@@ -66,27 +66,14 @@
 
         const cy = cytoscape({
             container: $('#cy')[0],
-            layout: {
-                name: 'grid'
-            },
-            elements: [
-                // { data: { id: 'n1', dom: div } },
-                // { data: { id: 'n2', content: 'Node 2\nThis is the second demo node.' } },
-                // { data: { id: 'e1', source: 'n1', target: 'n2', content: 'Edge between Node 1 and Node 2' } }
-            ],
+            elements: [ ],
             style: [
                 {
                     selector: 'node',
                     style: {
-                        //'text-wrap': 'wrap',
-                        //'text-max-width': '200px',
-                        //'text-halign': 'center', 'text-valign': 'center',
                         'background-color': 'white',
                         'padding': '10px',
                         'shape': 'rectangle'
-                        //'label': 'data(content)',
-                        //'width': 'label', 'height': 'label',
-                        //'min-width': '100px', 'min-height': '50px'
                     }
                 },
                 {
@@ -123,23 +110,6 @@
                 }
             };
         }
-
-        // //DUMMY DATA
-        // {
-        //     const div = document.createElement("div");
-        //     div.innerHTML = `node 1 <button>x</button> <input type="text">`;
-        //     cy.add({data: {id: 'n1', dom: div}});
-        // }
-        // {
-        //     const div = document.createElement("div");
-        //     div.innerHTML = `node 2 <button>x</button> <button>y</button> <button>z</button> <input type="range">`;
-        //     cy.add({ data: { id: 'n2', dom: div } });
-        // }
-        // {
-        //     cy.add({ data: { id: 'e1', source: 'n1', target: 'n2', content: 'Edge between Node 1 and Node 2' } });
-        // }
-
-
 
         let currentNode;
 
