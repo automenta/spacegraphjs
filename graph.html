@@ -43,6 +43,20 @@
             z-index: 1500;
             display: none;
         }
+
+
+        .resize-handle {
+            position: absolute;
+            width: 10px; height: 10px;
+            z-index: 1000;
+            /*background-color: #fff;
+            border: 1px solid #000;*/
+        }
+        .resize-handle-top-left     { cursor: nwse-resize; top: -5px; left: -5px;     }
+        .resize-handle-top-right    { cursor: nesw-resize; top: -5px; right: -5px;    }
+        .resize-handle-bottom-left  { cursor: nesw-resize; bottom: -5px; left: -5px;  }
+        .resize-handle-bottom-right { cursor: nwse-resize; bottom: -5px; right: -5px; }
+
     </style>
 </head>
 <body>
@@ -72,7 +86,7 @@
                     selector: 'node',
                     style: {
                         'background-color': 'white',
-                        'padding': '10px',
+                        'padding': '4px',
                         'shape': 'rectangle'
                     }
                 },
@@ -93,6 +107,43 @@
         });
         cy.domNode();
 
+        function startResize(event) {
+            const dom = event.target.parentNode.parentNode;
+            const DOM = $(dom);
+
+            const startWidth = DOM.width(), startHeight = DOM.height();
+
+            const startX = event.clientX, startY = event.clientY;
+
+            function resize(event) {
+                const deltaX = event.clientX - startX,
+                      deltaY = event.clientY - startY,
+                      newWidth  = startWidth  + deltaX,
+                      newHeight = startHeight + deltaY;
+
+                DOM.css({'width': newWidth, 'height': newHeight });
+            }
+
+            const DOC = $(document);
+
+            function stopResize() {
+                DOC.off('mousemove', resize);
+                DOC.off('mouseup', stopResize);
+            }
+
+            DOC.on('mousemove', resize);
+            DOC.on('mouseup', stopResize);
+        }
+
+        function newResizeHandles() {
+            const resizeHandles = $('<div class="resize-handles">');
+            resizeHandles.append('<div class="resize-handle resize-handle-top-left"></div>');
+            resizeHandles.append('<div class="resize-handle resize-handle-top-right"></div>');
+            resizeHandles.append('<div class="resize-handle resize-handle-bottom-left"></div>');
+            resizeHandles.append('<div class="resize-handle resize-handle-bottom-right"></div>');
+            resizeHandles.on('mousedown', startResize);
+            return resizeHandles;
+        }
 
         /**
          * @param {string} newContent
@@ -101,6 +152,10 @@
             const dom = $('<div>');
             dom.attr('contentEditable', 'true');
             dom.append(newContent);
+
+
+            dom.append(newResizeHandles());
+
 
             return {
                 group: 'nodes',
