@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Language Model Mind Map</title>
+    <script src="https://unpkg.com/jquery/dist/jquery.min.js"></script>
+    <script src="https://unpkg.com/cytoscape/dist/cytoscape.min.js"></script>
+    <script src="cytoscape-dom-node.js"></script>
+
+    <style>
+        body {
+            margin: 0; padding: 0;
+            background-color: gray;
+        }
+        #cy {
+            width: 100%; height: 100%;
+            position: fixed;
+        }
+        .menu-frame {
+            position: absolute;
+            display: none;
+            z-index: 1000;
+        }
+        .menu-frame button {
+            background-color: white;
+            border: 1px solid black;
+            padding: 5px; margin: 5px;
+            cursor: pointer;
+        }
+        #editor-popup {
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            border: 1px solid black;
+            padding: 20px;
+            z-index: 2000;
+        }
+        #editor-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1500;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="cy"></div>
+
+    <div id="menu-frame" class="menu-frame">
+        <button id="submit-button">&#128224;</button>
+        <button id="edit-button">&#128394;</button>
+        <button id="remove-button">&#128465;</button>
+    </div>
+
+    <div id="editor-overlay"></div>
+    <div id="editor-popup" style="display: none;">
+        <textarea id="editor" rows="10" cols="50"></textarea>
+        <br>
+        <button id="save-button">Save</button>
+        <button id="cancel-button">Cancel</button>
+    </div>
+
+    <script>
+
+        const cy = cytoscape({
+            container: $('#cy')[0],
+            layout: {
+                name: 'grid'
+            },
+            elements: [
+                // { data: { id: 'n1', dom: div } },
+                // { data: { id: 'n2', content: 'Node 2\nThis is the second demo node.' } },
+                // { data: { id: 'e1', source: 'n1', target: 'n2', content: 'Edge between Node 1 and Node 2' } }
+            ],
+            style: [
+                {
+                    selector: 'node',
+                    style: {
+                        //'text-wrap': 'wrap',
+                        //'text-max-width': '200px',
+                        //'text-halign': 'center', 'text-valign': 'center',
+                        'background-color': 'white',
+                        'padding': '10px',
+                        'shape': 'rectangle'
+                        //'label': 'data(content)',
+                        //'width': 'label', 'height': 'label',
+                        //'min-width': '100px', 'min-height': '50px'
+                    }
+                },
+                {
+                    selector: 'edge',
+                    style: {
+                        'curve-style': 'bezier',
+                        'target-arrow-shape': 'triangle',
+                        'label': 'data(content)',
+                        'text-wrap': 'wrap',
+                        'text-max-width': '200px',
+                        'font-size': '12px',
+                        'text-margin-x': '10px', 'text-margin-y': '10px',
+                        'text-rotation': 'autorotate'
+                    }
+                }
+            ]
+        });
+        cy.domNode();
+
+
+        /**
+         * @param {string} newContent
+         */
+        function newNode(newContent) {
+            const dom = $('<div>');
+            dom.attr('contentEditable', 'true');
+            dom.append(newContent);
+
+            return {
+                group: 'nodes',
+                data: {
+                    id: uuid(),
+                    dom: dom[0]
+                }
+            };
+        }
+
+        // //DUMMY DATA
+        // {
+        //     const div = document.createElement("div");
+        //     div.innerHTML = `node 1 <button>x</button> <input type="text">`;
+        //     cy.add({data: {id: 'n1', dom: div}});
+        // }
+        // {
+        //     const div = document.createElement("div");
+        //     div.innerHTML = `node 2 <button>x</button> <button>y</button> <button>z</button> <input type="range">`;
+        //     cy.add({ data: { id: 'n2', dom: div } });
+        // }
+        // {
+        //     cy.add({ data: { id: 'e1', source: 'n1', target: 'n2', content: 'Edge between Node 1 and Node 2' } });
+        // }
+
+
+
+        let currentNode;
+
+        $('#submit-button').on('click', () => spawnLinkedNode(currentNode, dummyContent(), ''));
+        //$('#edit-button').on('click',   () => editorShow(currentNode, currentNode.data('content')));
+        $('#remove-button').on('click', () => nodeRemove(currentNode));
+
+        cy.on('tap', 'node', evt => {
+            currentNode = evt.target;
+            const nodeWidth = currentNode.outerWidth(), nodeHeight = currentNode.outerHeight();
+            const nodePosition = currentNode.renderedPosition();
+
+            $('#menu-frame').css({
+                display: 'block',
+                left: nodePosition.x + nodeWidth / 2 + 'px',
+                top: nodePosition.y - nodeHeight / 2 - $('#menu-frame').outerHeight() + 'px'
+            });
+        });
+
+        function unfocus() {
+            $('#menu-frame').hide();
+        }
+
+        cy.on('tap', evt => { if (evt.target === cy) { unfocus(); } });
+        cy.on('dragfreeon', 'node', unfocus);
+        cy.on('dbltap', evt => {
+            if (evt.target === cy) {
+                editorShow((txt) => {
+                    const x = newNode(txt);
+                    x.position = evt.position;
+                    const y = cy.add(x);
+                });
+            }
+        });
+        function uuid() { return 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'.replace(/x/g, () => (Math.random() * 16 | 0).toString(16)); }
+
+
+        function spawnLinkedNode(parentNode, newContent, edgeLabel) {
+            const nn = newNode(newContent);
+            nn.position = {
+                x: parentNode.position('x') + parentNode.outerWidth() + 100,
+                y: parentNode.position('y')
+            };
+            const NN = cy.add(nn);
+            cy.add({
+                group: 'edges',
+                data: {
+                    id: 'e' + uuid(),
+                    source: parentNode.id(),
+                    target: NN.id(),
+                    content: edgeLabel
+                }
+            });
+        }
+
+        function dummyContent() {
+            const dummyPhrases = [
+                'Lorem ipsum dolor sit amet',
+                'Consectetur adipiscing elit'
+            ];
+            return dummyPhrases[Math.floor(Math.random() * dummyPhrases.length)];
+        }
+
+        function editorHide() {
+            $('#editor-popup, #editor-overlay').hide();
+        }
+
+        function editorShow(ele, initialText='') {
+            $('#editor').val(initialText);
+            $('#editor-popup, #editor-overlay').show();
+
+            $('#save-button').off('click').on('click', () => {
+                ele($('#editor').val());
+                editorHide();
+            });
+
+            $('#cancel-button').off('click').on('click', () => editorHide());
+        }
+
+        function nodeRemove(node) {
+            if (confirm('Are you sure you want to remove this node?')) {
+                cy.remove(node);
+                unfocus();
+            }
+        }
+    </script>
+</body>
+</html>
