@@ -5,143 +5,13 @@
     <script src="https://unpkg.com/jquery/dist/jquery.min.js"></script>
     <script src="https://unpkg.com/cytoscape/dist/cytoscape.min.js"></script>
     <script src="cytoscape-dom-node.js"></script>
-
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: gray;
-        }
-
-        .no-select {
-            user-select: none;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-        }
-
-        #cy {
-            width: 100%;
-            height: 100%;
-            position: fixed;
-        }
-
-        .menu-frame button {
-            background-color: white;
-            border: 1px solid black;
-            padding: 5px;
-            margin: 5px;
-            cursor: pointer;
-        }
-
-        #editor-popup {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: white;
-            border: 1px solid black;
-            padding: 20px;
-            z-index: 2000;
-        }
-
-        #editor-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 1500;
-            display: none;
-        }
-
-
-        .resize-grip {
-            position: absolute;
-            width: 10px;
-            height: 10px;
-            z-index: 1000;
-            /*background-color: #fff;
-            border: 1px solid #000;*/
-        }
-
-        .resize-grip-top-left {
-            cursor: nwse-resize;
-            top: -5px;
-            left: -5px;
-        }
-
-        .resize-grip-top-right {
-            cursor: nesw-resize;
-            top: -5px;
-            right: -5px;
-        }
-
-        .resize-grip-bottom-left {
-            cursor: nesw-resize;
-            bottom: -5px;
-            left: -5px;
-        }
-
-        .resize-grip-bottom-right {
-            cursor: nwse-resize;
-            bottom: -5px;
-            right: -5px;
-        }
-
-
-        .node-content {
-            position: relative;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            padding: 4px;
-            background-color: white;
-        }
-
-        .node-content-inner {
-            min-width: 50px;
-            min-height: 20px;
-            outline: none;
-        }
-
-        .node-menu-frame {
-            position: absolute;
-            top: -30px;
-            left: 0;
-            right: 0;
-            display: flex;
-            justify-content: center;
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
-
-        .node-content:hover .node-menu-frame {
-            opacity: 1;
-        }
-
-        .node-menu-frame button {
-            background-color: white;
-            border: 1px solid #ccc;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            margin: 0 2px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-
-        .node-menu-frame button:hover {
-            background-color: #f0f0f0;
-        }
-    </style>
+    <link rel="stylesheet" href="graph.css"/>
+    <script src="graph.js"></script>
+    <script src="transform.js"></script>
 </head>
 <body>
-<div id="cy"></div>
 
+<div id="cy"></div>
 
 <div id="editor-overlay"></div>
 <div id="editor-popup" style="display: none;">
@@ -151,236 +21,46 @@
     <button id="cancel-button">Cancel</button>
 </div>
 
+<div id="data-transform-overlay"></div>
+<div id="data-transform-popup" style="display: none;">
+    <h3>Data Transform</h3>
+    <div>
+        <label for="data-processing-options">Data Processing Options:</label>
+        <select id="data-processing-options">
+            <option value="none">None</option>
+            <option value="uppercase">Uppercase</option>
+            <option value="lowercase">Lowercase</option>
+            <option value="reverse">Reverse</option>
+        </select>
+    </div>
+    <div>
+        <label for="output-options">Output Options:</label>
+        <select id="output-options">
+            <option value="new-node">Create New Node</option>
+            <option value="replace-content">Replace Current Node Content</option>
+        </select>
+    </div>
+    <div>
+        <label for="preview">Preview:</label>
+        <div id="preview"></div>
+    </div>
+    <button id="run-button">Run</button>
+    <button id="save-transform-button" style="display: none;">Save</button>
+    <button id="cancel-transform-button">Cancel</button>
+</div>
 <script>
-    class WindowNode {
-        constructor(content) {
-            this.inner = typeof content === 'string' ?
-                $('<div class="node-content-inner" contenteditable="true">').append(content) :
-                $(content);
+    document.addEventListener('DOMContentLoaded', () => {
 
-            this.menuFrame = $('<div class="node-menu-frame">');
+        const p = new Plugins();
+        p.add(new TransformPlugin('uppercase', async x => x.toUpperCase()));
+        p.add(new TransformPlugin('lowercase', async x => x.toLowerCase()));
+        p.add(new TransformPlugin('reverse',   async x => x.toReversed()));
+        p.commit();
 
-            this.dom = $('<div class="node-content">').append(
-                this.inner, this.menuFrame, newResizeGrip());
-        }
-
-        /** TODO make MenuFrame singleton/shared, or lazily constructed */
-        start(node, nodeManager) {
-
-            function dummyContent() {
-                const dummyPhrases = [
-                    'Lorem ipsum dolor sit amet',
-                    'Consectetur adipiscing elit'
-                ];
-                return dummyPhrases[Math.floor(Math.random() * dummyPhrases.length)];
-            }
-            const submitButton = $('<button id="submit-button">&#128224;</button>')
-                .on('click', () => nodeManager.spawnLinkedNode(node, dummyContent(), ''));
-
-            const editButton = $('<button id="edit-button">&#128394;</button>')
-                .on('click', () => editorShow(x => this.inner.text(x), this.inner.text()));
-
-            const removeButton = $('<button id="remove-button">&#128465;</button>')
-                .on('click', () => nodeManager.removeNode(node));
-
-            this.menuFrame.append(submitButton, editButton, removeButton);
-        }
-    }
-
-
-    function startResize(event) {
-        const DOM = $(event.target.parentNode.parentNode);
-        const gripClass = event.target.classList[1];
-
-        const startWidth = DOM.width(), startHeight = DOM.height();
-        const startX = event.clientX,   startY = event.clientY;
-
-        const L = gripClass.includes('left'), T = gripClass.includes('top');
-
-        function resize(event) {
-            const dx = event.clientX - startX, dy = event.clientY - startY;
-
-            let newWidth;
-            let newHeight;
-
-            if (L) {
-                newWidth = startWidth - dx;
-                //DOM.css('left', `+=${deltaX}`/*px*/); //?
-            } else {
-                newWidth = startWidth + dx;
-            }
-
-            if (T) {
-                newHeight = startHeight - dy;
-                //DOM.css('top', `+=${deltaY}`/*px*/); //?
-            } else {
-                newHeight = startHeight + dy;
-            }
-
-            DOM.css({
-                width: newWidth, // + 'px',
-                height: newHeight// + 'px'
-            });
-        }
-
-        const BODY = $('body'), DOC = $(document);
-        BODY.addClass('no-select');
-
-
-        function stopResize() {
-            DOC.off('mousemove', resize).off('mouseup', stopResize);
-            BODY.removeClass('no-select');
-        }
-
-        DOC.on('mousemove', resize).on('mouseup', stopResize);
-    }
-
-    function newResizeGrip() {
-        function gCls(x) {
-            return '<div class="resize-grip resize-grip-' + x + '"></div>';
-        }
-
-        return $('<div class="resize-grips">').append(
-            gCls('top-left'),    gCls('top-right'),
-            gCls('bottom-left'), gCls('bottom-right'),
-        ).on('mousedown', startResize);
-    }
-
-    class SpaceGraph {
-        constructor(target) {
-            const cy = cytoscape({
-                container: target[0],
-                elements: [],
-                style: [
-                    {
-                        selector: 'node',
-                        style: {
-                            'background-color': 'white',
-                            'padding': '4px',
-                            'shape': 'rectangle'
-                        }
-                    },
-                    {
-                        selector: 'edge',
-                        style: {
-                            'curve-style': 'bezier',
-                            'target-arrow-shape': 'triangle',
-                            'label': 'data(content)',
-                            'text-wrap': 'wrap',
-                            'text-max-width': '200px',
-                            'font-size': '12px',
-                            'text-margin-x': '10px', 'text-margin-y': '10px',
-                            'text-rotation': 'autorotate'
-                        }
-                    }
-                ]
-            });
-            cy.domNode();
-            cy.on('tap', 'node', this.onNodeTap.bind(this));
-            cy.on('tap', this.onCanvasTap.bind(this));
-            cy.on('dragfreeon', 'node', this.menuHide.bind(this));
-            cy.on('dbltap', this.addNodeAtCursor.bind(this));
-
-            this.cy = cy;
-        }
-
-        addNode(content) {
-            const node = new WindowNode(content);
-            const dom = node.dom[0];
-
-            const cyNode = this.cy.add({
-                group: 'nodes',
-                data: {id: uuid(), dom: dom}
-            });
-            cyNode.data({'dom': dom, 'domNode': node});
-
-            node.start(cyNode, this);
-
-            return cyNode;
-        }
-
-        removeNode(node) {
-            if (confirm('Are you sure you want to remove this node?')) {
-                this.cy.remove(node);
-            }
-        }
-
-        spawnLinkedNode(parentNode, content, edgeLabel) {
-            const newNode = this.addNode(content);
-            newNode.position({
-                x: parentNode.position('x') + parentNode.outerWidth() + 100,
-                y: parentNode.position('y')
-            });
-
-            this.cy.add({
-                group: 'edges',
-                data: {
-                    id: 'e' + uuid(),
-                    source: parentNode.id(),
-                    target: newNode.id(),
-                    content: edgeLabel
-                }
-            });
-        }
-
-        onNodeTap(evt) {
-            const n = evt.target;
-            const f = n.data('domNode').menuFrame;
-            const nw = n.outerWidth(), nh = n.outerHeight();
-            const np = n.renderedPosition();
-            f.css({
-                display: 'block',
-                left: np.x + nw / 2/* + 'px'*/,
-                top:  np.y - nh / 2 - f.outerHeight()/* + 'px'*/
-            });
-        }
-
-        onCanvasTap(evt) {
-            if (evt.target === this.cy) {
-                this.menuHide();
-            }
-        }
-
-        menuHide() {
-            $('#menu-frame').hide();
-        }
-
-        addNodeAtCursor(evt) {
-            if (evt.target === this.cy) {
-                editorShow((txt) => {
-                    const newNode = this.addNode(txt);
-                    newNode.position(evt.position);
-                });
-            }
-        }
-    }
-
-
-    function editorShow(callback, initialText = '') {
-        function editorHide() {
-            $('#editor-popup, #editor-overlay').hide();
-        }
-
-        $('#editor').val(initialText);
-        $('#editor-popup, #editor-overlay').show();
-
-        $('#save-button').off('click').on('click', () => {
-            const text = $('#editor').val();
-            callback(text);
-            editorHide();
-        });
-
-        $('#cancel-button').off('click').on('click', editorHide);
-    }
-
-
-    function uuid() {
-        return 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'.replace(/x/g, () => (Math.random() * 16 | 0).toString(16));
-    }
-
-
-    const nodeManager = new SpaceGraph($('#cy'));
-
+        const s = new SpaceGraph($('#cy'));
+        s.addNode($('<div>Normal content</div>'));
+        //s.addNode($('<iframe src="https://wikipedia.org" style="min-width: 100px; min-height: 100px; width:100%;height:100%"></iframe>'));
+    });
 
 </script>
 </body>

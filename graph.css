@@ -1,0 +1,153 @@
+body {
+    margin: 0;
+    padding: 0;
+    background-color: gray;
+}
+
+.no-select {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+#cy {
+    width: 100%;
+    height: 100%;
+    position: fixed;
+}
+
+.menu-frame button {
+    background-color: white;
+    border: 1px solid black;
+    padding: 5px;
+    margin: 5px;
+    cursor: pointer;
+}
+
+#editor-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    border: 1px solid black;
+    padding: 20px;
+    z-index: 2000;
+}
+
+#editor-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1500;
+    display: none;
+}
+
+
+.resize-grip {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    z-index: 1000;
+    /*background-color: #fff;
+    border: 1px solid #000;*/
+}
+
+.resize-grip-top-left {
+    cursor: nwse-resize;
+    top: -5px;
+    left: -5px;
+}
+
+.resize-grip-top-right {
+    cursor: nesw-resize;
+    top: -5px;
+    right: -5px;
+}
+
+.resize-grip-bottom-left {
+    cursor: nesw-resize;
+    bottom: -5px;
+    left: -5px;
+}
+
+.resize-grip-bottom-right {
+    cursor: nwse-resize;
+    bottom: -5px;
+    right: -5px;
+}
+
+
+.node-content {
+    position: relative;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 4px;
+    background-color: white;
+}
+
+.node-content-inner {
+    min-width: 50px;
+    min-height: 20px;
+    outline: none;
+}
+
+.node-menu-frame {
+    position: absolute;
+    top: -30px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.node-content:hover .node-menu-frame {
+    opacity: 1;
+}
+
+.node-menu-frame button {
+    background-color: white;
+    border: 1px solid #ccc;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    margin: 0 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.node-menu-frame button:hover {
+    background-color: #f0f0f0;
+}
+
+
+#data-transform-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    border: 1px solid black;
+    padding: 20px;
+    z-index: 2000;
+}
+
+#data-transform-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1500;
+    display: none;
+}
