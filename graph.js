@@ -127,6 +127,7 @@ class SpaceGraph {
     constructor(target) {
         const cy = cytoscape({
             container: target[0],
+            wheelSensitivity: 0.25,
             style: [
                 {
                     selector: 'node',
@@ -183,7 +184,7 @@ class SpaceGraph {
 
     removeNodeConfirm(node) {
         if (confirm('Are you sure you want to remove this node?'))
-            removeNode(node);
+            this.removeNode(node);
     }
 
     spawnLinkedNode(parentNode, content, edgeLabel) {
