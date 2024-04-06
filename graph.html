@@ -6,56 +6,24 @@
     <script src="https://unpkg.com/cytoscape/dist/cytoscape.min.js"></script>
     <script src="cytoscape-dom-node.js"></script>
     <link rel="stylesheet" href="graph.css"/>
-    <script src="graph.js"></script>
     <script src="transform.js"></script>
+    <script src="graph.js"></script>
 </head>
 <body>
 
 <div id="cy"></div>
 
-<div id="editor-overlay"></div>
 <div id="editor-popup" style="display: none;">
-    <textarea id="editor" rows="10" cols="50"></textarea>
+    <textarea id="editor" rows="10" cols="36"></textarea>
     <br>
     <button id="save-button">Save</button>
     <button id="cancel-button">Cancel</button>
 </div>
 
-<div id="data-transform-overlay"></div>
-<div id="data-transform-popup" style="display: none;">
-    <h3>Data Transform</h3>
-    <div>
-        <label for="data-processing-options">Data Processing Options:</label>
-        <select id="data-processing-options">
-            <option value="none">None</option>
-            <option value="uppercase">Uppercase</option>
-            <option value="lowercase">Lowercase</option>
-            <option value="reverse">Reverse</option>
-        </select>
-    </div>
-    <div>
-        <label for="output-options">Output Options:</label>
-        <select id="output-options">
-            <option value="new-node">Create New Node</option>
-            <option value="replace-content">Replace Current Node Content</option>
-        </select>
-    </div>
-    <div>
-        <label for="preview">Preview:</label>
-        <div id="preview"></div>
-    </div>
-    <button id="run-button">Run</button>
-    <button id="save-transform-button" style="display: none;">Save</button>
-    <button id="cancel-transform-button">Cancel</button>
-</div>
+<div id="transformer-ui" style="display: none;"></div>
+
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-
-        const p = new Plugins();
-        p.add(new TransformPlugin('uppercase', async x => x.toUpperCase()));
-        p.add(new TransformPlugin('lowercase', async x => x.toLowerCase()));
-        p.add(new TransformPlugin('reverse',   async x => x.toReversed()));
-        p.commit();
 
         const s = new SpaceGraph($('#cy'));
         s.addNode($('<div>Normal content</div>'));

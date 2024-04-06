@@ -109,6 +109,18 @@ function newResizeGrip() {
     ).on('mousedown', startResize);
 }
 
+
+const p = new Plugins();
+p.add(new TransformPlugin('uppercase', async x => x.toUpperCase()));
+p.add(new TransformPlugin('lowercase', async x => x.toLowerCase()));
+//p.add(new TransformPlugin('reverse',   async TODO));
+
+let transformUI;
+document.addEventListener('DOMContentLoaded', () => {
+    transformUI = new TransformUI(p);
+});
+
+
 class SpaceGraph {
     constructor(target) {
         const cy = cytoscape({
@@ -253,83 +265,17 @@ class SpaceGraph {
     }
 
     openTransformer(node) {
-        const dataProcessingOptions = $('#data-processing-options');
-        const outputOptions = $('#output-options');
-        const preview = $('#preview');
-        const runButton = $('#run-button');
-        const saveButton = $('#save-transform-button');
-        const cancelButton = $('#cancel-transform-button');
-
         const nodeContent = node.data('domNode').inner.text();
-        let transformedContent = nodeContent;
-
-
-        function F(x) {
-            let y;
-            switch (dataProcessingOptions.val()) {
-                case 'uppercase':
-                    y = x.toUpperCase();
-                    break;
-                case 'lowercase':
-                    y = x.toLowerCase();
-                    break;
-                case 'reverse':
-                    y = x.split('').reverse().join('');
-                    break;
-                default:
-                    y = x;
-                    break;
-            }
-            return y;
-        }
-
-        function runTransform() {
-            runButton.prop('disabled', true);
-            setTimeout(() => {
-                const y = F(nodeContent);
-                if (y) {
-                    transformedContent = y;
-                    preview.text(y);
-
-                    saveButton.show();
-                }
-                runButton.prop('disabled', false);
-            }, 0);
-        }
-
-        function saveTransform() {
-            const selectedOutput = outputOptions.val();
-
-            if (selectedOutput === 'new-node') {
-                this.spawnLinkedNode(node, transformedContent, '');
-            } else if (selectedOutput === 'replace-content') {
-                node.data('domNode').inner.text(transformedContent);
-            }
-
-            hideDataTransformPopup();
-        }
-
-        function hideDataTransformPopup() {
-            $('#data-transform-popup, #data-transform-overlay').hide();
-        }
-
-        dataProcessingOptions.off('change').on('change', () => {
-            saveButton.hide();
-            //updatePreview();
-        });
-
-        outputOptions.off('change').on('change', () => {
-            saveButton.hide();
-        });
-
-        runButton.off('click').on('click', runTransform.bind(this));
-        saveButton.off('click').on('click', saveTransform.bind(this));
-        cancelButton.off('click').on('click', hideDataTransformPopup);
-
-        //updatePreview();
-        saveButton.hide();
-
-        $('#data-transform-popup, #data-transform-overlay').show();
+        transformUI.input = nodeContent;
+        transformUI.onOutput = (y, outputMode) => {
+            if (outputMode === 'new-node')
+                this.spawnLinkedNode(node, y, '');
+            else if (outputMode === 'replace-content')
+                node.data('domNode').inner.text(y);
+            else
+                console.error('todo outputMode', outputMode);
+        };
+        $('#transformer-ui').show();
     }
 }
 
