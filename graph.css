@@ -31,9 +31,10 @@ body {
     left: 50%;
     transform: translate(-50%, -50%);
     background-color: white;
-    border: 1px solid black;
     padding: 20px;
-    z-index: 2000;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    border-radius: 10px;
+    z-index: 1000;
 }
 
 
@@ -134,10 +135,14 @@ body {
 }
 
 
-
+iframe {
+    border: 1px solid #ccc;
+    box-shadow: 0px 0px 8px rgba(0,0,0,0.1);
+}
 
 /* Button Styling */
 button {
+    user-select: none;
     background-color: #6a6a6a;
     border: none;
     border-radius: 3px;

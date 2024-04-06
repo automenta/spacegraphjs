@@ -54,6 +54,8 @@ class WindowNode {
 
 
 function startResize(event) {
+    if(event.button !== 0) return; // Ignore right-clicks
+
     const DOM = $(event.target.parentNode.parentNode);
     const gripClass = event.target.classList[1];
 
