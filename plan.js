@@ -13,16 +13,55 @@ class PlanEdge {
 class PlanGraph {
     constructor() {
         this.nodes = new Map();
-        this.edges = [];
+        this.nodeEdges = new Map();
     }
 
-    addNode(node) { this.nodes.set(node.id, node); }
-    getNode(id) { return this.nodes.get(id); }
-    addEdge(edge) { this.edges.push(edge); }
-    getEdgesByNode(id, relationType = undefined) {
-        return this.edges.filter(edge => (edge.sourceId === id || edge.targetId === id) && (!relationType || edge.relation === relationType));
+    addNode(node) {
+        this.nodes.set(node.id, node);
+        this.nodeEdges.set(node.id, new Set());
+    }
+
+    getNode(id) {
+        return this.nodes.get(id);
+    }
+
+    removeNode(id) {
+        this.nodes.delete(id);
+        this.nodeEdges.delete(id);
+        for (const edges of this.nodeEdges.values()) {
+            for (const e of edges) {
+                if (e.sourceId === id || e.targetId === id)
+                    edges.delete(e);
+            }
+        }
+    }
+
+    addEdge(edge) {
+        const { sourceId, targetId } = edge;
+        this.nodeEdges.get(sourceId)?.add(edge);
+        this.nodeEdges.get(targetId)?.add(edge);
+    }
+
+    removeEdge(edge) {
+        const { sourceId, targetId } = edge;
+        this.nodeEdges.get(sourceId)?.delete(edge);
+        this.nodeEdges.get(targetId)?.delete(edge);
+    }
+
+    getEdgesByNodeArray(id, relType) {
+        return [...this.getEdgesByNode(id, relType)];
+    }
+
+    *getEdgesByNode(id, relType = undefined) {
+        const edges = this.nodeEdges.get(id) || new Set();
+        for (const edge of edges) {
+            if (!relType || edge.relation === relType)
+                yield edge;
+        }
     }
 }
+
+const costRanker = (a, b) => a.cost - b.cost;
 
 class Planner {
     constructor(variablesState = {}) {
@@ -40,14 +79,16 @@ class Planner {
         if (visited.has(taskId)) return; else visited.add(taskId);
 
         const task = this.graph.getNode(taskId);
+
+        const edgesBy = (taskId, relType) => this.graph.getEdgesByNodeArray(taskId, relType).sort(costRanker);
+
         if (task.type === 'action' && this.evalConds(task.conditions)) {
             const actionCost = currentCost + task.cost;
             this.applyEffects(task.effects);
             yield { name: task.content.name, cost: actionCost, effects: task.effects };
             if (taskId === goalStateId) return;
         } else if (task.type === 'task') {
-            const decompositionEdges = this.graph.getEdgesByNode(taskId, 'decomposition').sort((a, b) => a.cost - b.cost);
-            for (const edge of decompositionEdges) {
+            for (const edge of edgesBy(taskId, 'decomposition')) {
                 const subPlan = [...this.planGenerator(edge.targetId, goalStateId, currentCost + edge.cost, new Set(visited))];
                 if (subPlan.length > 0) {
                     yield* subPlan;
@@ -56,12 +97,9 @@ class Planner {
             }
         }
 
-        const transitionEdges = this.graph.getEdgesByNode(taskId, 'transition').sort((a, b) => a.cost - b.cost);
-        for (const edge of transitionEdges) {
-            if (!visited.has(edge.targetId) && this.evalConds(edge.conditions)) {
+        for (const edge of edgesBy(taskId, 'transition'))
+            if (!visited.has(edge.targetId) && this.evalConds(edge.conditions))
                 yield* this.planGenerator(edge.targetId, goalStateId, currentCost + edge.cost, visited);
-            }
-        }
     }
 
     plan(initialTaskId, goalStateId) {
