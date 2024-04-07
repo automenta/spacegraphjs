@@ -1,0 +1,20 @@
+This code implements the core methods for the planning system, including:
+
+Predicate.toString(): Returns a string representation of the predicate.
+Action.toString(): Returns a string representation of the action.
+NumericExpression.evaluate(state): Evaluates the numeric expression in a given state (placeholder).
+Constraint.isSatisfied(state): Checks if the constraint is satisfied in a given state.
+PlanningProblem.isGoalSatisfied(state): Checks if the goal state is satisfied in a given state.
+PlanningProblem.getApplicableActions(state): Retrieves the applicable actions in a given state.
+PlanningProblem.applyAction(state, action, params): Applies an action to a given state and returns the resulting state.
+PlanNode.toString(): Returns a string representation of the plan node.
+BreadthFirstSearch.search(problem): Implements the breadth-first search algorithm.
+DepthFirstSearch.search(problem): Implements the depth-first search algorithm.
+HeuristicSearch.search(problem): Implements the heuristic search algorithm (e.g., A*, Greedy Best-First Search).
+LocalSearch.search(problem): Implements the local search algorithm (e.g., Hill Climbing, Simulated Annealing).
+GeneticAlgorithm.search(problem): Implements the genetic algorithm for plan optimization.
+The temporal planner, numeric planner, and hybrid planner classes are placeholders for additional reasoning and optimization techniques.
+
+The usage example demonstrates how to create a planning problem, define the domain with predicates and actions, and use a hybrid planner with a heuristic search strategy to generate a plan.
+
+Please note that this code provides a basic implementation and may require further optimization and refinement based on the specific requirements and constraints of the planning problem at hand

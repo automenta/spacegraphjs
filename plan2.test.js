@@ -1,4 +1,8 @@
-const { Planner, TracingPlanner } = require('./plan2'); // Adjust the import path as necessary
+const {
+    Planner, TracingPlanner,
+    PlanNode,
+    AbstractExec, DepthFirstExec, BreadthFirstExec, LowestCostExec
+} = require('./plan2'); // Adjust the import path as necessary
 
 describe('Planner', () => {
     let p;
@@ -120,3 +124,43 @@ describe('Smart Home Evening Routine', () => {
         //expect(v.thermostat).toBe("21°C");
     });
 });
+
+// Incorporate tests for dynamic dependencies and reevaluation
+// Add tests to verify the functionality of the DepthFirstStrategy, BreadthFirstStrategy, and LowestCostStrategy
+
+describe('Dynamic Dependencies and Reevaluation', () => {
+    test('Dynamic Dependency Handling', async () => {
+        // TODO Setup planner with nodes having dynamic dependencies
+        // Verify the dynamic dependency logic works as expected
+    });
+
+    test('Reevaluation Mechanism', async () => {
+        // TODO Setup planner with conditions that change during execution
+        // Verify the planner reevaluates and adjusts execution accordingly
+    });
+});
+
+describe('Executors: execution order and outcome', () => {
+    let p;
+
+    beforeEach(() => {
+        p = new Planner();
+        // TODO Define nodes and their dependencies here
+    });
+
+    test('DepthFirstStrategy Execution Order', async () => {
+        p.setExecutor(new DepthFirstExec());
+        //TODO
+    });
+
+    test('BreadthFirstStrategy Execution Order', async () => {
+        p.setExecutor(new BreadthFirstExec());
+        //TODO
+    });
+
+    test('LowestCostStrategy Execution Order', async () => {
+        p.setExecutor(new LowestCostExec());
+        //TODO
+    });
+});
+
