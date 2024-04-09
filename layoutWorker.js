@@ -12,6 +12,10 @@ onmessage = e => {
 const layouts = {
     forceDirected: (nodes, edges) => {
         const fC = 50, sL = 100, a = 1 / fC, maxIt = 1;
+
+        const distMax = 300; //TODO tune based on node sizes
+        const distMaxSq = distMax*distMax;
+
         const pos = new Map(), //positions
               rF = new Map(); //repulsion forces
 
@@ -28,24 +32,24 @@ const layouts = {
 
                 //TODO iterate only the upper triangle of the matrix
 
-                if (A !== B) {
-                    let
-                        dx = a[0] - b[0],
-                        dy = a[1] - b[1],
-                        distSq = dx * dx + dy * dy;
+                if (A === B) return;
 
-                    if (distSq < 1.0E-5) {
-                        //HACK when they are at the same position
-                        dx = (Math.random() * 2) - 1;
-                        dy = (Math.random() * 2) - 1;
-                        distSq = dx * dx + dy * dy;
-                    }
-
-                    const force = fC / distSq;
-                    const forceXY = rF.get(A) || [0, 0];
-                    const z = [ forceXY[0] + dx * force, forceXY[1] + dy * force ];
-                    rF.set(A, z);
+                let
+                    dx = a[0] - b[0],
+                    dy = a[1] - b[1],
+                    distSq = dx * dx + dy * dy;
+                if (distSq > distMaxSq)
+                    return;
+                if (distSq < 1.0E-5) {
+                    //HACK when they are at the same position
+                    dx = (Math.random() * 2) - 1;
+                    dy = (Math.random() * 2) - 1;
+                    distSq = dx * dx + dy * dy;
                 }
+                const force = fC / distSq;
+                const forceXY = rF.get(A) || [0, 0];
+                const z = [forceXY[0] + dx * force, forceXY[1] + dy * force];
+                rF.set(A, z);
             }));
 
 
@@ -78,6 +82,6 @@ const layouts = {
 
         }
 
-        return Array.from(pos,(v, k) => [v[0], v[1][0], v[1][1]]);
+        return Array.from(pos,v => [v[0], v[1][0], v[1][1]]);
     }
 };

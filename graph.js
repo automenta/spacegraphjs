@@ -31,14 +31,6 @@ class WindowNode {
     /** TODO make MenuFrame singleton/shared, or lazily constructed */
     start(node, nodeManager) {
 
-        function dummyContent() {
-            const dummyPhrases = [
-                'Lorem ipsum dolor sit amet',
-                'Consectetur adipiscing elit'
-            ];
-            return dummyPhrases[Math.floor(Math.random() * dummyPhrases.length)];
-        }
-
         const editButton = $('<button id="edit-button">&#128394;</button>')
             .on('click', () => editorShow(x => this.inner.text(x), this.inner.text()));
 
@@ -268,8 +260,7 @@ class SpaceGraph {
     }
 
     openTransformer(node) {
-        const nodeContent = node.data('domNode').inner.text();
-        transformUI.input = nodeContent;
+        transformUI.input = node.data('domNode').inner.text();
         transformUI.onOutput = (y, outputMode) => {
             if (outputMode === 'new-node')
                 this.spawnLinkedNode(node, y, '');

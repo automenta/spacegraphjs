@@ -31,22 +31,34 @@ class CytoscapeDomNode {
             }
         });
 
-        const transformStyle = (style, transform) => {
-            style.webkitTransform = style.msTransform = style.transform = transform;
+        const styleUpdates = new Map();
+
+        const styleSetter = (transform, ele) => {
+            ele.style.transform = transform;
+            //style.webkitTransform = style.msTransform = style.transform = update.transform;
         };
 
-        const numString = (cy_node, index) => cy_node.position(index).toFixed(2);
+        function applyUpdates() {
+            styleUpdates.forEach(styleSetter);
+            styleUpdates.clear();
+            requestAnimationFrame(applyUpdates);
+        }
+
+        const ns = (v) => {
+            //return Math.round(v * 10)/10; //nearest 0.1
+            return Math.round(v * 2)/2; //nearest 0.5
+            //return Math.round(v);  //nearest pixel
+            //return v.toFixed(1);
+        };
 
         const updateContainer = () => {
             const pan = cy.pan();
-            transformStyle(this.containerDiv.style, `translate(${pan.x}px, ${pan.y}px) scale(${cy.zoom()})`);
+            styleUpdates.set(this.containerDiv, `translate(${ns(pan.x)}px, ${ns(pan.y)}px) scale(${cy.zoom()})`);
         };
 
         const updateDOM = (dom, cyNode) => {
-            const style = dom.style;
-            transformStyle(style, `translate(-50%, -50%) translate(${numString(cyNode, 'x')}px, ${numString(cyNode, 'y')}px)`);
-            style.display = 'inline';
-            style.position = 'absolute';
+            const cyNodePos = cyNode.position();
+            styleUpdates.set(dom, `translate(-50%, -50%) translate(${ns(cyNodePos.x)}px, ${ns(cyNodePos.y)}px)`);
         };
 
         cy.on("pan zoom", updateContainer);
@@ -59,6 +71,7 @@ class CytoscapeDomNode {
 
         updateContainer();
         cy.nodes().forEach(n => this._add_node(n));
+        requestAnimationFrame(applyUpdates);
     }
 
     _add_node(n) {
