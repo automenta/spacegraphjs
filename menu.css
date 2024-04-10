@@ -1,0 +1,39 @@
+#menu-icon {
+    position: fixed;
+    top: 5px;
+    left: 5px;
+
+    cursor: pointer;
+    z-index: 3000; /* Ensure menu is above other elements */
+
+    font-size: 150%;
+    line-height: 0.5;
+
+    opacity: 0.8;
+    color: white;
+
+    transition: opacity 0.2s ease, color 0.5s ease;
+}
+#menu-icon:hover {
+    opacity: 1.0;
+    color: orange;
+}
+
+#menu-popup {
+    left: 25px;
+    position: fixed;
+    padding: 0;
+    opacity: 0;
+    scale: 0.5;
+    visibility: hidden;
+    transition: opacity 0.3s ease;
+}
+
+#menu-popup.show {
+    opacity: 1;
+    scale: 1;
+    visibility: visible;
+}
+
+
+

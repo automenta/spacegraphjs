@@ -1,5 +1,8 @@
 "use strict";
 
+/**
+ * TODO make (explicitly, by CSS) hidden any DOM totally off-screen
+ */
 class CytoscapeDomNode {
     constructor(cy) {
         this.nodeDom = new Map();

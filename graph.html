@@ -10,6 +10,13 @@
     <script src="transform.js"></script>
     <script src="layout.js"></script>
     <script src="graph.js"></script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/smartmenus/dist/css/sm-core-css.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/smartmenus/dist/css/sm-clean/sm-clean.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/smartmenus/dist/jquery.smartmenus.min.js"></script>
+
+    <link rel="stylesheet" href="menu.css"/>
+    <script src="menu.js"></script>
 </head>
 <body>
 <script>
@@ -46,8 +53,7 @@
         };
         const createCanvasAnimation = () => {
             const d = $('<div>');
-            const canvas = $('<canvas>', { width: 400, height: 300 })
-                .appendTo(d).get(0);
+            const canvas = $('<canvas>', { width: 400, height: 300 }).appendTo(d).get(0);
             const ctx = canvas.getContext('2d');
             let squares = [{x: 50, y: 50, dx: 2, dy: 2, size: 20}]; // Initial square
 
@@ -64,7 +70,7 @@
                 });
             };
 
-            setInterval(draw, 30); // Redraw every 30ms
+            setInterval(draw, 50);
 
             // Add a new square every 2 seconds
             setInterval(() => {
@@ -74,14 +80,7 @@
             return d;
         };
 
-        function lmUI() {
-            const d = $('<div>');
-            d.append('Loading');
-            new LanguageModelClient('http://xyz:11434/api')
-                .generateText('Why is the sky blue?  One short sentence.',
-                    (x)=>d.append(JSON.stringify(x, null, 4)));
-            return d;
-        }
+
 
         const s = new SpaceGraph($('#cy'));
         s.addNode($('<div>Normal content</div>'));
@@ -99,7 +98,8 @@
 
         //s.addNode($('<iframe src="https://wikipedia.org" style="min-width: 100px; min-height: 100px; width:100%;height:100%"></iframe>'));
 
-        new Layout(s.cy);
+        menuInit();
+        //new Layout(s.cy);
     });
 
 </script>
