@@ -55,25 +55,7 @@ class MapView extends View {
     }
 }
 
-class Frame {
-    constructor(obj, views) {
-        this.obj = obj;
-        this.views = views;
-        this.currentView = views[0];
-    }
 
-    render() {
-        const select = $('<select>').on('change', () => {
-            this.currentView = this.views[select.val()];
-            container.empty().append(this.currentView.render(this.obj));
-        });
-
-        this.views.forEach((view, index) => select.append($('<option>', { value: index, text: view.constructor.name })));
-
-        const container = $('<div>').append(this.currentView.render(this.obj));
-        return $('<div>').append(select, container);
-    }
-}
 class NumberView extends View {
     match(obj) { return typeof obj === 'number' ? 1 : 0; }
     render(obj) { return $('<div>').text(obj.toLocaleString()); }
@@ -108,6 +90,90 @@ class YouTubeVideoView extends View {
     }
 }
 
+class Frame {
+    constructor(obj, views) {
+        this.obj = obj;
+        this.views = views;
+        this.currentView = views[0];
+        this.frameMenu = null;
+        this.contentContainer = null;
+    }
+
+    render() {
+        const frame = $('<div class="frame" style="border: 1px solid transparent; transition: border-color 0.3s; position: relative;">');
+        const contentContainer = this.contentContainer =
+            $('<div class="content-container">')
+                .append(this.currentView.render(this.obj));
+
+
+        const menuButton = $('<button class="frameMenuButton" style="position: absolute; top: 5px; left: 5px; z-index: 50;">&#9776;</button>').on('click', (e) => {
+            e.stopPropagation(); // Prevent event from bubbling to frame hover out
+            if (this.frameMenu) {
+                this.frameMenu.remove();
+                this.frameMenu = null;
+            } else {
+                this.originalSize = { width: contentContainer.width(), height: contentContainer.height() };
+                frame.append(this.frameMenu = this.createMenu(frame, contentContainer));
+            }
+        });
+
+        frame.append(menuButton, contentContainer);
+
+        // Toggle visibility of menu button on hover
+        frame.hover(
+            function(e) {
+                e.stopPropagation();
+                menuButton.show();
+                frame.css('border-color', '#ccc'); // Show border on hover
+            },
+            function() {
+                menuButton.hide();
+                frame.css('border-color', 'transparent'); // Hide border when not hovering
+                if (this.frameMenu) {
+                    this.frameMenu.remove();
+                    this.frameMenu = null;
+                }
+            }
+        );
+
+        return frame;
+    }
+
+    createMenu(frame, contentContainer) {
+        const menu = $('<div class="frameMenu" style="position: absolute; top: 10px; left: 10px; background: white; border: 1px solid #ccc; padding: 10px; z-index: 100;">');
+        if (this.views.length > 1)
+            menu.append(this.createSelectElement());
+
+        menu.append(this.createScaleSlider());
+        return menu;
+    }
+
+    createSelectElement() {
+        const select = $('<select>');
+        this.views.forEach((view, index) => select.append($('<option>', { value: index, text: view.constructor.name })));
+        select.on('change', () => {
+            this.currentView = this.views[select.val()];
+            this.contentContainer.empty().append(this.currentView.render(this.obj));
+        });
+        return select;
+    }
+
+    createScaleSlider() {
+        const cc = this.contentContainer;
+        const originalSize = this.originalSize;
+        const scaleSlider = $('<input type="range" min="0.5" max="2" step="0.05" value="1" style="width:100%;">').on('input', function(){
+            const scale = parseFloat(this.value);
+            cc.css({
+                'transform': `scale(${scale})`,
+                'width': originalSize.width * scale,
+                'height': originalSize.height * scale
+            });
+        });
+        return scaleSlider;
+    }
+}
+
+
 const Views = [
     new TextView(), new URLView(), new ImageView(), new JsonView(), new ArrayView(), new MapView(), new NumberView(),
     new ExpressionView(), new YouTubeVideoView()
@@ -119,7 +185,7 @@ function renderObject(obj) {
 
     const matched = Views.map(view => ({ view, match: view.match(obj) })).filter(vm => vm.match > 0);
     matched.sort((a, b) => b.match - a.match);
-    return matched.length > 1 ?
-        new Frame(obj, matched.map(vm => vm.view)).render() :
-        matched[0].view.render(obj);
+    //return matched.length > 1 ?
+    return new Frame(obj, matched.map(vm => vm.view)).render();
+        //matched[0].view.render(obj);
 }
