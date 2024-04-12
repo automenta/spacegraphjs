@@ -157,16 +157,15 @@ class SpaceGraph {
     }
 
     addNode(content) {
-        const node = new WindowNode(content);
+        const viewContent = renderObject(content);
+        const node = new WindowNode(viewContent);
         const dom = node.dom[0];
-
         const cyNode = this.cy.add({
             group: 'nodes',
             data: { id: uuid(), dom: dom, domNode: node }
         });
 
         node.start(cyNode, this);
-
         return cyNode;
     }
 

@@ -9,6 +9,7 @@
     <script src="lm.js"></script>
     <script src="transform.js"></script>
     <script src="layout.js"></script>
+    <script src="view.js"></script>
     <script src="graph.js"></script>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/smartmenus/dist/css/sm-core-css.min.css">
@@ -36,9 +37,9 @@
 <script>
     document.addEventListener('DOMContentLoaded', () => {
 
-        const createInteractiveList = () => {
+        const createTODOList = () => {
             const container = $('<div>').appendTo('body');
-            const input = $('<input>', { type: 'text', placeholder: 'Enter your name' }).appendTo(container);
+            const input = $('<input>', { type: 'text', placeholder: 'TODO' }).appendTo(container);
             const button = $('<button>').text('Add').appendTo(container);
             const list = $('<ul>').appendTo(container);
 
@@ -84,16 +85,21 @@
 
         const s = new SpaceGraph($('#cy'));
         s.addNode($('<div>Normal content</div>'));
+
+        function demo(label, f) {
+            return $('<button>').text(label).click(() => s.addNode(f instanceof Function ? f() : f));
+        }
+
         s.addNode($('<div>')
-            .append($('<button>').text('Text Node').click(() => s.addNode($('<div>').text('Example Text Node'))))
-            .append($('<button>').text('List').click(() => s.addNode(createInteractiveList())))
+            .append(demo('Text Node', 'Example Text Node'))
+            .append($('<button>').text('TODO List').click(() => s.addNode(createTODOList())))
             .append($('<button>').text('Animation').click(() => s.addNode(createCanvasAnimation())))
-            .append($('<button>').text('Iframe Node').click(() => s.addNode($('<iframe>').attr({
-                src: 'https://wikipedia.org',
-                style: 'width:300px; height:200px;'
-            }))))
-            .append($('<button>').text('Random Content Node').click(() => s.addNode($('<div>').html('<strong>Random Content:</strong> ' + Math.random()))))
-            .append($('<button>').text('LM API').click(()=>s.addNode(lmUI())))
+            .append(demo('IFrame', 'https://wikipedia.org'))
+            .append($('<button>').text('Random Text').click(() => s.addNode($('<div>').html('<strong>Random Content:</strong> ' + Math.random()))))
+            .append($('<button>').text('LanguageModel').click(()=>s.addNode(lmUI())))
+            .append(demo('Image', 'https://www.wikipedia.org/portal/wikipedia.org/assets/img/Wikipedia-logo-v2@1.5x.png'))
+            .append(demo('Array', ['x', 'https://www.wikipedia.org/portal/wikipedia.org/assets/img/Wikipedia-logo-v2@1.5x.png', 228348274829748734]))
+            .append(demo('YouTube', 'https://youtu.be/ddbln7GHa0s'))
         );
 
         //s.addNode($('<iframe src="https://wikipedia.org" style="min-width: 100px; min-height: 100px; width:100%;height:100%"></iframe>'));
