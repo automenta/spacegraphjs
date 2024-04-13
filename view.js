@@ -90,63 +90,92 @@ class YouTubeVideoView extends View {
     }
 }
 
+class UnifiedContextMenu {
+    constructor() {
+        // No need to initialize the menuElement or set it as a member since it will be created and destroyed dynamically
+    }
+
+    show(node) {
+        this.menuElement = this.createMenu(node);
+        this.positionMenu(node);
+        $('body').append(this.menuElement);
+    }
+
+    createMenu(node) {
+        let menu = $('<div>', { class: 'context-menu', style: 'position: absolute; z-index: 100; padding: 10px; background: white; border: 1px solid #ccc;' });
+
+        // Populate menu with dynamic items based on the node
+        menu.append(this.createMenuItem('Edit', () => this.editAction(node)));
+        menu.append(this.createMenuItem('Delete', () => this.deleteAction(node)));
+
+        // Adding a global click listener to handle outside clicks to close the menu
+        $(document).on('click', (e) => {
+            if (!$(e.target).closest('.context-menu').length) {
+                this.close();
+            }
+        });
+
+        return menu;
+    }
+
+    createMenuItem(text, action) {
+        return $('<button>').text(text).on('click', (e) => {
+            e.stopPropagation();
+            action();
+            this.close();
+        });
+    }
+
+    positionMenu(node) {
+        const offset = $(node).offset();
+        this.menuElement.css({ top: offset.top + 30, left: offset.left });  // Adjust top as necessary
+    }
+
+    close() {
+        if (this.menuElement) {
+            this.menuElement.remove();  // Remove the menu from the DOM
+            this.menuElement = null;    // Ensure reference is cleared
+        }
+    }
+
+    editAction(node) {
+        console.log('Editing:', node);
+        // Implement edit logic
+    }
+
+    deleteAction(node) {
+        console.log('Deleting:', node);
+        // Implement delete logic
+    }
+}
+
+
 class Frame {
     constructor(obj, views) {
         this.obj = obj;
         this.views = views;
         this.currentView = views[0];
-        this.frameMenu = null;
-        this.contentContainer = null;
+        this.contextMenu = null;
     }
 
     render() {
-        const frame = $('<div class="frame" style="border: 1px solid transparent; transition: border-color 0.3s; position: relative;">');
-        const contentContainer = this.contentContainer =
-            $('<div class="content-container">')
-                .append(this.currentView.render(this.obj));
+        const frame = $('<div>', { class: 'frame', style: 'border: 1px solid transparent; position: relative;' });
+        const contentContainer = $('<div>', { class: 'content-container' }).append(this.currentView.render(this.obj));
+        const menuButton = $('<button>', { class: 'menu-toggle-button'}).html('&#9776;');
 
-
-        const menuButton = $('<button class="frameMenuButton" style="position: absolute; top: 5px; left: 5px; z-index: 50;">&#9776;</button>').on('click', (e) => {
-            e.stopPropagation(); // Prevent event from bubbling to frame hover out
-            if (this.frameMenu) {
-                this.frameMenu.remove();
-                this.frameMenu = null;
-            } else {
-                this.originalSize = { width: contentContainer.width(), height: contentContainer.height() };
-                frame.append(this.frameMenu = this.createMenu(frame, contentContainer));
-            }
+        menuButton.on('click', (e) => {
+            e.stopPropagation();
+            if (this.contextMenu) {
+                this.contextMenu.close();
+                this.contextMenu = null;
+            } else
+                (this.contextMenu = new UnifiedContextMenu()).show(frame);
         });
 
         frame.append(menuButton, contentContainer);
-
-        // Toggle visibility of menu button on hover
-        frame.hover(
-            function(e) {
-                e.stopPropagation();
-                menuButton.show();
-                frame.css('border-color', '#ccc'); // Show border on hover
-            },
-            function() {
-                menuButton.hide();
-                frame.css('border-color', 'transparent'); // Hide border when not hovering
-                if (this.frameMenu) {
-                    this.frameMenu.remove();
-                    this.frameMenu = null;
-                }
-            }
-        );
-
         return frame;
     }
 
-    createMenu(frame, contentContainer) {
-        const menu = $('<div class="frameMenu" style="position: absolute; top: 10px; left: 10px; background: white; border: 1px solid #ccc; padding: 10px; z-index: 100;">');
-        if (this.views.length > 1)
-            menu.append(this.createSelectElement());
-
-        menu.append(this.createScaleSlider());
-        return menu;
-    }
 
     createSelectElement() {
         const select = $('<select>');
@@ -163,6 +192,17 @@ class Frame {
         const originalSize = this.originalSize;
         const scaleSlider = $('<input type="range" min="0.5" max="2" step="0.05" value="1" style="width:100%;">').on('input', function(){
             const scale = parseFloat(this.value);
+
+            /* Alternative Scaling Methods
+                Instead of using CSS transform, consider directly manipulating the relevant styling properties like width, height, and font-size. This approach will cause reflow and adjustments in the document's layout, effectively resizing the content as if it were naturally that size.
+
+                3. JavaScript-driven Layout Adjustments
+                A more complex, but flexible solution involves using JavaScript to dynamically calculate and adjust the spacing around the transformed element based on its visual size. This can be done by listening to size changes and adjusting the margins or positioning accordingly.
+
+                4. Use CSS Grid or Flexbox
+                For layouts that might benefit from dynamic resizing, using a layout system like CSS Grid or Flexbox can help by allowing elements to grow and shrink within the confines of a more flexible container. This doesn't solve the transform issue directly but can make the surrounding layout more adaptive.
+
+                Each of these solutions has its trade-offs between simplicity, performance, and flexibility. You'll need to choose based on the specific needs and constraints of your project. */
             cc.css({
                 'transform': `scale(${scale})`,
                 'width': originalSize.width * scale,

@@ -86,21 +86,19 @@
 
 
         const s = new SpaceGraph($('#cy'));
-        s.addNode($('<div>Normal content</div>'));
 
         function demo(label, f) {
             return $('<button>').text(label).click(() => s.addNode(f instanceof Function ? f() : f));
         }
-
         s.addNode($('<div>')
-            .append(demo('Text Node', 'Example Text Node'))
-            .append($('<button>').text('TODO List').click(() => s.addNode(createTODOList())))
-            .append($('<button>').text('Animation').click(() => s.addNode(createCanvasAnimation())))
-            .append(demo('IFrame', 'https://wikipedia.org'))
-            .append($('<button>').text('Random Text').click(() => s.addNode($('<div>').html('<strong>Random Content:</strong> ' + Math.random()))))
-            .append($('<button>').text('LanguageModel').click(()=>s.addNode(lmUI())))
+            .append(demo('Text', 'Example Text Node'))
             .append(demo('Image', 'https://www.wikipedia.org/portal/wikipedia.org/assets/img/Wikipedia-logo-v2@1.5x.png'))
             .append(demo('Array', ['x', 'https://www.wikipedia.org/portal/wikipedia.org/assets/img/Wikipedia-logo-v2@1.5x.png', 228348274829748734]))
+            .append(demo('TODOs', () => s.addNode(createTODOList())))
+            .append(demo('Anim', () => s.addNode(createCanvasAnimation())))
+            .append(demo('IFrame', 'https://wikipedia.org'))
+            .append(demo('Random', () => s.addNode($('<div>').html('<strong>Random Content:</strong> ' + Math.random()))))
+            .append(demo('LM', ()=>s.addNode(lmUI())))
             .append(demo('YouTube', 'https://youtu.be/ddbln7GHa0s'))
         );
 

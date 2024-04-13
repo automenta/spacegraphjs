@@ -32,3 +32,15 @@ select, input[type="range"] {
 .frameMenuButton:hover {
     background: #ddd;
 }
+
+.menu-toggle-button {
+    position: absolute;
+    padding: 0;
+    opacity: 0.75;
+    z-index: 50;
+    border: 0;
+}
+.menu-toggle-button:hover {
+    opacity: 1;
+    border: 1px solid gray;
+}
