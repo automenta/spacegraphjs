@@ -1,9 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Language Model Mind Map</title>
+    <title>-</title>
+
     <script src="https://unpkg.com/jquery/dist/jquery.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
+
     <script src="https://unpkg.com/cytoscape/dist/cytoscape.min.js"></script>
+
     <script src="cytoscape-dom-node.js"></script>
 
     <script src="lm.js"></script>
@@ -87,6 +92,22 @@
 
         const s = new SpaceGraph($('#cy'));
 
+        s.addNode($('<div><h1>Node 1</h1></div>'), [
+            { id: 'portA', label: 'In1', data: { relativePosition: { x: -1.25, y: 0.5 }}},
+            { id: 'portB', label: 'In2', data: { relativePosition: { x: -1.25, y: -0.5 }}},
+            { id: 'portZ', label: 'Out', data: { relativePosition: { x: +1.25, y: 0 }} }
+        ]);
+        s.addNode($('<div><h1>Node 2</h1></div>'), [
+            { id: 'portA', label: 'In1', data: { relativePosition: { x: -1.25, y: 0.5 }}},
+            { id: 'portB', label: 'In2', data: { relativePosition: { x: -1.25, y: -0.5 }}},
+            { id: 'portZ', label: 'Out', data: { relativePosition: { x: +1.25, y: 0 }} }
+        ]);
+
+        const p = new Plugins();
+        p.add(new TransformPlugin('uppercase', async x => x.toUpperCase()));
+        p.add(new TransformPlugin('lowercase', async x => x.toLowerCase()));
+        //p.add(new TransformPlugin('reverse',   async TODO));
+
         function demo(label, f) {
             return $('<button>').text(label).click(() => s.addNode(f instanceof Function ? f() : f));
         }
@@ -102,10 +123,10 @@
             .append(demo('YouTube', 'https://youtu.be/ddbln7GHa0s'))
         );
 
-        //s.addNode($('<iframe src="https://wikipedia.org" style="min-width: 100px; min-height: 100px; width:100%;height:100%"></iframe>'));
-
         menuInit();
         //new Layout(s.cy);
+
+        s.cy.layout({name: 'random'}).run();
     });
 
 </script>

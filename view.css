@@ -1,46 +1,34 @@
 .frame {
     position: relative;
-    z-index: 5000;
-    width: 100%; height: 100%;
-}
-
-.frameMenu {
-    position: absolute;
-    top: -5em;
+    border: 1px solid #ccc;
 }
 
 .content-container {
-    transition: transform 0.3s ease-in-out;
-    transform-origin: top left;
+    user-select: text;
 }
 
-/* Optionally, ensure select and input elements match your UI's style */
-select, input[type="range"] {
-    border: 1px solid #ccc;
-    padding: 4px 8px;
-    margin-top: 10px; /* Spacing between the content and controls */
+.array-container {
+    display: flex;
+    flex-direction: column;
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 10px;
 }
 
-.frameMenuButton {
-    display: none;
-    background: #eee;
-    border: none;
-    cursor: pointer;
-    padding: 5px 10px;
+.array-header {
+    font-weight: bold;
+    margin-bottom: 5px;
 }
 
-.frameMenuButton:hover {
-    background: #ddd;
+.array-item-list {
+    list-style-type: none;
+    padding-left: 20px;
 }
 
-.menu-toggle-button {
-    position: absolute;
-    padding: 0;
-    opacity: 0.75;
-    z-index: 50;
-    border: 0;
+.array-item {
+    margin-bottom: 10px;
 }
-.menu-toggle-button:hover {
-    opacity: 1;
-    border: 1px solid gray;
+
+.array-item > .frame {
+    margin-left: 20px;
 }

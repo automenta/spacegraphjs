@@ -40,9 +40,18 @@ class JsonView extends View {
 class ArrayView extends View {
     match(obj) { return Array.isArray(obj) ? 1 : 0; }
     render(obj) {
-        const ul = $('<ul>');
-        obj.forEach(item => ul.append($('<li>').append(renderObject(item))));
-        return ul;
+        const container = $('<div>', { class: 'array-container' });
+        const header = $('<div>', { class: 'array-header' }).text('Array');
+        const itemList = $('<ul>', { class: 'array-item-list' });
+
+        obj.forEach(item => {
+            const listItem = $('<li>', { class: 'array-item' });
+            listItem.append(render(item));
+            itemList.append(listItem);
+        });
+
+        container.append(header, itemList);
+        return container;
     }
 }
 
@@ -50,7 +59,7 @@ class MapView extends View {
     match(obj) { return obj instanceof Map ? 1 : 0; }
     render(obj) {
         const table = $('<table>');
-        obj.forEach((value, key) => table.append($('<tr>').append($('<td>').text(key), $('<td>').append(renderObject(value)))));
+        obj.forEach((value, key) => table.append($('<tr>').append($('<td>').text(key), $('<td>').append(render(value)))));
         return table;
     }
 }
@@ -71,7 +80,6 @@ class YouTubeVideoView extends View {
     match(obj) { return isURL(obj) && (obj.includes('youtube.com') || obj.includes('youtu.be')) ? 2 : 0; }
     render(obj) {
         const videoId = obj.split(obj.includes('youtu.be') ? 'youtu.be/' : 'v=')[1].split('&')[0];
-        console.log(obj, videoId);
         const embedUrl = `https://www.youtube.com/embed/${videoId}`;
         return $('<iframe>').attr({
             src: embedUrl,
@@ -92,27 +100,29 @@ class YouTubeVideoView extends View {
 
 class UnifiedContextMenu {
     constructor() {
-        // No need to initialize the menuElement or set it as a member since it will be created and destroyed dynamically
+        this.menuElement = null;
     }
 
     show(node) {
+        this.close(); // Close any existing menu before showing a new one
         this.menuElement = this.createMenu(node);
         this.positionMenu(node);
         $('body').append(this.menuElement);
+        //$(document).on('click', this.close);
     }
 
     createMenu(node) {
-        let menu = $('<div>', { class: 'context-menu', style: 'position: absolute; z-index: 100; padding: 10px; background: white; border: 1px solid #ccc;' });
+        let menu = $('<div>', { class: 'context-menu', style: 'position: absolute; z-index: 100; background: white; border: 1px solid #ccc; padding: 0.5em;' });
+
+        menu.append($('<button>').html('x').click(()=>this.close()));
 
         // Populate menu with dynamic items based on the node
         menu.append(this.createMenuItem('Edit', () => this.editAction(node)));
         menu.append(this.createMenuItem('Delete', () => this.deleteAction(node)));
 
-        // Adding a global click listener to handle outside clicks to close the menu
-        $(document).on('click', (e) => {
-            if (!$(e.target).closest('.context-menu').length) {
-                this.close();
-            }
+        // Adding a click listener to the menu to prevent it from closing when clicked inside
+        menu.on('click', (e) => {
+            e.stopPropagation();
         });
 
         return menu;
@@ -128,13 +138,30 @@ class UnifiedContextMenu {
 
     positionMenu(node) {
         const offset = $(node).offset();
-        this.menuElement.css({ top: offset.top + 30, left: offset.left });  // Adjust top as necessary
+        const menuWidth = this.menuElement.outerWidth();
+        const menuHeight = this.menuElement.outerHeight();
+        const windowWidth = $(window).width();
+        const windowHeight = $(window).height();
+
+        let left = offset.left + 10;
+        let top = offset.top + 10;
+
+        // Adjust the position if the menu would overflow the window
+        if (left + menuWidth > windowWidth) {
+            left = windowWidth - menuWidth - 10;
+        }
+        if (top + menuHeight > windowHeight) {
+            top = windowHeight - menuHeight - 10;
+        }
+
+        this.menuElement.css({ top: top, left: left });
     }
 
     close() {
         if (this.menuElement) {
-            this.menuElement.remove();  // Remove the menu from the DOM
-            this.menuElement = null;    // Ensure reference is cleared
+            this.menuElement.remove();
+            this.menuElement = null;
+            //$(document).off('click', this.close); // Unbind when the menu is closed
         }
     }
 
@@ -149,7 +176,6 @@ class UnifiedContextMenu {
     }
 }
 
-
 class Frame {
     constructor(obj, views) {
         this.obj = obj;
@@ -159,24 +185,23 @@ class Frame {
     }
 
     render() {
-        const frame = $('<div>', { class: 'frame', style: 'border: 1px solid transparent; position: relative;' });
+        const frame = $('<div>', { class: 'frame' });
         const contentContainer = $('<div>', { class: 'content-container' }).append(this.currentView.render(this.obj));
-        const menuButton = $('<button>', { class: 'menu-toggle-button'}).html('&#9776;');
 
-        menuButton.on('click', (e) => {
-            e.stopPropagation();
+        frame.on('contextmenu', (e) => {
+            e.preventDefault();
             if (this.contextMenu) {
                 this.contextMenu.close();
                 this.contextMenu = null;
-            } else
-                (this.contextMenu = new UnifiedContextMenu()).show(frame);
+            } else {
+                this.contextMenu = new UnifiedContextMenu();
+                this.contextMenu.show(frame);
+            }
         });
 
-        frame.append(menuButton, contentContainer);
+        frame.append(contentContainer);
         return frame;
     }
-
-
     createSelectElement() {
         const select = $('<select>');
         this.views.forEach((view, index) => select.append($('<option>', { value: index, text: view.constructor.name })));
@@ -219,7 +244,7 @@ const Views = [
     new ExpressionView(), new YouTubeVideoView()
 ];
 
-function renderObject(obj) {
+function render(obj) {
     if (obj instanceof HTMLElement) return obj;
     if (obj.jquery) return obj[0]; //unwrap jquery element
 
@@ -228,4 +253,101 @@ function renderObject(obj) {
     //return matched.length > 1 ?
     return new Frame(obj, matched.map(vm => vm.view)).render();
         //matched[0].view.render(obj);
+}
+
+class TransformUI {
+    constructor(pluginRegistry) {
+        this.pluginRegistry = pluginRegistry;
+        $('#transformer-ui').empty().append(`
+            <h2>Data Transform</h2>
+            <select id="data-processing-options"></select>
+            <button id="run-button">Run</button>
+            <div id="output-options-section" style="display:none;">
+                <label for="output-options">Output Options:</label>
+                <select id="output-options">
+                    <option value="new-node">Create New Node</option>
+                    <option value="replace-content">Replace Current Node Content</option>
+                </select>
+            </div>
+            <h3>Preview:</h3>
+            <div id="preview" style="display:none;"></div>
+            <button id="save-transform-button">Save</button>
+            <button id="close-transform-button" style="position:absolute; right:0; top:0;">X</button>
+        `);
+        this.populateDataProcessingOptions();
+        this.setupEventListeners();
+    }
+
+    populateDataProcessingOptions() {
+        const options = this.pluginRegistry.getAllPlugins().map(plugin =>
+            `<option value="${plugin.name}">${plugin.name}</option>`
+        ).join('');
+        $('#data-processing-options').html(options);
+        // Re-bind the change event to hide Output Options and Preview on option change
+        $('#data-processing-options').change(() => {
+            $('#output-options-section').hide();
+            $('#preview').hide();
+            // Reset Save button visibility
+            $('#save-transform-button').hide();
+        });
+    }
+
+    saveTransform() {
+        const outputMode = $('#output-options').val();
+        this.onOutput(this.output, outputMode)
+        this.closeTransform();
+    }
+
+    closeTransform() {
+        $('#transformer-ui').hide();
+        this.input = null;
+        this.output = null;
+        this.onOutput = null;
+    }
+
+    setupEventListeners() {
+        $('#run-button').click(this.runTransform.bind(this));
+        $('#save-transform-button').click(this.saveTransform.bind(this));
+        $('#close-transform-button').click(this.closeTransform.bind(this));
+        $('#data-processing-options').change(() => {
+            this.resetUI(); // Additional method to reset UI elements
+        });
+    }
+    resetUI() {
+        // Hide Output Options and Preview initially or on options change
+        $('#preview').hide();
+        $('#output-options-section').hide();
+        $('#save-transform-button').hide(); // Ensure this is also hidden if needed
+    }
+    async runTransform() {
+        const pluginName = $('#data-processing-options').val();
+        const plugin = this.pluginRegistry.getPluginByName(pluginName);
+
+        if (!plugin) return this.showFeedback('Plugin not found', 'error');
+
+        $('#run-button').prop('disabled', true);
+        try {
+            const content = await plugin.run(this.input);
+            if (content) {
+                this.output = content;
+                $('#preview').text(content).show();
+                $('#output-options-section').show(); // Only show after successful transform
+                $('#save-transform-button').show();
+                this.showFeedback('Transformation complete', 'success');
+            }
+        } catch (error) {
+            this.showFeedback('Error during transformation:' + error, 'error');
+        } finally {
+            $('#run-button').prop('disabled', false);
+        }
+    }
+
+    showFeedback(message, type) {
+        const feedbackDiv = $('<div>').addClass('feedback-message').text(message);
+        if (type === 'error') {
+            feedbackDiv.css('background', '#dc3545'); // Red for errors
+        }
+        $('body').append(feedbackDiv);
+        setTimeout(() => feedbackDiv.remove(), 3000); // Remove after 3 seconds
+    }
 }

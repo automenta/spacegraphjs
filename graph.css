@@ -95,34 +95,24 @@ canvas {
 
 .node-menu-frame {
     position: absolute;
-    top: -30px;
-    left: 0;
-    right: 0;
+    top: -1em; /* Align to the top of the window */
+    height: 1em;
     display: flex;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 0.2s;
+    background-color: transparent; /* Optional: makes the frame less obtrusive */
 }
 
+.node-menu-frame button {
+    font-size: 75%;
+    padding: 0;
+    margin: 0;
+    border-radius: 0; /* Remove rounded corners */
+}
 .node-content:hover .node-menu-frame {
     opacity: 1;
 }
 
-.node-menu-frame button {
-    border: 1px solid #ccc;
-    border-radius: 50%;
-    width: 24px;
-    height: 24px;
-    margin: 0 2px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
 .node-menu-frame button:hover {
-    background-color: #306030;
+    background-color: #604040;
 }
 
 

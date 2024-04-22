@@ -16,32 +16,78 @@ const editorShow = (callback, initialText = '') => {
 
 
 class WindowNode {
-    constructor(content) {
+    constructor(id, content, s, ports = []) {
+        this.id = id;
+        this.ports = ports;
+        //this.spaceGraph = s;
+
         this.inner = typeof content === 'string' ?
-            $('<div class="node-content-inner" contenteditable="true">').append(content) :
+            $('<div class="node-content-inner" contenteditable="true">').text(content) :
             $(content);
 
         this.menuFrame = $('<div class="node-menu-frame">');
+        this.menuFrame.hide();
 
-        this.dom = $('<div class="node-content">').append(
-            this.inner, this.menuFrame, newResizeGrip());
+        this.dom = $('<div class="node-content">').append(this.inner, this.menuFrame, newResizeGrip());
 
-    }
-
-    /** TODO make MenuFrame singleton/shared, or lazily constructed */
-    start(node, nodeManager) {
+        /*if (ports.length > 0) {
+            this.dom.addClass('compound');
+            ports.forEach((port) => {
+                const portNode = $('<div>').addClass('port').text(port.label);
+                this.dom.append(portNode);
+            });
+        }*/
 
         const editButton = $('<button id="edit-button">&#128394;</button>')
             .on('click', () => editorShow(x => this.inner.text(x), this.inner.text()));
 
         const removeButton = $('<button id="remove-button">&#128465;</button>')
-            .on('click', () => nodeManager.removeNodeConfirm(node));
+            .on('click', () => s.removeNodeConfirm(id));
 
         const transformButton = $('<button id="transform-button">&#9881;</button>')
-            .on('click', () => nodeManager.openTransformer(node));
+            .on('click', () => s.openTransformer(id));
 
-        this.menuFrame.append(transformButton, editButton, removeButton);
+
+        const contextMenuButton = $('<button id="context-menu-button">&#9776;</button>')
+            .on('click', (e) => {
+                e.stopPropagation(); // Prevent the canvas click handler from firing
+                this.openContextMenu();
+            });
+        this.menuFrame.append(transformButton, editButton, removeButton, contextMenuButton);
+
+        let compound = this.ports && this.ports.length > 0;
+        if (compound) {
+            compound = s.cy.add({
+                group: 'nodes',
+                classes: compound ? 'compound' : '',
+                grabbable: false
+            });
+        }
+
+        this.node = s.cy.add({
+            group: 'nodes',
+            data: { id: this.id, dom: this.dom[0], domNode: this, parent: (compound ? compound.id() : undefined) },
+        });
+
+        this.ports = compound ? this.ports.map(port => {
+            let p = {
+                group: 'nodes',
+                data: port.data,
+                classes: 'port',
+                grabbable: false
+            };
+            p.data.id = `${this.id}-${port.id}`;
+            p.data.parent = compound.id();
+            //p.data.label = '~';
+            return s.cy.add(p);
+        }) : undefined;
+        this.node.data('ports', this.ports);
     }
+
+    openContextMenu() {
+        new UnifiedContextMenu().show(this.menuFrame);
+    }
+
 }
 
 
@@ -132,12 +178,20 @@ class SpaceGraph {
                 {
                     selector: 'edge',
                     style: {
-                        'curve-style': 'bezier',
+                        width: 6,
+                        //'curve-style': 'bezier',
+                        //'curve-style': 'unbundled-bezier',
+                        "curve-style": "unbundled-bezier",
+                        "control-point-distances": [40, -40],
+                        "control-point-weights": [0.250, 0.75],
+                        'line-color': 'green',
+                        'target-arrow-color': 'blue',
+                        'source-arrow-color': 'red',
                         'target-arrow-shape': 'triangle',
-                        'label': 'data(content)',
+                        //'label': 'data(content)',
                         'text-wrap': 'wrap',
                         'text-max-width': '200px',
-                        'font-size': '12px',
+                        //'font-size': '12px',
                         'text-margin-x': '10px', 'text-margin-y': '10px',
                         'text-rotation': 'autorotate'
                     }
@@ -145,6 +199,111 @@ class SpaceGraph {
             ]
         });
         cy.domNode();
+        // const eh = cy.edgehandles({
+        //     handleNodes: 'port',  // Only nodes with class 'port' will have handles
+        //     canConnect: function(sourceNode, targetNode) {
+        //         // Allow edge creation only between ports
+        //         if (sourceNode == targetNode)  return null;
+        //         if (sourceNode.hasClass('port') && targetNode.hasClass('port')) {
+        //             return 'flat';  // Returns the type of edges to create between ports
+        //         }
+        //         return null;  // Prevents edge creation for non-port connections
+        //     },
+        //     handlePosition: 'middle', // Positions the handle at the middle of the nodes
+        //     handleInDrawMode: false,  // Determines if handles should appear in draw mode
+        //     complete: function(sourceNode, targetNode, addedEles) {
+        //         // Optional: handle completion of edge creation
+        //         if (sourceNode.hasClass('port') && targetNode.hasClass('port')) {
+        //             addedEles.data('label', 'Connection');
+        //         }
+        //     },
+        //     // Defines the edge type for the newly created edges
+        //     edgeParams: function(sourceNode, targetNode, i){
+        //         // Optional function to define edge parameters
+        //         return {
+        //             data: { label: 'New Edge', source: sourceNode.id(), target: targetNode.id() }
+        //         };
+        //     }
+        // });
+        // eh.enableDrawMode();
+        cy.style()
+            .selector('.compound')
+            .style({
+                'background-opacity': '0',
+                'border-color': 'blue','border-opacity': 0.25
+            })
+            // .selector('.eh-handle')
+            // .style({
+            //     'background-color': 'red',
+            //     'width': 12,
+            //     'height': 12,
+            //     'shape': 'ellipse',
+            //     'overlay-opacity': 0,
+            //     'border-width': 12, // Makes the handle larger for easier grabbing
+            //     'border-opacity': 0
+            // })
+            // .selector('.eh-hover')
+            // .style({
+            //     'background-color': 'blue'
+            // })
+            // .selector('.eh-source')
+            // .style({
+            //     'border-width': 2,
+            //     'border-color': 'red'
+            // })
+            // .selector('.eh-target')
+            // .style({
+            //     'border-width': 2,
+            //     'border-color': 'green'
+            // })
+            // .selector('.eh-preview, .eh-ghost-edge')
+            // .style({
+            //     'background-color': 'red',
+            //     'line-color': 'red',
+            //     'target-arrow-color': 'red',
+            //     'source-arrow-color': 'red'
+            //})
+            .update();
+
+        /*var cee = new CytoscapeEdgeEditation;  //https://github.com/sitnarf/fork-cytoscape.js-edge-editation?tab=readme-ov-file#how-to-use
+        cee.init(cy);
+        cee.registerHandle({
+            positionX: "center",          //horizontal position of the handle  (left | center | right)
+            positionY: "center",        //vertical position of the handle  (top | center | bottom)
+            color: "#48FF00",           //color of the handle
+            type: "port",          //stored as data() attribute, can be used for styling
+            nodeTypeNames: ["port"],    //which types of nodes will contain this handle
+            single: true,               //wheter only one edge of this type can start from same node (default false)
+            noMultigraph: false         //whereter two nodes can't be connected with multiple edges (does not consider orientation)
+        });*/
+
+        this.initEdgeHandling(cy);
+
+        function updatePortPositions(node) {
+             //TODO select only 'port' children
+            let nodeWidth = node.outerWidth();
+            let nodeHeight = node.outerHeight();
+            let nodePos = node.position();
+
+            node.data('ports').forEach(port => {
+                const relativePos = port.data('relativePosition'); // Assuming this data attribute exists
+                let nx = nodePos.x + relativePos.x * nodeWidth/2;
+                let ny = nodePos.y + relativePos.y * nodeHeight/2;
+                //const pp = port.position();
+                port.position({
+                    x: nx,
+                    y: ny
+                });
+            });
+        }
+
+        const updateIfHasPorts = function(evt) {
+            let node = evt.target;
+            if (node.data('ports'))
+                updatePortPositions(node);
+        };
+        cy.on('position bounds add'/*'position bounds add', 'node'*/, updateIfHasPorts);
+
         cy.on('tap', 'node', this.onNodeTap.bind(this));
         cy.on('tap', this.onCanvasTap.bind(this));
         cy.on('dragfreeon', 'node', this.menuHide.bind(this));
@@ -153,20 +312,71 @@ class SpaceGraph {
         cy.on('mouseout', 'node', this.onNodeMouseOut.bind(this));
         cy.on('cxttap', 'node', this.onNodeRightClick.bind(this));
 
+
         this.cy = cy;
     }
 
-    addNode(content) {
-        const viewContent = renderObject(content);
-        const node = new WindowNode(viewContent);
-        const dom = node.dom[0];
-        const cyNode = this.cy.add({
-            group: 'nodes',
-            data: { id: uuid(), dom: dom, domNode: node }
+    initEdgeHandling(cy) {
+
+        const overlay = $('<svg style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:50000;"></svg>');
+        $(cy.container()).parent().prepend(overlay);
+        this.overlayLine = $(document.createElementNS('http://www.w3.org/2000/svg', 'line'))
+            .attr('stroke', 'orange')
+            .attr('stroke-width', 2)
+            .hide();
+        overlay.append(this.overlayLine);
+
+        let sourceNode = null;
+
+        cy.on('mousedown', 'node.port', (event) => {
+            sourceNode = event.target;
+            const sourcePos = sourceNode.renderedPosition();
+            this.overlayLine.attr({
+                'x1': sourcePos.x,
+                'y1': sourcePos.y,
+                'x2': sourcePos.x,
+                'y2': sourcePos.y
+            }).show();
         });
 
-        node.start(cyNode, this);
-        return cyNode;
+        cy.on('mousemove', (event) => {
+            if (!sourceNode) return;
+            this.overlayLine.attr('x2', event.renderedPosition.x).attr('y2', event.renderedPosition.y);
+        });
+
+        cy.on('mouseup', 'node.port', (event) => {
+            if (sourceNode && sourceNode !== event.target) {
+                cy.add({
+                    group: 'edges',
+                    data: {
+                        id: `e${uuid()}`,
+                        source: sourceNode.id(),
+                        target: event.target.id(),
+                    },
+                    classes: 'edge'
+                });
+            }
+            sourceNode = null;
+            this.overlayLine.hide();
+        });
+
+        cy.on('mouseup', (event) => {
+            if (sourceNode) {
+                sourceNode = null;
+                this.overlayLine.hide();
+            }
+        });
+
+        cy.on('tap', 'edge', (event) => {
+            const edge = event.target;
+            if (window.confirm('Are you sure you want to delete this edge?')) {
+                edge.remove();
+            }
+        });
+    }
+
+    addNode(content, ports = []) {
+        return new WindowNode(uuid(), render(content), this, ports).node;
     }
 
     removeNode(node) {
@@ -197,18 +407,19 @@ class SpaceGraph {
     }
 
     onNodeTap(evt) {
-        const n = evt.target;
-        const f = n.data('domNode').menuFrame;
-
-        const nw = n.outerWidth(), nh = n.outerHeight();
-        const np = n.renderedPosition();
-        f.css({
-            display: 'block',
-            left: np.x + nw / 2,
-            top:  np.y - nh / 2 - f.outerHeight()
-        });
+        this.menuShow(evt.target);
     }
 
+    menuShow(n) {
+        const dom = n.data('domNode');
+        if (dom) {
+            const f = dom.menuFrame;
+
+            const nw = n.outerWidth(), nh = n.outerHeight();
+            const np = n.renderedPosition();
+            f.css({display: 'flex',});
+        }
+    }
 
     onCanvasTap(evt) {
         if (evt.target === this.cy) {
@@ -217,7 +428,7 @@ class SpaceGraph {
     }
 
     menuHide() {
-        $('#menu-frame').hide();
+        $('.node-menu-frame').hide();
     }
 
     addNodeAtCursor(evt) {
@@ -230,11 +441,13 @@ class SpaceGraph {
     }
 
     onNodeMouseOver(evt) {
-        evt.target.style('border-width', '3px');
+        evt.target.style('border-width', '5px');
+        this.menuShow(evt.target);
     }
 
     onNodeMouseOut(evt) {
         evt.target.style('border-width', '1px');
+        this.menuHide();
     }
 
     onNodeRightClick(evt) {
