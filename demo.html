@@ -91,16 +91,21 @@
 
 
         const s = new SpaceGraph($('#cy'));
-
+        s.addNode($('<div><h1>Generator</h1></div>'), [
+            { label: 'Out', type: 'string', relativePosition: { x: +1.25, y: 0 } }
+        ]);
+        s.addNode($('<div><h1>Display</h1></div>'), [
+            { label: 'In', type: 'string', relativePosition: { x: -1.25, y: 0 } }
+        ]);
         s.addNode($('<div><h1>Node 1</h1></div>'), [
-            { id: 'portA', label: 'In1', data: { relativePosition: { x: -1.25, y: 0.5 }}},
-            { id: 'portB', label: 'In2', data: { relativePosition: { x: -1.25, y: -0.5 }}},
-            { id: 'portZ', label: 'Out', data: { relativePosition: { x: +1.25, y: 0 }} }
+            { label: 'In1', relativePosition: { x: -1.25, y: 0.5 }},
+            { label: 'In2', relativePosition: { x: -1.25, y: -0.5 }},
+            { label: 'Out', relativePosition: { x: +1.25, y: 0 } }
         ]);
         s.addNode($('<div><h1>Node 2</h1></div>'), [
-            { id: 'portA', label: 'In1', data: { relativePosition: { x: -1.25, y: 0.5 }}},
-            { id: 'portB', label: 'In2', data: { relativePosition: { x: -1.25, y: -0.5 }}},
-            { id: 'portZ', label: 'Out', data: { relativePosition: { x: +1.25, y: 0 }} }
+            { label: 'In1', relativePosition: { x: -1.25, y: 0.5 }},
+            { label: 'In2', relativePosition: { x: -1.25, y: -0.5 }},
+            { label: 'Out', relativePosition: { x: +1.25, y: 0 } }
         ]);
 
         const p = new Plugins();

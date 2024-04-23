@@ -19,7 +19,6 @@ class WindowNode {
     constructor(id, content, s, ports = []) {
         this.id = id;
         this.ports = ports;
-        //this.spaceGraph = s;
 
         this.inner = typeof content === 'string' ?
             $('<div class="node-content-inner" contenteditable="true">').text(content) :
@@ -30,14 +29,6 @@ class WindowNode {
 
         this.dom = $('<div class="node-content">').append(this.inner, this.menuFrame, newResizeGrip());
 
-        /*if (ports.length > 0) {
-            this.dom.addClass('compound');
-            ports.forEach((port) => {
-                const portNode = $('<div>').addClass('port').text(port.label);
-                this.dom.append(portNode);
-            });
-        }*/
-
         const editButton = $('<button id="edit-button">&#128394;</button>')
             .on('click', () => editorShow(x => this.inner.text(x), this.inner.text()));
 
@@ -46,7 +37,6 @@ class WindowNode {
 
         const transformButton = $('<button id="transform-button">&#9881;</button>')
             .on('click', () => s.openTransformer(id));
-
 
         const contextMenuButton = $('<button id="context-menu-button">&#9776;</button>')
             .on('click', (e) => {
@@ -60,7 +50,8 @@ class WindowNode {
             compound = s.cy.add({
                 group: 'nodes',
                 classes: compound ? 'compound' : '',
-                grabbable: false
+                grabbable: false,
+                selectable: false
             });
         }
 
@@ -70,17 +61,19 @@ class WindowNode {
         });
 
         this.ports = compound ? this.ports.map(port => {
-            let p = {
+            return s.cy.add({
                 group: 'nodes',
-                data: port.data,
                 classes: 'port',
-                grabbable: false
-            };
-            p.data.id = `${this.id}-${port.id}`;
-            p.data.parent = compound.id();
-            //p.data.label = '~';
-            return s.cy.add(p);
+                grabbable: false,
+                data: {
+                    id: `${this.id}-${port.id || uuid()}`,
+                    parent: compound.id(),
+                    label: port.label || '',
+                    relativePosition: port.relativePosition
+                }
+            });
         }) : undefined;
+
         this.node.data('ports', this.ports);
     }
 
@@ -91,56 +84,58 @@ class WindowNode {
 }
 
 
-function startResize(event) {
-    if(event.button !== 0) return; // Ignore right-clicks
 
-    const DOM = $(event.target.parentNode.parentNode);
-    const gripClass = event.target.classList[1];
-
-    const startWidth = DOM.width(), startHeight = DOM.height();
-    const startX = event.clientX,   startY = event.clientY;
-
-    const L = gripClass.includes('left'), T = gripClass.includes('top');
-
-    function resize(event) {
-        const dx = event.clientX - startX, dy = event.clientY - startY;
-
-        let newWidth, newHeight;
-
-        if (L) {
-            newWidth = startWidth - dx;
-            //DOM.css('left', `+=${deltaX}`/*px*/); //?
-        } else {
-            newWidth = startWidth + dx;
-        }
-
-        if (T) {
-            newHeight = startHeight - dy;
-            //DOM.css('top', `+=${deltaY}`/*px*/); //?
-        } else {
-            newHeight = startHeight + dy;
-        }
-
-        DOM.css({
-            width: newWidth, // + 'px',
-            height: newHeight// + 'px'
-        });
-    }
-
-    const BODY = $('body'), DOC = $(document);
-    BODY.addClass('no-select');
-
-    function stopResize() {
-        DOC.off('mousemove', resize).off('mouseup', stopResize);
-        BODY.removeClass('no-select');
-    }
-
-    DOC.on('mousemove', resize).on('mouseup', stopResize);
-}
 
 function newResizeGrip() {
     function gCls(x) {
         return '<div class="resize-grip resize-grip-' + x + '"></div>';
+    }
+
+    function startResize(event) {
+        if(event.button !== 0) return; // Ignore right-clicks
+
+        const DOM = $(event.target.parentNode.parentNode);
+        const gripClass = event.target.classList[1];
+
+        const startWidth = DOM.width(), startHeight = DOM.height();
+        const startX = event.clientX,   startY = event.clientY;
+
+        const L = gripClass.includes('left'), T = gripClass.includes('top');
+
+        function resize(event) {
+            const dx = event.clientX - startX, dy = event.clientY - startY;
+
+            let newWidth, newHeight;
+
+            if (L) {
+                newWidth = startWidth - dx;
+                //DOM.css('left', `+=${deltaX}`/*px*/); //?
+            } else {
+                newWidth = startWidth + dx;
+            }
+
+            if (T) {
+                newHeight = startHeight - dy;
+                //DOM.css('top', `+=${deltaY}`/*px*/); //?
+            } else {
+                newHeight = startHeight + dy;
+            }
+
+            DOM.css({
+                width: newWidth, // + 'px',
+                height: newHeight// + 'px'
+            });
+        }
+
+        const BODY = $('body'), DOC = $(document);
+        BODY.addClass('no-select');
+
+        function stopResize() {
+            DOC.off('mousemove', resize).off('mouseup', stopResize);
+            BODY.removeClass('no-select');
+        }
+
+        DOC.on('mousemove', resize).on('mouseup', stopResize);
     }
 
     return $('<div class="resize-grips">').append(
@@ -179,130 +174,62 @@ class SpaceGraph {
                     selector: 'edge',
                     style: {
                         width: 6,
-                        //'curve-style': 'bezier',
-                        //'curve-style': 'unbundled-bezier',
-                        "curve-style": "unbundled-bezier",
-                        "control-point-distances": [40, -40],
-                        "control-point-weights": [0.250, 0.75],
+                        'curve-style': 'straight',
+                        //"curve-style": "unbundled-bezier",
+                        //"control-point-distances": [40, -40],
+                        //"control-point-weights": [0.250, 0.75],
                         'line-color': 'green',
                         'target-arrow-color': 'blue',
                         'source-arrow-color': 'red',
                         'target-arrow-shape': 'triangle',
                         //'label': 'data(content)',
-                        'text-wrap': 'wrap',
-                        'text-max-width': '200px',
+                        //'text-wrap': 'wrap',
+                        //'text-max-width': '200px',
                         //'font-size': '12px',
-                        'text-margin-x': '10px', 'text-margin-y': '10px',
+                        //'text-margin-x': '10px', 'text-margin-y': '10px',
                         'text-rotation': 'autorotate'
                     }
+                },
+                {
+                    selector: '.compound',
+                    style: {
+                        'background-opacity': 0,
+                        'border-opacity': 0,
+                        'events': 'no'
+                        //'border-color': 'blue','border-opacity': 0.25,
+                    }
+                },
+                {
+                    selector: '.port',
+                    style: {
+                        'label': 'data(label)',
+                        'text-wrap': 'wrap'
+                    }
                 }
+
             ]
         });
         cy.domNode();
-        // const eh = cy.edgehandles({
-        //     handleNodes: 'port',  // Only nodes with class 'port' will have handles
-        //     canConnect: function(sourceNode, targetNode) {
-        //         // Allow edge creation only between ports
-        //         if (sourceNode == targetNode)  return null;
-        //         if (sourceNode.hasClass('port') && targetNode.hasClass('port')) {
-        //             return 'flat';  // Returns the type of edges to create between ports
-        //         }
-        //         return null;  // Prevents edge creation for non-port connections
-        //     },
-        //     handlePosition: 'middle', // Positions the handle at the middle of the nodes
-        //     handleInDrawMode: false,  // Determines if handles should appear in draw mode
-        //     complete: function(sourceNode, targetNode, addedEles) {
-        //         // Optional: handle completion of edge creation
-        //         if (sourceNode.hasClass('port') && targetNode.hasClass('port')) {
-        //             addedEles.data('label', 'Connection');
-        //         }
-        //     },
-        //     // Defines the edge type for the newly created edges
-        //     edgeParams: function(sourceNode, targetNode, i){
-        //         // Optional function to define edge parameters
-        //         return {
-        //             data: { label: 'New Edge', source: sourceNode.id(), target: targetNode.id() }
-        //         };
-        //     }
-        // });
-        // eh.enableDrawMode();
-        cy.style()
-            .selector('.compound')
-            .style({
-                'background-opacity': '0',
-                'border-color': 'blue','border-opacity': 0.25
-            })
-            // .selector('.eh-handle')
-            // .style({
-            //     'background-color': 'red',
-            //     'width': 12,
-            //     'height': 12,
-            //     'shape': 'ellipse',
-            //     'overlay-opacity': 0,
-            //     'border-width': 12, // Makes the handle larger for easier grabbing
-            //     'border-opacity': 0
-            // })
-            // .selector('.eh-hover')
-            // .style({
-            //     'background-color': 'blue'
-            // })
-            // .selector('.eh-source')
-            // .style({
-            //     'border-width': 2,
-            //     'border-color': 'red'
-            // })
-            // .selector('.eh-target')
-            // .style({
-            //     'border-width': 2,
-            //     'border-color': 'green'
-            // })
-            // .selector('.eh-preview, .eh-ghost-edge')
-            // .style({
-            //     'background-color': 'red',
-            //     'line-color': 'red',
-            //     'target-arrow-color': 'red',
-            //     'source-arrow-color': 'red'
-            //})
-            .update();
-
-        /*var cee = new CytoscapeEdgeEditation;  //https://github.com/sitnarf/fork-cytoscape.js-edge-editation?tab=readme-ov-file#how-to-use
-        cee.init(cy);
-        cee.registerHandle({
-            positionX: "center",          //horizontal position of the handle  (left | center | right)
-            positionY: "center",        //vertical position of the handle  (top | center | bottom)
-            color: "#48FF00",           //color of the handle
-            type: "port",          //stored as data() attribute, can be used for styling
-            nodeTypeNames: ["port"],    //which types of nodes will contain this handle
-            single: true,               //wheter only one edge of this type can start from same node (default false)
-            noMultigraph: false         //whereter two nodes can't be connected with multiple edges (does not consider orientation)
-        });*/
 
         this.initEdgeHandling(cy);
 
-        function updatePortPositions(node) {
-             //TODO select only 'port' children
-            let nodeWidth = node.outerWidth();
-            let nodeHeight = node.outerHeight();
-            let nodePos = node.position();
-
-            node.data('ports').forEach(port => {
-                const relativePos = port.data('relativePosition'); // Assuming this data attribute exists
-                let nx = nodePos.x + relativePos.x * nodeWidth/2;
-                let ny = nodePos.y + relativePos.y * nodeHeight/2;
-                //const pp = port.position();
-                port.position({
-                    x: nx,
-                    y: ny
-                });
-            });
-        }
-
         const updateIfHasPorts = function(evt) {
-            let node = evt.target;
-            if (node.data('ports'))
-                updatePortPositions(node);
+            const node = evt.target;
+            if (node.data('ports')) {
+                //TODO select only 'port' children
+                const nodeWidth = node.outerWidth();
+                const nodeHeight = node.outerHeight();
+                const nodePos = node.position();
+
+                node.data('ports').forEach(port => {
+                    const relativePos = port.data('relativePosition'); // Assuming this data attribute exists
+                    const nx = nodePos.x + relativePos.x * nodeWidth / 2;
+                    const ny = nodePos.y + relativePos.y * nodeHeight / 2;
+                    port.position({ x: nx,  y: ny });
+                });
+            }
         };
-        cy.on('position bounds add'/*'position bounds add', 'node'*/, updateIfHasPorts);
+        cy.on('position bounds add', 'node', updateIfHasPorts);
 
         cy.on('tap', 'node', this.onNodeTap.bind(this));
         cy.on('tap', this.onCanvasTap.bind(this));
@@ -313,11 +240,39 @@ class SpaceGraph {
         cy.on('cxttap', 'node', this.onNodeRightClick.bind(this));
 
 
+        cy.on('add', 'node', (event) => this.updateFlows(event.target));
+        cy.on('remove', 'node', () => this.updateFlows());
+        cy.on('add remove', 'edge', () => this.updateFlows());
+
         this.cy = cy;
     }
 
-    initEdgeHandling(cy) {
+    updateFlows(targetNode) {
+        this.cy.edges().forEach(edge => {
+            if (this.validFlow(edge)) {
+                edge.addClass('dataFlow');
+            } else {
+                edge.removeClass('dataFlow');
+            }
+        });
+        // Optional: Provide user feedback
+        if (targetNode && this.hasFlow(targetNode)) {
+            console.log(`Data flow updated for node: ${targetNode.id()}`);
+        }
+    }
 
+    validFlow(edge) {
+        const sourceNode = edge.source();
+        const targetNode = edge.target();
+        // Check if the source node's output is compatible with the target's input
+        return sourceNode.data('outputType') === targetNode.data('inputType');
+    }
+
+    hasFlow(node) {
+        return node.connectedEdges('.dataFlow').length > 0;
+    }
+
+    initEdgeHandling(cy) {
         const overlay = $('<svg style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:50000;"></svg>');
         $(cy.container()).parent().prepend(overlay);
         this.overlayLine = $(document.createElementNS('http://www.w3.org/2000/svg', 'line'))
@@ -380,30 +335,17 @@ class SpaceGraph {
     }
 
     removeNode(node) {
-        this.cy.remove(node);
+        const n = this.cy.getElementById(node);
+        const p = n.parent();
+        if (p)
+            this.cy.remove(p); //remove compound wrapper
+
+        this.cy.remove('#'+node);
     }
 
     removeNodeConfirm(node) {
         if (confirm('Are you sure you want to remove this node?'))
             this.removeNode(node);
-    }
-
-    spawnLinkedNode(parentNode, content, edgeLabel) {
-        const newNode = this.addNode(content);
-        newNode.position({
-            x: parentNode.position('x') + parentNode.outerWidth() + 100,
-            y: parentNode.position('y')
-        });
-
-        this.cy.add({
-            group: 'edges',
-            data: {
-                id: 'e' + uuid(),
-                source: parentNode.id(),
-                target: newNode.id(),
-                content: edgeLabel
-            }
-        });
     }
 
     onNodeTap(evt) {
@@ -412,13 +354,8 @@ class SpaceGraph {
 
     menuShow(n) {
         const dom = n.data('domNode');
-        if (dom) {
-            const f = dom.menuFrame;
-
-            const nw = n.outerWidth(), nh = n.outerHeight();
-            const np = n.renderedPosition();
-            f.css({display: 'flex',});
-        }
+        if (dom)
+            dom.menuFrame.css({display: 'flex',});
     }
 
     onCanvasTap(evt) {
@@ -474,9 +411,9 @@ class SpaceGraph {
     openTransformer(node) {
         transformUI.input = node.data('domNode').inner.text();
         transformUI.onOutput = (y, outputMode) => {
-            if (outputMode === 'new-node')
-                this.spawnLinkedNode(node, y, '');
-            else if (outputMode === 'replace-content')
+            ///if (outputMode === 'new-node')
+                //this.spawnLinkedNode(node, y, '');
+            if (outputMode === 'replace-content')
                 node.data('domNode').inner.text(y);
             else
                 console.error('todo outputMode', outputMode);
