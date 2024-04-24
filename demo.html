@@ -8,15 +8,15 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
 
     <script src="https://unpkg.com/cytoscape/dist/cytoscape.min.js"></script>
-
     <script src="cytoscape-dom-node.js"></script>
 
     <script src="lm.js"></script>
     <script src="transform.js"></script>
     <script src="layout.js"></script>
-    <link rel="stylesheet" href="view.css"/>
+    <link href="view.css" rel="stylesheet"/>
     <script src="view.js"></script>
-    <link rel="stylesheet" href="graph.css"/>
+    <link href="graph.css" rel="stylesheet"/>
+    <script src="window.js"></script>
     <script src="graph.js"></script>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/smartmenus/dist/css/sm-core-css.min.css">
@@ -27,9 +27,7 @@
     <script src="menu.js"></script>
 </head>
 <body>
-<script>
 
-</script>
 <div id="cy"></div>
 
 <div id="editor-popup" style="display: none;">
@@ -91,22 +89,35 @@
 
 
         const s = new SpaceGraph($('#cy'));
-        s.addNode($('<div><h1>Generator</h1></div>'), [
-            { label: 'Out', type: 'string', relativePosition: { x: +1.25, y: 0 } }
-        ]);
-        s.addNode($('<div><h1>Display</h1></div>'), [
+
+        s.addNode($('<div><h1>Generator</h1></div>'), {
+            start: function(node) {
+                  this.interval = setInterval(()=>{
+                      node.content.html(new Date().toString());
+                      //TODO send
+                  }, 500);
+            },
+            stop: function(node) {
+                  //TODO
+                  //this.interval.
+            },
+            ports: [
+                { label: 'Out', type: 'string', relativePosition: { x: +1.25, y: 0 } }
+            ]
+        });
+        s.addNode($('<div><h1>Display</h1></div>'), { ports: [
             { label: 'In', type: 'string', relativePosition: { x: -1.25, y: 0 } }
-        ]);
-        s.addNode($('<div><h1>Node 1</h1></div>'), [
-            { label: 'In1', relativePosition: { x: -1.25, y: 0.5 }},
+        ]});
+        s.addNode($('<div><h1>Node 1</h1></div>'), { ports: [
+            { label: 'In1', relativePosition: { x: -1.25, y: +0.5 }},
             { label: 'In2', relativePosition: { x: -1.25, y: -0.5 }},
             { label: 'Out', relativePosition: { x: +1.25, y: 0 } }
-        ]);
-        s.addNode($('<div><h1>Node 2</h1></div>'), [
-            { label: 'In1', relativePosition: { x: -1.25, y: 0.5 }},
+        ]});
+        s.addNode($('<div><h1>Node 2</h1></div>'), { ports: [
+            { label: 'In1', relativePosition: { x: -1.25, y: +0.5 }},
             { label: 'In2', relativePosition: { x: -1.25, y: -0.5 }},
             { label: 'Out', relativePosition: { x: +1.25, y: 0 } }
-        ]);
+        ]});
 
         const p = new Plugins();
         p.add(new TransformPlugin('uppercase', async x => x.toUpperCase()));
@@ -133,7 +144,6 @@
 
         s.cy.layout({name: 'random'}).run();
     });
-
 </script>
 </body>
 </html>

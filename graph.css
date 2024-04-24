@@ -51,6 +51,10 @@ canvas {
     /*background-color: #fff;
     border: 1px solid #000;*/
 }
+.resize-grip:hover {
+    background-color: rgba(100, 100, 255, 0.5);
+    border: 1px solid yellow;
+}
 
 .resize-grip-top-left {
     cursor: nwse-resize;
