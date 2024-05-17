@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dynamic Neural Network Visualization</title>
+    <style>
+        body { margin: 0; height: 100vh; display: flex; justify-content: center; align-items: center; background: #f0f0f0; }
+        canvas { border: 1px solid #333; }
+    </style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const size = 100; // Size of the grid
+    canvas.width = 200; // 100 for weights, 100 for outputs
+    canvas.height = 200;
+
+    let weights = Array.from({ length: size }, () => Array.from({ length: size }, () => Math.random() * 2 - 1));
+    let outputs = Array.from({ length: size }, () => Array.from({ length: size }, () => 0));
+
+    // Weight decay factor and learning rate
+    const weightDecay = 0.99;
+    const learningRate = 0.02;
+    let time = 0;
+
+    function updateTarget() {
+        // Circle pattern animating based on time
+        const radius = size / 4 + 10 * Math.sin(time / 50); // Dynamic radius
+        const centerX = size / 2 + 20 * Math.cos(time / 60); // Dynamic X center
+        const centerY = size / 2 + 20 * Math.sin(time / 40); // Dynamic Y center
+
+        return Array.from({ length: size }, (_, y) =>
+            Array.from({ length: size }, (_, x) => {
+                let dx = x - centerX, dy = y - centerY;
+                return Math.sqrt(dx * dx + dy * dy) < radius ? 1 : -1;
+            }));
+    }
+
+    function updateCanvas() {
+        // Display weights
+        for (let y = 0; y < size; y++) {
+            for (let x = 0; x < size; x++) {
+                let weightValue = (weights[y][x] + 1) / 2 * 255; // Normalize to [0,255]
+                ctx.fillStyle = `rgb(0, 0, ${weightValue})`;
+                ctx.fillRect(x, y, 1, 1);
+            }
+        }
+
+        // Display outputs
+        for (let y = 0; y < size; y++) {
+            for (let x = 0; x < size; x++) {
+                let outputValue = (outputs[y][x] + 1) / 2 * 255; // Normalize to [0,255]
+                ctx.fillStyle = `rgb(${outputValue}, 0, 0)`;
+                ctx.fillRect(100 + x, y, 1, 1); // Offset by 100 pixels
+            }
+        }
+    }
+
+    function step() {
+        time++;
+        const target = updateTarget();
+
+        // Compute new outputs based on weights
+        for (let y = 0; y < size; y++) {
+            for (let x = 0; x < size; x++) {
+                let sum = 0, count = 0;
+                // Average weights from neighbors, including self
+                for (let dy = -1; dy <= 1; dy++) {
+                    for (let dx = -1; dx <= 1; dx++) {
+                        let nx = x + dx, ny = y + dy;
+                        if (nx >= 0 && nx < size && ny >= 0 && ny < size) {
+                            sum += weights[ny][nx];
+                            count++;
+                        }
+                    }
+                }
+                outputs[y][x] = sum / count; // Set output as the average
+            }
+        }
+
+        // Adjust weights based on output error vs. target with decay
+        for (let y = 0; y < size; y++) {
+            for (let x = 0; x < size; x++) {
+                weights[y][x] *= weightDecay; // Apply weight decay
+                weights[y][x] += learningRate * (target[y][x] - outputs[y][x]); // Adjust with learning rule
+            }
+        }
+
+        updateCanvas();
+    }
+
+    setInterval(step, 1); // Update every 100 milliseconds
+</script>
+</body>
+</html>

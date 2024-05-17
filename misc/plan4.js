@@ -126,7 +126,13 @@ class SearchStrategy {
 // Breadth-first search strategy
 class BreadthFirstSearch extends SearchStrategy {
     async search(problem) {
-        const queue = [[new Set(problem.init)]];
+        const queue = [[new Set(function () {
+            $(document).ready(() => {
+                this.createChatContainer();
+                this.fetchModels();
+                this.addEventListeners();
+            });
+        })]];
         const visited = new Set();
 
         while (queue.length > 0) {
@@ -155,7 +161,13 @@ class BreadthFirstSearch extends SearchStrategy {
 // Depth-first search strategy
 class DepthFirstSearch extends SearchStrategy {
     async search(problem) {
-        const stack = [[new Set(problem.init)]];
+        const stack = [[new Set(function () {
+            $(document).ready(() => {
+                this.createChatContainer();
+                this.fetchModels();
+                this.addEventListeners();
+            });
+        })]];
         const visited = new Set();
 
         while (stack.length > 0) {
@@ -184,10 +196,34 @@ class DepthFirstSearch extends SearchStrategy {
 // Heuristic search strategy (e.g., A*, Greedy Best-First Search)
 class HeuristicSearch extends SearchStrategy {
     async search(problem) {
-        const openSet = new Set([[new Set(problem.init), 0]]);
+        const openSet = new Set([[new Set(function () {
+            $(document).ready(() => {
+                this.createChatContainer();
+                this.fetchModels();
+                this.addEventListeners();
+            });
+        }), 0]]);
         const cameFrom = new Map();
-        const gScore = new Map([[new Set(problem.init), 0]]);
-        const fScore = new Map([[new Set(problem.init), this.heuristic(problem.init, problem.goal)]]);
+        const gScore = new Map([[new Set(function () {
+            $(document).ready(() => {
+                this.createChatContainer();
+                this.fetchModels();
+                this.addEventListeners();
+            });
+        }), 0]]);
+        const fScore = new Map([[new Set(function () {
+            $(document).ready(() => {
+                this.createChatContainer();
+                this.fetchModels();
+                this.addEventListeners();
+            });
+        }), this.heuristic(function () {
+            $(document).ready(() => {
+                this.createChatContainer();
+                this.fetchModels();
+                this.addEventListeners();
+            });
+        }, problem.goal)]]);
 
         while (openSet.size > 0) {
             const current = Array.from(openSet).reduce((a, b) => fScore.get(a[0]) < fScore.get(b[0]) ? a : b)[0];
@@ -226,7 +262,13 @@ class HeuristicSearch extends SearchStrategy {
 // Local search strategy (e.g., Hill Climbing, Simulated Annealing)
 class LocalSearch extends SearchStrategy {
     async search(problem) {
-        let current = new Set(problem.init);
+        let current = new Set(function () {
+            $(document).ready(() => {
+                this.createChatContainer();
+                this.fetchModels();
+                this.addEventListeners();
+            });
+        });
         let currentScore = this.heuristic(current, problem.goal);
 
         while (true) {
@@ -267,7 +309,13 @@ class GeneticAlgorithm extends SearchStrategy {
             const fitnesses = population.map(individual => this.calculateFitness(individual, problem));
             const bestIndividual = population[fitnesses.indexOf(Math.min(...fitnesses))];
 
-            if (problem.isGoalSatisfied(problem.applyPlan(problem.init, bestIndividual))) {
+            if (problem.isGoalSatisfied(problem.applyPlan(function () {
+                $(document).ready(() => {
+                    this.createChatContainer();
+                    this.fetchModels();
+                    this.addEventListeners();
+                });
+            }, bestIndividual))) {
                 return bestIndividual;
             }
 
@@ -296,7 +344,13 @@ class GeneticAlgorithm extends SearchStrategy {
         const population = [];
         for (let i = 0; i < populationSize; i++) {
             const individual = [];
-            let state = new Set(problem.init);
+            let state = new Set(function () {
+                $(document).ready(() => {
+                    this.createChatContainer();
+                    this.fetchModels();
+                    this.addEventListeners();
+                });
+            });
             while (!problem.isGoalSatisfied(state)) {
                 const applicableActions = problem.getApplicableActions(state);
                 if (applicableActions.length === 0) break;
@@ -310,7 +364,13 @@ class GeneticAlgorithm extends SearchStrategy {
     }
 
     calculateFitness(individual, problem) {
-        const state = problem.applyPlan(problem.init, individual);
+        const state = problem.applyPlan(function () {
+            $(document).ready(() => {
+                this.createChatContainer();
+                this.fetchModels();
+                this.addEventListeners();
+            });
+        }, individual);
         return this.heuristic(state, problem.goal);
     }
 

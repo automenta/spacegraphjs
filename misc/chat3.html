@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat Widget</title>
+    <script src="https://unpkg.com/jquery/dist/jquery.min.js"></script>
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            font-family: monospace;
+            background-color: #080808;
+            color: #0f0;
+        }
+        #chat-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background-color: #000;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        #messages {
+            height: calc(100% - 50px);
+            overflow-y: auto;
+            background-color: #000;
+            color: #0f0;
+            padding: 5px;
+            font-size: clamp(12px, 4vw, 18px);
+        }
+        #messages div {
+            margin-bottom: 1em;
+        }
+        #input, #stop-button, #model-select, #temp-slider {
+            padding: 5px;
+            background-color: #000;
+            color: #0f0;
+            border: 1px solid #003300;
+        }
+        #input {
+            /*width: calc(50% - 60px);*/
+            flex: 1
+        }
+        #stop-button {
+            background-color: #300;
+            color: #f00;
+            cursor: pointer;
+        }
+        .user {
+            color: #0f0;
+        }
+        .bot {
+            color: #0f6;
+        }
+        .system {
+            color: #f90;
+        }
+        .waiting {
+            color: #ff0;
+            font-weight: 700;
+        }
+        #chat-options {
+            position: absolute;
+            bottom: 10px;
+            width: 96%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px;
+            box-sizing: border-box;
+        }
+        #model-select, #temp-slider {
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+<script>
+    "use strict";
+
+    /*
+    Here are some potential functionality enhancements that could be added to the AI chat widget:
+        Voice Input: Implement support for voice input using the Web Speech API or a third-party speech recognition service. This would allow users to send messages by speaking instead of typing.
+        Voice Output: Add text-to-speech functionality to have the bot's responses read out loud. This could be particularly useful for accessibility purposes or hands-free operation.
+        File Uploads: Allow users to upload files (e.g., images, documents) and send them along with their messages. The bot could then process the files and provide relevant responses or information.
+        Conversation History: Implement a feature to save and retrieve conversation history. This would allow users to refer back to previous messages or continue a conversation from where they left off.
+        Persistent User Context: Store user-specific context information (e.g., preferences, settings, conversation context) to provide a more personalized experience across multiple conversations.
+        Bot Avatars and Customization: Allow users to customize the bot's appearance by selecting different avatars or themes. This could make the conversation feel more engaging and personalized.
+        Multi-language Support: Add support for multiple languages by integrating with language translation APIs or models. This would enable users to converse with the bot in their preferred language.
+        Inline Formatting and Markdown Support: Enable users to format their messages using inline styles (e.g., bold, italic) or Markdown syntax. This could make conversations more expressive and easier to read.
+        Shareable Links: Generate shareable links for specific conversations or parts of a conversation. This could be useful for sharing relevant information or seeking feedback from others.
+        Integration with External Services: Integrate the chat widget with external services or APIs (e.g., weather, news, task management) to provide additional functionality based on user requests or queries.
+        Bot Persona Customization: Allow users to customize the bot's persona or tone (e.g., professional, friendly, humorous) to better suit their preferences or use cases.
+        Interactive Elements (e.g., buttons, forms): Enable the bot to generate interactive elements, such as buttons or forms, within its responses. This could make the conversation more dynamic and engaging.
+        Analytics and Insights: Implement analytics features to track user interactions, conversation patterns, and bot performance. This could help improve the bot's capabilities and provide valuable insights.
+        Collaborative Conversations: Enable multiple users to participate in the same conversation, allowing for group discussions or collaborative problem-solving.
+        Context-aware Suggestions and Auto-complete: Provide context-aware suggestions or auto-complete functionality based on the conversation history or user inputs, making it easier to formulate queries or responses.
+
+        These are just a few examples of potential functionality enhancements. The specific enhancements to implement would depend on the use case, target audience, and overall goals of the chat widget application.
+     */
+    class ChatView {
+        constructor() {
+            this.host = 'http://localhost:11434';
+            this.controller = null;
+            this.botMessageElement = null;
+            this.currentModel = 'dolphin-llama3:8b-256k-v2.9-q8_0';
+            this.currentTemp = 0.7;
+            this.messagesDiv = $('<div>').attr('id', 'messages')[0];
+            this.context = [];
+            $(document).ready(() => {
+                this.createChatContainer();
+                this.fetchModels();
+                this.addEventListeners();
+            });
+        }
+
+        createChatContainer() {
+            const $chatContainer = $('<div>').attr('id', 'chat-container');
+            const $chatOptions = $('<div>').attr('id', 'chat-options');
+
+            this.inputField = $('<input>')
+                .attr('type', 'text')
+                .attr('id', 'input')
+                .attr('placeholder', 'Type a message...')
+                .attr('autofocus', true);
+
+            this.stopButton = $('<button>')
+                .attr('id', 'stop-button')
+                .attr('title', 'Stop')
+                .html('&#x1f6d1;');
+
+            this.modelSelect = $('<select>').attr('id', 'model-select');
+            this.tempSlider = $('<input>')
+                .attr('type', 'range')
+                .attr('id', 'temp-slider')
+                .attr('min', '0')
+                .attr('max', '4')
+                .attr('step', '0.1')
+                .attr('value', '0.7')
+                .attr('title', 'Temperature');
+
+            $chatOptions.append(this.inputField, this.stopButton, this.modelSelect, this.tempSlider);
+            $chatContainer.append(this.messagesDiv, $chatOptions);
+            $('body').append($chatContainer);
+        }
+
+        fetchModels() {
+            fetch(this.host + '/api/tags')
+                .then(res => res.json())
+                .then(data => data.models.map(x => x.model).forEach(m => $('#model-select').append($('<option>').val(m).text(m))));
+
+            $('#model-select').val(this.currentModel);
+            $('#temp-slider').val(this.currentTemp);
+        }
+
+        addEventListeners() {
+            this.inputField[0].addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    const message = this.inputField[0].value.trim();
+                    if (message) {
+                        this.sendMessage(message);
+                    }
+                }
+            });
+
+            this.stopButton[0].addEventListener('click', () => {
+                if (this.controller) {
+                    this.controller.abort();
+                    this.appendMessage('System', 'Streaming stopped by user.');
+                }
+            });
+
+            this.modelSelect[0].addEventListener('change', () => this.currentModel = this.modelSelect[0].value);
+            this.tempSlider[0].addEventListener('input', () => {
+                return this.currentTemp = this.tempSlider[0].value;
+            });
+
+        }
+
+        appendMessage(sender, text) {
+
+            if (this.context.length > 0 && this.context[this.context.length-1].role===sender)
+                this.context[this.context.length-1].content += text; //append
+            else
+                this.context.push({ role: sender, content: text });
+
+            const x = this.sanitizeHTML(text);
+            if (sender !== 'user') {
+                if (!this.botMessageElement) {
+                    const messageElement = document.createElement('div');
+                    messageElement.innerHTML = `<strong class="${sender.toLowerCase()}">${sender}:</strong> ${x}`;
+                    this.messagesDiv.appendChild(messageElement);
+                    this.botMessageElement = messageElement;
+                } else {
+                    this.botMessageElement.innerHTML += x;
+                }
+            } else {
+                const messageElement = document.createElement('div');
+                messageElement.innerHTML = `<strong class="${sender.toLowerCase()}">${sender}:</strong> ${x}`;
+                this.messagesDiv.appendChild(messageElement);
+                this.botMessageElement = null;
+            }
+            this.adjustFontSize();
+            setTimeout(()=>{
+                this.messagesDiv.scrollTop = this.messagesDiv.scrollHeight;
+            });
+        }
+
+        sendMessage(text) {
+/*
+            this.appendMessage('You', text);
+            this.inputField[0].value = '';
+            this.appendMessage('Bot', ''/!*'<span class="waiting">Waiting for response...</span>'*!/, true);
+            this.controller = new AbortController();
+            const signal = this.controller.signal;
+
+            const that = this;
+            fetch(this.host + `/api/generate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    prompt: text,
+                    model: this.currentModel,
+                    // context: this.context,
+                    options: {temperature: parseFloat(this.currentTemp), mirostat: 2}
+                }),
+                signal
+            })
+*/
+            this.appendMessage('user', text);
+            this.inputField[0].value = '';
+            //this.appendMessage('Bot', '', true);
+            this.controller = new AbortController();
+            const signal = this.controller.signal;
+
+            const that = this;
+
+            fetch(this.host + `/api/chat`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: this.currentModel,
+                    messages: this.context,
+                    options: { temperature: parseFloat(this.currentTemp), mirostat: 2 }
+                }),
+                signal
+            })
+                .then(res => res.body.getReader())
+                .then(reader => {
+                    const stream = new ReadableStream({
+                        start(ctrl) {
+                            const push = () => {
+                                reader.read().then(({done, value}) => {
+                                    if (done) {
+                                        ctrl.close();
+                                        return;
+                                    }
+                                    const chunk = new TextDecoder("utf-8").decode(value);
+                                    const c = that.processChunk(chunk);
+                                    // if (c.context) {
+                                    //     console.log('context', c.context);
+                                    //     this.context = c.context;
+                                    // }
+                                    if (c.done)
+                                        that.displayMetrics(c);
+
+                                    push();
+                                }).catch(err => {
+                                    console.error('Error reading stream:', err);
+                                    ctrl.error(err);
+                                });
+                            };
+
+                            push();
+                        }
+                    });
+                    return new Response(stream);
+                })
+                .catch(err => {
+                    if (err.name === 'AbortError') {
+                        console.log('Fetch aborted by user');
+                        this.appendMessage('System', '<span class="waiting">Stream aborted.</span>');
+                    } else {
+                        console.error('Fetch error:', err);
+                    }
+                });
+
+            signal.addEventListener('abort', () => {
+                this.appendMessage('System', '<span class="waiting">Stream aborted.</span>');
+            });
+        }
+
+        processChunk(chunk) {
+            try {
+                const data = JSON.parse(chunk);
+                this.appendMessage(
+                    data.message.role, data.message.content
+                    //data.response //GENERATE
+                , false);
+                return data;
+            } catch (e) {
+                console.log('Error processing chunk:', e);
+            }
+        }
+
+        displayMetrics(data) {
+            //this.appendMessage('Bot', `Generation complete. Metrics: Load Duration - ${data.load_duration}`, false);
+        }
+
+        sanitizeHTML(str) {
+            const temp = document.createElement('div');
+            temp.textContent = str;
+            return temp.innerHTML.replace(/\n/g, '<br/>');
+        }
+        adjustFontSize() {
+            this.minFontSize = 18;
+            this.maxFontSize = 40;
+            const totalTextLength = Array.from(this.messagesDiv.childNodes)
+                .reduce((acc, child) => acc + child.textContent.length, 0);
+            const newFontSize = Math.max(this.minFontSize, this.maxFontSize - totalTextLength / 100);
+            this.messagesDiv.style.fontSize = `${newFontSize}px`;
+
+            // const totalHeight = this.messagesDiv.scrollHeight;
+            // const visibleHeight = this.messagesDiv.clientHeight;
+            // const lineHeight = parseInt(window.getComputedStyle(this.messagesDiv).lineHeight, 10);
+            // const numberOfLines = totalHeight / lineHeight;
+            // const optimalFontSize = Math.max(this.minFontSize, this.maxFontSize - numberOfLines / 2);
+            // this.messagesDiv.style.fontSize = `${optimalFontSize}px`;
+        }
+    }
+
+    new ChatView();
+</script>
+</body>
+</html>

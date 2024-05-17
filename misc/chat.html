@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<!-- https://github.com/ollama/ollama/blob/main/docs/api.md -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Continuous Stream Chat Widget</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background-color: #080808;
+            color: #0f0;
+            padding: 20px;
+        }
+        #chat-container {
+            width: 100%;
+            background-color: #000;
+        }
+        #messages {
+            height: 400px;
+            overflow-y: auto;
+            background-color: #000;
+            color: #0f0;
+            padding: 10px;
+        }
+        #input, #stop-button {
+            width: calc(50% - 10px);
+            padding: 10px;
+            background-color: #000;
+            color: #0f0;
+            border: 1px solid #003300;
+            margin-top: 5px;
+        }
+        #stop-button {
+            background-color: #300;
+            color: #f00;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <div id="messages"></div>
+        <input type="text" id="input" placeholder="Type a message..." autofocus>
+        <button id="stop-button">Stop</button>
+    </div>
+    <script>
+        let controller;
+        let lastBotMessageElement;
+
+        const messagesDiv = document.getElementById('messages');
+        const inputField = document.getElementById('input');
+        const stopButton = document.getElementById('stop-button');
+
+        inputField.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                const message = inputField.value.trim();
+                if (message) {
+                    appendMessage('You', message);
+                    inputField.value = '';
+                    let model =
+                        //'llama3:8b-text-q8_0';
+                        'dolphin-llama3:8b-256k-v2.9-q8_0'
+                    sendMessageToModel(model, message);
+                }
+            }
+        });
+
+        stopButton.addEventListener('click', function() {
+            if (controller) {
+                controller.abort();
+                appendMessage('System', 'Streaming stopped by user.');
+            }
+        });
+
+        function appendMessage(sender, text, isNew = false) {
+            const sanitizedText = document.createElement('div').appendChild(document.createTextNode(text)).parentNode.innerHTML; // Sanitize input to prevent XSS
+            if (sender === 'Bot' && lastBotMessageElement && !isNew) {
+                lastBotMessageElement.innerHTML += sanitizedText; // Append to the last bot message
+            } else {
+                const messageElement = document.createElement('div');
+                messageElement.innerHTML = `<strong>${sender}:</strong> ${sanitizedText}`;
+                messagesDiv.appendChild(messageElement);
+                lastBotMessageElement = (sender === 'Bot') ? messageElement : null;
+            }
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+    function sendMessageToModel(model, text) {
+        controller = new AbortController();
+        const signal = controller.signal;
+
+        fetch('http://localhost:11434/api/generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ model: model, prompt: text, options: { temperature: 2.0, mirostat: 2 } }),
+            signal
+        }).then(response => {
+            const reader = response.body.getReader();
+            return new ReadableStream({
+                start(controller) {
+                    function push() {
+                        reader.read().then(({ done, value }) => {
+                            if (done) {
+                                controller.close();
+                                return;
+                            }
+                            const chunk = new TextDecoder("utf-8").decode(value);
+                            processChunk(chunk);
+                            push();
+                        }).catch(err => {
+                            console.error('Error reading stream:', err);
+                            controller.error(err);
+                        });
+                    }
+                    push();
+                }
+            });
+        }).then(stream => new Response(stream))
+            .then(response => response.json())
+            .then(data => {
+                if (data.done) {
+                    displayMetrics(data);
+                }
+            }).catch(err => {
+            if (err.name === 'AbortError') {
+                console.log('Fetch aborted by user');
+            } else {
+                console.error('Fetch error:', err);
+            }
+        });
+    }
+
+    function processChunk(chunk) {
+        try {
+            const data = JSON.parse(chunk);
+            appendMessage('Bot', data.response);
+        } catch (e) {
+            console.log('Error processing chunk:', e);
+        }
+    }
+
+    function displayMetrics(data) {
+            appendMessage('Bot', `Generation complete. Metrics: Load Duration - ${data.load_duration}`, true);
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!DOCTYPE>
+    <style>
+        body {margin: 0; height: 100vh; display: flex; justify-content: center; align-items: center; background: #f0f0f0;}
+        canvas {border: 1px solid #333;}
+    </style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const size = 100; // Size of the grid
+    canvas.width = size;
+    canvas.height = size;
+
+    // Initialize weights randomly between -1 and 1
+    let weights = Array.from({length: size}, () =>
+    Array.from({length: size}, () => Math.random() * 2 - 1));
+    // Define a target pattern (e.g., a simple centered circle)
+    let target = Array.from({length: size}, (_, y) =>
+    Array.from({length: size}, (_, x) => {let dx = x - size / 2 + 0.5, dy = y - size / 2 + 0.5;
+    return Math.sqrt(dx * dx + dy * dy) < size / 4 ? 1 : -1;}));
+
+    function
+    updateCanvas() {for (let y = 0; y < size; y++) {for (let x = 0; x < size; x++) {const value = (weights[y][x] + 1) / 2 * 255; // Normalize and scale to [0,255]
+    ctx.fillStyle = `rgb(${value}, ${value}, ${value})`;
+    ctx.fillRect(x, y, 1, 1);}}}
+
+    function step3x3() {let newWeights = weights.map((row, y) => row.map((value, x) => {let sum = 0;
+    let count = 0;
+    // Convolve the 3x3 neighborhood
+    for (let dy = -1; dy <= 1; dy++) {for (let dx = -1; dx <= 1; dx++) {let nx = x + dx, ny = y + dy;
+    if (nx >= 0 && nx < size && ny >= 0 && ny < size) {sum += weights[ny][nx];
+    count++;}}}
+    let average = sum / count;
+    // Forward pass: compute the difference from the target
+    let error = target[y][x] - value;
+    // Backward pass: adjust based on the error and difference from neighbors
+    return value + 0.01 * error + 0.005 * (average - value);}));
+    weights = newWeights;
+    updateCanvas();}
+    function step() {let newWeights = weights.map((row, y) => row.map((value, x) => {let sum = 0;
+    let count = 0;
+    // Sum up all valid neighbors
+    for (let dy = -1; dy <= 1; dy++) {for (let dx = -1; dx <= 1; dx++) {if (dx === 0 && dy === 0) continue; // Skip self
+    let nx = x + dx, ny = y + dy;
+    if (nx >= 0 && nx < size && ny >= 0 && ny < size) {sum += weights[ny][nx];
+    count++;}}}
+    let average = sum / count;
+    // Forward pass: compute the difference from the target
+    let error = target[y][x] - value;
+    // Backward pass: adjust based on the error and difference from neighbors
+    return value + 0.01 * error + 0.005 * (average - value);}));
+    weights = newWeights;
+    updateCanvas();}
+
+    setInterval(step3x3, 100); // Update the canvas every 100 milliseconds
+</script>
+</body>
+</html>

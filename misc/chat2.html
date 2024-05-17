@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Chat UI</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        #chat-container {
+            width: 80%;
+            margin: 20px auto;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+        #messages {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background-color: #e0e0e0;
+        }
+        .message {
+            margin-bottom: 5px;
+        }
+        .user {
+            color: blue;
+        }
+        .bot {
+            color: green;
+        }
+        #input, #model-selector, #temperature-control {
+            width: 100%;
+            margin-top: 10px;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        #status {
+            margin-top: 10px;
+            height: 20px;
+        }
+        .waiting {
+            color: orange;
+        }
+        .ready {
+            color: green;
+        }
+    </style>
+</head>
+<body>
+<div id="chat-container">
+    <div id="status" class="ready">Ready</div>
+    <div id="messages"></div>
+    <input type="text" id="input" placeholder="Type your message here...">
+    <select id="model-selector">
+        <option>Loading models...</option>
+    </select>
+    <input type="range" id="temperature-control" min="0" max="1" step="0.01" value="0.5">
+    <button onclick="sendMessage()">Send</button>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        fetchModels();
+        document.getElementById('input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    });
+
+    function fetchModels() {
+        // Simulate fetching from an API
+        setTimeout(() => {
+            const models = [
+                'llama3:8b-text-q8_0',
+                'dolphin-llama3:8b-256k-v2.9-q8_0'
+            ];
+            const modelSelector = document.getElementById('model-selector');
+            modelSelector.innerHTML = '';
+            models.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model;
+                option.textContent = model;
+                modelSelector.appendChild(option);
+            });
+        }, 1000);
+    }
+
+    function sendMessage() {
+        const input = document.getElementById('input');
+        const message = input.value.trim();
+        if (message) {
+            appendMessage('You', message, 'user');
+            input.value = '';
+            simulateResponse(message);
+        }
+    }
+
+    function simulateResponse(message) {
+        setStatus('waiting');
+        setTimeout(() => {
+            appendMessage('Bot', 'Response to: ' + message, 'bot');
+            setStatus('ready');
+        }, 1500);
+    }
+
+    function appendMessage(sender, text, className) {
+        const messagesDiv = document.getElementById('messages');
+        const messageElement = document.createElement('div');
+        messageElement.className = 'message ' + className;
+        messageElement.textContent = `${sender}: ${text}`;
+        messagesDiv.appendChild(messageElement);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function setStatus(status) {
+        const statusDiv = document.getElementById('status');
+        statusDiv.className = status;
+        statusDiv.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+    }
+</script>
+</body>
+</html>

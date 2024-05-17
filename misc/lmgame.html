@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Language Model Training Game</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.8.0/dist/tf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+<div id="controls">
+    <label for="max-epochs">Epochs:</label>
+    <input type="range" id="max-epochs" min="1" max="20" value="1">
+    <label for="hidden-size">Brain Width:</label>
+    <input type="range" id="hidden-size" min="16" max="512" step="64" value="32">
+    <label for="num-layers">Brain Depth:</label>
+    <input type="range" id="num-layers" min="1" max="3" value="1">
+    <button id="train-btn">LEARN</button>
+</div>
+<div id="container"></div>
+<script>
+    // Load the text corpus
+    const text = 'This is a small sample text corpus for training a character-level language model.';
+
+    // Create a character-level dataset
+    const chars = Array.from(new Set(text));
+    const charToIndex = new Map();
+    chars.forEach((char, i) => charToIndex.set(char, i));
+    const data = text.split('').map(char => charToIndex.get(char));
+
+    // Define the character-level language model
+    const vocabSize = chars.length;
+    const embeddingDim = 128;
+    let hiddenSize = parseInt(document.getElementById('hidden-size').value);
+    let numLayers = parseInt(document.getElementById('num-layers').value);
+
+    let model = tf.sequential();
+    model.add(tf.layers.embedding({ inputDim: vocabSize, outputDim: embeddingDim }));
+    model.add(tf.layers.lstm({ units: hiddenSize, returnSequences: true }));
+    for (let i = 1; i < numLayers; i++) {
+        model.add(tf.layers.lstm({ units: hiddenSize, returnSequences: true }));
+    }
+    model.add(tf.layers.dense({ units: vocabSize, activation: 'softmax' }));
+
+    // Create a 3D visualization
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.getElementById('container').appendChild(renderer.domElement);
+
+    const geometry = new THREE.BoxGeometry();
+    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+    const cube = new THREE.Mesh(geometry, material);
+    scene.add(cube);
+
+    camera.position.z = 5;
+
+    const trainModel = async () => {
+        const maxEpochs = document.getElementById('max-epochs').value;
+        const batchSize = 32;
+        const optimizer = tf.train.adam(0.001);
+
+        for (let epoch = 0; epoch < maxEpochs; epoch++) {
+            console.log(`Epoch ${epoch + 1}/${maxEpochs}`);
+
+            for (let i = 0; i <= data.length - batchSize; i += batchSize) {
+                tf.tidy(() => {  // Ensure tensors created inside this block are disposed
+                    const inputBatch = data.slice(i, i + batchSize);
+                    const targetBatch = data.slice(i + 1, i + batchSize + 1);
+
+                    // Ensure the input and target are correctly shaped and typed
+                    const input = tf.tensor2d(inputBatch, [inputBatch.length, 1], 'float32');
+                    const targetIndices = tf.tensor1d(targetBatch, 'int32');
+                    const target = tf.oneHot(targetIndices, vocabSize);
+
+                    // Compute the predictions and loss
+                    const predictions = model.apply(input, {training: true});
+                    const loss = tf.losses.softmaxCrossEntropy(target, predictions);
+
+                    // Compute and apply gradients
+                    const grads = tf.grads((x) => {
+                        const preds = model.apply(x, {training: true});
+                        return tf.losses.softmaxCrossEntropy(target, preds);
+                    });
+
+                    const gradsValues = grads([input]);
+                    optimizer.applyGradients(gradsValues.reduce((acc, grad, i) => {
+                        if (grad) { // Ensure that gradients are not null
+                            acc[model.weights[i].name] = grad;
+                        }
+                        return acc;
+                    }, {}));
+
+                    console.log(`Epoch ${epoch + 1}, Batch ${(i / batchSize) + 1}: Loss: ${loss.dataSync()}`);
+                });
+            }
+        }
+
+    };
+
+    document.getElementById('train-btn').addEventListener('click', trainModel);
+
+    // Update model and 3D visualization when sliders change
+    document.getElementById('hidden-size').addEventListener('input', () => {
+        hiddenSize = parseInt(document.getElementById('hidden-size').value);
+        updateModel();
+    });
+
+    document.getElementById('num-layers').addEventListener('input', () => {
+        numLayers = parseInt(document.getElementById('num-layers').value);
+        updateModel();
+    });
+
+    const updateModel = () => {
+        model = tf.sequential();
+        model.add(tf.layers.embedding({ inputDim: vocabSize, outputDim: embeddingDim }));
+        model.add(tf.layers.lstm({ units: hiddenSize, returnSequences: true }));
+        for (let i = 1; i < numLayers; i++) {
+            model.add(tf.layers.lstm({ units: hiddenSize, returnSequences: true }));
+        }
+        model.add(tf.layers.dense({ units: vocabSize, activation: 'softmax' }));
+    };
+
+    function animate() {
+        requestAnimationFrame(animate);
+        renderer.render(scene, camera);
+    }
+    animate();
+</script>
+</body>
+</html>

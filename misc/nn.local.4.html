@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Cellular RNN Enhanced Visualization</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        canvas { border: 1px solid #ccc; margin-top: 5px; }
+        .container { display: flex; justify-content: space-around; flex-wrap: wrap; }
+        .canvas-container { margin-bottom: 20px; }
+        h2 { text-align: center; }
+        button { margin-top: 10px; }
+    </style>
+</head>
+<body>
+<h1>Enhanced Cellular RNN Visualization</h1>
+<div class="container">
+    <div class="canvas-container">
+        <h2>Outputs</h2>
+        <canvas id="outputsCanvas" width="300" height="300"></canvas>
+    </div>
+    <div class="canvas-container">
+        <h2>Weights Overview</h2>
+        <canvas id="weightsCanvas" width="300" height="300"></canvas>
+    </div>
+</div>
+<button onclick="startTraining()">Start Dynamic Training</button>
+<script>
+    class CellularRNN {
+        constructor(width, height, activationFunc, learningRate) {
+            this.width = width;
+            this.height = height;
+            this.activation = activationFunc;
+            this.learningRate = learningRate;
+            this.states = new Array(width * height).fill(0).map(() => Math.random() - 0.5);
+            this.outputs = new Array(width * height).fill(0);
+            this.weights = new Array(width * height * 4).fill(0).map(() => Math.random() * 2 - 1); // Ensuring distinct initial weights
+            this.targets = new Array(width * height).fill(0).map((_, i) => (i % 2 === 0) ? 1 : -1);
+        }
+
+        index(i, j) {
+            return i * this.width + j;
+        }
+
+        update() {
+            for (let i = 0; i < this.height; i++) {
+                for (let j = 0; j < this.width; j++) {
+                    let idx = this.index(i, j);
+                    let sum = 0;
+                    sum += this.states[this.index(Math.max(i - 1, 0), j)] * this.weights[idx * 4];     // North
+                    sum += this.states[this.index(Math.min(i + 1, this.height - 1), j)] * this.weights[idx * 4 + 1]; // South
+                    sum += this.states[this.index(i, Math.max(j - 1, 0))] * this.weights[idx * 4 + 2]; // West
+                    sum += this.states[this.index(i, Math.min(j + 1, this.width - 1))] * this.weights[idx * 4 + 3]; // East
+                    this.outputs[idx] = this.activation(sum);
+                }
+            }
+        }
+
+        train() {
+            this.update();
+            for (let i = 0; i < this.height; i++) {
+                for (let j = 0; j < this.width; j++) {
+                    let idx = this.index(i, j);
+                    let output = this.outputs[idx];
+                    let error = this.targets[idx] - output;
+                    for (let k = 0; k < 4; k++) {
+                        let sourceIndex = this.index(
+                            i + (k === 0 ? -1 : k === 1 ? 1 : 0),
+                            j + (k === 2 ? -1 : k === 3 ? 1 : 0)
+                        );
+                        if (sourceIndex >= 0 && sourceIndex < this.width * this.height) {
+                            this.weights[idx * 4 + k] += this.learningRate * error * this.states[sourceIndex]; // Update using state not output
+                        }
+                    }
+                }
+            }
+        }
+
+        drawArray(context, data, posNegColor = false) {
+            const cellWidth = context.canvas.width / this.width;
+            const cellHeight = context.canvas.height / this.height;
+            for (let i = 0; i < this.height; i++) {
+                for (let j = 0; j < this.width; j++) {
+                    const idx = this.index(i, j);
+                    const value = data[idx];
+                    const colorIntensity = Math.abs(Math.round(value * 255));
+                    context.fillStyle = posNegColor ? (value > 0 ? `rgb(0, ${colorIntensity}, 0)` : `rgb(${colorIntensity}, 0, 0)`) : `rgb(${colorIntensity}, ${colorIntensity}, ${colorIntensity})`;
+                    context.fillRect(j * cellWidth, i * cellHeight, cellWidth, cellHeight);
+                }
+            }
+        }
+    }
+
+    function sigmoid(x) {
+        return 1 / (1 + Math.exp(-x));
+    }
+
+    const outputsCanvas = document.getElementById('outputsCanvas');
+    const weightsCanvas = document.getElementById('weightsCanvas');
+    const outputsContext = outputsCanvas.getContext('2d');
+    const weightsContext = weightsCanvas.getContext('2d');
+    const rnn = new CellularRNN(20, 20, sigmoid, 0.05);
+
+    function startTraining() {
+        setInterval(() => {
+            for (let i = 0; i < rnn.targets.length; i++) {
+                rnn.targets[i] = Math.sin(Date.now() / 1000 + i / rnn.targets.length * Math.PI * 2) > 0 ? 1 : -1;
+            }
+            rnn.train();
+            rnn.drawArray(outputsContext, rnn.outputs);
+            rnn.drawArray(weightsContext, rnn.weights, true);
+        }, 20);
+    }
+
+    // Initial draw to show initial states
+    rnn.drawArray(outputsContext, rnn.outputs);
+    rnn.drawArray(weightsContext, rnn.weights, true);
+</script>
+</body>
+</html>
