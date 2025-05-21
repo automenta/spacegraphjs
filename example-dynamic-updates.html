@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+    <title>SpaceGraph - Dynamic Updates Example</title>
+    <link href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔄</text></svg>"
+          rel="icon">
+    <link href="index.css" rel="stylesheet"/>
+    <style>
+        #controls-panel {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(30, 30, 50, 0.85);
+            padding: 15px;
+            border-radius: 8px;
+            z-index: 10001; /* Above context menu */
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            border: 1px solid var(--accent-color);
+        }
+        #controls-panel h3 {
+            margin: 0 0 5px 0;
+            color: var(--accent-color);
+            font-size: 16px;
+        }
+        #controls-panel label {
+            font-size: 12px;
+            margin-bottom: 3px;
+            display: block;
+        }
+        #controls-panel input[type="text"],
+        #controls-panel button {
+            padding: 6px 8px;
+            border-radius: 4px;
+            border: 1px solid var(--accent-color-darker);
+            background-color: var(--node-button-bg);
+            color: var(--primary-color);
+            font-size: 13px;
+        }
+        #controls-panel input[type="text"] {
+            width: 100%;
+        }
+        #controls-panel button {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        #controls-panel button:hover {
+            background-color: var(--node-button-hover-bg);
+        }
+        .control-group {
+            padding-top: 10px;
+            border-top: 1px solid var(--accent-color-darker);
+        }
+        .control-group:first-child {
+            padding-top: 0;
+            border-top: none;
+        }
+    </style>
+</head>
+<body>
+
+<div id="space">
+    <canvas id="webgl-canvas"></canvas>
+    <div id="css3d-container"></div>
+</div>
+
+<div id="controls-panel">
+    <div class="control-group">
+        <h3>Update NoteNode</h3>
+        <label for="note-content-input">New Content for 'dynamic-note':</label>
+        <input type="text" id="note-content-input" value="New dynamic content!">
+        <button id="update-note-button" style="margin-top:5px;">Update Note Content</button>
+    </div>
+
+    <div class="control-group">
+        <h3>Update ShapeNode</h3>
+        <button id="change-shape-color-button">Change Shape Color</button>
+        <button id="change-shape-size-button" style="margin-top:5px;">Toggle Shape Size</button>
+    </div>
+
+    <div class="control-group">
+        <h3>Add Elements</h3>
+        <button id="add-node-button">Add New NoteNode</button>
+        <button id="add-edge-button" style="margin-top:5px;">Add Edge (DynamicShape to NewNode)</button>
+    </div>
+</div>
+
+<script type="importmap">
+    {
+        "imports": {
+            "three":         "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
+            "gsap":          "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
+        }
+    }
+</script>
+<script type="module">
+    import * as S from './spacegraph.js';
+
+    let space; 
+    let statusIndicatorElement; // Will be dynamically created by UIManager
+
+    function showStatus(message) {
+        if (!statusIndicatorElement) {
+            statusIndicatorElement = S.$('#status-indicator'); // Try to find it if already created
+        }
+        if (statusIndicatorElement) {
+            statusIndicatorElement.textContent = message;
+            statusIndicatorElement.classList.remove('hidden');
+            setTimeout(() => statusIndicatorElement.classList.add('hidden'), 2500);
+        } else {
+            console.warn("Status indicator element not found for message:", message);
+        }
+    }
+
+    function init() {
+        const container = S.$('#space');
+        // UI elements are now auto-created by UIManager if not found.
+        if (!container) {
+            console.error("Initialization Failed: Missing required #space container element.");
+            document.body.innerHTML = "<p style='color:red; padding: 20px;'>Error: Missing required #space container HTML element.</p>";
+            return;
+        }
+
+        try {
+            space = new S.SpaceGraph(container, {}); // Pass empty object for uiElements
+            createInitialGraph(space);
+            setupDynamicControls(space);
+            
+            // Attempt to get a reference to the dynamically created status indicator
+            statusIndicatorElement = S.$('#status-indicator');
+
+
+            space.layoutEngine.runOnce(100);
+            space.centerView(null, 0.5);
+            
+            window.space = space; 
+            showStatus('Dynamic Updates Example Ready ✨');
+
+        } catch (error) {
+            console.error("Dynamic Updates Example Initialization Failed:", error);
+            const tempStatus = S.$('#status-indicator') || document.body.appendChild(document.createElement('div'));
+            tempStatus.id = 'status-indicator';
+            tempStatus.textContent = `Error: ${error.message}`;
+            tempStatus.style.backgroundColor = 'var(--delete-button-bg)';
+            tempStatus.classList.remove('hidden');
+            container.innerHTML = `<div style="color: red; padding: 20px;">Error initializing: ${error.message}<br><pre>${error.stack}</pre></div>`;
+        }
+    }
+
+    function createInitialGraph(currentSpace) {
+        const note1 = currentSpace.addNode(new S.NoteNode('dynamic-note', { x: -150, y: 0, z: 0 }, {
+            content: "<h2>Initial Note</h2><p>This content will be updated dynamically.</p>",
+            width: 250, height: 100, backgroundColor: "#3a3a70"
+        }));
+
+        const shape1 = currentSpace.addNode(new S.ShapeNode('dynamic-shape', { x: 150, y: 0, z: 0 }, {
+            label: "Dynamic Shape", shape: 'sphere', size: 60, color: 0xff8800
+        }));
+        
+        const targetNode = currentSpace.addNode(new S.NoteNode('target-for-edge', { x: 0, y: 150, z: -30 }, {
+            content: "<h3>Target Node</h3><p>A new edge might connect here.</p>",
+            width: 200, height: 90, backgroundColor: "#2a502a"
+        }));
+
+        currentSpace.addEdge(note1, shape1, {constraintParams: {idealLength: 300}});
+        currentSpace.addEdge(shape1, targetNode, {constraintParams: {idealLength: 180}});
+        showStatus('Initial graph created.');
+    }
+
+    let newNodeCounter = 0;
+    let lastAddedNodeId = null;
+
+    function setupDynamicControls(currentSpace) {
+        S.$('#update-note-button').addEventListener('click', () => {
+            const noteToUpdate = currentSpace.getNodeById('dynamic-note');
+            const newContent = S.$('#note-content-input').value;
+            if (noteToUpdate instanceof S.HtmlNodeElement) { 
+                noteToUpdate.data.content = newContent; 
+                const contentDiv = S.$('.node-content', noteToUpdate.htmlElement);
+                if (contentDiv) contentDiv.innerHTML = newContent;
+                showStatus("Note content updated.");
+            } else {
+                showStatus("Error: 'dynamic-note' not found or not an HtmlNodeElement.");
+            }
+        });
+
+        let shapeColors = [0x00ff00, 0x0000ff, 0xff00ff, 0xffff00];
+        let currentColorIndex = 0;
+        S.$('#change-shape-color-button').addEventListener('click', () => {
+            const shapeToUpdate = currentSpace.getNodeById('dynamic-shape');
+            if (shapeToUpdate instanceof S.ShapeNode) {
+                currentColorIndex = (currentColorIndex + 1) % shapeColors.length;
+                const newColor = shapeColors[currentColorIndex];
+                shapeToUpdate.data.color = newColor; 
+                if (shapeToUpdate.mesh && shapeToUpdate.mesh.material) {
+                    shapeToUpdate.mesh.material.color.setHex(newColor); 
+                }
+                showStatus(`Shape color changed to #${newColor.toString(16)}.`);
+            } else {
+                showStatus("Error: 'dynamic-shape' not found or not a ShapeNode.");
+            }
+        });
+        
+        let isShapeLarge = false;
+        S.$('#change-shape-size-button').addEventListener('click', () => {
+            const shapeToUpdate = currentSpace.getNodeById('dynamic-shape');
+            if (shapeToUpdate instanceof S.ShapeNode) {
+                isShapeLarge = !isShapeLarge;
+                const newSize = isShapeLarge ? 90 : 50;
+                const oldSize = shapeToUpdate.data.size;
+                shapeToUpdate.data.size = newSize; 
+                
+                if (shapeToUpdate.mesh) {
+                    const scaleFactor = newSize / (oldSize || 50) ; 
+                    shapeToUpdate.mesh.scale.multiplyScalar(scaleFactor / shapeToUpdate.mesh.scale.x);
+
+                }
+                currentSpace.layoutEngine.kick(); 
+                showStatus(`Shape size toggled to ${newSize}.`);
+            } else {
+                showStatus("Error: 'dynamic-shape' not found or not a ShapeNode.");
+            }
+        });
+
+        S.$('#add-node-button').addEventListener('click', () => {
+            newNodeCounter++;
+            const newNodeId = `new-node-${newNodeCounter}`;
+            lastAddedNodeId = newNodeId;
+            const randomX = Math.random() * 400 - 200;
+            const randomY = Math.random() * 300 - 150;
+            const newNode = currentSpace.addNode(new S.NoteNode(newNodeId, { x: randomX, y: randomY, z: Math.random()*50 - 25 }, {
+                content: `<h3>New Node ${newNodeCounter}</h3><p>Added dynamically!</p>`,
+                width: 200, height: 80, backgroundColor: `hsl(${Math.random()*360}, 50%, 30%)`
+            }));
+            currentSpace.layoutEngine.kick();
+            showStatus(`Node '${newNode.id}' added.`);
+        });
+
+        S.$('#add-edge-button').addEventListener('click', () => {
+            const shapeNode = currentSpace.getNodeById('dynamic-shape');
+            if (lastAddedNodeId) {
+                const newlyAddedNode = currentSpace.getNodeById(lastAddedNodeId);
+                if (shapeNode && newlyAddedNode) {
+                    const existingEdge = [...currentSpace.edges.values()].find(edge =>
+                        (edge.source === shapeNode && edge.target === newlyAddedNode) ||
+                        (edge.source === newlyAddedNode && edge.target === shapeNode)
+                    );
+                    if (!existingEdge) {
+                        currentSpace.addEdge(shapeNode, newlyAddedNode);
+                        showStatus(`Edge added between 'dynamic-shape' and '${lastAddedNodeId}'.`);
+                    } else {
+                        showStatus(`Edge already exists between 'dynamic-shape' and '${lastAddedNodeId}'.`);
+                    }
+                } else {
+                    showStatus("Error: One or both nodes for edge creation not found.");
+                }
+            } else {
+                showStatus("Add a new node first to create an edge to it.");
+            }
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init(); 
+    }
+</script>
+</body>
+</html>

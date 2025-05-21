@@ -3,23 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+    <title>SpaceGraph Keystone Example 🧠</title>
     <link href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>"
           rel="icon">
     <link href="index.css" rel="stylesheet"/>
 </head>
 <body>
 
-<div id="space">
-    <canvas id="webgl-canvas"></canvas>
-    <div id="css3d-container"></div>
-</div>
-
-<div class="context-menu" id="context-menu"></div>
-
-<div class="dialog" id="confirm-dialog">
-    <p id="confirm-message">Are you sure?</p>
-    <button id="confirm-yes">Yes</button>
-    <button id="confirm-no">No</button>
+<div id="space"> 
+    <canvas id="webgl-canvas"></canvas> 
+    <div id="css3d-container"></div> 
 </div>
 
 <script type="importmap">
@@ -36,108 +29,144 @@
 
     function init() {
         const container = S.$('#space');
-        const contextMenuEl = S.$('#context-menu');
-        const confirmDialogEl = S.$('#confirm-dialog');
+        const container = S.$('#space');
+        // const contextMenuEl = S.$('#context-menu'); // No longer needed to pass explicitly
+        // const confirmDialogEl = S.$('#confirm-dialog'); // No longer needed to pass explicitly
+        // const statusIndicator = S.$('#status-indicator'); // No longer needed to pass explicitly
 
-        if (!container || !contextMenuEl || !confirmDialogEl) {
-            console.error("Initialization Failed: Missing required DOM elements (#space, #context-menu, #confirm-dialog).");
-            container.innerHTML = "<p style='color:red; padding: 20px;'>Error: Missing required HTML elements.</p>";
+        if (!container) { // Only need to check for the main container
+            console.error("Initialization Failed: Missing required #space container element.");
+            document.body.innerHTML = "<p style='color:red; padding: 20px;'>Error: Missing required #space container HTML element for the demo.</p>";
             return;
         }
 
         try {
-            const space = new S.SpaceGraph(container);
+            // UIManager will now create UI elements if not found.
+            // Pass empty uiElements or specific ones if they *were* on the page.
+            // For this cleanup, we assume they are not on the page and will be auto-created.
+            const space = new S.SpaceGraph(container, {}); 
 
-            space.ui = new S.UIManager(space, contextMenuEl, confirmDialogEl);
+            createKeystoneExampleGraph(space);
 
-            const layout = new S.ForceLayout(space);
-            space.layout = layout;
+            space.layoutEngine.runOnce(250); 
+            space.centerView(null, 0.8);     
 
+            window.space = space; 
+            // UIManager should handle its own status indicator if necessary, or examples can manage it if a specific one is on page.
+            // For now, let's assume the UIManager's dynamically created one is sufficient or CSS handles initial state.
+            const statusEl = S.$('#status-indicator'); // Find the auto-created one
+            if (statusEl) {
+                statusEl.textContent = 'SpaceGraph Ready ✨';
+                setTimeout(() => statusEl.classList.add('hidden'), 1500);
+            }
 
-            createExampleGraph(space);
-
-            layout.runOnce(250); // Initial settling steps
-            space.centerView(null, 0.8); // Center view smoothly
-            layout.start(); // Start continuous layout simulation
-            space.animate(); // Start render loop
-
-            window.space = space; // Expose for debugging
-            console.log("Mind Map Initialized Successfully.");
 
         } catch (error) {
             console.error("Initialization Failed:", error);
-            container.innerHTML = `<div style="color: red; padding: 20px;">Error initializing Mind Map: ${error.message}<br><pre>${error.stack}</pre></div>`;
+            const statusEl = S.$('#status-indicator') || document.body.appendChild(document.createElement('div'));
+            statusEl.id = 'status-indicator'; // Ensure it has an ID if newly created
+            statusEl.textContent = `Error: ${error.message}`;
+            statusEl.style.backgroundColor = 'var(--delete-button-bg)';
+            statusEl.classList.remove('hidden');
+            container.innerHTML = `<div style="color: red; padding: 20px;">Error initializing SpaceGraph: ${error.message}<br><pre>${error.stack}</pre></div>`;
         }
     }
 
-    function createExampleGraph(space) {
-        console.log("Creating example graph...");
-        const colors = ['#2a2a50', '#2a402a', '#402a2a', '#40402a', '#2a4040', '#402a40', '#503030'];
+    function createKeystoneExampleGraph(space) {
+        console.log("Creating Keystone Example Graph...");
+        const colors = ['#2a2a50', '#2a402a', '#402a2a', '#40402a', '#2a4040', '#402a40', '#503030', '#305030', '#303050'];
         let colorIndex = 0;
         const nextColor = () => colors[colorIndex++ % colors.length];
 
-        // Core Node (Heavier)
-        const n1 = space.addNode(new S.NoteNode('core', { x: 0, y: 0, z: 0 }, {
-            content: "<h1>🚀 READY 🧠</h1><p>Enhanced Mind Map</p>",
-            width: 300, height: 110, backgroundColor: nextColor()
-        }, 2.5)); // Mass = 2.5
+        const n_core = space.addNode(new S.NoteNode('core', { x: 0, y: 0, z: 0 }, {
+            content: "<h1>🚀 SpaceGraph Keystone 🧠</h1><p>A 3D interactive information space.</p><ul><li>HTML & 3D Nodes</li><li>Customizable Edges</li><li>Physics Layout</li></ul>",
+            width: 320, height: 160, backgroundColor: nextColor(), contentScale: 1.1
+        }, 2.0)); 
 
-        // Features Branch
-        const n_features = space.addNode(new S.NoteNode('features', { x: 350, y: 100, z: 20 }, {
-            content: "<h2>Features ✨</h2><ul><li>HTML & 3D Nodes</li><li>Node Mass/Momentum</li><li>Edge Menu & Constraints</li><li>BG Toggle</li><li>3D Labels</li></ul>",
-            width: 240, height: 190, backgroundColor: nextColor()
-        }, 1.5)); // Mass = 1.5
-        space.addEdge(n1, n_features);
-
-        // Shape Nodes (Different Masses)
-        const n_box = space.addNode(new S.ShapeNode('box1', { x: 600, y: 150, z: 30 }, {
-            label: "Box Node 📦 (Mass 2.0)", shape: 'box', size: 70, color: 0xcc8833
-        }, 2.0)); // Mass = 2.0
-        // Rigid link example
-        space.addEdge(n_features, n_box, { constraintType: 'rigid', constraintParams: { distance: 180, stiffness: 0.08 } });
-
-        const n_sphere = space.addNode(new S.ShapeNode('sphere1', { x: 650, y: 0, z: -20 }, {
-            label: "Sphere Node 🌐 (Mass 1.0)", shape: 'sphere', size: 80, color: 0x33aabb
-        }, 1.0)); // Mass = 1.0
-        // Elastic link example
-        space.addEdge(n_box, n_sphere, { constraintType: 'elastic', constraintParams: { idealLength: 150, stiffness: 0.002 } });
-        space.addEdge(n_features, n_sphere); // Cross link
-
-        // Tech Branch
-        const n_tech = space.addNode(new S.NoteNode('tech', { x: -350, y: 100, z: -10 }, {
-            content: "<h2>Technology 💻</h2><p><code>Three.js</code> (WebGL, CSS3D)</p><p><code>GSAP</code>, <code>ES Modules</code></p>",
-            width: 250, height: 120, backgroundColor: nextColor()
+        const interactiveNodeId = S.generateId('interactive'); 
+        const n_interactive = space.addNode(new S.NoteNode(interactiveNodeId, { x: 380, y: 100, z: 30 }, {
+            content: `<h2>Interactive Content</h2>
+                      <p>Slider: <span class="slider-val-${interactiveNodeId}">50</span></p>
+                      <input type="range" min="0" max="100" value="50" style="width: 90%; pointer-events: auto; cursor: pointer;"
+                             oninput="document.querySelector('.slider-val-${interactiveNodeId}').textContent = this.value; event.stopPropagation();"
+                             onpointerdown="event.stopPropagation();">
+                      <button onclick="alert('Button inside node ${interactiveNodeId} clicked!'); event.stopPropagation();" 
+                              style="pointer-events: auto; cursor: pointer; margin-top: 8px;">Alert!
+                      </button>
+                      <button id="update-content-btn-${interactiveNodeId}" 
+                              style="pointer-events: auto; cursor: pointer; margin-top: 8px;">Update Text
+                      </button>
+                      <p id="dynamic-text-${interactiveNodeId}">Original Text</p>`,
+            width: 260, height: 220, backgroundColor: nextColor()
         }));
-        space.addEdge(n1, n_tech);
+        space.addEdge(n_core, n_interactive, { constraintType: 'elastic', constraintParams: { idealLength: 300, stiffness: 0.002 }});
+        
+        const updateBtn = S.$(`#update-content-btn-${interactiveNodeId}`, n_interactive.htmlElement);
+        if (updateBtn) {
+            updateBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); 
+                const textEl = S.$(`#dynamic-text-${interactiveNodeId}`, n_interactive.htmlElement);
+                if (textEl) textEl.textContent = `Text updated at ${new Date().toLocaleTimeString()}`;
+            });
+        } else {
+            console.warn(`Button #update-content-btn-${interactiveNodeId} not found for event listener setup.`);
+        }
 
-        // Style Branch
-        const n_style = space.addNode(new S.NoteNode('style', { x: 0, y: -250, z: 0 }, {
-            content: "<h2>Style 🎨</h2><p>✨ Dark/Transparent BG</p><p>🎨 Node Colors</p><p>🕸️ Dot Grid BG</p>",
-            width: 220, height: 110, backgroundColor: nextColor()
+        const n_box = space.addNode(new S.ShapeNode('shapeBox', { x: -350, y: 120, z: -20 }, {
+            label: "3D Box Node 📦", shape: 'box', size: 80, color: 0xcc8833
+        }, 1.5));
+        space.addEdge(n_core, n_box, { constraintType: 'rigid', constraintParams: { distance: 280, stiffness: 0.05 } });
+
+        const n_sphere = space.addNode(new S.ShapeNode('shapeSphere', { x: -400, y: -100, z: 50 }, {
+            label: "3D Sphere 🌐", shape: 'sphere', size: 70, color: 0x33aabb
+        })); 
+        space.addEdge(n_core, n_sphere, { constraintType: 'elastic', constraintParams: { idealLength: 320, stiffness: 0.001 }});
+        space.addEdge(n_box, n_sphere, { constraintType: 'weld', constraintParams: { stiffness: 0.1 } }); 
+
+        const n_details = space.addNode(new S.NoteNode('details', { x: 50, y: -280, z: -40 }, {
+            content: "<h3>Node Details</h3><p>This node shows more connections and different edge types.</p><p>Try context menus (right-click) on nodes, edges, or background.</p>",
+            width: 280, height: 130, backgroundColor: nextColor()
         }));
-        // Weld constraint example (strong rigid link)
-        space.addEdge(n1, n_style, { constraintType: 'weld' });
+        space.addEdge(n_core, n_details, {
+            color: 0xff8800, 
+            thickness: 2.5,
+            constraintType: 'elastic',
+            constraintParams: { idealLength: 250, stiffness: 0.003 }
+        });
+        space.addEdge(n_interactive, n_details, {
+            color: 0x88ff00,
+            constraintType: 'rigid',
+            constraintParams: { distance: 350, stiffness: 0.01 }
+        });
+        space.addEdge(n_sphere, n_details, {
+             color: 0x0088ff,
+             constraintType: 'elastic',
+             constraintParams: { idealLength: 300, stiffness: 0.0015 }
+        });
 
-        // Interactive Node Example
-        const n_interactive = space.addNode(new S.NoteNode('interactive', { x: 350, y: -150, z: -30 }, {
-            content: `<h2>Interactive</h2><p>Slider: <span class="slider-val">50</span></p>
-        <input type="range" min="0" max="100" value="50" style="width: 90%; pointer-events: auto; cursor: pointer;"
-               oninput="this.previousElementSibling.textContent = this.value; event.stopPropagation();"
-               onpointerdown="event.stopPropagation();">
-        <button onclick="alert('Button clicked!'); event.stopPropagation();" style="pointer-events: auto; cursor: pointer; margin-top: 5px;">Click</button>`,
-            width: 230, height: 170, backgroundColor: nextColor()
+        const n_fractal_root = space.addNode(new S.NoteNode('fractalRoot', {x: n_box.position.x + 150, y: n_box.position.y + 150, z: n_box.position.z - 50}, {
+            content: "<h4>Sub-Cluster</h4>", width: 130, height: 60, backgroundColor: nextColor()
         }));
-        space.addEdge(n_features, n_interactive);
-        space.addEdge(n_style, n_interactive, { constraintType: 'elastic', constraintParams: { idealLength: 250 } });
+        space.addEdge(n_box, n_fractal_root, { constraintType: 'rigid', constraintParams: { distance: 150, stiffness: 0.02 } });
 
-        console.log("Example graph created:", space.nodes.size, "nodes,", space.edges.size, "edges.");
+        for (let i = 0; i < 2; i++) {
+            const angle = (i / 2) * Math.PI * 2 + Math.PI/4;
+            const n_level1 = space.addNode(new S.NoteNode(null, {
+                x: n_fractal_root.position.x + Math.cos(angle) * 120,
+                y: n_fractal_root.position.y + Math.sin(angle) * 120,
+                z: n_fractal_root.position.z + (Math.random() - 0.5) * 60
+            }, {content: `L1-${i+1}`, width: 90, height: 45, backgroundColor: nextColor(), contentScale: 0.9}));
+            space.addEdge(n_fractal_root, n_level1, { constraintType: 'elastic', constraintParams: { idealLength: 100, stiffness: 0.005 }});
+        }
+
+
+        console.log("Keystone Example Graph created:", space.nodes.size, "nodes,", space.edges.size, "edges.");
     }
 
-    // --- Start the application ---
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
-        init(); // DOMContentLoaded has already fired
+        init(); 
     }
 </script>
 </body>
