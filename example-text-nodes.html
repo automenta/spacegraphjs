@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+    <title>SpaceGraph - Text Node Examples</title>
+    <link href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📝</text></svg>"
+          rel="icon">
+    <link href="index.css" rel="stylesheet"/> 
+</head>
+<body>
+
+<div id="space"> 
+    <canvas id="webgl-canvas"></canvas>
+    <div id="css3d-container"></div>
+</div>
+
+<script type="importmap">
+    {
+        "imports": {
+            "three":         "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
+            "gsap":          "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
+        }
+    }
+</script>
+<script type="module">
+    import * as S from './spacegraph.js';
+
+    function init() {
+        const container = S.$('#space');
+        // UI elements like contextMenuEl, confirmDialogEl, statusIndicator are now auto-created if not found.
+        // We only need to ensure the main container exists.
+        if (!container) {
+            console.error("Initialization Failed: Missing required #space container element.");
+            document.body.innerHTML = "<p style='color:red; padding: 20px;'>Error: Missing required #space container HTML element for the demo.</p>";
+            return;
+        }
+
+        try {
+            const space = new S.SpaceGraph(container, {}); // Pass empty object for uiElements
+
+            createTextNodesExample(space);
+
+            space.layoutEngine.runOnce(150); 
+            space.centerView(null, 0.7);    
+            
+            window.space = space; 
+            const statusEl = S.$('#status-indicator'); // Find the auto-created one
+            if (statusEl) {
+                statusEl.textContent = 'Text Node Example Ready ✨';
+                setTimeout(() => statusEl.classList.add('hidden'), 1500);
+            }
+
+        } catch (error) {
+            console.error("Text Node Example Initialization Failed:", error);
+            const statusEl = S.$('#status-indicator') || document.body.appendChild(document.createElement('div'));
+            statusEl.id = 'status-indicator'; // Ensure it has an ID if newly created
+            statusEl.textContent = `Error: ${error.message}`;
+            statusEl.style.backgroundColor = 'var(--delete-button-bg)'; 
+            statusEl.classList.remove('hidden');
+            container.innerHTML = `<div style="color: red; padding: 20px;">Error initializing: ${error.message}<br><pre>${error.stack}</pre></div>`;
+        }
+    }
+
+    function createTextNodesExample(space) {
+        console.log("Creating Text Nodes Example Graph...");
+        const colors = ['#2a3a50', '#3a502a', '#502a2a', '#503a2a', '#2a503a', '#502a3a'];
+        let colorIndex = 0;
+        const nextColor = () => colors[colorIndex++ % colors.length];
+
+        const n_rich_text = space.addNode(new S.NoteNode('rich-text-node', { x: -300, y: 0, z: 0 }, {
+            content: `<h1>Main Heading (H1)</h1>
+                      <p>This is a paragraph with <b>bold text</b> and <i>italic text</i>. It also includes a <a href="https://example.com" target="_blank">link to example.com</a>.</p>
+                      <h2>Sub Heading (H2)</h2>
+                      <ul><li>Unordered List Item 1</li><li>Unordered List Item 2</li></ul>
+                      <h3>Smaller Heading (H3)</h3>
+                      <ol><li>Ordered List Item 1</li><li>Ordered List Item 2</li></ol>
+                      <p>Inline code: <code>const foo = "bar";</code></p>
+                      <pre><code>// Preformatted code block:
+function greet(name) {
+  return "Hello, " + name + "!";
+}</code></pre>
+                      <blockquote>This is a blockquote, useful for citations or highlighted text.</blockquote>`,
+            width: 350, height: 420, backgroundColor: nextColor(), contentScale: 1.0 
+        }));
+
+        const n_small_scale = space.addNode(new S.NoteNode('small-scale-node', { x: 80, y: -150, z: -30 }, {
+            content: "<h2>Small Scale Text (0.8)</h2><p>This node has its content scaled down using <code>contentScale: 0.8</code>.</p><p>Useful for less important information or fitting more text in a smaller visual area.</p>",
+            width: 280, height: 120, backgroundColor: nextColor(), contentScale: 0.8
+        }));
+        space.addEdge(n_rich_text, n_small_scale);
+
+        const n_large_scale = space.addNode(new S.NoteNode('large-scale-node', { x: 80, y: 150, z: 20 }, {
+            content: "<h2>Large Scale Text (1.3)</h2><p>This node uses <code>contentScale: 1.3</code> for larger, more prominent text.</p>",
+            width: 300, height: 100, backgroundColor: nextColor(), contentScale: 1.3
+        }));
+        space.addEdge(n_rich_text, n_large_scale);
+        
+        const n_editable = space.addNode(new S.NoteNode('editable-node', { x: 450, y: 0, z: -10 }, {
+            content: "<h2>Editable Node ✏️</h2><p>You can edit this content directly! Click here to start typing.</p><p>The <code>NoteNode</code> class is editable by default. You can also use the context menu (Right-click -> Edit Content).</p>",
+            width: 300, height: 150, backgroundColor: nextColor()
+        }));
+        space.addEdge(n_large_scale, n_editable);
+
+        const n_wide_short = space.addNode(new S.NoteNode('wide-short-node', { x: -300, y: 280, z: 10 }, {
+            content: "<h3>Wide & Short Node</h3><p>This node demonstrates text wrapping within a wide but short container. Long lines of text will wrap accordingly, making efficient use of horizontal space.</p>",
+            width: 400, height: 100, backgroundColor: nextColor()
+        }));
+        space.addEdge(n_rich_text, n_wide_short);
+
+        const n_narrow_tall = space.addNode(new S.NoteNode('narrow-tall-node', { x: 480, y: -200, z: -40 }, {
+            content: "<h3>Narrow & Tall</h3><p>This node shows how text behaves in a tall, narrow space, leading to more line breaks and vertical scrolling if content exceeds the height.</p>",
+            width: 180, height: 250, backgroundColor: nextColor()
+        }));
+        space.addEdge(n_editable, n_narrow_tall);
+        space.addEdge(n_small_scale, n_narrow_tall);
+
+        const n_small_clip = space.addNode(new S.NoteNode('small-clip-node', { x: 0, y: 300, z: 30 }, {
+            content: "<h4>Tiny Note</h4><p>This is a very small node. If the content is too long for its dimensions, you should be able to scroll within the content area to see the rest. This tests overflow handling.</p><ul><li>Item A</li><li>Item B</li><li>Item C</li></ul>",
+            width: 150, height: 90, backgroundColor: nextColor(), contentScale: 0.7
+        }));
+        space.addEdge(n_wide_short, n_small_clip);
+
+        console.log("Text Nodes Example Graph created:", space.nodes.size, "nodes,", space.edges.size, "edges.");
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init(); 
+    }
+</script>
+</body>
+</html>
