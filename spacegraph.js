@@ -9,59 +9,6 @@ export const lerp = (a, b, t) => a + (b - a) * t;
 export const generateId = (prefix = 'id') => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
 export const DEG2RAD = Math.PI / 180;
 
-/**
- * Global logging function for SpaceGraph. Appends messages to a HUD console.
- * @param {string} message - The message to log.
- * @param {'info' | 'warn' | 'error'} [type='info'] - The type of log message.
- */
-window.spaceGraphLog = function(message, type = 'info') {
-    let logConsole = document.getElementById('hud-log-console');
-    let consoleInitialized = !!window.spaceGraphLogConsoleInitialized;
-
-    if (!logConsole) {
-        // Fallback for critical environments where HUD might be missing
-        const fallbackLog = type === 'error' ? console.error : type === 'warn' ? console.warn : console.log;
-        fallbackLog(`HUD Console missing. Log (${type}): ${message}`);
-        return;
-    }
-
-    if (!consoleInitialized) {
-        logConsole.style.display = 'block';
-        window.spaceGraphLogConsoleInitialized = true;
-    }
-
-    const msgElement = document.createElement('div');
-    const timestamp = new Date().toLocaleTimeString();
-    msgElement.textContent = `[${timestamp}] ${message}`;
-
-    switch (type) {
-        case 'error':
-            msgElement.style.color = 'var(--delete-button-bg, #ff6961)'; // Light red
-            msgElement.style.fontWeight = 'bold';
-            break;
-        case 'warn':
-            msgElement.style.color = 'var(--color-accent-yellow, #f8d57e)'; // Light yellow/orange
-            break;
-        case 'info':
-        default:
-            msgElement.style.color = 'var(--color-accent-aqua, #79d8ff)'; // Light blue/aqua
-            break;
-    }
-    msgElement.style.marginBottom = '3px';
-    msgElement.style.borderBottom = '1px solid rgba(255,255,255,0.1)';
-    msgElement.style.paddingBottom = '3px';
-
-
-    logConsole.appendChild(msgElement);
-    logConsole.scrollTop = logConsole.scrollHeight;
-
-    // Limit log entries
-    const maxEntries = 100;
-    while (logConsole.childNodes.length > maxEntries) {
-        logConsole.removeChild(logConsole.firstChild);
-    }
-};
-
 export class SpaceGraph {
     nodes = new Map();
     edges = new Map();
@@ -76,11 +23,7 @@ export class SpaceGraph {
     background = {color: 0x000000, alpha: 0.0}; 
 
     constructor(containerElement, uiElements = {}) {
-        window.spaceGraphLog('SpaceGraph initializing...');
-        if (!containerElement) {
-            window.spaceGraphLog('SpaceGraph constructor error: Container element is required.', 'error');
-            throw new Error("SpaceGraph requires a container element.");
-        }
+        if (!containerElement) throw new Error("SpaceGraph requires a container element.");
         this.container = containerElement;
 
         this.scene = new THREE.Scene(); 
@@ -106,7 +49,6 @@ export class SpaceGraph {
 
         this._animate();
         this.layoutEngine.start();
-        window.spaceGraphLog('SpaceGraph initialized successfully.');
     }
 
     _setupRenderers() {
@@ -169,16 +111,12 @@ export class SpaceGraph {
         if (nodeInstance.labelObject) this.cssScene.add(nodeInstance.labelObject); 
 
         this.layoutEngine?.addNode(nodeInstance);
-        window.spaceGraphLog(`Node added: ${nodeInstance.id} (Type: ${nodeInstance.constructor.name})`);
         return nodeInstance;
     }
 
     removeNode(nodeId) {
         const node = this.nodes.get(nodeId);
-        if (!node) {
-            window.spaceGraphLog(`Attempted to remove non-existent node: ${nodeId}`, 'warn');
-            return;
-        }
+        if (!node) return;
 
         if (this.selectedNode === node) this.setSelectedNode(null);
         if (this.linkSourceNode === node) this.uiManager?.cancelLinking();
@@ -189,16 +127,12 @@ export class SpaceGraph {
         node.dispose(); 
         this.nodes.delete(nodeId);
         this.layoutEngine?.removeNode(node);
-        window.spaceGraphLog(`Node removed: ${nodeId}`);
     }
 
     addEdge(sourceNode, targetNode, data = {}) {
-        if (!sourceNode || !targetNode || sourceNode === targetNode) {
-            window.spaceGraphLog('Add edge failed: Source and target must be valid and different.', 'warn');
-            return null;
-        }
+        if (!sourceNode || !targetNode || sourceNode === targetNode) return null;
         if ([...this.edges.values()].some(e => (e.source === sourceNode && e.target === targetNode) || (e.source === targetNode && e.target === sourceNode))) {
-             window.spaceGraphLog(`Duplicate edge ignored: ${sourceNode.id} to ${targetNode.id}`, 'warn');
+             console.warn("Duplicate edge ignored:", sourceNode.id, targetNode.id);
             return null;
         }
 
@@ -208,21 +142,16 @@ export class SpaceGraph {
         this.edges.set(edgeId, edge);
         if (edge.threeObject) this.scene.add(edge.threeObject); 
         this.layoutEngine?.addEdge(edge);
-        window.spaceGraphLog(`Edge added: ${edgeId} (Source: ${sourceNode.id}, Target: ${targetNode.id})`);
         return edge;
     }
 
     removeEdge(edgeId) {
         const edge = this.edges.get(edgeId);
-        if (!edge) {
-            window.spaceGraphLog(`Attempted to remove non-existent edge: ${edgeId}`, 'warn');
-            return;
-        }
+        if (!edge) return;
         if (this.selectedEdge === edge) this.setSelectedEdge(null);
         edge.dispose();
         this.edges.delete(edgeId);
         this.layoutEngine?.removeEdge(edge);
-        window.spaceGraphLog(`Edge removed: ${edgeId}`);
     }
 
     getNodeById = (id) => this.nodes.get(id);
@@ -378,8 +307,7 @@ export class SpaceGraph {
 
         window.removeEventListener('resize', this._onWindowResize);
         this.uiManager?.dispose();
-        window.spaceGraphLog("SpaceGraph disposed.", 'info');
-        // console.log("SpaceGraph disposed."); // Original console log replaced by HUD log
+        console.log("SpaceGraph disposed.");
     }
 }
 
@@ -681,42 +609,9 @@ export class ShapeNode extends BaseNode {
 
     setSelectedStyle(selected) {
         if (this.mesh?.material) {
-            this.mesh.material.emissive?.setHex(selected ? 0xffff00 : 0x000000); // Brighter yellow for selection
-        }
-
-        if (this.mesh) {
-            let scale = 1.0;
-            if (selected) {
-                scale = 1.1; // Selected scale
-            } else if (this.spaceGraph?.uiManager?.hoveredShapeNode === this) {
-                scale = 1.05; // Hovered scale if not selected
-            }
-            this.mesh.scale.setScalar(scale);
+            this.mesh.material.emissive?.setHex(selected ? 0x888800 : 0x000000);
         }
         this.labelObject?.element?.classList.toggle('selected', selected);
-    }
-
-    /**
-     * Sets the visual style for a hovered ShapeNode.
-     * @param {boolean} hovered - True if the node is being hovered, false otherwise.
-     */
-    setHoverStyle(hovered) {
-        // If this node is currently selected, the selected style (especially scale) takes precedence.
-        if (this.spaceGraph?.selectedNode === this) {
-            if (this.mesh) {
-                // Ensure selected scale is maintained even if hover status changes underneath
-                this.mesh.scale.setScalar(1.1);
-            }
-            return; // Do not apply hover scaling effects if selected
-        }
-
-        if (this.mesh) {
-            this.mesh.scale.setScalar(hovered ? 1.05 : 1.0);
-        }
-        // Optional: Other hover effects like a subtle emissive color for non-selected nodes
-        // if (this.mesh?.material) {
-        //    this.mesh.material.emissive?.setHex(hovered && !this.spaceGraph?.selectedNode ? 0x222200 : 0x000000);
-        // }
     }
 }
 
@@ -809,7 +704,6 @@ export class UIManager {
     draggedNode = null;
     resizedNode = null;
     hoveredEdge = null;
-    hoveredShapeNode = null; // To track hovered ShapeNode
     resizeStartPos = {x: 0, y: 0};
     resizeStartSize = {width: 0, height: 0};
     dragOffset = new THREE.Vector3();
@@ -862,6 +756,10 @@ export class UIManager {
         window.addEventListener('pointermove', this._onPointerMove.bind(this), false); 
         window.addEventListener('pointerup', this._onPointerUp.bind(this), false); 
         this.container.addEventListener('contextmenu', this._onContextMenu.bind(this), opts);
+
+        // Drag and Drop from palette
+        this.container.addEventListener('dragover', this._onDragOver.bind(this), false);
+        this.container.addEventListener('drop', this._onDrop.bind(this), false);
         
         document.addEventListener('click', this._onDocumentClick.bind(this), true);
         
@@ -925,7 +823,6 @@ export class UIManager {
         this._updatePointerState(e, true);
         const targetInfo = this._getTargetInfo(e);
 
-        // If a click starts on UI controls, a resize handle, or editable content, let it proceed.
         if (targetInfo.nodeControlsButton && targetInfo.node instanceof HtmlNodeElement) {
             e.preventDefault(); e.stopPropagation();
             this._handleNodeControlButtonClick(targetInfo.nodeControlsButton, targetInfo.node);
@@ -941,63 +838,33 @@ export class UIManager {
             this._hideContextMenu(); return;
         }
 
-        // Handle clicking on a node (ShapeNode or HtmlNodeElement)
         if (targetInfo.node) {
-            // If a different ShapeNode was hovered, un-hover it now that a click has occurred.
-            if (this.hoveredShapeNode && this.hoveredShapeNode !== targetInfo.node) {
-                this.hoveredShapeNode.setHoverStyle(false);
-            }
-            // The current target becomes the (potentially) new hovered ShapeNode.
-            // If it's not a ShapeNode, hoveredShapeNode becomes null.
-            this.hoveredShapeNode = targetInfo.node instanceof ShapeNode ? targetInfo.node : null;
-
             if (targetInfo.interactiveInNode || targetInfo.contentEditable) {
-                 e.stopPropagation(); // Allow interaction with node's internal HTML content
-                 // Select the node if it's not already selected.
-                 if(this.spaceGraph.selectedNode !== targetInfo.node) {
-                    this.spaceGraph.setSelectedNode(targetInfo.node);
-                 }
-                 // No need to call setHoverStyle(false) here, as pointerMove will handle it if mouse leaves.
-                 this._hideContextMenu(); // Hide context menu as interaction is within node content
-            } else { // Click was on the node itself (not specific interactive content within it)
+                 e.stopPropagation();
+                 if(this.spaceGraph.selectedNode !== targetInfo.node) this.spaceGraph.setSelectedNode(targetInfo.node);
+                 this._hideContextMenu();
+            } else {
                 e.preventDefault();
                 this.draggedNode = targetInfo.node;
                 this.draggedNode.startDrag();
+                if (this.draggedNode instanceof HtmlNodeElement && this.draggedNode.htmlElement) {
+                    this.draggedNode.htmlElement.classList.add('node-dragging-html');
+                }
                 const worldPos = this.spaceGraph.screenToWorld(e.clientX, e.clientY, this.draggedNode.position.z);
                 this.dragOffset = worldPos ? worldPos.sub(this.draggedNode.position) : new THREE.Vector3();
                 this.container.style.cursor = 'grabbing';
-
-                if(this.spaceGraph.selectedNode !== targetInfo.node) {
-                    this.spaceGraph.setSelectedNode(targetInfo.node); // This will call setSelectedStyle
-                } else {
-                    // If already selected, ensure its style (e.g. scale) is correctly reapplied.
-                    // This is important if it was also the hoveredShapeNode whose style might differ slightly.
-                    targetInfo.node.setSelectedStyle(true);
-                }
+                if(this.spaceGraph.selectedNode !== targetInfo.node) this.spaceGraph.setSelectedNode(targetInfo.node);
                 this._hideContextMenu(); return;
             }
-        } else if (targetInfo.intersectedEdge) { // Handle clicking on an edge
+        } else if (targetInfo.intersectedEdge) {
             e.preventDefault();
-            // If a ShapeNode was hovered, un-hover it as we're now interacting with an edge.
-            if (this.hoveredShapeNode) {
-                this.hoveredShapeNode.setHoverStyle(false);
-                this.hoveredShapeNode = null;
-            }
             this.spaceGraph.setSelectedEdge(targetInfo.intersectedEdge);
             this._hideContextMenu(); return;
-        } else { // Click was on the background
+        } else {
             this._hideContextMenu();
-            // If a ShapeNode was hovered, un-hover it.
-            if (this.hoveredShapeNode) {
-                this.hoveredShapeNode.setHoverStyle(false);
-                this.hoveredShapeNode = null;
-            }
-            // If no specific object is clicked, and it's a primary button click, allow camera panning.
-            // Deselection of any selected node/edge will be handled in _onPointerUp if it's a click (potentialClick = true).
-            if (this.pointerState.primary && !this.draggedNode && !this.resizedNode) { // Ensure not starting a drag/resize
-                 if (!this.spaceGraph.selectedNode && !this.spaceGraph.selectedEdge) { // Only pan if nothing is selected
-                    this.spaceGraph.cameraController?.startPan(e);
-                 }
+            if (this.spaceGraph.selectedNode || this.spaceGraph.selectedEdge) {
+            } else if (this.pointerState.primary) {
+                this.spaceGraph.cameraController?.startPan(e);
             }
         }
     }
@@ -1052,27 +919,16 @@ export class UIManager {
              this.spaceGraph.cameraController.pan(e);
         }
 
-        // Hover effects management (Edges and ShapeNodes)
         if (!this.pointerState.down && !this.resizedNode && !this.draggedNode && !this.spaceGraph.isLinking) {
-            const targetInfo = this._getTargetInfo(e);
-
-            // Edge hover: Apply/remove highlight if not the selected edge
-            if (this.hoveredEdge !== targetInfo.intersectedEdge) {
+            const { intersectedEdge } = this._getTargetInfo(e);
+            if (this.hoveredEdge !== intersectedEdge) {
                 if (this.hoveredEdge && this.hoveredEdge !== this.spaceGraph.selectedEdge) {
                     this.hoveredEdge.setHighlight(false);
                 }
-                this.hoveredEdge = targetInfo.intersectedEdge;
+                this.hoveredEdge = intersectedEdge;
                 if (this.hoveredEdge && this.hoveredEdge !== this.spaceGraph.selectedEdge) {
                     this.hoveredEdge.setHighlight(true);
                 }
-            }
-
-            // ShapeNode hover: Apply/remove hover style
-            const currentHoveredShape = targetInfo.node instanceof ShapeNode ? targetInfo.node : null;
-            if (this.hoveredShapeNode !== currentHoveredShape) {
-                this.hoveredShapeNode?.setHoverStyle(false); // Unstyle previous, if any
-                this.hoveredShapeNode = currentHoveredShape;
-                this.hoveredShapeNode?.setHoverStyle(true);  // Style new, if any
             }
         }
     }
@@ -1083,6 +939,9 @@ export class UIManager {
         if (this.resizedNode) {
             this.resizedNode.endResize(); this.resizedNode = null;
         } else if (this.draggedNode) {
+            if (this.draggedNode instanceof HtmlNodeElement && this.draggedNode.htmlElement) {
+                this.draggedNode.htmlElement.classList.remove('node-dragging-html');
+            }
             this.draggedNode.endDrag(); this.draggedNode = null;
         } else if (this.spaceGraph.isLinking && e.button === 0) { 
             this._completeLinking(e);
@@ -1188,61 +1047,28 @@ export class UIManager {
                 const node = this.spaceGraph.getNodeById(data.nodeId);
                 if (node instanceof HtmlNodeElement && node.data.editable) {
                     node.htmlElement?.querySelector('.node-content')?.focus();
-                    window.spaceGraphLog(`Context menu: Edit content for node ${data.nodeId}`);
                 }
             },
             'delete-node': () => this._showConfirm(`Delete node "${data.nodeId.substring(0,10)}..."?`, () => this.spaceGraph.removeNode(data.nodeId)),
             'delete-edge': () => this._showConfirm(`Delete edge "${data.edgeId.substring(0,10)}..."?`, () => this.spaceGraph.removeEdge(data.edgeId)),
-            'autozoom-node': () => {
-                const n = this.spaceGraph.getNodeById(data.nodeId);
-                if(n) this.spaceGraph.autoZoom(n);
-                window.spaceGraphLog(`Context menu: AutoZoom on node ${data.nodeId}`);
-            },
+            'autozoom-node': () => { const n = this.spaceGraph.getNodeById(data.nodeId); if(n) this.spaceGraph.autoZoom(n); },
             'create-note': () => this._createNodeFromMenu(data.position, NoteNode, {content: 'New Note ✨'}),
             'create-box': () => this._createNodeFromMenu(data.position, ShapeNode, {label: 'Box', shape: 'box', color: Math.random() * 0xffffff}),
             'create-sphere': () => this._createNodeFromMenu(data.position, ShapeNode, {label: 'Sphere', shape: 'sphere', color: Math.random() * 0xffffff}),
-            'center-view': () => {
-                this.spaceGraph.centerView();
-                window.spaceGraphLog('Context menu: Center view');
-            },
-            'reset-view': () => {
-                this.spaceGraph.cameraController?.resetView();
-                window.spaceGraphLog('Context menu: Reset view');
-            },
-            'start-link': () => {
-                const n = this.spaceGraph.getNodeById(data.nodeId);
-                if(n) this._startLinking(n);
-                window.spaceGraphLog(`Context menu: Start link from node ${data.nodeId}`);
-            },
+            'center-view': () => this.spaceGraph.centerView(),
+            'reset-view': () => this.spaceGraph.cameraController?.resetView(),
+            'start-link': () => { const n = this.spaceGraph.getNodeById(data.nodeId); if(n) this._startLinking(n); },
             'reverse-edge': () => {
                 const edge = this.spaceGraph.getEdgeById(data.edgeId);
-                if (edge) {
-                    [edge.source, edge.target] = [edge.target, edge.source];
-                    edge.update();
-                    this.spaceGraph.layoutEngine?.kick();
-                    window.spaceGraphLog(`Context menu: Reversed edge ${data.edgeId}`);
-                }
+                if (edge) { [edge.source, edge.target] = [edge.target, edge.source]; edge.update(); this.spaceGraph.layoutEngine?.kick(); }
             },
-            'edit-edge': () => { // This is for the main context menu, not the edge quick menu
-                const e = this.spaceGraph.getEdgeById(data.edgeId);
-                if(e) this.spaceGraph.setSelectedEdge(e);
-                window.spaceGraphLog(`Context menu: Edit edge ${data.edgeId} (shows quick menu)`);
-            },
-            'toggle-background': () => {
-                const newAlpha = this.spaceGraph.background.alpha === 0 ? 1.0 : 0.0;
-                this.spaceGraph.setBackground(
-                    newAlpha === 1.0 ? 0x101018 : 0x000000,
-                    newAlpha
-                );
-                window.spaceGraphLog(`Context menu: Toggled background to ${newAlpha === 1.0 ? 'dark' : 'transparent'}`);
-            },
+            'edit-edge': () => { const e = this.spaceGraph.getEdgeById(data.edgeId); if(e) this.spaceGraph.setSelectedEdge(e);  },
+            'toggle-background': () => this.spaceGraph.setBackground(
+                this.spaceGraph.background.alpha === 0 ? 0x101018 : 0x000000,
+                this.spaceGraph.background.alpha === 0 ? 1.0 : 0.0
+            ),
         };
-        if (actions[action]) {
-            actions[action]();
-        } else {
-            window.spaceGraphLog(`Unknown context menu action: ${action}`, 'warn');
-            // console.warn("Unknown context menu action:", action); // Original console warn
-        }
+        actions[action]?.() ?? console.warn("Unknown context menu action:", action);
     }
     
     _createNodeFromMenu(positionData, NodeTypeClass, nodeDataParams) {
@@ -1299,22 +1125,13 @@ export class UIManager {
         $('#confirm-message', this.confirmDialogElement).textContent = message;
         this.confirmCallback = onConfirm;
         this.confirmDialogElement.style.display = 'block';
-        window.spaceGraphLog(`Confirmation shown: "${message}"`, 'info');
     }
     _hideConfirm = () => { this.confirmDialogElement.style.display = 'none'; this.confirmCallback = null; }
-    _onConfirmYes = () => {
-        window.spaceGraphLog(`Confirmation accepted for: "${$('#confirm-message', this.confirmDialogElement).textContent}"`, 'info');
-        this.confirmCallback?.();
-        this._hideConfirm();
-    }
-    _onConfirmNo = () => {
-        window.spaceGraphLog(`Confirmation rejected for: "${$('#confirm-message', this.confirmDialogElement).textContent}"`, 'info');
-        this._hideConfirm();
-    }
+    _onConfirmYes = () => { this.confirmCallback?.(); this._hideConfirm(); }
+    _onConfirmNo = () => { this._hideConfirm(); }
 
     _startLinking(sourceNode) {
         if (!sourceNode) return;
-        window.spaceGraphLog(`Starting link from node ${sourceNode.id}`, 'info');
         this.spaceGraph.isLinking = true;
         this.spaceGraph.linkSourceNode = sourceNode;
         this.container.style.cursor = 'crosshair';
@@ -1419,6 +1236,90 @@ export class UIManager {
                     handled = true;
                 } else { this.spaceGraph.centerView(); handled = true; }
                 break;
+
+            case 'Tab':
+                event.preventDefault();
+                const nodes = Array.from(this.spaceGraph.nodes.values());
+                if (nodes.length === 0) break;
+                nodes.sort((a, b) => a.id.localeCompare(b.id));
+                let currentIndex = -1;
+                if (this.spaceGraph.selectedNode) {
+                    currentIndex = nodes.findIndex(n => n === this.spaceGraph.selectedNode);
+                }
+                let nextIndex;
+                if (event.shiftKey) { // Shift+Tab
+                    nextIndex = currentIndex > 0 ? currentIndex - 1 : nodes.length - 1;
+                } else { // Tab
+                    nextIndex = currentIndex < nodes.length - 1 ? currentIndex + 1 : 0;
+                }
+                if (nodes[nextIndex]) {
+                    this.spaceGraph.setSelectedNode(nodes[nextIndex]);
+                    this.spaceGraph.focusOnNode(nodes[nextIndex], 0.3, true);
+                }
+                handled = true;
+                break;
+
+            case 'ArrowUp':
+            case 'ArrowDown':
+            case 'ArrowLeft':
+            case 'ArrowRight':
+                event.preventDefault();
+                let currentNode = this.spaceGraph.selectedNode;
+                const allGraphNodes = Array.from(this.spaceGraph.nodes.values());
+
+                if (!currentNode) {
+                    if (allGraphNodes.length > 0) {
+                        allGraphNodes.sort((a, b) => a.id.localeCompare(b.id));
+                        currentNode = allGraphNodes[0];
+                        this.spaceGraph.setSelectedNode(currentNode);
+                        this.spaceGraph.focusOnNode(currentNode, 0.3, true);
+                    } else {
+                        break; // No nodes to navigate
+                    }
+                }
+                if (!currentNode) break; // Should be set if allGraphNodes.length > 0
+
+                const directionVector = new THREE.Vector3();
+                if (event.key === 'ArrowUp') directionVector.set(0, 1, 0);
+                else if (event.key === 'ArrowDown') directionVector.set(0, -1, 0);
+                else if (event.key === 'ArrowLeft') directionVector.set(-1, 0, 0);
+                else if (event.key === 'ArrowRight') directionVector.set(1, 0, 0);
+
+                let bestCandidateNode = null;
+                let minScore = Infinity;
+                const vectorToOther = new THREE.Vector3(); // For reuse
+
+                for (const otherNode of allGraphNodes) {
+                    if (otherNode === currentNode) continue;
+
+                    vectorToOther.subVectors(otherNode.position, currentNode.position);
+                    const distance = vectorToOther.length();
+                    if (distance === 0) continue;
+
+                    const normalizedVectorToOther = vectorToOther.normalize();
+                    const dotProduct = normalizedVectorToOther.dot(directionVector);
+
+                    // Consider nodes within a wider cone (e.g., dotProduct > 0.5 for <60 degrees off-axis)
+                    // Or simply dotProduct > 0 to be generally in that direction.
+                    // Using 0.3 for a slightly wider cone than 0.5.
+                    if (dotProduct > 0.3) {
+                        // Score inversely proportional to dotProduct (higher is better alignment)
+                        // and proportional to distance (closer is better).
+                        // (1.5 - dotProduct) makes alignment factor stronger.
+                        const score = distance * (1.5 - dotProduct);
+                        if (score < minScore) {
+                            minScore = score;
+                            bestCandidateNode = otherNode;
+                        }
+                    }
+                }
+
+                if (bestCandidateNode) {
+                    this.spaceGraph.setSelectedNode(bestCandidateNode);
+                    this.spaceGraph.focusOnNode(bestCandidateNode, 0.3, true);
+                }
+                handled = true;
+                break;
         }
         if (handled) event.preventDefault();
     }
@@ -1441,7 +1342,6 @@ export class UIManager {
     showEdgeMenu(edge) {
         if (!edge || this.edgeMenuObject) return; 
         this.hideEdgeMenu(); 
-        window.spaceGraphLog(`Showing edge menu for edge: ${edge.id}`, 'info');
 
         const menuElement = document.createElement('div');
         menuElement.className = 'edge-menu-frame'; 
@@ -1480,8 +1380,6 @@ export class UIManager {
 
     hideEdgeMenu() {
         if (this.edgeMenuObject) {
-            const edgeId = this.edgeMenuObject.element?.dataset.edgeId;
-            window.spaceGraphLog(`Hiding edge menu (was for edge: ${edgeId || 'unknown'})`, 'info');
             this.edgeMenuObject.element?.remove();
             this.edgeMenuObject.parent?.remove(this.edgeMenuObject);
             this.edgeMenuObject = null;
@@ -1510,6 +1408,10 @@ export class UIManager {
         window.removeEventListener('keydown', this._onKeyDown);
         this.container.removeEventListener('wheel', this._onWheel);
 
+        // Remove drag and drop listeners
+        this.container.removeEventListener('dragover', this._onDragOver);
+        this.container.removeEventListener('drop', this._onDrop);
+
         this.hideEdgeMenu(); 
         this.contextMenuElement?.remove(); 
         this.confirmDialogElement?.remove(); 
@@ -1517,10 +1419,88 @@ export class UIManager {
 
         this.spaceGraph = null; this.container = null;
         this.contextMenuElement = null; this.confirmDialogElement = null; this.statusIndicatorElement = null;
-        this.draggedNode = null; this.resizedNode = null; this.hoveredEdge = null; this.hoveredShapeNode = null;
+        this.draggedNode = null; this.resizedNode = null; this.hoveredEdge = null;
         this.confirmCallback = null;
-        window.spaceGraphLog("UIManager disposed.", 'info');
-        // console.log("UIManager disposed.");
+        console.log("UIManager disposed.");
+    }
+
+    // --- Drag and Drop Node Creation ---
+    _onDragOver(event) {
+        event.preventDefault();
+        if (event.dataTransfer.types.includes('application/x-spacegraph-node-type')) {
+            event.dataTransfer.dropEffect = 'copy';
+            this.container.classList.add('drag-over-active');
+        } else {
+            event.dataTransfer.dropEffect = 'none';
+        }
+    }
+
+    _onDrop(event) {
+        event.preventDefault();
+        this.container.classList.remove('drag-over-active');
+
+        const rawData = event.dataTransfer.getData('application/x-spacegraph-node-type');
+        if (!rawData) {
+            console.warn("Drop event without spacegraph node data.");
+            return;
+        }
+
+        let nodeCreationData;
+        try {
+            nodeCreationData = JSON.parse(rawData);
+        } catch (err) {
+            console.error("Failed to parse dragged node data:", err);
+            return;
+        }
+
+        if (!nodeCreationData.type) {
+            console.error("Dragged node data is missing 'type' property.");
+            return;
+        }
+
+        const worldPos = this.spaceGraph.screenToWorld(event.clientX, event.clientY, 0);
+        if (!worldPos) {
+            console.error("Could not convert drop position to world coordinates.");
+            return;
+        }
+
+        // Merge world position into the creation data
+        const finalNodeData = { ...nodeCreationData, x: worldPos.x, y: worldPos.y, z: worldPos.z };
+        let newNodeInstance = null;
+
+        // Instantiate based on type - similar to _createNodeFromMenu
+        // Note: ID is generated by constructors if null/undefined
+        if (finalNodeData.type === 'note') {
+            newNodeInstance = new NoteNode(finalNodeData.id, worldPos, finalNodeData);
+        } else if (finalNodeData.type === 'shape') {
+            // Ensure 'shape' (e.g. 'box', 'sphere') is part of finalNodeData for ShapeNode constructor
+            newNodeInstance = new ShapeNode(finalNodeData.id, worldPos, finalNodeData);
+        } else if (finalNodeData.type === 'html') { // For a generic HtmlNodeElement
+             newNodeInstance = new HtmlNodeElement(finalNodeData.id, worldPos, finalNodeData);
+        // TODO: Add handling for registered custom node types here if/when SpaceGraph.nodeTypes is available
+        // else if (this.spaceGraph.nodeTypes && this.spaceGraph.nodeTypes.has(finalNodeData.type)) {
+        //     const typeDefinition = this.spaceGraph.nodeTypes.get(finalNodeData.type);
+        //     newNodeInstance = new RegisteredNode(finalNodeData.id, finalNodeData, typeDefinition, this.spaceGraph);
+        } else {
+            console.error(`Unknown node type for drag-and-drop: ${finalNodeData.type}`);
+            return;
+        }
+
+        if (newNodeInstance) {
+            this.spaceGraph.addNode(newNodeInstance);
+            console.log(`Node of type '${finalNodeData.type}' created by drop:`, newNodeInstance.id);
+            this.spaceGraph.setSelectedNode(newNodeInstance);
+            this.spaceGraph.layoutEngine?.kick();
+            // Optional: Focus, similar to _createNodeFromMenu
+            // setTimeout(() => {
+            //    this.spaceGraph.focusOnNode(newNodeInstance, 0.6, true);
+            //    if (newNodeInstance instanceof NoteNode) {
+            //        newNodeInstance.htmlElement?.querySelector('.node-content')?.focus();
+            //    }
+            // }, 100);
+        } else {
+            console.error("Failed to create node instance from dropped data.", finalNodeData);
+        }
     }
 }
 
@@ -1754,21 +1734,18 @@ export class ForceLayout {
     releaseNode(node) { this.fixedNodes.delete(node);  }
 
     runOnce(steps = 100) {
-        window.spaceGraphLog(`ForceLayout: Running ${steps} initial steps...`, 'info');
-        // console.log(`ForceLayout: Running ${steps} initial steps...`);
+        console.log(`ForceLayout: Running ${steps} initial steps...`);
         let i = 0;
         for (; i < steps; i++) {
             if (this._calculateStep() < this.settings.minEnergyThreshold) break;
         }
-        window.spaceGraphLog(`ForceLayout: Initial steps completed after ${i} iterations.`, 'info');
-        // console.log(`ForceLayout: Initial steps completed after ${i} iterations.`);
+        console.log(`ForceLayout: Initial steps completed after ${i} iterations.`);
         this.spaceGraph._updateNodesAndEdges(); 
     }
 
     start() {
         if (this.isRunning || this.nodes.length < 2) return;
-        window.spaceGraphLog("ForceLayout: Starting simulation.", 'info');
-        // console.log("ForceLayout: Starting simulation.");
+        console.log("ForceLayout: Starting simulation.");
         this.isRunning = true; this.lastKickTime = Date.now();
         const loop = () => {
             if (!this.isRunning) return;
@@ -1788,13 +1765,11 @@ export class ForceLayout {
         if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId);
         clearTimeout(this.autoStopTimeout);
         this.animationFrameId = null; this.autoStopTimeout = null;
-        window.spaceGraphLog(`ForceLayout: Simulation stopped. Energy: ${this.energy?.toFixed(4)}`, 'info');
-        // console.log("ForceLayout: Simulation stopped. Energy:", this.energy?.toFixed(4));
+        console.log("ForceLayout: Simulation stopped. Energy:", this.energy?.toFixed(4));
     }
 
     kick(intensity = 1) {
         if (this.nodes.length === 0) return;
-        window.spaceGraphLog(`ForceLayout: Kicking layout with intensity ${intensity}.`, 'info');
         this.lastKickTime = Date.now(); this.energy = Infinity; 
         this.nodes.forEach(node => {
             if (!this.fixedNodes.has(node)) {
@@ -1918,7 +1893,6 @@ export class ForceLayout {
         this.nodes = []; this.edges = [];
         this.velocities.clear(); this.fixedNodes.clear();
         this.spaceGraph = null;
-        window.spaceGraphLog("ForceLayout disposed.", 'info');
-        // console.log("ForceLayout disposed.");
+        console.log("ForceLayout disposed.");
     }
 }

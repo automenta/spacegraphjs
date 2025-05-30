@@ -6,16 +6,50 @@
     <title>SpaceGraph - Text Node Examples</title>
     <link href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📝</text></svg>"
           rel="icon">
-    <link href="index.css" rel="stylesheet"/> 
+    <link href="index.css" rel="stylesheet"/>
+    <style>
+        #node-palette {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 10px;
+            background-color: rgba(40, 40, 40, 0.8);
+            border-radius: 8px;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        #node-palette button {
+            padding: 8px 12px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: grab;
+            text-align: left;
+        }
+        #node-palette button:active {
+            cursor: grabbing;
+        }
+        #space.drag-over-active {
+            border: 2px dashed #00ff00;
+            box-sizing: border-box;
+        }
+    </style>
 </head>
 <body>
+
+<div id="node-palette">
+    <button id="btn-create-note" draggable="true">📝 Create Note</button>
+    <button id="btn-create-box" draggable="true">📦 Create Box</button>
+    <button id="btn-create-sphere" draggable="true">🌐 Create Sphere</button>
+</div>
 
 <div id="space"> 
     <canvas id="webgl-canvas"></canvas>
     <div id="css3d-container"></div>
 </div>
-
-<div id="hud-log-console" style="position: fixed; bottom: 10px; left: 10px; width: 350px; height: 180px; background: rgba(0,0,0,0.65); color: white; overflow-y: scroll; padding: 8px; font-family: monospace; font-size: 11px; z-index: 10000; border-radius: 5px; display: none; box-shadow: 0 0 10px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2);"></div>
 
 <script type="importmap">
     {
@@ -71,6 +105,38 @@
         let colorIndex = 0;
         const nextColor = () => colors[colorIndex++ % colors.length];
 
+        // Setup Draggable Palette Items
+        const paletteItems = [
+            {
+                buttonId: 'btn-create-note',
+                data: { type: 'note', content: 'New Note via D&D', label: 'New Note', width: 200, height: 100, backgroundColor: nextColor() }
+            },
+            {
+                buttonId: 'btn-create-box',
+                data: { type: 'shape', shape: 'box', label: 'Box via D&D', color: 0xccaa88, size: 60 }
+            },
+            {
+                buttonId: 'btn-create-sphere',
+                data: { type: 'shape', shape: 'sphere', label: 'Sphere via D&D', color: 0x88aacc, size: 50 }
+            }
+        ];
+
+        paletteItems.forEach(item => {
+            const button = S.$(`#${item.buttonId}`);
+            if (button) {
+                button.addEventListener('dragstart', (event) => {
+                    event.dataTransfer.effectAllowed = 'copy';
+                    event.dataTransfer.setData('application/x-spacegraph-node-type', JSON.stringify(item.data));
+                    // Optional: visual feedback on the button itself
+                    // button.style.opacity = '0.5';
+                });
+                // Optional: clear visual feedback on drag end
+                // button.addEventListener('dragend', () => button.style.opacity = '1');
+            } else {
+                console.warn(`Palette button #${item.buttonId} not found.`);
+            }
+        });
+
         const n_rich_text = space.addNode(new S.NoteNode('rich-text-node', { x: -300, y: 0, z: 0 }, {
             content: `<h1>Main Heading (H1)</h1>
                       <p>This is a paragraph with <b>bold text</b> and <i>italic text</i>. It also includes a <a href="https://example.com" target="_blank">link to example.com</a>.</p>
@@ -123,6 +189,10 @@ function greet(name) {
             width: 150, height: 90, backgroundColor: nextColor(), contentScale: 0.7
         }));
         space.addEdge(n_wide_short, n_small_clip);
+
+        // Connect one of the new palette-created types to an existing node if desired
+        // For example, if a "Note" is created via drag-drop, it won't be connected initially.
+        // This is more for testing the creation part.
 
         console.log("Text Nodes Example Graph created:", space.nodes.size, "nodes,", space.edges.size, "edges.");
     }

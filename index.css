@@ -317,3 +317,12 @@ body {
     border-color: #ffaa00; /* Already defined, but ensure consistency */
     box-shadow: 0 0 20px 5px rgba(255, 170, 0, 0.5);
 }
+
+/* Styles for HtmlNodeElement when it's being dragged */
+.node-html.node-dragging-html {
+    opacity: 0.7 !important; /* Ensure opacity change takes precedence */
+    box-shadow: 0px 10px 20px rgba(0,0,0,0.4) !important; /* Ensure shadow change takes precedence */
+    transform: scale(1.02); /* Optional: slight scale up */
+    /* Transitions might conflict with rapid drag updates, so commented out by default */
+    /* transition: opacity 0.1s ease-out, transform 0.1s ease-out, box-shadow 0.1s ease-out; */
+}
