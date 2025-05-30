@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+    <title>SpaceGraph - App Node Examples</title>
+    <link href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💡</text></svg>"
+          rel="icon">
+    <link href="index.css" rel="stylesheet"/>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        /* Styles for Markdown Editor Node (can be moved to index.css later) */
+        .node-html.markdown-editor-node .editor-area { /* Target textarea within the specific node type */
+            background-color: #2d2d2d; /* Darker background for text area */
+            color: #f0f0f0; /* Light text */
+            font-family: monospace;
+            border: none;
+            padding: 8px;
+            margin: 0; /* Remove default textarea margin */
+            box-sizing: border-box;
+        }
+        .node-html.markdown-editor-node .preview-area { /* Target preview div */
+            background-color: #fff; /* White background for preview */
+            color: #333; /* Dark text for preview */
+            padding: 8px;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+         /* Ensure node-html itself doesn't add extra padding if children handle it */
+        .node-html.markdown-editor-node .node-inner-wrapper {
+            padding: 0;
+        }
+
+        /* Task List Node Specific Styles */
+        .task-list-node-content {
+            padding: 10px;
+            background-color: #f0f8ff; /* AliceBlue */
+            color: #333;
+            border-radius: 8px; /* Match node-html */
+            font-family: var(--font-family); /* Ensure consistent font */
+        }
+        .task-list-node-content h3 {
+            margin-top: 0;
+            margin-bottom: 8px;
+            text-align: center;
+            color: #007bff;
+        }
+        .task-list-node-content .input-container { /* Container for input + button */
+            display: flex;
+            margin-bottom: 8px;
+        }
+        .task-list-node-content .new-task-input {
+            flex-grow: 1;
+            margin-right: 5px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        .task-list-node-content .add-task-button {
+            padding: 5px 10px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .task-list-node-content .add-task-button:hover {
+            background-color: #218838;
+        }
+        .task-list-node-content .task-list-ul {
+            list-style-type: none;
+            padding: 0;
+            margin-top: 0; /* No extra space above list */
+            flex-grow: 1; /* Allow list to take available space */
+            overflow-y: auto;
+            min-height: 50px; /* Ensure it's visible even when empty */
+        }
+        .task-list-node-content .task-list-ul li {
+            display: flex;
+            align-items: center;
+            padding: 6px 2px;
+            border-bottom: 1px solid #eee;
+        }
+        .task-list-node-content .task-list-ul li:last-child {
+            border-bottom: none;
+        }
+        .task-list-node-content .task-list-ul li input[type="checkbox"] {
+            margin-right: 10px;
+            cursor: pointer;
+            width: 16px; /* Larger checkboxes */
+            height: 16px;
+        }
+        .task-list-node-content .task-list-ul li span { /* Task text span */
+            flex-grow: 1;
+            word-break: break-word;
+        }
+        .task-list-node-content .task-list-ul li span.completed {
+            text-decoration: line-through;
+            color: #999;
+        }
+        .task-list-node-content .task-list-ul li .delete-task-button {
+            margin-left: 8px; /* Space between text and button */
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            padding: 3px 6px;
+            font-size: 10px;
+            line-height: 1;
+        }
+        .task-list-node-content .task-list-ul li .delete-task-button:hover {
+            background: #c82333;
+        }
+    </style>
+</head>
+<body>
+
+<div id="space">
+    <canvas id="webgl-canvas"></canvas>
+    <div id="css3d-container"></div>
+</div>
+
+<div id="node-palette">
+    <button id="btn-create-md-editor" draggable="true">📝 Create Markdown Editor</button>
+    <button id="btn-create-task-list" draggable="true">📋 Create Task List</button>
+</div>
+
+
+<script type="importmap">
+    {
+        "imports": {
+            "three":         "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
+            "gsap":          "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
+        }
+    }
+</script>
+<script type="module">
+    import * as S from './spacegraph.js'; // Assuming spacegraph.js is in the same directory
+
+    const markdownEditorNodeDefinition = {
+        getDefaults: (initialData) => ({
+            markdownContent: initialData?.markdownContent || '# Hello\n\nStart typing Markdown here...',
+            width: initialData?.width || 350,
+            height: initialData?.height || 400,
+            label: initialData?.label || initialData?.id || 'Markdown Editor',
+            ports: initialData?.ports || {
+                inputs: { md_in: { label: 'Markdown In', type: 'string' } },
+                outputs: { html_out: { label: 'HTML Out', type: 'string' } }
+            }
+        }),
+        onCreate: (nodeInst, spaceGraph) => {
+            const three = spaceGraph.constructor.THREE; // Access THREE via SpaceGraph static or import
+            const CSS3DObject = three.CSS3DObject || window.CSS3DObject; // Adjust if import changes
+
+            nodeInst.htmlElement = document.createElement('div');
+            nodeInst.htmlElement.classList.add('markdown-editor-node'); // For specific styling
+            nodeInst.htmlElement.style.width = `${nodeInst.data.width}px`;
+            nodeInst.htmlElement.style.height = `${nodeInst.data.height}px`;
+            nodeInst.htmlElement.style.backgroundColor = 'var(--node-bg-alt, #282c34)';
+            nodeInst.htmlElement.style.border = '1px solid var(--accent-color-darker, #444)';
+            nodeInst.htmlElement.style.display = 'flex';
+            nodeInst.htmlElement.style.flexDirection = 'column';
+            nodeInst.htmlElement.style.overflow = 'hidden'; // Important for fixed size
+
+            const editor = document.createElement('textarea');
+            editor.className = 'editor-area'; // For styling
+            editor.style.flex = '1';
+            editor.style.resize = 'none';
+            // editor.style.border = 'none'; // Handled by CSS
+            // editor.style.padding = '5px'; // Handled by CSS
+            editor.value = nodeInst.data.markdownContent;
+            editor.spellcheck = false;
+
+            const preview = document.createElement('div');
+            preview.className = 'preview-area'; // For styling
+            preview.style.flex = '1';
+            preview.style.borderTop = '1px solid #444';
+            // preview.style.padding = '5px'; // Handled by CSS
+            // preview.style.overflowY = 'auto'; // Handled by CSS
+
+            nodeInst.htmlElement.appendChild(editor);
+            nodeInst.htmlElement.appendChild(preview);
+
+            const renderPreview = () => {
+                if (window.marked && typeof window.marked.parse === 'function') {
+                    preview.innerHTML = window.marked.parse(nodeInst.data.markdownContent);
+                } else {
+                    preview.textContent = 'Marked.js not loaded or .parse not a function.';
+                    console.warn('Marked.js not loaded or marked.parse is not a function.');
+                }
+                // Emit the HTML content to the output port
+                if (nodeInst.data.ports?.outputs?.html_out) {
+                    nodeInst.emit('html_out', preview.innerHTML);
+                }
+            };
+
+            // Stop pointer events on editor/preview from propagating to UIManager for node dragging
+            editor.addEventListener('pointerdown', (e) => e.stopPropagation());
+            preview.addEventListener('pointerdown', (e) => e.stopPropagation());
+            // Also stop wheel events inside these areas from affecting camera zoom
+            editor.addEventListener('wheel', (e) => e.stopPropagation());
+            preview.addEventListener('wheel', (e) => e.stopPropagation());
+
+
+            editor.addEventListener('input', () => {
+                nodeInst.data.markdownContent = editor.value;
+                renderPreview();
+            });
+
+            renderPreview(); // Initial render
+
+            // Store editor and preview for potential external updates via onDataUpdate
+            nodeInst.customElements = { editor, preview, renderPreview };
+
+
+            return { htmlElement: nodeInst.htmlElement }; // Let RegisteredNode wrap it in CSS3DObject
+        },
+        getBoundingSphereRadius: (nodeInst) => {
+            return Math.sqrt(nodeInst.data.width**2 + nodeInst.data.height**2) / 2;
+        },
+        onDispose: (nodeInst) => {
+            // No specific THREE.js geometries/materials to dispose here.
+            // Event listeners on editor/preview are on htmlElement children, will be removed with htmlElement.
+            nodeInst.customElements = null; // Clear references
+        },
+        // Optional: Handle external data updates
+        onDataUpdate: (nodeInst, updatedData) => {
+            if (updatedData.markdownContent !== undefined && nodeInst.customElements?.editor) {
+                if (nodeInst.customElements.editor.value !== updatedData.markdownContent) {
+                    nodeInst.customElements.editor.value = updatedData.markdownContent;
+                    nodeInst.customElements.renderPreview();
+                }
+            }
+        }
+    };
+
+    const taskListNodetypeDefinition = {
+        getDefaults: (initialData) => ({
+            tasks: initialData?.tasks || [{id: 'task-init-1', text: 'First task', completed: false}],
+            width: initialData?.width || 300,
+            height: initialData?.height || 280,
+            title: initialData?.title || 'My To-Do List',
+            label: initialData?.label || initialData?.id || 'Task List',
+            ports: initialData?.ports || {
+                inputs: { add_task: { label: 'Add Task (text)', type: 'string'} },
+                outputs: {
+                    task_completed: { label: 'Task Completed (taskObj)', type: 'object'},
+                    tasks_updated: { label: 'Tasks Updated (allTasks)', type: 'array'}
+                }
+            }
+        }),
+        onCreate: (nodeInst, spaceGraph) => {
+            const three = spaceGraph.constructor.THREE;
+            const CSS3DObject = three.CSS3DObject || window.CSS3DObject;
+
+            nodeInst.htmlElement = document.createElement('div');
+            nodeInst.htmlElement.classList.add('task-list-node-content'); // For specific styling
+            nodeInst.htmlElement.style.width = `${nodeInst.data.width}px`;
+            nodeInst.htmlElement.style.height = `${nodeInst.data.height}px`;
+            nodeInst.htmlElement.style.display = 'flex';
+            nodeInst.htmlElement.style.flexDirection = 'column';
+            nodeInst.htmlElement.style.overflow = 'hidden';
+
+            const titleEl = document.createElement('h3');
+            titleEl.textContent = nodeInst.data.title;
+
+            const inputContainer = document.createElement('div');
+            inputContainer.className = 'input-container';
+
+            const newTaskInput = document.createElement('input');
+            newTaskInput.type = 'text';
+            newTaskInput.placeholder = 'New task...';
+            newTaskInput.className = 'new-task-input';
+
+            const addTaskButton = document.createElement('button');
+            addTaskButton.textContent = 'Add';
+            addTaskButton.className = 'add-task-button';
+
+            inputContainer.appendChild(newTaskInput);
+            inputContainer.appendChild(addTaskButton);
+
+            const taskListUl = document.createElement('ul');
+            taskListUl.className = 'task-list-ul';
+
+            nodeInst.htmlElement.appendChild(titleEl);
+            nodeInst.htmlElement.appendChild(inputContainer);
+            nodeInst.htmlElement.appendChild(taskListUl);
+
+            // Prevent SpaceGraph's UIManager from processing events on these interactive elements
+            [titleEl, newTaskInput, addTaskButton, taskListUl].forEach(el => {
+                el.addEventListener('pointerdown', e => e.stopPropagation());
+                el.addEventListener('wheel', e => e.stopPropagation());
+            });
+
+            const renderTasks = () => {
+                taskListUl.innerHTML = '';
+                if (!Array.isArray(nodeInst.data.tasks)) nodeInst.data.tasks = [];
+
+                nodeInst.data.tasks.forEach(task => {
+                    const li = document.createElement('li');
+
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.checked = task.completed;
+                    checkbox.addEventListener('change', () => {
+                        task.completed = checkbox.checked;
+                        if (task.completed && nodeInst.data.ports?.outputs?.task_completed) {
+                            nodeInst.emit('task_completed', { ...task });
+                        }
+                        renderTasks();
+                    });
+
+                    const span = document.createElement('span');
+                    span.textContent = task.text;
+                    if (task.completed) {
+                        span.classList.add('completed');
+                    }
+
+                    const deleteButton = document.createElement('button');
+                    deleteButton.textContent = 'X';
+                    deleteButton.className = 'delete-task-button';
+                    deleteButton.addEventListener('click', () => {
+                        nodeInst.data.tasks = nodeInst.data.tasks.filter(t => t.id !== task.id);
+                        renderTasks();
+                    });
+
+                    li.appendChild(checkbox);
+                    li.appendChild(span);
+                    li.appendChild(deleteButton);
+                    taskListUl.appendChild(li);
+                });
+
+                if (nodeInst.data.ports?.outputs?.tasks_updated) {
+                     nodeInst.emit('tasks_updated', [...nodeInst.data.tasks]); // Emit copy
+                }
+            };
+
+            addTaskButton.addEventListener('click', () => {
+                const text = newTaskInput.value.trim();
+                if (text) {
+                    if (!Array.isArray(nodeInst.data.tasks)) nodeInst.data.tasks = [];
+                    nodeInst.data.tasks.push({ id: 'task-' + Date.now(), text: text, completed: false });
+                    newTaskInput.value = '';
+                    renderTasks();
+                }
+            });
+
+            newTaskInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    addTaskButton.click();
+                    e.preventDefault();
+                }
+            });
+
+            renderTasks();
+            nodeInst.customElements = { titleEl, taskListUl, renderTasks, newTaskInput };
+            return { htmlElement: nodeInst.htmlElement };
+        },
+        onDataUpdate: (nodeInst, updatedData) => {
+            let needsRender = false;
+            if (updatedData.tasks !== undefined) {
+                if (JSON.stringify(nodeInst.data.tasks) !== JSON.stringify(updatedData.tasks)) {
+                    nodeInst.data.tasks = Array.isArray(updatedData.tasks) ? [...updatedData.tasks] : [];
+                    needsRender = true;
+                }
+            }
+            if (updatedData.title !== undefined && nodeInst.customElements?.titleEl) {
+                if (nodeInst.customElements.titleEl.textContent !== updatedData.title) {
+                    nodeInst.customElements.titleEl.textContent = updatedData.title;
+                    nodeInst.data.title = updatedData.title; // Update internal data as well
+                }
+            }
+            if (typeof updatedData.add_task === 'string') { // Check if add_task is a string
+                const text = updatedData.add_task.trim();
+                if (text) {
+                     if (!Array.isArray(nodeInst.data.tasks)) nodeInst.data.tasks = [];
+                     nodeInst.data.tasks.push({ id: 'task-' + Date.now(), text: text, completed: false });
+                     needsRender = true;
+                }
+                // Important: "Consume" the add_task data to prevent re-adding on subsequent updates
+                // if updatedData is directly nodeInst.data, this would be nodeInst.data.add_task = null or delete nodeInst.data.add_task
+                // Since updatedData is a separate object, this action is implicitly handled by not re-applying it unless it changes again.
+                // For explicit consumption if updatedData could be nodeInst.data:
+                // if (nodeInst.data.hasOwnProperty('add_task')) delete nodeInst.data.add_task;
+            }
+
+            if (needsRender && nodeInst.customElements?.renderTasks) {
+                nodeInst.customElements.renderTasks();
+            }
+        },
+        getBoundingSphereRadius: (nodeInst) => {
+            return Math.sqrt(nodeInst.data.width**2 + nodeInst.data.height**2) / 2;
+        },
+        onDispose: (nodeInst) => {
+            nodeInst.customElements = null;
+        }
+    };
+
+    function init() {
+        const container = S.$('#space');
+        if (!container) {
+            console.error("Initialization Failed: Missing required #space container element.");
+            return;
+        }
+
+        try {
+            const space = new S.SpaceGraph(container);
+            window.space = space; // Make it globally accessible for debugging
+
+            // Register node types
+            space.registerNodeType('markdown-editor', markdownEditorNodeDefinition);
+            space.registerNodeType('task-list', taskListNodetypeDefinition);
+
+            // Add initial nodes
+            const mdEditor1 = space.addNode({ type: 'markdown-editor', id: 'md-editor-1', x: -250, y: 0, z: 0 });
+            const taskNode1 = space.addNode({
+                type: 'task-list',
+                id: 'tasks-1',
+                x: 200, y: -150, z: 0, // Adjusted y to not overlap mdEditor1
+                data: { // Pass custom data for this instance
+                    title: 'Project Bravo Tasks',
+                    tasks: [ // Example initial tasks
+                        {id: 'task-a', text: 'Design phase for Bravo', completed: true},
+                        {id: 'task-b', text: 'Bravo Implementation', completed: false},
+                        {id: 'task-c', text: 'Testing & QA for Bravo', completed: false},
+                    ]
+                }
+            });
+
+            // Example of a listener node (simple NoteNode for now)
+            const listenerNode = space.addNode({
+                type: 'note', // Using built-in NoteNode
+                id: 'html-listener-1',
+                x: 200, y: 0, z: 0,
+                width: 300, height: 250,
+                content: 'Waiting for HTML output...'
+            });
+
+            if (mdEditor1 && listenerNode) {
+                // Ensure the listener node's instance is available for the callback
+                const listenerNodeInstance = space.getNodeById('html-listener-1');
+                if (listenerNodeInstance) {
+                     mdEditor1.listenTo('html-listener-1', 'html_out', (htmlPayload, senderNode) => {
+                        // This callback is incorrect. The listenTo should be ON the listenerNode, listening TO mdEditor1
+                    });
+
+                    // Corrected: Listener node listens to mdEditor1
+                    listenerNodeInstance.listenTo(mdEditor1, 'html_out', (htmlPayload, senderNode) => {
+                        console.log(`Listener node ${listenerNodeInstance.id} received HTML from ${senderNode.id}`);
+                        // Update the content of the NoteNode. NoteNode uses 'content' in data.
+                        listenerNodeInstance.data.content = htmlPayload;
+                        // For NoteNode, its internal HTML needs to be updated based on data.content
+                        const contentDiv = listenerNodeInstance.htmlElement?.querySelector('.node-content');
+                        if(contentDiv) contentDiv.innerHTML = htmlPayload;
+                    });
+                     console.log(`Node ${listenerNodeInstance.id} is now listening to 'html_out' events from ${mdEditor1.id}`);
+                }
+            }
+
+            // Setup palette for this example
+            const mdPaletteBtn = S.$('#btn-create-md-editor');
+            if (mdPaletteBtn) {
+                mdPaletteBtn.addEventListener('dragstart', (event) => {
+                    const nodeData = {
+                        type: 'markdown-editor',
+                        label: 'Markdown Editor D&D',
+                    };
+                    event.dataTransfer.effectAllowed = 'copy';
+                    event.dataTransfer.setData('application/x-spacegraph-node-type', JSON.stringify(nodeData));
+                });
+            }
+            const taskPaletteBtn = S.$('#btn-create-task-list');
+            if (taskPaletteBtn) {
+                taskPaletteBtn.addEventListener('dragstart', (event) => {
+                    const nodeData = {
+                        type: 'task-list',
+                        label: 'To-Dos D&D',
+                        data: { title: 'New List (D&D)' }
+                    };
+                    event.dataTransfer.effectAllowed = 'copy';
+                    event.dataTransfer.setData('application/x-spacegraph-node-type', JSON.stringify(nodeData));
+                });
+            }
+
+            // Optional: Test port communication for task list
+            if (taskNode1 && listenerNode) { // listenerNode was for mdEditor1, let's make a new one or reuse
+                 const taskListenerNode = space.getNodeById('html-listener-1'); // Reuse for simplicity
+                 if (taskListenerNode) {
+                    taskNode1.listenTo(taskListenerNode.id, 'tasks_updated', (tasksPayload, senderNode) => {
+                         // This is incorrect, listenerNode should listen TO taskNode1
+                    });
+                    // Corrected:
+                    taskListenerNode.listenTo(taskNode1, 'tasks_updated', (tasksPayload, senderNode) => {
+                        console.log(`Listener node ${taskListenerNode.id} received tasks_updated from ${senderNode.id}:`, tasksPayload);
+                        let content = `<h3>Tasks from ${senderNode.id}</h3><ul>`;
+                        tasksPayload.forEach(task => {
+                            content += `<li>${task.text} (${task.completed ? 'Done' : 'Pending'})</li>`;
+                        });
+                        content += `</ul>`;
+                        taskListenerNode.data.content = content;
+                        const contentDiv = taskListenerNode.htmlElement?.querySelector('.node-content');
+                        if(contentDiv) contentDiv.innerHTML = content;
+                    });
+                    console.log(`Node ${taskListenerNode.id} is now listening to 'tasks_updated' events from ${taskNode1.id}`);
+
+                    // Example of sending data to 'add_task' input port of taskNode1
+                    // setTimeout(() => {
+                    //    console.log("Attempting to add task to taskNode1 via port...");
+                    //    space.updateNodeData(taskNode1.id, { add_task: "Task added via port!" });
+                    //    // Or: taskNode1.emit('add_task', "A task from another node!"); // This is if taskNode was listening to itself.
+                    //    // Correct way for external trigger if `add_task` was an event it listened to:
+                    //    // someOtherNode.emitTo(taskNode1.id, 'add_task', "A task sent via another node's emitTo");
+                    //    // For direct data update to trigger onDataUpdate:
+                    //    // taskNode1.data.add_task = "A new task by direct data manipulation";
+                    //    // taskNode1.spaceGraph.nodeNeedsUpdate(taskNode1); // if direct data manipulation needs manual update trigger
+                    // }, 5000);
+
+                }
+            }
+
+
+            space.layoutEngine.runOnce(100);
+            space.centerView();
+
+            const statusEl = S.$('#status-indicator') || document.body.appendChild(document.createElement('div'));
+            statusEl.id = 'status-indicator'; // Ensure it has an ID if newly created
+            statusEl.textContent = 'App Node Example Initialized.';
+            setTimeout(() => statusEl.classList.add('hidden'), 2000);
+
+        } catch (error) {
+            console.error("App Node Example Initialization Failed:", error);
+            container.innerHTML = `<div style="color: red; padding: 20px;">Error initializing: ${error.message}<br><pre>${error.stack}</pre></div>`;
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+</script>
+</body>
+</html>

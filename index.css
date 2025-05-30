@@ -326,3 +326,45 @@ body {
     /* Transitions might conflict with rapid drag updates, so commented out by default */
     /* transition: opacity 0.1s ease-out, transform 0.1s ease-out, box-shadow 0.1s ease-out; */
 }
+
+/* Node Ports Styling */
+.node-port {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background-color: #555; /* Default for generic/untyped ports */
+    border: 1px solid #888;
+    border-radius: 50%; /* Circle */
+    z-index: 10; /* Ensure ports are above node content but below node controls if any */
+    cursor: pointer; /* Indicate interactivity */
+    box-sizing: border-box;
+    transition: transform 0.1s ease-out, border-color 0.1s ease-out;
+    display: none; /* Hidden by default, shown on selection */
+}
+
+.node-port.port-input {
+    background-color: #3a7bd5; /* Blue for inputs */
+}
+
+.node-port.port-output {
+    background-color: #ff8c00; /* Orange for outputs */
+}
+
+.node-port:hover {
+    border-color: #fff !important; /* Ensure hover is visible */
+    transform: scale(1.2);
+}
+
+/* Visibility of ports can be controlled by JS adding/removing a class or directly setting display style.
+   If controlled by a class on the node-port itself (e.g., .port-visible):
+.node-port.port-visible {
+    display: block;
+}
+   The prompt asks for direct style manipulation in RegisteredNode.setSelectedStyle,
+   so the .node-html.selected .node-port rule is removed for now. */
+
+.node-port.linking-target-port {
+    background-color: #00ff00 !important; /* Bright green */
+    border: 2px solid #00cc00 !important;
+    transform: scale(1.3) !important; /* Slightly larger scale for target port */
+}

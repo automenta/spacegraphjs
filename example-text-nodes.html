@@ -42,8 +42,9 @@
 
 <div id="node-palette">
     <button id="btn-create-note" draggable="true">📝 Create Note</button>
-    <button id="btn-create-box" draggable="true">📦 Create Box</button>
-    <button id="btn-create-sphere" draggable="true">🌐 Create Sphere</button>
+    <button id="btn-create-box" draggable="true">📦 Create Box (Legacy Shape)</button>
+    <button id="btn-create-sphere" draggable="true">🌐 Create Sphere (Legacy Shape)</button>
+    <button id="btn-create-custom-box" draggable="true">🧊 Create Custom Box (Registered)</button>
 </div>
 
 <div id="space"> 
@@ -105,6 +106,44 @@
         let colorIndex = 0;
         const nextColor = () => colors[colorIndex++ % colors.length];
 
+        // Define a custom node type: simpleBoxNodeTypeDefinition
+        const simpleBoxNodeTypeDefinition = {
+            getDefaults: (initialData) => ({
+                label: initialData.label || 'Custom Box',
+                color: initialData.color || 0xff8800, // Default orange
+                size: initialData.size || 70,
+                ports: initialData.ports || { // Ensure ports definition is part of defaults if not provided
+                    inputs: {
+                        colorIn: { label: 'Color Input', type: 'color'},
+                        dataIn: { label: 'Data In', type: 'any' }
+                    },
+                    outputs: { dataOut: { label: 'Data Output', type: 'any'} }
+                }
+            }),
+            onCreate: (node, sg) => { // node is an instance of RegisteredNode
+                const three = sg.constructor.THREE; // Access THREE via SpaceGraph static or import
+                const geometry = new three.BoxGeometry(node.data.size, node.data.size, node.data.size);
+                const material = new three.MeshStandardMaterial({ color: node.data.color });
+                const mesh = new three.Mesh(geometry, material);
+                mesh.userData = { nodeId: node.id }; // Important for UIManager raycasting
+
+                // This type does not create an htmlElement, so ports won't render visually via _createAndRenderPorts
+                // but the data.ports structure should exist.
+                return { mesh };
+            },
+            onSetSelectedStyle: (node, isSelected) => {
+                if (node.mesh && node.mesh.material) {
+                    node.mesh.material.emissive.setHex(isSelected ? 0x885500 : 0x000000);
+                }
+            },
+            getBoundingSphereRadius: (node) => {
+                return (node.data.size || 70) * Math.sqrt(3) / 2;
+            }
+            // No onUpdate, onDispose, etc. needed for this simple example
+        };
+        // Register the custom node type
+        space.registerNodeType('simple-box', simpleBoxNodeTypeDefinition);
+
         // Setup Draggable Palette Items
         const paletteItems = [
             {
@@ -112,12 +151,26 @@
                 data: { type: 'note', content: 'New Note via D&D', label: 'New Note', width: 200, height: 100, backgroundColor: nextColor() }
             },
             {
-                buttonId: 'btn-create-box',
+                buttonId: 'btn-create-box', // Legacy shape node
                 data: { type: 'shape', shape: 'box', label: 'Box via D&D', color: 0xccaa88, size: 60 }
             },
             {
-                buttonId: 'btn-create-sphere',
+                buttonId: 'btn-create-sphere', // Legacy shape node
                 data: { type: 'shape', shape: 'sphere', label: 'Sphere via D&D', color: 0x88aacc, size: 50 }
+            },
+            {
+                buttonId: 'btn-create-custom-box',
+                data: {
+                    type: 'simple-box', // Registered type
+                    label: 'Custom Box D&D',
+                    color: 0x00ff00,
+                    size: 55,
+                    // Ports data can also be overridden here if needed, otherwise defaults from getDefaults are used
+                    ports: {
+                        inputs: { customDataIn: { label: 'DragDrop Input', type: 'string'} },
+                        outputs: { result: { label: 'DragDrop Output', type: 'number'} }
+                    }
+                }
             }
         ];
 
@@ -193,6 +246,26 @@ function greet(name) {
         // Connect one of the new palette-created types to an existing node if desired
         // For example, if a "Note" is created via drag-drop, it won't be connected initially.
         // This is more for testing the creation part.
+
+        // Programmatically add one instance for immediate testing of data structure
+        const customBoxNode = space.addNode({
+            type: 'simple-box',
+            id: 'custom-box-programmatic',
+            x: 200, y: 200, z: 0,
+            label: 'Prog. Custom Box',
+            color: 0xff00ff, // Override default color
+            // Ports will use defaults from simpleBoxNodeTypeDefinition.getDefaults
+        });
+        if (customBoxNode) {
+            console.log("Programmatic Custom Box Node created:", customBoxNode.id, "Data:", customBoxNode.data);
+            if (customBoxNode.data.ports) {
+                 console.log("Ports data found:", customBoxNode.data.ports);
+            } else {
+                 console.warn("Ports data NOT found for programmatic custom box.");
+            }
+        }
+         if(n_editable && customBoxNode) space.addEdge(n_editable, customBoxNode);
+
 
         console.log("Text Nodes Example Graph created:", space.nodes.size, "nodes,", space.edges.size, "edges.");
     }

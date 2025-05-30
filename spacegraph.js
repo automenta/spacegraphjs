@@ -37,6 +37,7 @@ export class SpaceGraph {
 
         this.cameraController = new CameraController(this._camera, this.container); 
         this.layoutEngine = new ForceLayout(this); 
+        this.nodeTypes = new Map(); // Initialize for custom node types
 
         this.uiManager = new UIManager(this, uiElements);
 
@@ -93,22 +94,90 @@ export class SpaceGraph {
         this.scene.add(directionalLight);
     }
     
+    /**
+     * Registers a new node type definition.
+     * @param {string} typeName - The unique name for this node type.
+     * @param {object} typeDefinition - An object defining the lifecycle and behavior of nodes of this type.
+     * @throws {Error} If a type with the same name is already registered or definition is invalid.
+     */
+    registerNodeType(typeName, typeDefinition) {
+        if (this.nodeTypes.has(typeName)) {
+            throw new Error(`Node type "${typeName}" is already registered.`);
+        }
+        if (!typeDefinition || typeof typeDefinition.onCreate !== 'function') { // Basic validation
+            throw new Error(`Invalid typeDefinition for "${typeName}": onCreate method is required.`);
+        }
+        this.nodeTypes.set(typeName, typeDefinition);
+        console.log(`Node type "${typeName}" registered.`);
+    }
+
     setBackground(color = 0x000000, alpha = 0.0) {
         this.background = {color, alpha};
         this.webglRenderer.setClearColor(color, alpha);
         this.webglCanvas.style.backgroundColor = alpha === 0 ? 'transparent' : `#${color.toString(16).padStart(6, '0')}`;
     }
 
-    addNode(nodeInstance) {
-        if (!nodeInstance.id) nodeInstance.id = generateId('node');
-        if (this.nodes.has(nodeInstance.id)) return this.nodes.get(nodeInstance.id);
+    /**
+     * Adds a node to the graph. Can accept a pre-instantiated node object (extending BaseNode)
+     * or a data object to create a new node.
+     * @param {BaseNode|object} dataOrInstance - Either a node instance or a data object for creating a new node.
+     *   If data object, it must include a 'type' property. Optional 'id', 'x', 'y', 'z', and other type-specific data.
+     * @returns {BaseNode|null} The added or created node instance, or null if creation failed.
+     */
+    addNode(dataOrInstance) {
+        let nodeInstance;
+
+        if (dataOrInstance instanceof BaseNode) {
+            nodeInstance = dataOrInstance;
+            if (!nodeInstance.id) nodeInstance.id = generateId('node');
+            if (this.nodes.has(nodeInstance.id)) {
+                console.warn(`Node instance with id ${nodeInstance.id} already added or duplicate ID.`);
+                return this.nodes.get(nodeInstance.id);
+            }
+        } else if (typeof dataOrInstance === 'object' && dataOrInstance !== null) {
+            const data = dataOrInstance;
+            if (!data.type) {
+                console.error("Node data must include a 'type' property.", data);
+                return null;
+            }
+            data.id = data.id ?? generateId('node');
+            if (this.nodes.has(data.id)) {
+                console.warn(`Node with id ${data.id} already exists. Returning existing node.`);
+                return this.nodes.get(data.id);
+            }
+
+            const position = { x: data.x ?? 0, y: data.y ?? 0, z: data.z ?? 0 };
+
+            if (this.nodeTypes.has(data.type)) {
+                const typeDefinition = this.nodeTypes.get(data.type);
+                // Pass 'data' as initialUserData to RegisteredNode
+                nodeInstance = new RegisteredNode(data.id, data, typeDefinition, this);
+            } else if (data.type === 'note') {
+                nodeInstance = new NoteNode(data.id, position, data);
+            } else if (data.type === 'html') {
+                nodeInstance = new HtmlNodeElement(data.id, position, data);
+            } else if (data.type === 'shape' || data.shape) { // data.shape for backward compatibility
+                nodeInstance = new ShapeNode(data.id, position, data);
+            } else {
+                console.error(`Unknown or unregistered node type: ${data.type}`);
+                return null;
+            }
+        } else {
+            console.error("Invalid argument to addNode. Must be a node data object or a BaseNode instance.", dataOrInstance);
+            return null;
+        }
+
+        if (!nodeInstance) { // Should have been caught by earlier checks
+            console.error("Failed to create or identify node instance.");
+            return null;
+        }
 
         this.nodes.set(nodeInstance.id, nodeInstance);
-        nodeInstance.spaceGraph = this; 
+        nodeInstance.spaceGraph = this; // Ensure spaceGraph ref is set
 
         if (nodeInstance.cssObject) this.cssScene.add(nodeInstance.cssObject);
-        if (nodeInstance.mesh) this.scene.add(nodeInstance.mesh); 
-        if (nodeInstance.labelObject) this.cssScene.add(nodeInstance.labelObject); 
+        if (nodeInstance.mesh) this.scene.add(nodeInstance.mesh);
+        if (nodeInstance.labelObject) this.cssScene.add(nodeInstance.labelObject);
 
         this.layoutEngine?.addNode(nodeInstance);
         return nodeInstance;
@@ -296,6 +365,7 @@ export class SpaceGraph {
         this.edges.forEach(edge => edge.dispose());
         this.nodes.clear();
         this.edges.clear();
+        if (this.nodeTypes) this.nodeTypes.clear(); // Clear registered node types
 
         this.scene?.clear();
         this.cssScene?.clear();
@@ -518,6 +588,188 @@ export class NoteNode extends HtmlNodeElement {
     }
 }
 
+export class RegisteredNode extends BaseNode {
+    typeDefinition = null;
+    portElements = [];
+
+    constructor(id, initialUserData, typeDefinition, spaceGraphRef) {
+        super(id,
+              { x: initialUserData.x ?? 0, y: initialUserData.y ?? 0, z: initialUserData.z ?? 0 },
+              initialUserData,
+              initialUserData.mass ?? typeDefinition.getDefaults?.(initialUserData)?.mass ?? 1.0);
+
+        this.typeDefinition = typeDefinition;
+        this.spaceGraph = spaceGraphRef;
+
+        const visualOutputs = this.typeDefinition.onCreate(this, this.spaceGraph);
+        if (visualOutputs) {
+            this.mesh = visualOutputs.mesh;
+            this.htmlElement = visualOutputs.htmlElement;
+            this.cssObject = visualOutputs.cssObject || (this.htmlElement ? new CSS3DObject(this.htmlElement) : null);
+            this.labelObject = visualOutputs.labelObject;
+
+            if (this.mesh) this.mesh.userData = { nodeId: this.id, type: this.data.type };
+            if (this.cssObject) this.cssObject.userData = { nodeId: this.id, type: this.data.type };
+            if (this.htmlElement && !this.htmlElement.dataset.nodeId) this.htmlElement.dataset.nodeId = this.id;
+            if (this.labelObject) this.labelObject.userData = { nodeId: this.id, type: `${this.data.type}-label`};
+        }
+
+        this.portElements = [];
+        this._createAndRenderPorts();
+
+        this.update();
+    }
+
+    getDefaultData() {
+        const typeDefDefaults = this.typeDefinition?.getDefaults ? this.typeDefinition.getDefaults(this.data || {}) : {};
+        return typeDefDefaults;
+    }
+
+    _createAndRenderPorts() {
+        if (!this.data.ports || !this.htmlElement) {
+            return;
+        }
+
+        const portBaseSpacing = 20;
+        const portSize = 12;
+        const nodeHeight = this.htmlElement.offsetHeight;
+        const nodeWidth = this.htmlElement.offsetWidth; // Needed if ports were top/bottom
+
+        // Clear existing port elements from DOM if any (e.g. on a re-render call, though not typical now)
+        this.portElements.forEach(pE => pE.remove());
+        this.portElements = [];
+
+        if (this.data.ports.inputs) {
+            const inputKeys = Object.keys(this.data.ports.inputs);
+            inputKeys.forEach((portName, i) => {
+                const portDef = this.data.ports.inputs[portName];
+                const portEl = document.createElement('div');
+                portEl.className = 'node-port port-input';
+                portEl.dataset.portName = portName;
+                portEl.dataset.portType = 'input';
+                portEl.dataset.portDataType = portDef.type || 'any';
+                portEl.title = portDef.label || portName;
+
+                portEl.style.left = `-${portSize/2}px`;
+                const yPos = (nodeHeight / (inputKeys.length + 1)) * (i + 1) - (portSize / 2);
+                portEl.style.top = `${Math.max(0, Math.min(nodeHeight - portSize, yPos))}px`;
+
+                this.htmlElement.appendChild(portEl);
+                this.portElements.push(portEl);
+            });
+        }
+
+        if (this.data.ports.outputs) {
+            const outputKeys = Object.keys(this.data.ports.outputs);
+            outputKeys.forEach((portName, i) => {
+                const portDef = this.data.ports.outputs[portName];
+                const portEl = document.createElement('div');
+                portEl.className = 'node-port port-output';
+                portEl.dataset.portName = portName;
+                portEl.dataset.portType = 'output';
+                portEl.dataset.portDataType = portDef.type || 'any';
+                portEl.title = portDef.label || portName;
+
+                portEl.style.right = `-${portSize/2}px`;
+                const yPos = (nodeHeight / (outputKeys.length + 1)) * (i + 1) - (portSize / 2);
+                portEl.style.top = `${Math.max(0, Math.min(nodeHeight - portSize, yPos))}px`;
+
+                this.htmlElement.appendChild(portEl);
+                this.portElements.push(portEl);
+            });
+        }
+    }
+
+    update(spaceGraphInstance) {
+        if (this.typeDefinition?.onUpdate) {
+            this.typeDefinition.onUpdate(this, this.spaceGraph || spaceGraphInstance);
+        } else {
+            if (this.cssObject) this.cssObject.position.copy(this.position);
+            if (this.mesh) this.mesh.position.copy(this.position);
+            // Basic label billboarding & positioning
+            if (this.labelObject && (this.spaceGraph?._camera || spaceGraphInstance?._camera)) {
+                const offset = (this.getBoundingSphereRadius() * 1.1) + 10; // Default offset logic
+                this.labelObject.position.copy(this.position).y += offset;
+                this.labelObject.quaternion.copy((this.spaceGraph?._camera || spaceGraphInstance?._camera).quaternion);
+            }
+        }
+    }
+
+    dispose() {
+        if (this.typeDefinition?.onDispose) {
+            this.typeDefinition.onDispose(this);
+        }
+
+        this.portElements.forEach(portEl => portEl.remove());
+        this.portElements = [];
+
+        this.mesh?.geometry?.dispose(); this.mesh?.material?.dispose(); this.mesh?.parent?.remove(this.mesh);
+        this.cssObject?.element?.remove(); this.cssObject?.parent?.remove(this.cssObject);
+        this.labelObject?.element?.remove(); this.labelObject?.parent?.remove(this.labelObject);
+
+        this.mesh = null; this.cssObject = null; this.htmlElement = null; this.labelObject = null;
+        this.typeDefinition = null;
+        super.dispose();
+    }
+
+    setPosition(x,y,z) {
+        super.setPosition(x,y,z);
+        if (this.typeDefinition?.onSetPosition) {
+            this.typeDefinition.onSetPosition(this,x,y,z);
+        } else {
+            if (this.mesh) this.mesh.position.copy(this.position);
+            if (this.cssObject) this.cssObject.position.copy(this.position);
+            // Label position updated in 'update' method
+        }
+    }
+
+    setSelectedStyle(selected) {
+        if (this.portElements && this.portElements.length > 0) {
+            this.portElements.forEach(portEl => {
+                portEl.style.display = selected ? 'block' : 'none';
+            });
+        }
+
+        if (this.typeDefinition?.onSetSelectedStyle) {
+            this.typeDefinition.onSetSelectedStyle(this, selected);
+        } else {
+            if (this.htmlElement) this.htmlElement.classList.toggle('selected', selected);
+            else if (this.mesh?.material?.emissive) this.mesh.material.emissive.setHex(selected ? 0x888800 : 0x000000);
+
+            if (this.labelObject?.element) this.labelObject.element.classList.toggle('selected', selected);
+        }
+    }
+
+    setHoverStyle(hovered) {
+        if (this.typeDefinition?.onSetHoverStyle) {
+            this.typeDefinition.onSetHoverStyle(this,hovered);
+        }
+        // No default hover style for ports beyond CSS :hover for now
+    }
+
+    getBoundingSphereRadius() {
+        if (this.typeDefinition?.getBoundingSphereRadius) {
+            return this.typeDefinition.getBoundingSphereRadius(this);
+        }
+        if (this.htmlElement) return Math.max(this.htmlElement.offsetWidth, this.htmlElement.offsetHeight) / 2;
+        if (this.mesh?.geometry) {
+            if (!this.mesh.geometry.boundingSphere) this.mesh.geometry.computeBoundingSphere();
+            return this.mesh.geometry.boundingSphere.radius;
+        }
+        return super.getBoundingSphereRadius();
+    }
+
+    startDrag() {
+        if (this.typeDefinition?.onStartDrag) this.typeDefinition.onStartDrag(this); else super.startDrag();
+    }
+    drag(newPosition) {
+        if (this.typeDefinition?.onDrag) this.typeDefinition.onDrag(this, newPosition); else super.drag(newPosition);
+    }
+    endDrag() {
+        if (this.typeDefinition?.onEndDrag) this.typeDefinition.onEndDrag(this); else super.endDrag();
+    }
+}
+
 export class ShapeNode extends BaseNode {
     shape = 'sphere'; 
     size = 50;    
@@ -715,6 +967,9 @@ export class UIManager {
     confirmCallback = null;
     statusIndicatorElement = null;
 
+    // For port linking
+    linkingTargetPortElement = null; // Store the currently highlighted target port
+
     constructor(spaceGraph, uiElements = {}) {
         if (!spaceGraph) {
             throw new Error("UIManager requires a SpaceGraph instance.");
@@ -828,6 +1083,27 @@ export class UIManager {
             this._handleNodeControlButtonClick(targetInfo.nodeControlsButton, targetInfo.node);
             this._hideContextMenu(); return;
         }
+
+        // Check for port click first for linking
+        const portElement = targetInfo.element?.closest('.node-port');
+        if (portElement && targetInfo.node) {
+            e.preventDefault(); e.stopPropagation();
+            this.spaceGraph.isLinking = true;
+            this.spaceGraph.linkSourceNode = targetInfo.node;
+            this.spaceGraph.linkSourcePortInfo = {
+                name: portElement.dataset.portName,
+                type: portElement.dataset.portType, // 'input' or 'output'
+                element: portElement // Optional: for visual feedback on source port
+            };
+            // For now, _createTempLinkLine starts from node center. Pass portElement if specific port connection point is desired.
+            this._createTempLinkLine(targetInfo.node /*, portElement */);
+            this.container.style.cursor = 'crosshair';
+            this._hideContextMenu();
+            // Optional: Add class to source port for visual feedback
+            // portElement.classList.add('linking-source-port');
+            return;
+        }
+
         if (targetInfo.resizeHandle && targetInfo.node instanceof HtmlNodeElement) {
             e.preventDefault(); e.stopPropagation();
             this.resizedNode = targetInfo.node;
@@ -907,10 +1183,32 @@ export class UIManager {
         if (this.spaceGraph.isLinking) {
             e.preventDefault();
             this._updateTempLinkLine(e.clientX, e.clientY);
-            const {node} = this._getTargetInfo(e); 
+
+            // Clear previous target port highlight
+            if (this.linkingTargetPortElement) {
+                this.linkingTargetPortElement.classList.remove('linking-target-port');
+                this.linkingTargetPortElement = null;
+            }
+            // Clear previous target node highlight
             $$('.node-html.linking-target', this.container).forEach(el => el.classList.remove('linking-target'));
-            if (node && node !== this.spaceGraph.linkSourceNode && node.htmlElement) {
-                node.htmlElement.classList.add('linking-target');
+
+            const targetInfoMove = this._getTargetInfo(e);
+            const targetNode = targetInfoMove.node;
+            const targetPortElement = targetInfoMove.element?.closest('.node-port');
+
+            if (targetPortElement && targetNode && targetNode !== this.spaceGraph.linkSourceNode) {
+                const sourcePortType = this.spaceGraph.linkSourcePortInfo?.type;
+                const targetPortType = targetPortElement.dataset.portType;
+                // Basic validation: output -> input or input -> output (adjust if strict direction needed)
+                if (sourcePortType && targetPortType && sourcePortType !== targetPortType) {
+                    targetPortElement.classList.add('linking-target-port');
+                    this.linkingTargetPortElement = targetPortElement;
+                    // Also highlight the node itself for clarity
+                    if (targetNode.htmlElement) targetNode.htmlElement.classList.add('linking-target');
+                }
+            } else if (targetNode && targetNode !== this.spaceGraph.linkSourceNode && targetNode.htmlElement) {
+                // If hovering over a node but not a specific port (allow node-to-node linking as fallback)
+                 targetNode.htmlElement.classList.add('linking-target');
             }
             return;
         }
@@ -959,6 +1257,10 @@ export class UIManager {
         this.spaceGraph.cameraController?.endPan();
         this._updatePointerState(e, false); 
         $$('.node-html.linking-target', this.container).forEach(el => el.classList.remove('linking-target'));
+        if (this.linkingTargetPortElement) { // Ensure any lingering port highlight is removed
+            this.linkingTargetPortElement.classList.remove('linking-target-port');
+            this.linkingTargetPortElement = null;
+        }
     }
 
     _onContextMenu(e) {
@@ -1002,7 +1304,10 @@ export class UIManager {
         }
         else if (node instanceof ShapeNode && node.labelObject) {
         }
-        items.push({label: "Start Link ✨", action: "start-link", nodeId: node.id});
+        // For HTML nodes that might have ports, we prefer port-to-port linking if ports are visible.
+        // This context menu "Start Link" is more for node-to-node or ShapeNode linking.
+        // Or, it could be adapted to pick a default port if desired. For now, it remains node-centric.
+        items.push({label: "Start Link (Node) ✨", action: "start-link-node", nodeId: node.id});
         items.push({label: "Auto Zoom / Back 🖱️", action: "autozoom-node", nodeId: node.id});
         items.push({type: 'separator'});
         items.push({label: "Delete Node 🗑️", action: "delete-node", nodeId: node.id, class: 'delete-action'});
@@ -1057,7 +1362,10 @@ export class UIManager {
             'create-sphere': () => this._createNodeFromMenu(data.position, ShapeNode, {label: 'Sphere', shape: 'sphere', color: Math.random() * 0xffffff}),
             'center-view': () => this.spaceGraph.centerView(),
             'reset-view': () => this.spaceGraph.cameraController?.resetView(),
-            'start-link': () => { const n = this.spaceGraph.getNodeById(data.nodeId); if(n) this._startLinking(n); },
+            'start-link-node': () => { // Renamed from 'start-link'
+                const n = this.spaceGraph.getNodeById(data.nodeId);
+                if(n) this._startLinking(n); // _startLinking now takes optional portElement
+            },
             'reverse-edge': () => {
                 const edge = this.spaceGraph.getEdgeById(data.edgeId);
                 if (edge) { [edge.source, edge.target] = [edge.target, edge.source]; edge.update(); this.spaceGraph.layoutEngine?.kick(); }
@@ -1130,21 +1438,37 @@ export class UIManager {
     _onConfirmYes = () => { this.confirmCallback?.(); this._hideConfirm(); }
     _onConfirmNo = () => { this._hideConfirm(); }
 
-    _startLinking(sourceNode) {
+    _startLinking(sourceNode, sourcePortElement = null) {
         if (!sourceNode) return;
         this.spaceGraph.isLinking = true;
         this.spaceGraph.linkSourceNode = sourceNode;
+        if (sourcePortElement) {
+            this.spaceGraph.linkSourcePortInfo = {
+                name: sourcePortElement.dataset.portName,
+                type: sourcePortElement.dataset.portType,
+                element: sourcePortElement
+            };
+            // Optional: add class to sourcePortElement for visual feedback
+            // sourcePortElement.classList.add('linking-source-port');
+        } else {
+            this.spaceGraph.linkSourcePortInfo = null; // Explicitly null for node-to-node linking
+        }
         this.container.style.cursor = 'crosshair';
-        this._createTempLinkLine(sourceNode);
+        this._createTempLinkLine(sourceNode, sourcePortElement);
     }
 
-    _createTempLinkLine(sourceNode) {
+    _createTempLinkLine(sourceNode, sourcePortElement = null) { // Added sourcePortElement
         this._removeTempLinkLine(); 
+        // For now, line always starts from node center. Visual connection to port element can be done via CSS if needed.
+        const startPos = sourceNode.position.clone();
+        // If we wanted to start from port center (more complex due to CSS3D to World conversion):
+        // if (sourcePortElement) { startPos = this.getPortWorldPosition(sourcePortElement) || startPos; }
+
         const material = new THREE.LineDashedMaterial({
             color: 0xffaa00, linewidth: 2, dashSize: 8, gapSize: 4,
             transparent: true, opacity: 0.9, depthTest: false
         });
-        const points = [sourceNode.position.clone(), sourceNode.position.clone()]; 
+        const points = [startPos.clone(), startPos.clone()]; // Use startPos
         const geometry = new THREE.BufferGeometry().setFromPoints(points);
         this.spaceGraph.tempLinkLine = new THREE.Line(geometry, material);
         this.spaceGraph.tempLinkLine.computeLineDistances(); 
@@ -1173,17 +1497,51 @@ export class UIManager {
     }
     _completeLinking(event) {
         this._removeTempLinkLine();
-        const {node: targetNode} = this._getTargetInfo(event); 
+        const targetInfo = this._getTargetInfo(event);
+        const targetNode = targetInfo.node;
+        const targetPortElement = targetInfo.element?.closest('.node-port');
+        let edgeData = {};
+
         if (targetNode && targetNode !== this.spaceGraph.linkSourceNode) {
-            this.spaceGraph.addEdge(this.spaceGraph.linkSourceNode, targetNode);
+            if (this.spaceGraph.linkSourcePortInfo && targetPortElement) {
+                // Port-to-port connection
+                const sourcePortType = this.spaceGraph.linkSourcePortInfo.type;
+                const targetPortType = targetPortElement.dataset.portType;
+
+                if (sourcePortType !== targetPortType) { // e.g., output to input
+                    edgeData = {
+                        sourcePort: this.spaceGraph.linkSourcePortInfo.name,
+                        targetPort: targetPortElement.dataset.portName,
+                        // Could add sourcePortType and targetPortType if needed by Edge or app logic
+                    };
+                    this.spaceGraph.addEdge(this.spaceGraph.linkSourceNode, targetNode, edgeData);
+                } else {
+                    console.warn("Link rejected: Cannot connect port of type", sourcePortType, "to port of type", targetPortType);
+                }
+            } else if (!this.spaceGraph.linkSourcePortInfo && !targetPortElement) {
+                // Node-to-node connection (no ports involved on either side)
+                this.spaceGraph.addEdge(this.spaceGraph.linkSourceNode, targetNode, {});
+            } else {
+                // Mixed mode (one side has a port, other doesn't) - currently not creating edge
+                console.warn("Link rejected: Mixed port/node connection not directly handled by this logic yet.");
+            }
         }
-        this.cancelLinking(); 
+        this.cancelLinking();
     }
 
     cancelLinking() {
         this._removeTempLinkLine();
+        // Clear source port highlighting if any class was added
+        // if (this.spaceGraph.linkSourcePortInfo?.element) {
+        //    this.spaceGraph.linkSourcePortInfo.element.classList.remove('linking-source-port');
+        // }
+        if (this.linkingTargetPortElement) {
+            this.linkingTargetPortElement.classList.remove('linking-target-port');
+            this.linkingTargetPortElement = null;
+        }
         this.spaceGraph.isLinking = false;
         this.spaceGraph.linkSourceNode = null;
+        this.spaceGraph.linkSourcePortInfo = null; // Clear port info
         this.container.style.cursor = 'grab';
         $$('.node-html.linking-target', this.container).forEach(el => el.classList.remove('linking-target'));
     }
@@ -1466,40 +1824,25 @@ export class UIManager {
 
         // Merge world position into the creation data
         const finalNodeData = { ...nodeCreationData, x: worldPos.x, y: worldPos.y, z: worldPos.z };
-        let newNodeInstance = null;
 
-        // Instantiate based on type - similar to _createNodeFromMenu
-        // Note: ID is generated by constructors if null/undefined
-        if (finalNodeData.type === 'note') {
-            newNodeInstance = new NoteNode(finalNodeData.id, worldPos, finalNodeData);
-        } else if (finalNodeData.type === 'shape') {
-            // Ensure 'shape' (e.g. 'box', 'sphere') is part of finalNodeData for ShapeNode constructor
-            newNodeInstance = new ShapeNode(finalNodeData.id, worldPos, finalNodeData);
-        } else if (finalNodeData.type === 'html') { // For a generic HtmlNodeElement
-             newNodeInstance = new HtmlNodeElement(finalNodeData.id, worldPos, finalNodeData);
-        // TODO: Add handling for registered custom node types here if/when SpaceGraph.nodeTypes is available
-        // else if (this.spaceGraph.nodeTypes && this.spaceGraph.nodeTypes.has(finalNodeData.type)) {
-        //     const typeDefinition = this.spaceGraph.nodeTypes.get(finalNodeData.type);
-        //     newNodeInstance = new RegisteredNode(finalNodeData.id, finalNodeData, typeDefinition, this.spaceGraph);
-        } else {
-            console.error(`Unknown node type for drag-and-drop: ${finalNodeData.type}`);
-            return;
-        }
+        // UIManager directly calls SpaceGraph.addNode with the data object.
+        // SpaceGraph.addNode will handle instantiation of RegisteredNode or legacy nodes.
+        const newNode = this.spaceGraph.addNode(finalNodeData);
 
-        if (newNodeInstance) {
-            this.spaceGraph.addNode(newNodeInstance);
-            console.log(`Node of type '${finalNodeData.type}' created by drop:`, newNodeInstance.id);
-            this.spaceGraph.setSelectedNode(newNodeInstance);
+        if (newNode) {
+            console.log(`Node of type '${finalNodeData.type}' created by drop:`, newNode.id);
+            this.spaceGraph.setSelectedNode(newNode);
             this.spaceGraph.layoutEngine?.kick();
             // Optional: Focus, similar to _createNodeFromMenu
             // setTimeout(() => {
-            //    this.spaceGraph.focusOnNode(newNodeInstance, 0.6, true);
-            //    if (newNodeInstance instanceof NoteNode) {
-            //        newNodeInstance.htmlElement?.querySelector('.node-content')?.focus();
+            //    this.spaceGraph.focusOnNode(newNode, 0.6, true);
+            //    if (newNode instanceof NoteNode) {
+            //        newNode.htmlElement?.querySelector('.node-content')?.focus();
             //    }
             // }, 100);
         } else {
-            console.error("Failed to create node instance from dropped data.", finalNodeData);
+            // Error messages would be handled by SpaceGraph.addNode if creation failed
+            console.error("Failed to create node from dropped data via SpaceGraph.addNode.", finalNodeData);
         }
     }
 }
