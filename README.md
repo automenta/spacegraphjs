@@ -9,6 +9,67 @@ The Zooming User Interface Library is a general-purpose, extensible JavaScript l
 
 ---
 
+## Getting Started / Manual Setup
+
+Since the library is not yet available as an npm package, you can use it by directly including `spacegraph.js` in your project.
+
+1.  **Get the Code:** Clone this repository or download the `spacegraph.js` file and `index.css` (and any other necessary assets like images if your nodes use them).
+2.  **Include in HTML:** Create an HTML file and include `spacegraph.js` as a module. You'll also need to include `three.js` and `gsap`. The recommended way to handle these external dependencies is via CDNs and an import map, as demonstrated in the example files (e.g., `index.html`, `example-app-nodes.html`).
+
+    ```html
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>My SpaceGraph App</title>
+        <link href="path/to/your/index.css" rel="stylesheet"/> <!-- Link to where you put index.css -->
+        <style>
+            body { margin: 0; overflow: hidden; }
+            #my-spacegraph-container { width: 100vw; height: 100vh; }
+        </style>
+    </head>
+    <body>
+        <div id="my-spacegraph-container">
+            <!-- Canvas and CSS3D container will be added here by SpaceGraph -->
+        </div>
+
+        <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
+                "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
+            }
+        }
+        </script>
+        <script type="module">
+            import { SpaceGraph } from './path/to/your/spacegraph.js'; // Adjust path as needed
+
+            const container = document.getElementById('my-spacegraph-container');
+            if (container) {
+                const space = new SpaceGraph(container);
+                // ... your application logic ...
+
+                // Example: Add a simple node
+                space.addNode({
+                    type: 'note', // Built-in NoteNode
+                    id: 'welcome-note',
+                    x: 0, y: 0, z: 0,
+                    content: 'Hello SpaceGraph!',
+                    width: 200, height: 80
+                });
+                space.centerView();
+            } else {
+                console.error("Container element not found!");
+            }
+        </script>
+    </body>
+    </html>
+    ```
+3.  **Explore Examples:** Check out the `example-*.html` files in the repository to see various features and custom node implementations.
+
+---
+
 ## 2. Functional Requirements
 
 ### 2.1 Core Features
@@ -115,6 +176,18 @@ The Zooming User Interface Library is a general-purpose, extensible JavaScript l
 - **View Modes**: Use three.js to toggle between 2D, 3D, and spherical projections, ensuring a unified model.
 - **HUD**: Build as a separate HTML overlay with CSS for translucency, integrating WebGL for 3D interactions if needed.
 - **REPL**: Implement a command parser with a set of predefined actions (search, collect, probe), extensible for custom commands.
+
+---
+
+## API Documentation
+
+The API documentation is embedded as JSDoc comments directly within the `spacegraph.js` source code. Developers can refer to the source code for detailed explanations of classes, methods, properties, and parameters.
+
+Generating browsable HTML documentation from these comments (e.g., using JSDoc tooling) would require a working Node.js/npm environment to install JSDoc and its dependencies. Due to current environmental constraints preventing reliable `npm install` operations, pre-built HTML documentation is not available at this time.
+
+To view the documentation:
+1.  Open the `spacegraph.js` file.
+2.  Read the JSDoc blocks (formatted as `/** ... */`) preceding class and method definitions.
 
 ---
 

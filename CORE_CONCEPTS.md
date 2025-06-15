@@ -86,6 +86,7 @@ This object tells SpaceGraph how to handle your custom nodes. Key methods includ
         *   `cssObject`: Alternatively, a pre-constructed `CSS3DObject`.
         *   `labelObject`: A `CSS3DObject` typically used for labels.
     *   These returned objects will be added to the appropriate scenes by SpaceGraph.
+    *   It's a common pattern to store references to frequently accessed internal DOM elements or THREE.js objects (like materials) on `nodeInst.customElements = { ... }`. This makes them easily accessible in other lifecycle methods like `onDataUpdate` or `onDispose`.
 
 *   **`onUpdate(nodeInstance, spaceGraph)`**:
     *   Optional. Called on every frame of the animation loop. Useful for animations or dynamic updates.
@@ -110,6 +111,7 @@ This object tells SpaceGraph how to handle your custom nodes. Key methods includ
 
 *   **`onDataUpdate(nodeInstance, updatedData)`**:
     *   Optional. Called when `spaceGraph.updateNodeData(nodeId, newData)` is used. Allows the node to react to specific data changes.
+    *   This method is key for making nodes dynamic. When `spaceGraph.updateNodeData(nodeId, newData)` is called, `onDataUpdate` receives the `newData` object. If `newData` contains keys corresponding to the node's defined input ports (e.g., `updatedData.my_input_port`), this method should handle that incoming data, update the node's internal state (`nodeInst.data`), and refresh its visual representation if necessary. Remember to update `nodeInst.data.propertyName = updatedData.propertyName` if the change should persist.
 
 ### Node Ports (for HTML-based RegisteredNodes)
 
@@ -130,7 +132,7 @@ This object tells SpaceGraph how to handle your custom nodes. Key methods includ
     *   `portName`: A programmatic identifier for the port (e.g., `data_in`, `trigger_out`).
     *   `label`: A user-friendly string for tooltips or UI display.
     *   `type`: A user-defined string indicating the expected data type (e.g., `'string'`, `'number'`, `'signal'`, `'any'`). This is for user/developer reference and can be used for validation during linking.
-*   **Rendering**: For `RegisteredNode`s that create an `htmlElement` in their `onCreate` method, these defined ports will be automatically rendered as small `div` elements (styled with CSS classes `.node-port`, `.port-input`, `.port-output`) on the periphery of the `htmlElement`.
+*   **Rendering**: For `RegisteredNode`s that create an `htmlElement` in their `onCreate` method, these defined ports will be automatically rendered as small `div` elements (styled with CSS classes `.node-port`, `.port-input`, `.port-output`) on the periphery of the `htmlElement`. For `RegisteredNode`s that define a `mesh` (WebGL) instead of an `htmlElement` in `onCreate`, these port definitions are primarily for data modeling and semantic purposes. Visual rendering of ports on WebGL nodes would require custom logic within `onCreate` (e.g., creating small indicator meshes at port locations) and is not automatic.
 *   **Interaction**: These visual ports can be clicked to initiate edge linking (see "Inter-Node Messaging System / Edge Linking" below).
 
 ### Instantiating a Custom Node
@@ -201,6 +203,7 @@ Nodes can communicate directly using a publish/subscribe system. This is also ti
         *   Example: `edge.data = { sourcePort: 'html_out', targetPort: 'md_in' }`.
     *   This allows application logic to understand the specific connection points of an edge, enabling more complex data flow or state propagation logic beyond simple node-to-node adjacency.
     *   Node-to-node links (without specific ports) are also possible and will result in an empty `edge.data` object by default.
+    *   It's important to distinguish this direct eventing from data flow implied by visual port connections on `RegisteredNode`s. While `emit/listenTo` works for any node communication, data arriving at a `RegisteredNode`'s defined 'input port' (e.g., `my_input_port`) is typically handled via its `onDataUpdate` method. This method is invoked when `spaceGraph.updateNodeData(receiverNode.id, { my_input_port: someValue })` is called by external logic. An edge drawn between an output port and an input port visually represents this intended data path, but the library itself does not automatically pipe data through these edges for `RegisteredNode`s using `onDataUpdate`. Application-specific logic or a dedicated data flow manager would be responsible for observing an output event (or data change) and then triggering `updateNodeData` on the connected node(s). The `example-inter-node-communication.html` provides scenarios for both direct `listenTo` and `onDataUpdate`-based communication.
 
 *   **Global Graph Events**:
     *   `spaceGraph.on(eventName, callback)` and `spaceGraph.emit(eventName, payload)` for graph-wide events.
@@ -229,8 +232,8 @@ The custom node registration system, combined with the ability to embed rich HTM
     *   The `outputPortName` should match one of the keys defined in `nodeInst.data.ports.outputs`.
 
 *   **Receiving Data via Input Ports (Conceptual)**:
-    *   **Method 1 (Direct Event Listening - Less Common for "Input Port" Semantics):** While a node can technically `listenTo` any event from another node, for true "input port" behavior, it's often about reacting to data *sent to it*.
-    *   **Method 2 (`onDataUpdate`):** A common pattern for input ports is to have external actors (other nodes or system logic) update the App Node's data directly using a key that matches the input port name. For instance, if an input port is named `config_in`, another node might effectively do (conceptually): `spaceGraph.updateNodeData(appNodeId, { config_in: newConfigData })`. The App Node's `onDataUpdate` method would then detect `updatedData.config_in` and react accordingly.
+    *   **Method 1 (Direct Event Listening - Less Common for "Input Port" Semantics):** While a node can technically `listenTo` any event from another node, for true "input port" behavior, it's often about reacting to data *sent to it*. This method is viable but less direct for port semantics compared to `onDataUpdate`.
+    *   **Method 2 (`onDataUpdate`):** This is the most common and recommended pattern for `RegisteredNode` types to handle data arriving at their conceptual input ports. If your `TypeDefinition` defines an input port (e.g., in `getDefaults` or initial data as `ports: { inputs: { config_in: ... } }`), external logic (another node's action, or application code) would typically call `spaceGraph.updateNodeData(appNodeId, { config_in: newConfigData })`. The `onDataUpdate(nodeInst, updatedData)` method within your `TypeDefinition` for the `appNodeId` node is then responsible for checking if `updatedData.config_in` exists and processing this `newConfigData`. This usually involves updating `nodeInst.data.config_in` and then refreshing the node's internal HTML or WebGL visuals to reflect the new configuration.
     *   **Method 3 (Dedicated Listener in `onCreate` - Advanced):** An App Node could, in its `onCreate`, set up listeners for specific events targeted at itself, perhaps using a global event bus or directly if another node `emit`s an event *with the App Node's ID as part of the event name or payload*. This is more complex and less conventional than using `onDataUpdate` for port-like inputs.
 
 ### Example App Node Walkthroughs

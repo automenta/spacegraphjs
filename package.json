@@ -1,0 +1,39 @@
+{
+  "name": "spacegraph-zui",
+  "version": "0.1.0",
+  "description": "A general-purpose, extensible JavaScript library for creating Zooming User Interfaces (ZUI) with 2D and 3D visualizations.",
+  "main": "dist/spacegraph.umd.js",
+  "module": "dist/spacegraph.esm.js",
+  "files": [
+    "dist",
+    "README.md",
+    "CORE_CONCEPTS.md",
+    "index.css"
+  ],
+  "scripts": {
+    "build": "npx rollup -c",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "SpaceGraph Contributors",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/automenta/spacegraphjs.git"
+  },
+  "keywords": [],
+  "bugs": {
+    "url": "https://github.com/automenta/spacegraphjs/issues"
+  },
+  "homepage": "https://github.com/automenta/spacegraphjs#readme",
+  "dependencies": {
+    "gsap": "^3.13.0",
+    "three": "^0.177.0"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^28.0.5",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "jsdoc": "^4.0.4",
+    "rollup": "^4.43.0"
+  }
+}
