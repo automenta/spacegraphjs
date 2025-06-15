@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SpaceGraph - Centralized Configuration Example</title>
+    <link href="./index.css" rel="stylesheet"/>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; }
+        #graph-container { width: 100vw; height: 100vh; overflow: hidden; }
+        /* Basic style for default HTML node from config to be visible */
+        .node-html {
+            background-color: var(--node-bg, #f0f0f0); /* Fallback if --node-bg is not set */
+            border: 1px solid #ccc;
+            padding: 5px;
+            border-radius: 4px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div id="graph-container"></div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
+            "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
+        }
+    }
+    </script>
+    <script type="module">
+        import { SpaceGraph } from './spacegraph.js';
+
+        const container = document.getElementById('graph-container');
+
+        /**
+         * @type {import('./spacegraph.js').SpaceGraphConfig}
+         */
+        const customConfig = {
+            rendering: {
+                defaultBackgroundColor: 0x112233, // Dark blue
+                defaultBackgroundAlpha: 1.0,    // Opaque
+                lineIntersectionThreshold: 8      // Slightly larger threshold for selecting lines
+            },
+            camera: {
+                initialPositionZ: 800,      // Start a bit further out
+                fov: 60,                    // Narrower field of view
+                zoomSpeed: 0.0020,          // Faster zoom
+                panSpeed: 0.7,              // Slower pan
+                dampingFactor: 0.1          // Slightly more responsive
+            },
+            defaults: {
+                node: {
+                    html: {
+                        width: 220,                 // Wider HTML nodes by default
+                        height: 55,                 // Shorter HTML nodes
+                        billboard: false,           // HTML nodes don't face camera by default
+                        contentScale: 0.9,          // Slightly smaller content
+                        backgroundColor: 'rgba(255, 220, 150, 0.9)' // Light orange, semi-transparent
+                    },
+                    shape: {
+                        shape: 'box',               // Default shape is box
+                        size: 70,                   // Larger shapes
+                        color: 0x00ccff            // Light blue shapes
+                    }
+                },
+                edge: {
+                    color: 0xffaa00,            // Orange edges
+                    thickness: 2.5,             // Thicker edges
+                    opacity: 0.75               // More opaque edges
+                }
+            }
+        };
+
+        // Initialize SpaceGraph with the custom configuration.
+        // Note: The uiElements parameter is {} (empty object) as we are not focusing on UI elements here.
+        const graph = new SpaceGraph(container, customConfig, {});
+
+        // Add nodes and edges to demonstrate the configuration.
+
+        // 1. An HTML node that should use the new defaults from `customConfig.defaults.node.html`
+        graph.addNode({
+            type: 'html',
+            id: 'html-default',
+            content: 'HTML Node (uses new global defaults from config)',
+            x: -300, y: 100
+        });
+
+        // 2. A Shape node that should use the new defaults from `customConfig.defaults.node.shape`
+        graph.addNode({
+            type: 'shape',
+            id: 'shape-default',
+            label: 'Shape Node (default "box", new color/size)',
+            x: 0, y: -150
+        });
+
+        // 3. An HTML node with some properties overridden at instance level.
+        //    These instance-specific properties should take precedence over global config defaults.
+        graph.addNode({
+            type: 'html',
+            id: 'html-override',
+            content: 'HTML Node (overrides width & color)',
+            x: 300, y: 100,
+            width: 150,                         // Override: narrower than config default (220)
+            backgroundColor: 'rgba(150, 220, 255, 0.9)', // Override: light blue
+            billboard: true                     // Override: this one will billboard
+        });
+
+        // 4. A Shape node with overridden properties.
+        graph.addNode({
+            type: 'shape',
+            id: 'shape-override',
+            label: 'Shape Node (override to "sphere", red)',
+            x: 0, y: 150,
+            shape: 'sphere',                    // Override: config default is 'box'
+            size: 40,                           // Override: smaller than config default (70)
+            color: 0xff0000                     // Override: red, config default is light blue
+        });
+
+        // Add edges - they should use the new default edge color and thickness from `customConfig.defaults.edge`
+        if (graph.getNodeById('html-default') && graph.getNodeById('shape-default')) {
+            graph.addEdge(graph.getNodeById('html-default'), graph.getNodeById('shape-default'));
+        }
+        if (graph.getNodeById('html-override') && graph.getNodeById('shape-override')) {
+            graph.addEdge(graph.getNodeById('html-override'), graph.getNodeById('shape-override'), {
+                color: 0x00ff00, // Override this specific edge to be green
+                thickness: 1
+            });
+        }
+         if (graph.getNodeById('shape-default') && graph.getNodeById('shape-override')) {
+            graph.addEdge(graph.getNodeById('shape-default'), graph.getNodeById('shape-override'));
+        }
+
+
+        // Center the view to see the nodes
+        graph.centerView();
+
+        console.log("SpaceGraph initialized with custom configuration:", graph.config);
+        console.log("Demonstrating centralized configuration. Note the background color, initial zoom, and default node/edge appearances.");
+        console.log("HTML Node 'html-default' should have width 220 and a light orange background.");
+        console.log("Shape Node 'shape-default' should be a light blue box of size 70.");
+        console.log("HTML Node 'html-override' should be 150px wide and light blue, and billboard.");
+        console.log("Shape Node 'shape-override' should be a red sphere of size 40.");
+        console.log("Edges should generally be orange and thick, unless overridden (like the green edge).");
+
+    </script>
+</body>
+</html>

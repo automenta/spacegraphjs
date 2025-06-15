@@ -16,6 +16,8 @@ Understanding these core classes is key to working with SpaceGraph:
     *   Owns the THREE.js scenes (WebGL and CSS3D), the camera, and the renderers.
     *   Manages the active layout engine (e.g., `ForceLayout`).
     *   Provides the `registerNodeType()` method for defining custom node types.
+    *   Manages global configuration defaults for various aspects of the graph.
+    *   Features a graph-wide event emitter (`on`, `_emit`) for key lifecycle and interaction events.
     *   Handles global events and overall graph state.
 
 *   **`BaseNode`**:
@@ -206,9 +208,41 @@ Nodes can communicate directly using a publish/subscribe system. This is also ti
     *   It's important to distinguish this direct eventing from data flow implied by visual port connections on `RegisteredNode`s. While `emit/listenTo` works for any node communication, data arriving at a `RegisteredNode`'s defined 'input port' (e.g., `my_input_port`) is typically handled via its `onDataUpdate` method. This method is invoked when `spaceGraph.updateNodeData(receiverNode.id, { my_input_port: someValue })` is called by external logic. An edge drawn between an output port and an input port visually represents this intended data path, but the library itself does not automatically pipe data through these edges for `RegisteredNode`s using `onDataUpdate`. Application-specific logic or a dedicated data flow manager would be responsible for observing an output event (or data change) and then triggering `updateNodeData` on the connected node(s). The `example-inter-node-communication.html` provides scenarios for both direct `listenTo` and `onDataUpdate`-based communication.
 
 *   **Global Graph Events**:
-    *   `spaceGraph.on(eventName, callback)` and `spaceGraph.emit(eventName, payload)` for graph-wide events.
+    *   `spaceGraph.on(eventName, callback)`: Allows subscription to graph-wide events.
+    *   `spaceGraph._emit(eventName, payload)`: Used internally to emit these events.
+    *   Key built-in events include:
+        *   `nodeAdded`: When a node is added. Data: `{ node: BaseNode }`.
+        *   `nodeRemoved`: When a node is removed. Data: `{ nodeId: string, node: BaseNode }`.
+        *   `edgeAdded`: When an edge is added. Data: `{ edge: Edge }`.
+        *   `edgeRemoved`: When an edge is removed. Data: `{ edgeId: string, edge: Edge }`.
+        *   `nodeSelected`: When node selection changes. Data: `{ selectedNode: BaseNode | null, previouslySelectedNode: BaseNode | null }`.
+        *   `edgeSelected`: When edge selection changes. Data: `{ selectedEdge: Edge | null, previouslySelectedEdge: Edge | null }`.
+    *   These provide hooks into the graph's lifecycle and user interactions, complementing the direct node-to-node eventing.
 
-## 5. Creating Complex Nodes (App Nodes)
+## 5. Customizing Defaults via Configuration
+
+SpaceGraph allows for global customization of many default behaviors and visual properties through a configuration object passed to its constructor. This makes it easier to theme a graph or set project-wide standards without altering individual node/edge creation calls.
+
+*   **Passing Configuration**:
+    ```javascript
+    const myConfig = {
+      rendering: { defaultBackgroundColor: 0x112233 },
+      defaults: { node: { shape: { color: 0xff00ff } } }
+    };
+    const graph = new SpaceGraph(container, myConfig, {}); // config is the second argument
+    ```
+*   **Scope**: The configuration can affect:
+    *   **Rendering**: Background color, alpha, line intersection thresholds.
+    *   **Camera**: Initial position, FOV, zoom/pan speeds, damping.
+    *   **Node Defaults**: Default properties for `html` nodes (width, height, background) and `shape` nodes (shape type, size, color).
+    *   **Edge Defaults**: Default color, thickness, opacity for edges.
+*   **Precedence**:
+    1.  Data provided directly when adding a node or edge (e.g., `graph.addNode({ type: 'shape', color: 0x00ff00 })`).
+    2.  Global defaults set via the `SpaceGraph` configuration object.
+    3.  Internal hardcoded defaults within node/edge classes (these are minimal now).
+*   **Structure**: For the detailed structure of the configuration object (`SpaceGraphConfig`), refer to the JSDoc in `spacegraph.js` or the main `README.md`.
+
+## 6. Creating Complex Nodes (App Nodes)
 
 The custom node registration system, combined with the ability to embed rich HTML and JavaScript logic, allows for the creation of "App Nodes"—nodes that function as mini-applications or complex, interactive widgets within the SpaceGraph environment.
 
@@ -291,3 +325,6 @@ SpaceGraph uses a hybrid rendering approach:
 *   **`ForceLayout`**: Default physics-based engine.
 *   Nodes have `mass`; edges have `stiffness`, `idealLength`.
 *   `node.getBoundingSphereRadius()` is important for overlap prevention.
+
+## 9. Testing
+The library includes a testing setup using Vitest. Tests can be run with `npm test`. This helps ensure stability and correctness of core functionalities.

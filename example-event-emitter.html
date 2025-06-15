@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SpaceGraph - Event Emitter Example</title>
+    <link href="./index.css" rel="stylesheet"/>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        #controls { padding: 10px; background-color: #f0f0f0; border-bottom: 1px solid #ccc; }
+        #controls button { margin-right: 5px; padding: 5px 10px; }
+        #graph-container { flex-grow: 1; border: 1px solid #ccc; overflow: hidden; }
+        #event-log-container { height: 20vh; display: flex; flex-direction: column; border-top: 1px solid #ccc; }
+        #event-log-container h4 { margin: 5px; padding-left: 5px; font-size: 1em; }
+        #event-log {
+            flex-grow: 1;
+            overflow-y: scroll;
+            padding: 5px;
+            background-color: #f9f9f9;
+            font-size: 0.9em;
+            white-space: pre-wrap; /* To see object details if logged */
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <button id="addNodeBtn">Add Node & Edge</button>
+        <button id="removeNodeBtn">Remove Last Node</button>
+        <button id="selectNodeBtn">Select First Node</button>
+        <button id="deselectBtn">Deselect All</button>
+    </div>
+    <div id="graph-container"></div>
+    <div id="event-log-container">
+        <h4>Event Log:</h4>
+        <div id="event-log"></div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
+            "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
+        }
+    }
+    </script>
+    <script type="module">
+        import { SpaceGraph } from './spacegraph.js';
+
+        const container = document.getElementById('graph-container');
+        const eventLog = document.getElementById('event-log');
+        const graph = new SpaceGraph(container);
+
+        /**
+         * Logs a message to the on-screen event log and the browser console.
+         * @param {string} message - The message to log.
+         */
+        function logEvent(message) {
+            const formattedMessage = `${new Date().toLocaleTimeString()}: ${message}\n`;
+            eventLog.innerHTML += formattedMessage;
+            eventLog.scrollTop = eventLog.scrollHeight; // Auto-scroll to the latest event
+            console.log(message);
+        }
+
+        // Register event listeners
+        graph.on('nodeAdded', (eventData) => {
+            logEvent(`EVENT: nodeAdded - ID: ${eventData.node.id}, Type: ${eventData.node.data.type}`);
+        });
+
+        graph.on('nodeRemoved', (eventData) => {
+            logEvent(`EVENT: nodeRemoved - ID: ${eventData.nodeId}, Original Node Type: ${eventData.node.data.type}`);
+        });
+
+        graph.on('edgeAdded', (eventData) => {
+            logEvent(`EVENT: edgeAdded - ID: ${eventData.edge.id} (From: ${eventData.edge.source.id} To: ${eventData.edge.target.id})`);
+        });
+
+        graph.on('edgeRemoved', (eventData) => {
+            logEvent(`EVENT: edgeRemoved - ID: ${eventData.edgeId}`);
+        });
+
+        graph.on('nodeSelected', (eventData) => {
+            const selectedId = eventData.selectedNode ? eventData.selectedNode.id : 'none';
+            const previouslySelectedId = eventData.previouslySelectedNode ? eventData.previouslySelectedNode.id : 'none';
+            logEvent(`EVENT: nodeSelected - Selected: ${selectedId}, Previously: ${previouslySelectedId}`);
+        });
+
+        graph.on('edgeSelected', (eventData) => {
+            const selectedId = eventData.selectedEdge ? eventData.selectedEdge.id : 'none';
+            const previouslySelectedId = eventData.previouslySelectedEdge ? eventData.previouslySelectedEdge.id : 'none';
+            logEvent(`EVENT: edgeSelected - Selected: ${selectedId}, Previously: ${previouslySelectedId}`);
+        });
+
+        let nodeCounter = 0;
+        let lastAddedNodeId = null;
+        const addedNodeIds = [];
+
+        // Add Node Button
+        document.getElementById('addNodeBtn').addEventListener('click', () => {
+            const nodeId = 'node-' + nodeCounter++;
+            const x = (Math.random() * 400) - 200;
+            const y = (Math.random() * 300) - 150;
+            graph.addNode({ type: 'note', id: nodeId, content: `Node ${nodeId}`, x: x, y: y });
+            addedNodeIds.push(nodeId);
+
+            if (lastAddedNodeId && graph.getNodeById(lastAddedNodeId) && graph.getNodeById(nodeId)) {
+                graph.addEdge(graph.getNodeById(lastAddedNodeId), graph.getNodeById(nodeId));
+            }
+            lastAddedNodeId = nodeId;
+        });
+
+        // Remove Last Node Button
+        document.getElementById('removeNodeBtn').addEventListener('click', () => {
+            if (addedNodeIds.length > 0) {
+                const nodeIdToRemove = addedNodeIds.pop();
+                graph.removeNode(nodeIdToRemove);
+                if (addedNodeIds.length > 0) {
+                    lastAddedNodeId = addedNodeIds[addedNodeIds.length -1];
+                } else {
+                    lastAddedNodeId = null;
+                }
+            } else {
+                logEvent("No nodes to remove.");
+            }
+        });
+
+        // Select First Node Button
+        document.getElementById('selectNodeBtn').addEventListener('click', () => {
+            if (addedNodeIds.length > 0) {
+                const firstNodeId = addedNodeIds[0];
+                const nodeToSelect = graph.getNodeById(firstNodeId);
+                if (nodeToSelect) {
+                    graph.setSelectedNode(nodeToSelect);
+                } else {
+                    logEvent(`Node ${firstNodeId} not found for selection.`);
+                }
+            } else {
+                logEvent("No nodes to select.");
+            }
+        });
+
+        // Deselect All Button
+        document.getElementById('deselectBtn').addEventListener('click', () => {
+            graph.setSelectedNode(null);
+            graph.setSelectedEdge(null);
+            logEvent("Deselected all nodes and edges.");
+        });
+
+        graph.centerView();
+        logEvent("SpaceGraph initialized. Use buttons to trigger events.");
+    </script>
+</body>
+</html>

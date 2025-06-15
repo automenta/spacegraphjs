@@ -1,3 +1,10 @@
+/**
+ * @license MIT
+ * @module spacegraph
+ * @description A JavaScript library for creating interactive 2D/3D Zooming User Interfaces (ZUI)
+ * built with Three.js and HTML/CSS. It provides a scene graph, event handling,
+ * and a variety of node types to build complex, data-driven visualizations.
+ */
 import * as THREE from 'three';
 import {CSS3DObject, CSS3DRenderer} from 'three/addons/renderers/CSS3DRenderer.js';
 import {gsap} from "gsap";
@@ -11,10 +18,65 @@ export const DEG2RAD = Math.PI / 180;
 
 /**
  * @class SpaceGraph
- * @classdesc Manages the entire 3D/2D graph visualization, including nodes, edges, rendering, and interactions.
- * It orchestrates various components like the UIManager, CameraController, and ForceLayout engine.
+ * @classdesc Manages the entire 2D/3D graph visualization, including nodes, edges, rendering, and user interactions.
+ * It orchestrates components like {@link UIManager}, {@link CameraController}, and {@link ForceLayout}.
+ * The SpaceGraph is the main entry point for creating and interacting with the visualization.
+ *
+ * It also features an event emitter system that allows other parts of an application to subscribe to
+ * significant events occurring within the graph.
+ *
+ * **Available Events:**
+ *  - `nodeAdded`: Fired when a new node is successfully added to the graph.
+ *    - Data: `{ node: BaseNode }` - The node instance that was added.
+ *  - `nodeRemoved`: Fired when a node is successfully removed from the graph.
+ *    - Data: `{ nodeId: string, node: BaseNode }` - The ID of the removed node and the node instance itself.
+ *  - `edgeAdded`: Fired when a new edge is successfully added to the graph.
+ *    - Data: `{ edge: Edge }` - The edge instance that was added.
+ *  - `edgeRemoved`: Fired when an edge is successfully removed from the graph.
+ *    - Data: `{ edgeId: string, edge: Edge }` - The ID of the removed edge and the edge instance itself.
+ *  - `nodeSelected`: Fired when a node is selected or deselected.
+ *    - Data: `{ selectedNode: BaseNode | null, previouslySelectedNode: BaseNode | null }`
+ *  - `edgeSelected`: Fired when an edge is selected or deselected.
+ *    - Data: `{ selectedEdge: Edge | null, previouslySelectedEdge: Edge | null }`
+ *
+ * @example
+ * // HTML setup:
+ * // <div id="graph-container" style="width: 800px; height: 600px;"></div>
+ *
+ * import { SpaceGraph } from './spacegraph.js';
+ *
+ * const container = document.getElementById('graph-container');
+ * const graph = new SpaceGraph(container);
+ *
+ * // Add some nodes
+ * graph.addNode({ type: 'note', id: 'node1', content: 'Hello', x: 0, y: 0 });
+ * graph.addNode({ type: 'shape', id: 'node2', shape: 'sphere', x: 100, y: 50, label: 'Sphere' });
+ * graph.addNode({
+ *   type: 'html',
+ *   id: 'node3',
+ *   content: '<em>HTML Content</em>',
+ *   x: -100, y: -50,
+ *   width: 150, height: 50
+ * });
+ *
+ * // Add an edge
+ * graph.addEdge(graph.getNodeById('node1'), graph.getNodeById('node2'), { color: 0xff0000 });
+ *
+ * graph.centerView();
+ *
+ * // Listen for node additions
+ * graph.on('nodeAdded', (eventData) => {
+ *   console.log('A node was added:', eventData.node.id);
+ * });
  */
 export class SpaceGraph {
+    /**
+     * @private
+     * @property {Map<string, Set<Function>>} _events - Internal map to store event listeners.
+     *                                                Keys are event names, values are Sets of callback functions.
+     */
+    _events = new Map();
+
     /** @property {Map<string, BaseNode>} nodes - A map of all nodes in the graph, keyed by their IDs. */
     nodes = new Map();
     /** @property {Map<string, Edge>} edges - A map of all edges in the graph, keyed by their IDs. */
@@ -29,25 +91,82 @@ export class SpaceGraph {
     linkSourceNode = null;
     /** @property {THREE.Line | null} tempLinkLine - A temporary line object used to visualize a link being created. */
     tempLinkLine = null;
-    /** @property {UIManager | null} uiManager - Manages user interface elements and interactions. */
+    /** @property {UIManager | null} uiManager - Manages user interface elements and interactions. See {@link UIManager}. */
     uiManager = null;
-    /** @property {CameraController | null} cameraController - Controls the camera's position, orientation, and movement. */
+    /** @property {CameraController | null} cameraController - Controls the camera's position, orientation, and movement. See {@link CameraController}. */
     cameraController = null;
-    /** @property {ForceLayout | null} layoutEngine - Manages the physics-based layout of nodes and edges. */
+    /** @property {ForceLayout | null} layoutEngine - Manages the physics-based layout of nodes and edges. See {@link ForceLayout}. */
     layoutEngine = null;
-    /** @property {{color: number, alpha: number}} background - The background color and alpha for the WebGL renderer. */
+    /** @property {{color: number, alpha: number}} background - The background color and alpha for the WebGL renderer. Default is `{color: 0x000000, alpha: 0.0}` (transparent black). */
     background = {color: 0x000000, alpha: 0.0};
+    /** @property {object} config - Configuration object for SpaceGraph settings. */
+    config = {};
 
     /**
+     * @typedef {object} SpaceGraphConfig
+     * @property {object} [rendering] - Rendering related settings.
+     * @property {number} [rendering.defaultBackgroundColor=0x000000] - Default background color for WebGL.
+     * @property {number} [rendering.defaultBackgroundAlpha=0.0] - Default background alpha for WebGL.
+     * @property {number} [rendering.lineIntersectionThreshold=5] - Raycaster threshold for line intersections (edges).
+     * @property {object} [camera] - Camera controller settings.
+     * @property {number} [camera.initialPositionZ=700] - Initial Z position of the camera.
+     * @property {number} [camera.fov=70] - Camera field of view.
+     * @property {number} [camera.zoomSpeed=0.0015] - Camera zoom speed.
+     * @property {number} [camera.panSpeed=0.8] - Camera pan speed.
+     * @property {number} [camera.dampingFactor=0.12] - Camera movement damping factor.
+     * @property {object} [defaults] - Default properties for nodes and edges.
+     * @property {object} [defaults.node] - Default properties for nodes.
+     * @property {object} [defaults.node.html] - Default properties for HTML nodes.
+     * @property {number} [defaults.node.html.width=160]
+     * @property {number} [defaults.node.html.height=70]
+     * @property {boolean} [defaults.node.html.billboard=true]
+     * @property {number} [defaults.node.html.contentScale=1.0]
+     * @property {string} [defaults.node.html.backgroundColor='var(--node-bg-default)']
+     * @property {object} [defaults.node.shape] - Default properties for shape nodes.
+     * @property {string} [defaults.node.shape.shape='sphere']
+     * @property {number} [defaults.node.shape.size=50]
+     * @property {number} [defaults.node.shape.color=0xffffff]
+     * @property {object} [defaults.edge] - Default properties for edges.
+     * @property {number} [defaults.edge.color=0x00d0ff]
+     * @property {number} [defaults.edge.thickness=1.5]
+     * @property {number} [defaults.edge.opacity=0.6]
+     */
+
+    /**
+     * Creates an instance of SpaceGraph.
+     * Initializes the 3D scenes (WebGL and CSS3D), renderers, camera, lighting,
+     * UI manager, layout engine, and event listeners.
      * @constructor
      * @param {HTMLElement} containerElement - The DOM element that will host the SpaceGraph visualization.
-     * @param {object} [uiElements={}] - Optional pre-existing UI elements (e.g., context menu, dialogs).
-     * @throws {Error} If no containerElement is provided.
+     *                                       This element should have defined dimensions (width and height).
+     * @param {SpaceGraphConfig} [config={}] - Optional configuration object to override default settings.
+     * @param {object} [uiElements={}] - Optional pre-existing UI DOM elements to be used by the {@link UIManager}.
+     *                                   Can include `contextMenuEl`, `confirmDialogEl`, `statusIndicatorEl`.
+     * @throws {Error} If `containerElement` is not provided or is not a valid HTML element.
+     * @example
+     * const graphContainer = document.getElementById('myGraphContainer');
+     * const spaceGraph = new SpaceGraph(graphContainer, { camera: { fov: 75 }});
      */
-    constructor(containerElement, uiElements = {}) {
-        if (!containerElement) throw new Error("SpaceGraph requires a container element.");
+    constructor(containerElement, config = {}, uiElements = {}) {
+        if (!containerElement || !(containerElement instanceof HTMLElement)) {
+            throw new Error("SpaceGraph requires a valid HTML container element.");
+        }
         /** @property {HTMLElement} container - The main container DOM element for the graph. */
         this.container = containerElement;
+        this.config = { ...this.getDefaultConfig(), ...config };
+        // Deep merge for nested objects like camera, rendering, defaults
+        if (config.rendering) this.config.rendering = { ...this.getDefaultConfig().rendering, ...config.rendering };
+        if (config.camera) this.config.camera = { ...this.getDefaultConfig().camera, ...config.camera };
+        if (config.defaults) {
+            this.config.defaults = { ...this.getDefaultConfig().defaults };
+            if (config.defaults.node) {
+                this.config.defaults.node = { ...this.getDefaultConfig().defaults.node };
+                if (config.defaults.node.html) this.config.defaults.node.html = { ...this.getDefaultConfig().defaults.node.html, ...config.defaults.node.html };
+                if (config.defaults.node.shape) this.config.defaults.node.shape = { ...this.getDefaultConfig().defaults.node.shape, ...config.defaults.node.shape };
+            }
+            if (config.defaults.edge) this.config.defaults.edge = { ...this.getDefaultConfig().defaults.edge, ...config.defaults.edge };
+        }
+
 
         /** @property {THREE.Scene} scene - The main Three.js scene for WebGL objects (like shapes and edges). */
         this.scene = new THREE.Scene();
@@ -58,13 +177,26 @@ export class SpaceGraph {
          * @private
          * @property {THREE.PerspectiveCamera} _camera - The main perspective camera.
          */
-        this._camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 20000);
-        this._camera.position.z = 700;
+        this._camera = new THREE.PerspectiveCamera(
+            this.config.camera.fov,
+            window.innerWidth / window.innerHeight,
+            1,
+            20000
+        );
+        this._camera.position.z = this.config.camera.initialPositionZ;
 
         this._setupRenderers();
+        this.background = { // Initialize from config
+            color: this.config.rendering.defaultBackgroundColor,
+            alpha: this.config.rendering.defaultBackgroundAlpha
+        };
         this.setBackground(this.background.color, this.background.alpha);
 
-        this.cameraController = new CameraController(this._camera, this.container);
+        this.cameraController = new CameraController(this._camera, this.container, {
+            zoomSpeed: this.config.camera.zoomSpeed,
+            panSpeed: this.config.camera.panSpeed,
+            dampingFactor: this.config.camera.dampingFactor
+        });
         this.layoutEngine = new ForceLayout(this);
         /** @property {Map<string, TypeDefinition>} nodeTypes - Registered custom node type definitions. */
         this.nodeTypes = new Map(); // Initialize for custom node types
@@ -161,26 +293,55 @@ export class SpaceGraph {
 
     /**
      * Registers a new node type definition.
-     * @param {string} typeName - The unique name for this node type.
-     * @param {TypeDefinition} typeDefinition - An object defining the lifecycle and behavior of nodes of this type.
-     * @throws {Error} If a type with the same name is already registered or definition is invalid.
+     * @param {string} typeName - The unique name for this node type (e.g., 'my-custom-node').
+     * @param {TypeDefinition} typeDefinition - An object defining the lifecycle methods, default data,
+     *                                        and behavior for nodes of this type. See {@link TypeDefinition}.
+     * @throws {Error} If a type with the same name is already registered.
+     * @throws {Error} If `typeDefinition` is invalid (e.g., missing `onCreate` method).
      * @example
-     * spaceGraph.registerNodeType('custom-box', {
+     * spaceGraph.registerNodeType('custom-data-node', {
      *   onCreate: (node, graph) => {
-     *     const geometry = new THREE.BoxGeometry(50, 50, 50);
-     *     const material = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
-     *     const mesh = new THREE.Mesh(geometry, material);
-     *     return { mesh };
+     *     // 'node' is the RegisteredNode instance being created
+     *     // 'graph' is the SpaceGraph instance
+     *     const el = document.createElement('div');
+     *     el.className = 'custom-data-display';
+     *     el.innerHTML = `<h3>${node.data.title}</h3><p>${node.data.value}</p>`;
+     *     el.style.width = '200px';
+     *     el.style.height = '100px';
+     *     el.style.backgroundColor = 'lightblue';
+     *     el.style.border = '1px solid blue';
+     *     el.style.padding = '10px';
+     *     // Return an object with the `htmlElement` and optionally `cssObject`
+     *     // SpaceGraph will create the CSS3DObject if not provided directly.
+     *     return { htmlElement: el };
      *   },
-     *   getDefaults: (initData) => ({ ...initData, customProperty: 'defaultValue' }),
-     *   // ... other lifecycle methods
+     *   getDefaults: (initialData) => ({
+     *     title: 'Untitled',
+     *     value: 0,
+     *     color: 'lightblue', // Example custom default
+     *     ...initialData // Merge with any data provided at node creation
+     *   }),
+     *   onUpdate: (node, graph) => {
+     *     // Optional: Called each frame to update the node's visual or internal state
+     *     // For example, if the node's appearance depends on external data
+     *     const contentEl = node.htmlElement.querySelector('p');
+     *     if (contentEl) contentEl.textContent = `Value: ${node.data.value}`;
+     *   },
+     *   onDispose: (node) => {
+     *     // Optional: Clean up any custom resources when the node is removed
+     *     console.log(`Custom node ${node.id} disposed.`);
+     *   },
+     *   // ... other optional lifecycle methods like onSetPosition, onSetSelectedStyle, etc.
      * });
+     *
+     * // Then, you can add nodes of this custom type:
+     * graph.addNode({ type: 'custom-data-node', id: 'data1', title: 'Sensor A', value: 42 });
      */
     registerNodeType(typeName, typeDefinition) {
         if (this.nodeTypes.has(typeName)) {
             throw new Error(`Node type "${typeName}" is already registered.`);
         }
-        if (!typeDefinition || typeof typeDefinition.onCreate !== 'function') { // Basic validation
+        if (!typeDefinition || typeof typeDefinition.onCreate !== 'function') {
             throw new Error(`Invalid typeDefinition for "${typeName}": onCreate method is required.`);
         }
         this.nodeTypes.set(typeName, typeDefinition);
@@ -219,92 +380,147 @@ export class SpaceGraph {
 
     /**
      * Adds a node to the graph.
-     * Can accept a pre-instantiated node object (extending BaseNode) or a data object to create a new node.
-     * @param {BaseNode | NodeDataObject} dataOrInstance - Either a node instance or a data object for creating a new node.
-     * @returns {BaseNode | null} The added or created node instance, or null if creation failed.
+     * This method can accept either a pre-instantiated node object (which must extend {@link BaseNode})
+     * or a plain JavaScript object ({@link NodeDataObject}) describing the node to be created.
+     * If a data object is provided, a node of the specified `type` will be instantiated.
+     * Supported built-in types are 'note', 'html', and 'shape'. Custom types can be registered
+     * using {@link SpaceGraph#registerNodeType}.
+     *
+     * @param {BaseNode | NodeDataObject} dataOrInstance - Either a node instance (e.g., `new NoteNode(...)`)
+     *                                                   or a data object (e.g., `{ type: 'note', content: 'Hi' }`).
+     * @returns {BaseNode | null} The added or created node instance. Returns `null` if node creation fails
+     *                            (e.g., unknown type, missing required data).
+     * @throws {Error} If `dataOrInstance` is not a valid object or `BaseNode` instance.
      * @example
-     * // Add a node using a data object
-     * const myNote = spaceGraph.addNode({ type: 'note', x: 100, content: 'Hello World' });
-     * // Add a pre-instantiated custom node
-     * const myCustom = new MyCustomNodeType('custom1', {x:0,y:0,z:0}, {myData: 'value'});
-     * spaceGraph.addNode(myCustom);
+     * // Add a 'note' node using a data object
+     * const noteNode = spaceGraph.addNode({
+     *   type: 'note',
+     *   id: 'my-note-1',
+     *   x: 100, y: 50, z: 0,
+     *   content: 'This is an editable note.'
+     * });
+     *
+     * // Add a 'shape' node (sphere)
+     * const sphereNode = spaceGraph.addNode({
+     *   type: 'shape',
+     *   shape: 'sphere', // 'box' is also available
+     *   label: 'My Sphere',
+     *   x: -150, y: 0, z: 10,
+     *   size: 60,
+     *   color: 0x00ff00 // Green
+     * });
+     *
+     * // Add an 'html' node with custom HTML content
+     * const htmlNode = spaceGraph.addNode({
+     *   type: 'html',
+     *   content: '<h2>Custom HTML</h2><p>Rendered in 3D space.</p>',
+     *   width: 250, height: 120,
+     *   x: 0, y: -100, z: 0
+     * });
+     *
+     * // Assuming 'custom-widget' type is registered:
+     * // const customNode = spaceGraph.addNode({ type: 'custom-widget', id: 'cw1', customProp: 'value' });
+     *
+     * // Adding a pre-instantiated node (less common for typical usage)
+     * // import { MyCustomNode } from './my-custom-node.js'; // Assuming MyCustomNode extends BaseNode
+     * // const preInstantiatedNode = new MyCustomNode('custom-id', {x:0,y:0,z:0}, {someData: 'abc'});
+     * // spaceGraph.addNode(preInstantiatedNode);
      */
     addNode(dataOrInstance) {
         let nodeInstance;
 
         if (dataOrInstance instanceof BaseNode) {
             nodeInstance = dataOrInstance;
-            if (!nodeInstance.id) nodeInstance.id = generateId('node');
+            if (!nodeInstance.id) nodeInstance.id = generateId('node'); // Ensure ID if missing
             if (this.nodes.has(nodeInstance.id)) {
-                console.warn(`Node instance with id ${nodeInstance.id} already added or duplicate ID.`);
+                console.warn(`Node instance with ID ${nodeInstance.id} already exists or ID is duplicated. Returning existing node.`);
                 return this.nodes.get(nodeInstance.id);
             }
         } else if (typeof dataOrInstance === 'object' && dataOrInstance !== null) {
-            const data = dataOrInstance;
+            const data = dataOrInstance; // data is a NodeDataObject
             if (!data.type) {
-                console.error("Node data must include a 'type' property.", data);
+                console.error("Node data must include a 'type' property to determine which node class to instantiate.", data);
                 return null;
             }
-            data.id = data.id ?? generateId('node');
+            data.id = data.id ?? generateId('node'); // Ensure ID if missing
             if (this.nodes.has(data.id)) {
-                console.warn(`Node with id ${data.id} already exists. Returning existing node.`);
+                console.warn(`Node with ID ${data.id} already exists. Returning existing node.`);
                 return this.nodes.get(data.id);
             }
 
             const position = { x: data.x ?? 0, y: data.y ?? 0, z: data.z ?? 0 };
 
+            // Check registered custom types first
             if (this.nodeTypes.has(data.type)) {
                 const typeDefinition = this.nodeTypes.get(data.type);
-                // Pass 'data' as initialUserData to RegisteredNode
                 nodeInstance = new RegisteredNode(data.id, data, typeDefinition, this);
-            } else if (data.type === 'note') {
+            }
+            // Then check built-in types
+            else if (data.type === 'note') {
                 nodeInstance = new NoteNode(data.id, position, data);
             } else if (data.type === 'html') {
                 nodeInstance = new HtmlNodeElement(data.id, position, data);
             } else if (data.type === 'shape' || data.shape) { // data.shape for backward compatibility
                 nodeInstance = new ShapeNode(data.id, position, data);
             } else {
-                console.error(`Unknown or unregistered node type: ${data.type}`);
+                console.error(`Unknown or unregistered node type: "${data.type}". Please register it using spaceGraph.registerNodeType().`);
                 return null;
             }
         } else {
-            console.error("Invalid argument to addNode. Must be a node data object or a BaseNode instance.", dataOrInstance);
-            return null;
+            throw new Error("Invalid argument to addNode. Must be a BaseNode instance or a NodeDataObject.");
         }
 
-        if (!nodeInstance) { // Should have been caught by earlier checks
-            console.error("Failed to create or identify node instance.");
+        if (!nodeInstance) {
+            console.error("Node instantiation failed for an unknown reason.", dataOrInstance);
             return null;
         }
 
         this.nodes.set(nodeInstance.id, nodeInstance);
-        nodeInstance.spaceGraph = this; // Ensure spaceGraph ref is set
+        nodeInstance.spaceGraph = this; // Ensure the node has a reference back to the graph
 
+        // Add visual elements to the appropriate scenes
         if (nodeInstance.cssObject) this.cssScene.add(nodeInstance.cssObject);
         if (nodeInstance.mesh) this.scene.add(nodeInstance.mesh);
-        if (nodeInstance.labelObject) this.cssScene.add(nodeInstance.labelObject);
+        if (nodeInstance.labelObject) this.cssScene.add(nodeInstance.labelObject); // For labels of ShapeNodes or custom nodes
 
-        this.layoutEngine?.addNode(nodeInstance);
+        this.layoutEngine?.addNode(nodeInstance); // Add to physics layout engine
+        this._emit('nodeAdded', { node: nodeInstance });
         return nodeInstance;
     }
 
     /**
-     * Removes a node and its connected edges from the graph.
+     * Removes a node and all its connected edges from the graph.
+     * If the node is currently selected or involved in linking, these states are cleared.
+     * The node's `dispose` method is called to clean up its resources.
+     * Emits a `nodeRemoved` event upon successful removal.
+     *
      * @param {string} nodeId - The ID of the node to remove.
+     * @returns {boolean} True if the node was found and removed, false otherwise.
+     * @fires SpaceGraph#nodeRemoved
+     * @example
+     * spaceGraph.removeNode('my-note-1');
      */
     removeNode(nodeId) {
-        const node = this.nodes.get(nodeId);
-        if (!node) return;
+        const nodeToRemove = this.nodes.get(nodeId);
+        if (!nodeToRemove) {
+            console.warn(`Node with ID "${nodeId}" not found for removal.`);
+            return false;
+        }
 
-        if (this.selectedNode === node) this.setSelectedNode(null);
-        if (this.linkSourceNode === node) this.uiManager?.cancelLinking();
+        // Clear selection or linking state if this node is involved
+        if (this.selectedNode === nodeToRemove) this.setSelectedNode(null);
+        if (this.linkSourceNode === nodeToRemove) this.uiManager?.cancelLinking(); // UIManager handles temp line removal
 
-        const edgesToRemove = [...this.edges.values()].filter(edge => edge.source === node || edge.target === node);
-        edgesToRemove.forEach(edge => this.removeEdge(edge.id));
+        // Find and remove all edges connected to this node
+        const edgesToRemove = [...this.edges.values()].filter(edge => edge.source === nodeToRemove || edge.target === nodeToRemove);
+        edgesToRemove.forEach(edge => this.removeEdge(edge.id)); // removeEdge will emit its own events
 
-        node.dispose();
+        nodeToRemove.dispose(); // Call node's internal cleanup (removes from scenes, disposes geometry/materials)
         this.nodes.delete(nodeId);
-        this.layoutEngine?.removeNode(node);
+        this.layoutEngine?.removeNode(nodeToRemove); // Remove from physics layout
+
+        this._emit('nodeRemoved', { nodeId: nodeId, node: nodeToRemove });
+        return true;
     }
 
     /**
@@ -320,39 +536,97 @@ export class SpaceGraph {
      */
 
     /**
-     * Adds an edge between two nodes.
-     * @param {BaseNode} sourceNode - The source node instance.
-     * @param {BaseNode} targetNode - The target node instance.
-     * @param {EdgeDataObject} [data={}] - Optional data for the edge (e.g., color, constraint type).
-     * @returns {Edge|null} The created edge instance, or null if creation failed (e.g., duplicate edge).
+     * Adds an edge connecting two nodes in the graph.
+     * Edges are represented visually as lines and can influence the physics-based layout.
+     *
+     * @param {BaseNode} sourceNode - The source node instance for the edge. Must be a valid {@link BaseNode} present in the graph.
+     * @param {BaseNode} targetNode - The target node instance for the edge. Must be a valid {@link BaseNode} present in the graph.
+     * @param {EdgeDataObject} [data={}] - Optional data for the edge, such as `color`, `thickness`,
+     *                                   `constraintType`, `constraintParams`, `sourcePort`, `targetPort`. See {@link EdgeDataObject}.
+     * @returns {Edge | null} The created {@link Edge} instance, or `null` if creation failed (e.g., nodes are invalid,
+     *                        source and target are the same, or a duplicate edge already exists).
+     * @example
+     * const nodeA = spaceGraph.getNodeById('nodeA');
+     * const nodeB = spaceGraph.getNodeById('nodeB');
+     * if (nodeA && nodeB) {
+     *   const newEdge = spaceGraph.addEdge(nodeA, nodeB, {
+     *     color: 0xff00ff, // Magenta
+     *     thickness: 2,
+     *     constraintType: 'elastic',
+     *     constraintParams: { stiffness: 0.002, idealLength: 150 }
+     *   });
+     *   if (newEdge) console.log(`Edge ${newEdge.id} created.`);
+     * }
+     *
+     * // Example with ports (assuming nodes 'nodeC' and 'nodeD' are RegisteredNodes with defined ports)
+     * // const nodeC = spaceGraph.getNodeById('nodeC');
+     * // const nodeD = spaceGraph.getNodeById('nodeD');
+     * // if (nodeC && nodeD) {
+     * //   spaceGraph.addEdge(nodeC, nodeD, { sourcePort: 'output1', targetPort: 'inputA' });
+     * // }
      */
     addEdge(sourceNode, targetNode, data = {}) {
-        if (!sourceNode || !targetNode || sourceNode === targetNode) return null;
-        if ([...this.edges.values()].some(e => (e.source === sourceNode && e.target === targetNode) || (e.source === targetNode && e.target === sourceNode))) {
-             console.warn("Duplicate edge ignored:", sourceNode.id, targetNode.id);
-            return null;
+        if (!sourceNode || !(sourceNode instanceof BaseNode) || !this.nodes.has(sourceNode.id)) {
+            console.error("addEdge: Invalid or non-existent source node.", sourceNode); return null;
+        }
+        if (!targetNode || !(targetNode instanceof BaseNode) || !this.nodes.has(targetNode.id)) {
+            console.error("addEdge: Invalid or non-existent target node.", targetNode); return null;
+        }
+        if (sourceNode === targetNode) {
+            console.warn("addEdge: Source and target nodes cannot be the same."); return null;
         }
 
-        const edgeId = generateId('edge');
+        // Check for duplicate edges (simple check, could be enhanced for directed graphs or multi-edges if needed)
+        const_duplicate = [...this.edges.values()].find(e =>
+            (e.source === sourceNode && e.target === targetNode) ||
+            (e.source === targetNode && e.target === sourceNode) // Considers undirected duplicates
+        );
+        if (const_duplicate) {
+             console.warn(`addEdge: Duplicate edge between ${sourceNode.id} and ${targetNode.id} ignored.`);
+            return const_duplicate; // Or return null if duplicates are strictly disallowed
+        }
+
+        const edgeId = data.id ?? generateId('edge');
         const edge = new Edge(edgeId, sourceNode, targetNode, data);
-        edge.spaceGraph = this;
-        this.edges.set(edgeId, edge);
-        if (edge.threeObject) this.scene.add(edge.threeObject);
-        this.layoutEngine?.addEdge(edge);
+        edge.spaceGraph = this; // Ensure reference back to the graph
+
+        this.edges.set(edge.id, edge);
+        if (edge.threeObject) this.scene.add(edge.threeObject); // Add visual line to WebGL scene
+        this.layoutEngine?.addEdge(edge); // Add to physics layout
+        this._emit('edgeAdded', { edge: edge });
         return edge;
     }
 
     /**
-     * Removes an edge from the graph.
+     * Removes an edge from the graph by its ID.
+     * If the edge is currently selected, it will be deselected.
+     * The edge's `dispose` method is called to clean up its resources.
+     * Emits an `edgeRemoved` event upon successful removal.
+     *
      * @param {string} edgeId - The ID of the edge to remove.
+     * @returns {boolean} True if the edge was found and removed, false otherwise.
+     * @fires SpaceGraph#edgeRemoved
+     * @example
+     * const edgeToRemove = spaceGraph.getEdgeById('my-edge-1');
+     * if (edgeToRemove) {
+     *   spaceGraph.removeEdge(edgeToRemove.id);
+     * }
      */
     removeEdge(edgeId) {
-        const edge = this.edges.get(edgeId);
-        if (!edge) return;
-        if (this.selectedEdge === edge) this.setSelectedEdge(null);
-        edge.dispose();
+        const edgeToRemove = this.edges.get(edgeId);
+        if (!edgeToRemove) {
+            console.warn(`Edge with ID "${edgeId}" not found for removal.`);
+            return false;
+        }
+
+        if (this.selectedEdge === edgeToRemove) this.setSelectedEdge(null); // Deselect if it was selected
+
+        edgeToRemove.dispose(); // Call edge's internal cleanup (removes from scene, disposes geometry/material)
         this.edges.delete(edgeId);
-        this.layoutEngine?.removeEdge(edge);
+        this.layoutEngine?.removeEdge(edgeToRemove); // Remove from physics layout
+
+        this._emit('edgeRemoved', { edgeId: edgeId, edge: edgeToRemove });
+        return true;
     }
 
     /**
@@ -488,37 +762,81 @@ export class SpaceGraph {
     }
 
     /**
-     * Sets the currently selected node, updating visual styles.
-     * @param {BaseNode | null} node - The node to select, or null to deselect.
+     * Sets the currently selected node. This typically involves updating visual styles
+     * to highlight the selected node and deselecting any previously selected node or edge.
+     * The actual styling change is often delegated to the node's `setSelectedStyle` method.
+     *
+     * @param {BaseNode | null} node - The node to select. Provide `null` to deselect the current node.
+     * @see BaseNode#setSelectedStyle
+     * @fires SpaceGraph#nodeSelected
+     * @example
+     * const myNode = spaceGraph.getNodeById('node-abc');
+     * if (myNode) {
+     *   spaceGraph.setSelectedNode(myNode); // Selects 'node-abc'
+     * }
+     * spaceGraph.setSelectedNode(null); // Deselects any currently selected node
      */
     setSelectedNode(node) {
-        if (this.selectedNode === node) return;
-        this.selectedNode?.setSelectedStyle(false); // Deselect previous
-        if(this.selectedNode?.htmlElement) this.selectedNode.htmlElement.classList.remove('selected');
+        if (this.selectedNode === node) return; // No change if already selected or deselecting null
+
+        const previouslySelectedNode = this.selectedNode;
+
+        // Deselect previously selected node
+        if (this.selectedNode) {
+            this.selectedNode.setSelectedStyle(false);
+            // Note: The 'selected' class toggle is now primarily handled within BaseNode's setSelectedStyle,
+            // which might be overridden by specific node types.
+            // However, if a generic class was being applied directly here, it should be reviewed.
+            // For now, assume setSelectedStyle(false) handles all necessary visual deselection.
+        }
 
         this.selectedNode = node;
-        this.selectedNode?.setSelectedStyle(true); // Select new
-        if(this.selectedNode?.htmlElement) this.selectedNode.htmlElement.classList.add('selected');
 
-        if (node) this.setSelectedEdge(null); // Deselect any selected edge
+        // Select new node
+        if (this.selectedNode) {
+            this.selectedNode.setSelectedStyle(true);
+            // Similar to deselection, assume setSelectedStyle(true) handles all visual selection.
+            if (this.selectedEdge) this.setSelectedEdge(null); // Deselect any currently selected edge
+        }
+        this._emit('nodeSelected', { selectedNode: this.selectedNode, previouslySelectedNode: previouslySelectedNode });
     }
 
     /**
-     * Sets the currently selected edge, updating visual styles and showing its menu.
-     * @param {Edge | null} edge - The edge to select, or null to deselect.
+     * Sets the currently selected edge. This typically involves updating visual styles
+     * to highlight the selected edge and deselecting any previously selected edge or node.
+     * The {@link UIManager} might display an edge-specific menu.
+     * Emits an `edgeSelected` event.
+     *
+     * @param {Edge | null} edge - The edge to select. Provide `null` to deselect the current edge.
+     * @see Edge#setHighlight
+     * @fires SpaceGraph#edgeSelected
+     * @example
+     * const myEdge = spaceGraph.getEdgeById('edge-123');
+     * if (myEdge) {
+     *   spaceGraph.setSelectedEdge(myEdge); // Selects 'edge-123'
+     * }
+     * spaceGraph.setSelectedEdge(null); // Deselects any currently selected edge
      */
     setSelectedEdge(edge) {
-        if (this.selectedEdge === edge) return;
-        this.selectedEdge?.setHighlight(false); // Deselect previous
-        this.uiManager?.hideEdgeMenu();
+        if (this.selectedEdge === edge) return; // No change
+
+        const previouslySelectedEdge = this.selectedEdge;
+
+        // Deselect previously selected edge
+        if (this.selectedEdge) {
+            this.selectedEdge.setHighlight(false);
+            this.uiManager?.hideEdgeMenu();
+        }
 
         this.selectedEdge = edge;
-        this.selectedEdge?.setHighlight(true); // Select new
 
-        if (edge) {
-            this.setSelectedNode(null); // Deselect any selected node
-            this.uiManager?.showEdgeMenu(edge);
+        // Select new edge
+        if (this.selectedEdge) {
+            this.selectedEdge.setHighlight(true);
+            if (this.selectedNode) this.setSelectedNode(null); // Deselect any currently selected node
+            this.uiManager?.showEdgeMenu(this.selectedEdge);
         }
+        this._emit('edgeSelected', { selectedEdge: this.selectedEdge, previouslySelectedEdge: previouslySelectedEdge });
     }
 
     /**
@@ -531,7 +849,7 @@ export class SpaceGraph {
         const vec = new THREE.Vector2((screenX / window.innerWidth) * 2 - 1, -(screenY / window.innerHeight) * 2 + 1);
         const raycaster = new THREE.Raycaster();
         raycaster.setFromCamera(vec, this._camera);
-        raycaster.params.Line.threshold = 5; // For edges
+        raycaster.params.Line.threshold = this.config.rendering.lineIntersectionThreshold;
 
         // Check for node meshes first (typically more specific interaction)
         const nodeMeshes = [...this.nodes.values()].map(n => n.mesh).filter(Boolean);
@@ -559,98 +877,347 @@ export class SpaceGraph {
 
     /**
      * Cleans up all resources used by the SpaceGraph instance.
-     * Stops layout engine, disposes nodes, edges, renderers, and removes event listeners.
+     * This includes stopping the layout engine, disposing of all nodes and edges,
+     * disposing of Three.js renderers and scenes, and removing event listeners.
+     * Call this method when the SpaceGraph instance is no longer needed to prevent memory leaks.
+     *
+     * @example
+     * // Sometime later, when cleaning up:
+     * spaceGraph.dispose();
+     * spaceGraph = null; // Allow garbage collection
      */
     dispose() {
+        console.log(`Disposing SpaceGraph instance...`);
+        // Stop ongoing processes
         this.cameraController?.dispose();
-        this.layoutEngine?.stop();
-        this.nodes.forEach(node => node.dispose());
-        this.edges.forEach(edge => edge.dispose());
+        this.layoutEngine?.stop(); // Stop simulation first
+        this.layoutEngine?.dispose();
+
+        // Dispose all nodes and edges
+        // Iterate over copies as dispose() might modify the collections indirectly
+        [...this.nodes.values()].forEach(node => node.dispose());
+        [...this.edges.values()].forEach(edge => edge.dispose());
         this.nodes.clear();
         this.edges.clear();
-        if (this.nodeTypes) this.nodeTypes.clear(); // Clear registered node types
 
-        this.scene?.clear();
+        if (this.nodeTypes) this.nodeTypes.clear(); // Clear registered node types
+        if (this._events) this._events.clear(); // Clear all event listeners
+
+        // Clear Three.js scenes
+        this.scene?.clear(); // Removes all objects from the scene
         this.cssScene?.clear();
 
-        this.webglRenderer?.dispose();
-        this.cssRenderer?.domElement?.remove();
-        this.css3dContainer?.remove();
-        this.webglCanvas?.remove();
+        // Dispose renderers and their DOM elements
+        this.webglRenderer?.dispose(); // Releases WebGL context
+        if (this.webglCanvas) this.webglCanvas.remove();
 
-        window.removeEventListener('resize', this._onWindowResize);
+        if (this.cssRenderer?.domElement) this.cssRenderer.domElement.remove();
+        if (this.css3dContainer) this.css3dContainer.remove();
+
+
+        // Remove event listeners attached by SpaceGraph itself
+        window.removeEventListener('resize', this._onWindowResize.bind(this)); // Ensure correct bound function removal
+
+        // Dispose UIManager (which handles its own event listeners)
         this.uiManager?.dispose();
-        console.log("SpaceGraph disposed.");
+
+        // Nullify properties to help garbage collection
+        this.container = null;
+        this.scene = null; this.cssScene = null;
+        this.webglRenderer = null; this.cssRenderer = null;
+        this.webglCanvas = null; this.css3dContainer = null;
+        this._camera = null;
+        this.cameraController = null; this.layoutEngine = null; this.uiManager = null;
+        this.selectedNode = null; this.selectedEdge = null;
+        this.linkSourceNode = null; this.tempLinkLine = null;
+        this._events = null;
+
+
+        console.log("SpaceGraph disposed successfully.");
+    }
+
+    /**
+     * Returns the default configuration options for SpaceGraph.
+     * Users can override these by passing a config object to the constructor.
+     * @returns {SpaceGraphConfig} The default configuration object.
+     * @protected
+     */
+    getDefaultConfig() {
+        return {
+            rendering: {
+                defaultBackgroundColor: 0x000000,
+                defaultBackgroundAlpha: 0.0,
+                lineIntersectionThreshold: 5
+            },
+            camera: {
+                initialPositionZ: 700,
+                fov: 70,
+                zoomSpeed: 0.0015,
+                panSpeed: 0.8,
+                dampingFactor: 0.12
+            },
+            defaults: {
+                node: {
+                    html: {
+                        width: 160,
+                        height: 70,
+                        billboard: true,
+                        contentScale: 1.0,
+                        backgroundColor: 'var(--node-bg-default)'
+                    },
+                    shape: {
+                        shape: 'sphere',
+                        size: 50,
+                        color: 0xffffff
+                    }
+                },
+                edge: {
+                    color: 0x00d0ff,
+                    thickness: 1.5,
+                    opacity: 0.6
+                }
+            }
+        };
+    }
+
+
+    // --- Event Emitter System ---
+
+    /**
+     * Registers an event handler for the given event name.
+     * @param {string} eventName - The name of the event to listen for (e.g., 'nodeAdded', 'edgeRemoved').
+     * @param {Function} callback - The function to call when the event is emitted.
+     *                              This function will receive an event data object as its argument.
+     * @example
+     * spaceGraph.on('nodeAdded', (eventData) => {
+     *   console.log('Node added:', eventData.node.id, eventData.node);
+     * });
+     * spaceGraph.on('nodeSelected', (eventData) => {
+     *   if (eventData.selectedNode) {
+     *     console.log('Node selected:', eventData.selectedNode.id);
+     *   } else {
+     *     console.log('Node deselected. Previously selected:', eventData.previouslySelectedNode?.id);
+     *   }
+     * });
+     */
+    on(eventName, callback) {
+        if (typeof callback !== 'function') {
+            console.error(`Cannot register event "${eventName}": callback is not a function.`);
+            return;
+        }
+        if (!this._events.has(eventName)) {
+            this._events.set(eventName, new Set());
+        }
+        this._events.get(eventName).add(callback);
+    }
+
+    /**
+     * Removes a previously registered event handler.
+     * The callback must be the same function instance that was used for `on`.
+     * @param {string} eventName - The name of the event to stop listening for.
+     * @param {Function} callback - The callback function to remove.
+     * @example
+     * const onNodeAdd = (data) => console.log('Node added:', data.node.id);
+     * spaceGraph.on('nodeAdded', onNodeAdd);
+     * // ...later
+     * spaceGraph.off('nodeAdded', onNodeAdd);
+     */
+    off(eventName, callback) {
+        if (this._events.has(eventName)) {
+            const listeners = this._events.get(eventName);
+            listeners.delete(callback);
+            if (listeners.size === 0) {
+                this._events.delete(eventName);
+            }
+        }
+    }
+
+    /**
+     * Emits an event, calling all registered listeners for that event name.
+     * This is primarily for internal use but can be used to emit custom events.
+     * @param {string} eventName - The name of the event to emit.
+     * @param {object} [data={}] - The data object to pass to event listeners.
+     * @protected  // Or public if intended for external custom events
+     * @example
+     * // Internal example:
+     * // this._emit('nodeAdded', { node: newNodeInstance });
+     * //
+     * // Custom event example:
+     * // spaceGraph._emit('customApplicationEvent', { detail: 'something happened' });
+     */
+    _emit(eventName, data = {}) {
+        if (this._events.has(eventName)) {
+            // Iterate over a copy in case a callback modifies the listeners Set (e.g., calls off())
+            [...this._events.get(eventName)].forEach(callback => {
+                try {
+                    callback(data);
+                } catch (error) {
+                    console.error(`Error in event listener for "${eventName}":`, error);
+                }
+            });
+        }
     }
 }
 
 /**
  * @class BaseNode
  * @classdesc Abstract base class for all node types in the SpaceGraph.
- * Provides common properties like ID, position, data, and methods for updating and disposal.
+ * It provides common properties such as `id`, `position`, `data`, and `mass`,
+ * as well as core methods for updating, disposing, and interacting with the node.
+ * Specific node types (e.g., {@link HtmlNodeElement}, {@link ShapeNode}, {@link RegisteredNode})
+ * extend `BaseNode` to implement their unique visual representations and behaviors.
+ *
+ * Developers typically do not instantiate `BaseNode` directly but rather use or create
+ * one of its subclasses.
+ *
+ * @property {string} id - Unique identifier for the node. Automatically generated if not provided in the constructor.
+ * @property {SpaceGraph | null} spaceGraph - Reference to the parent {@link SpaceGraph} instance. Set when the node is added to a graph.
+ * @property {THREE.Vector3} position - The current 3D position of the node in world space.
+ * @property {object} data - An object containing arbitrary data associated with the node.
+ *                           The structure of this data depends on the node type and application needs.
+ *                           It often includes properties like `label`, `type`, and type-specific attributes (e.g., `content` for notes).
+ * @property {number} mass - Mass of the node, used by the {@link ForceLayout} engine for physics simulations. Default is `1.0`.
+ * @property {THREE.Mesh | null} mesh - Optional Three.js mesh for WebGL-rendered visual representation of the node (e.g., for {@link ShapeNode}).
+ * @property {CSS3DObject | null} cssObject - Optional Three.js `CSS3DObject` for rendering HTML content as part of the 3D scene.
+ *                                        Used by {@link HtmlNodeElement} and potentially {@link RegisteredNode}.
+ * @property {HTMLElement | null} htmlElement - Optional underlying HTML element associated with `cssObject` or used for direct DOM manipulation.
+ * @property {CSS3DObject | null} labelObject - Optional `CSS3DObject` for rendering a text label associated with the node, typically used by {@link ShapeNode}.
  */
 class BaseNode {
-    /** @property {string} id - Unique identifier for the node. */
     id = null;
-    /** @property {SpaceGraph | null} spaceGraph - Reference to the parent SpaceGraph instance. */
     spaceGraph = null;
-    /** @property {THREE.Vector3} position - The current 3D position of the node. */
     position = new THREE.Vector3();
-    /** @property {object} data - Arbitrary data associated with the node. Specific properties depend on the node type. */
     data = {};
-    /** @property {number} mass - Mass of the node, used by the physics layout engine. */
     mass = 1.0;
-
-    /** @property {THREE.Mesh | null} mesh - Optional Three.js mesh for WebGL rendering of the node. */
     mesh = null;
-    /** @property {CSS3DObject | null} cssObject - Optional Three.js CSS3DObject for rendering HTML content. */
     cssObject = null;
-    /** @property {HTMLElement | null} htmlElement - Optional underlying HTML element for CSS3DObject or direct manipulation. */
     htmlElement = null;
-    /** @property {CSS3DObject | null} labelObject - Optional CSS3DObject for a text label associated with the node. */
     labelObject = null;
 
     /**
+     * Constructs a BaseNode instance.
+     * As `BaseNode` is abstract, this constructor is typically called via `super()` from a subclass.
+     *
      * @constructor
-     * @param {string | null} id - Unique ID for the node. If null, one will be generated.
-     * @param {{x: number, y: number, z: number}} [position={x:0,y:0,z:0}] - Initial position.
-     * @param {object} [data={}] - Initial data for the node. Merged with default data.
-     * @param {number} [mass=1.0] - Mass of the node.
+     * @param {string | null} id - Unique ID for the node. If `null` or `undefined`, a new ID will be generated.
+     * @param {{x: number, y: number, z: number}} [position={x:0,y:0,z:0}] - Initial 3D position of the node.
+     * @param {object} [data={}] - Initial data for the node. This will be merged with default data provided by `getDefaultData()`.
+     * @param {number} [mass=1.0] - Mass of the node for physics calculations. Must be positive.
+     * @example
+     * // Called from a subclass constructor:
+     * // super(id, position, { ...myData, ...data }, mass);
      */
     constructor(id, position = {x: 0, y: 0, z: 0}, data = {}, mass = 1.0) {
         this.id = id ?? generateId('node');
-        this.position.set(position.x, position.y, position.z);
-        this.data = { ...this.getDefaultData(), ...data };
-        this.mass = Math.max(0.1, mass); // Ensure mass is positive
+        this.position.set(position.x ?? 0, position.y ?? 0, position.z ?? 0); // Ensure x,y,z defaults if not in position object
+        this.data = { ...this.getDefaultData(), ...data }; // Merge provided data with defaults
+        this.mass = Math.max(0.1, mass); // Ensure mass is positive and non-zero
     }
 
     /**
-     * Provides default data for a node. Subclasses can override this.
-     * @returns {object} Default data object.
+     * Provides default data for a node. Subclasses should override this method
+     * to define their specific default properties. The returned object will be
+     * merged with the `data` provided in the constructor.
+     *
+     * @returns {object} An object containing default data properties.
+     *                   Base implementation returns `{ label: this.id }`.
      * @protected
+     * @example
+     * // In a subclass:
+     * // getDefaultData() {
+     * //   return {
+     * //     ...super.getDefaultData(), // Optional: include base defaults
+     * //     customProperty: 'defaultValue',
+     * //     size: 50
+     * //   };
+     * // }
      */
     getDefaultData() { return { label: this.id }; }
 
     /**
-     * Sets the position of the node.
-     * @param {number} x - X-coordinate.
-     * @param {number} y - Y-coordinate.
-     * @param {number} z - Z-coordinate.
+     * Sets the 3D position of the node in world space.
+     * Subclasses may override this to update positions of their visual components (meshes, HTML elements).
+     *
+     * @param {number} x - The new x-coordinate.
+     * @param {number} y - The new y-coordinate.
+     * @param {number} z - The new z-coordinate.
+     * @example
+     * myNode.setPosition(100, 50, -20);
      */
-    setPosition(x, y, z) { this.position.set(x, y, z); }
+    setPosition(x, y, z) {
+        this.position.set(x, y, z);
+        // Subclasses should update their visual objects here, e.g.:
+        // if (this.mesh) this.mesh.position.copy(this.position);
+        // if (this.cssObject) this.cssObject.position.copy(this.position);
+    }
 
     /**
-     * Updates the node's state. Called by SpaceGraph in the animation loop.
-     * Subclasses should implement specific update logic (e.g., position, orientation).
-     * @param {SpaceGraph} spaceGraphInstance - Reference to the SpaceGraph instance.
+     * Abstract method intended to be called by {@link SpaceGraph} in its animation loop.
+     * Subclasses should implement this method to update their state, position, orientation,
+     * or any other dynamic aspects of the node.
+     *
+     * @param {SpaceGraph} spaceGraphInstance - Reference to the parent {@link SpaceGraph} instance,
+     *                                          providing access to global graph properties like the camera.
+     * @abstract
      */
-    update(spaceGraphInstance) { /* Base implementation does nothing */ }
+    update(spaceGraphInstance) {
+        // Base implementation does nothing.
+        // Subclasses override this to update visuals, e.g.:
+        // if (this.cssObject && this.billboard) {
+        //   this.cssObject.quaternion.copy(spaceGraphInstance._camera.quaternion);
+        // }
+        // if (this.mesh) this.mesh.position.copy(this.position);
+    }
 
     /**
-     * Cleans up resources used by the node (e.g., geometries, materials, DOM elements).
-     * Subclasses should call super.dispose() if overriding.
+     * Cleans up resources used by the node. This is crucial for preventing memory leaks when nodes are removed.
+     * Subclasses must override this method to dispose of their specific Three.js objects (geometries, materials, textures),
+     * remove DOM elements, and detach event listeners.
+     * It's important to call `super.dispose()` if overriding in a subclass that itself might be further subclassed,
+     * though for direct `BaseNode` children, it's often more about cleaning their own specific resources.
+     *
+     * @example
+     * // In a subclass:
+     * // dispose() {
+     * //   this.mesh?.geometry?.dispose();
+     * //   this.mesh?.material?.dispose();
+     * //   this.mesh?.parent?.remove(this.mesh);
+     * //   this.htmlElement?.remove();
+     * //   // any other custom cleanup
+     * //   super.dispose(); // If BaseNode had its own complex resources to clean
+     * // }
      */
-    dispose() { /* Base implementation does nothing */ }
+    dispose() {
+        // Base implementation can clear common references, though subclasses are primary actors.
+        if (this.mesh) {
+            this.mesh.parent?.remove(this.mesh);
+            this.mesh.geometry?.dispose();
+            // Material disposal depends on whether it's shared. Assume not shared for now.
+            if (Array.isArray(this.mesh.material)) {
+                this.mesh.material.forEach(m => m.dispose());
+            } else if (this.mesh.material) {
+                this.mesh.material.dispose();
+            }
+            this.mesh = null;
+        }
+        if (this.cssObject) {
+            this.cssObject.parent?.remove(this.cssObject);
+            this.cssObject.element?.remove(); // Remove the HTML element from DOM
+            this.cssObject = null;
+        }
+        if (this.labelObject) {
+            this.labelObject.parent?.remove(this.labelObject);
+            this.labelObject.element?.remove();
+            this.labelObject = null;
+        }
+        // htmlElement is often the same as cssObject.element, so it might already be handled.
+        // If htmlElement is managed independently, it should be removed here.
+        // this.htmlElement?.remove(); // Be cautious if it's shared with cssObject.element
+        this.htmlElement = null;
+
+        this.spaceGraph = null; // Break reference to parent graph
+        // console.log(`BaseNode ${this.id} disposed resources.`);
+    }
 
     /**
      * Calculates and returns the radius of the node's bounding sphere.
@@ -713,12 +1280,26 @@ export class HtmlNodeElement extends BaseNode {
      * @param {NodeDataObject} [data={}] - Initial data, including potential `width`, `height`, `content`, `editable`.
      */
     constructor(id, position = {x: 0, y: 0, z: 0}, data = {}) {
-        super(id, position, data, data.mass ?? 1.0);
-        this.size.width = data.width ?? this.size.width;
-        this.size.height = data.height ?? this.size.height;
-        this.billboard = data.billboard ?? this.billboard;
+        // BaseNode constructor will call getDefaultData, which needs spaceGraph to be set first
+        // Temporarily set it, then call super, then finalize data merging.
+        if (data.spaceGraph) this.spaceGraph = data.spaceGraph; // If passed in data for early access
 
-        this.htmlElement = this._createHtmlElement();
+        super(id, position, data, data.mass ?? 1.0); // data here is merged with BaseNode's default
+
+        // Now that this.spaceGraph is potentially set by BaseNode (if it was part of `data`),
+        // and `this.data` is initialized by `super()`, we can safely access `this.spaceGraph.config`.
+        const htmlDefaults = this.spaceGraph?.config?.defaults?.node?.html || {};
+
+        this.size.width = data.width ?? htmlDefaults.width ?? 160;
+        this.size.height = data.height ?? htmlDefaults.height ?? 70;
+        this.billboard = data.billboard ?? htmlDefaults.billboard ?? true;
+        // data.contentScale and data.backgroundColor are handled by getDefaultData and merged by BaseNode
+        // We ensure they are part of `this.data` correctly.
+        this.data.contentScale = data.contentScale ?? this.data.contentScale ?? htmlDefaults.contentScale ?? 1.0;
+        this.data.backgroundColor = data.backgroundColor ?? this.data.backgroundColor ?? htmlDefaults.backgroundColor ?? 'var(--node-bg-default)';
+
+
+        this.htmlElement = this._createHtmlElement(); // Uses this.size and this.data
         this.cssObject = new CSS3DObject(this.htmlElement);
         this.cssObject.userData = { nodeId: this.id, type: 'html-node' }; // For raycasting identification
 
@@ -735,11 +1316,19 @@ export class HtmlNodeElement extends BaseNode {
      * @protected
      */
     getDefaultData() {
+        // Get defaults from SpaceGraph config if available
+        const graphDefaults = this.spaceGraph?.config?.defaults?.node?.html || {};
         return {
-            label: '', content: '', type: 'html',
-            width: 160, height: 70, contentScale: 1.0,
-            backgroundColor: 'var(--node-bg-default)', // CSS variable for theming
-            editable: false
+            ...super.getDefaultData(), // Include label:id from BaseNode
+            type: 'html',
+            content: '',
+            width: graphDefaults.width ?? 160,
+            height: graphDefaults.height ?? 70,
+            contentScale: graphDefaults.contentScale ?? 1.0,
+            backgroundColor: graphDefaults.backgroundColor ?? 'var(--node-bg-default)',
+            billboard: graphDefaults.billboard ?? true,
+            editable: false,
+            // Note: `label` is already part of super.getDefaultData()
         };
     }
 
@@ -1223,10 +1812,22 @@ export class ShapeNode extends BaseNode {
      * @param {number} [mass=1.5] - Mass of the node.
      */
     constructor(id, position, data = {}, mass = 1.5) {
+        if (data.spaceGraph) this.spaceGraph = data.spaceGraph;
         super(id, position, data, mass);
-        this.shape = this.data.shape ?? this.shape;
-        this.size = this.data.size ?? this.size;
-        this.color = this.data.color ?? this.color;
+
+        const shapeDefaults = this.spaceGraph?.config?.defaults?.node?.shape || {};
+
+        // Properties are taken from data if provided, then from graph config defaults, then from class hardcoded defaults.
+        // this.data already contains merged data from constructor's `data` and `getDefaultData`.
+        this.shape = data.shape ?? this.data.shape ?? shapeDefaults.shape ?? 'sphere';
+        this.size = data.size ?? this.data.size ?? shapeDefaults.size ?? 50;
+        this.color = data.color ?? this.data.color ?? shapeDefaults.color ?? 0xffffff;
+
+        // Ensure this.data reflects the final chosen values if they came from graphDefaults or class defaults
+        this.data.shape = this.shape;
+        this.data.size = this.size;
+        this.data.color = this.color;
+
 
         this.mesh = this._createMesh();
         this.mesh.userData = { nodeId: this.id, type: 'shape-node' }; // For raycasting
@@ -1244,7 +1845,15 @@ export class ShapeNode extends BaseNode {
      * @protected
      */
     getDefaultData() {
-        return { label: '', shape: 'sphere', size: 50, color: 0xffffff, type: 'shape' };
+        const graphDefaults = this.spaceGraph?.config?.defaults?.node?.shape || {};
+        return {
+            ...super.getDefaultData(),
+            type: 'shape',
+            shape: graphDefaults.shape ?? 'sphere',
+            size: graphDefaults.size ?? 50,
+            color: graphDefaults.color ?? 0xffffff,
+            // label is from super.getDefaultData()
+        };
     }
 
     /**
@@ -1395,19 +2004,37 @@ export class Edge {
         this.id = id;
         this.source = sourceNode;
         this.target = targetNode;
+        this.spaceGraph = sourceNode.spaceGraph; // Assume sourceNode has spaceGraph reference
+
+        const edgeDefaults = this.spaceGraph?.config?.defaults?.edge || {};
 
         // Smart default constraint parameters based on type, merged with provided data
         const defaultConstraintParams = this._getDefaultConstraintParams(data.constraintType || this.data.constraintType, sourceNode, targetNode);
 
+        // Initialize this.data by merging class defaults, graph config defaults, and then specific instance data
+        const classDefaults = { // The original hardcoded defaults of the Edge class
+            color: 0x00d0ff,
+            thickness: 1.5,
+            style: 'solid',
+            opacity: 0.6, // Added opacity to defaults
+            constraintType: 'elastic',
+            constraintParams: { stiffness: 0.001, idealLength: 200 }
+        };
+
         this.data = {
-            ...this.data, // Start with class defaults
-            ...data,      // Override with any provided data
-            constraintParams: { // Deep merge for constraintParams
-                ...defaultConstraintParams,
-                ...(data.constraintParams || {})
+            ...classDefaults, // Start with class's own hardcoded defaults
+            color: edgeDefaults.color ?? classDefaults.color, // Then apply graph config defaults
+            thickness: edgeDefaults.thickness ?? classDefaults.thickness,
+            opacity: edgeDefaults.opacity ?? classDefaults.opacity,
+            ...data,      // Override with any data provided for this specific edge instance
+            constraintParams: { // Deep merge for constraintParams separately
+                ...classDefaults.constraintParams, // Base for constraint params
+                ...defaultConstraintParams,        // Overwrite with type-specific smart defaults
+                ...(data.constraintParams || {})   // Finally, apply instance-specific constraint params
             }
         };
-        this.threeObject = this._createThreeObject();
+
+        this.threeObject = this._createThreeObject(); // Uses this.data for color, thickness, opacity
         this.update(); // Initial update of line positions
     }
 
@@ -1441,7 +2068,7 @@ export class Edge {
             color: this.data.color,
             linewidth: this.data.thickness, // Note: linewidth > 1 often not effective in WebGL without extensions
             transparent: true,
-            opacity: 0.6,
+            opacity: this.data.opacity, // Use configured opacity
             depthTest: false, // Render lines on top of meshes for better visibility
         });
         const points = [this.source.position.clone(), this.target.position.clone()];
@@ -2681,9 +3308,19 @@ export class CameraController {
      * @param {THREE.PerspectiveCamera} threeCamera - The Three.js camera to control.
      * @param {HTMLElement} domElement - The DOM element for attaching event listeners.
      */
-    constructor(threeCamera, domElement) {
+    constructor(threeCamera, domElement, config = {}) {
         this.camera = threeCamera;
         this.domElement = domElement;
+
+        // Use provided config values or fallback to existing class defaults
+        this.zoomSpeed = config.zoomSpeed ?? 0.0015;
+        this.panSpeed = config.panSpeed ?? 0.8;
+        this.dampingFactor = config.dampingFactor ?? 0.12;
+        // minZoom and maxZoom can remain class defaults or also be made configurable
+        // this.minZoom = config.minZoom ?? 20;
+        // this.maxZoom = config.maxZoom ?? 15000;
+
+
         this.targetPosition.copy(this.camera.position);
         this.targetLookAt.copy(new THREE.Vector3(0,0,0)); // Default initial look-at
         this.currentLookAt.copy(this.targetLookAt);
