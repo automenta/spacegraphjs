@@ -137,52 +137,80 @@
     }
 </script>
 <script type="module">
+    // This example demonstrates the creation and usage of complex, custom "App Nodes"
+    // using SpaceGraph.registerNodeType. It defines two custom node types:
+    // 1. Markdown Editor: A node with a textarea for Markdown input and a live preview pane.
+    //    It uses the 'marked.js' library for rendering HTML from Markdown.
+    //    It also shows how to define input/output ports for inter-node communication.
+    // 2. Task List: A node that manages a list of tasks with add, complete, and delete functionalities.
+    //    It demonstrates dynamic HTML generation within a node and emitting events for task updates.
     import * as S from './spacegraph.js'; // Assuming spacegraph.js is in the same directory
 
+    // --- Markdown Editor Node Definition ---
+    // This object defines the behavior and appearance of our custom Markdown editor node.
     const markdownEditorNodeDefinition = {
+        /**
+         * Provides default data for a new Markdown editor node.
+         * This is called when a node of this type is created.
+         * @param {object} initialData - Any data passed during node creation (e.g., from addNode or palette).
+         * @returns {object} The default data object for this node type.
+         */
         getDefaults: (initialData) => ({
             markdownContent: initialData?.markdownContent || '# Hello\n\nStart typing Markdown here...',
-            width: initialData?.width || 350,
-            height: initialData?.height || 400,
-            label: initialData?.label || initialData?.id || 'Markdown Editor',
-            ports: initialData?.ports || {
-                inputs: { md_in: { label: 'Markdown In', type: 'string' } },
-                outputs: { html_out: { label: 'HTML Out', type: 'string' } }
+            width: initialData?.width || 350, // Default width of the node
+            height: initialData?.height || 400, // Default height of the node
+            label: initialData?.label || initialData?.id || 'Markdown Editor', // Default label
+            ports: initialData?.ports || { // Define input/output ports for communication
+                inputs: { md_in: { label: 'Markdown In', type: 'string' } },    // Input port for Markdown text
+                outputs: { html_out: { label: 'HTML Out', type: 'string' } }   // Output port for rendered HTML
             }
         }),
+        /**
+         * Creates the visual representation (HTML element) of the Markdown editor node.
+         * This function is called by SpaceGraph when a node of this type is added.
+         * @param {S.RegisteredNode} nodeInst - The instance of the RegisteredNode being created.
+         * @param {S.SpaceGraph} spaceGraph - The SpaceGraph instance.
+         * @returns {object} An object containing the `htmlElement` for this node.
+         */
         onCreate: (nodeInst, spaceGraph) => {
-            const three = spaceGraph.constructor.THREE; // Access THREE via SpaceGraph static or import
-            const CSS3DObject = three.CSS3DObject || window.CSS3DObject; // Adjust if import changes
+            // Access THREE and CSS3DObject, required if creating CSS3DObjects directly (though not strictly needed here as we return htmlElement)
+            const three = spaceGraph.constructor.THREE;
+            const CSS3DObject = three.CSS3DObject || window.CSS3DObject;
 
+            // Create the main container div for the node's HTML content
             nodeInst.htmlElement = document.createElement('div');
-            nodeInst.htmlElement.classList.add('markdown-editor-node'); // For specific styling
+            nodeInst.htmlElement.classList.add('markdown-editor-node'); // Add class for specific CSS styling
             nodeInst.htmlElement.style.width = `${nodeInst.data.width}px`;
             nodeInst.htmlElement.style.height = `${nodeInst.data.height}px`;
-            nodeInst.htmlElement.style.backgroundColor = 'var(--node-bg-alt, #282c34)';
+            nodeInst.htmlElement.style.backgroundColor = 'var(--node-bg-alt, #282c34)'; // Use CSS variables for theming
             nodeInst.htmlElement.style.border = '1px solid var(--accent-color-darker, #444)';
             nodeInst.htmlElement.style.display = 'flex';
-            nodeInst.htmlElement.style.flexDirection = 'column';
-            nodeInst.htmlElement.style.overflow = 'hidden'; // Important for fixed size
+            nodeInst.htmlElement.style.flexDirection = 'column'; // Stack editor and preview vertically
+            nodeInst.htmlElement.style.overflow = 'hidden'; // Prevent content from spilling out
 
+            // Create the textarea for Markdown input
             const editor = document.createElement('textarea');
-            editor.className = 'editor-area'; // For styling
-            editor.style.flex = '1';
-            editor.style.resize = 'none';
-            // editor.style.border = 'none'; // Handled by CSS
-            // editor.style.padding = '5px'; // Handled by CSS
-            editor.value = nodeInst.data.markdownContent;
+            editor.className = 'editor-area'; // For specific styling (see <style> block in HTML head)
+            editor.style.flex = '1'; // Allow editor to take up half the space
+            editor.style.resize = 'none'; // Disable manual resize of textarea
+            editor.value = nodeInst.data.markdownContent; // Set initial content from node data
             editor.spellcheck = false;
 
+            // Create the div for HTML preview
             const preview = document.createElement('div');
-            preview.className = 'preview-area'; // For styling
-            preview.style.flex = '1';
-            preview.style.borderTop = '1px solid #444';
-            // preview.style.padding = '5px'; // Handled by CSS
-            // preview.style.overflowY = 'auto'; // Handled by CSS
+            preview.className = 'preview-area'; // For specific styling
+            preview.style.flex = '1'; // Allow preview to take up the other half
+            preview.style.borderTop = '1px solid #444'; // Separator line
 
+            // Append editor and preview areas to the node's main HTML element
             nodeInst.htmlElement.appendChild(editor);
             nodeInst.htmlElement.appendChild(preview);
 
+            /**
+             * Renders the Markdown content from `nodeInst.data.markdownContent` into the preview div.
+             * Uses the `marked.js` library (expected to be globally available).
+             * Emits the rendered HTML to the 'html_out' output port.
+             */
             const renderPreview = () => {
                 if (window.marked && typeof window.marked.parse === 'function') {
                     preview.innerHTML = window.marked.parse(nodeInst.data.markdownContent);
@@ -190,82 +218,124 @@
                     preview.textContent = 'Marked.js not loaded or .parse not a function.';
                     console.warn('Marked.js not loaded or marked.parse is not a function.');
                 }
-                // Emit the HTML content to the output port
+                // Emit the HTML content to the output port if defined
                 if (nodeInst.data.ports?.outputs?.html_out) {
+                    // `nodeInst.emit(portName, payload)` sends data from this node's output port.
                     nodeInst.emit('html_out', preview.innerHTML);
                 }
             };
 
-            // Stop pointer events on editor/preview from propagating to UIManager for node dragging
+            // IMPORTANT: Stop pointer events (like drag, click) on the editor and preview areas
+            // from propagating to the SpaceGraph's UIManager. This allows normal text interaction
+            // (selection, scrolling) without accidentally dragging the node or triggering graph-level events.
             editor.addEventListener('pointerdown', (e) => e.stopPropagation());
             preview.addEventListener('pointerdown', (e) => e.stopPropagation());
-            // Also stop wheel events inside these areas from affecting camera zoom
+            // Also stop wheel events inside these areas from affecting camera zoom.
             editor.addEventListener('wheel', (e) => e.stopPropagation());
             preview.addEventListener('wheel', (e) => e.stopPropagation());
 
-
+            // Listen for input in the editor textarea to update Markdown content and re-render preview
             editor.addEventListener('input', () => {
-                nodeInst.data.markdownContent = editor.value;
-                renderPreview();
+                nodeInst.data.markdownContent = editor.value; // Update node's internal data
+                renderPreview(); // Re-render the preview and emit HTML
             });
 
-            renderPreview(); // Initial render
+            renderPreview(); // Initial render of the Markdown content when the node is created
 
-            // Store editor and preview for potential external updates via onDataUpdate
+            // Store references to key internal elements on `nodeInst.customElements`.
+            // This allows `onDataUpdate` or other methods to access and manipulate them later.
             nodeInst.customElements = { editor, preview, renderPreview };
 
-
-            return { htmlElement: nodeInst.htmlElement }; // Let RegisteredNode wrap it in CSS3DObject
+            // Return the main htmlElement. SpaceGraph's RegisteredNode class will automatically
+            // wrap this in a CSS3DObject for rendering in the 3D scene.
+            return { htmlElement: nodeInst.htmlElement };
         },
+        /**
+         * Calculates the bounding sphere radius for this node type.
+         * Used for camera focusing and layout calculations.
+         * @param {S.RegisteredNode} nodeInst - The node instance.
+         * @returns {number} The bounding sphere radius.
+         */
         getBoundingSphereRadius: (nodeInst) => {
+            // Approximate based on the diagonal of the node's dimensions
             return Math.sqrt(nodeInst.data.width**2 + nodeInst.data.height**2) / 2;
         },
+        /**
+         * Cleans up resources when the node is disposed.
+         * For this node, there are no specific Three.js objects created directly by `onCreate`
+         * that need manual disposal (like geometries or materials).
+         * Event listeners on `editor` and `preview` are on children of `nodeInst.htmlElement`,
+         * and will be removed from the DOM when `nodeInst.htmlElement` is removed by the base `RegisteredNode.dispose()`.
+         * @param {S.RegisteredNode} nodeInst - The node instance.
+         */
         onDispose: (nodeInst) => {
-            // No specific THREE.js geometries/materials to dispose here.
-            // Event listeners on editor/preview are on htmlElement children, will be removed with htmlElement.
-            nodeInst.customElements = null; // Clear references
+            nodeInst.customElements = null; // Clear references to custom elements
         },
-        // Optional: Handle external data updates
+        /**
+         * Handles external updates to the node's data.
+         * This method is called if `space.updateNodeData(nodeId, { ... })` is used,
+         * or if data arrives through an input port that is configured to update `nodeInst.data`.
+         * @param {S.RegisteredNode} nodeInst - The node instance.
+         * @param {object} updatedData - The new data that was received.
+         */
         onDataUpdate: (nodeInst, updatedData) => {
+            // Check if 'markdownContent' was part of the updated data
             if (updatedData.markdownContent !== undefined && nodeInst.customElements?.editor) {
+                // Only update if the content has actually changed to avoid unnecessary re-renders or cursor jumps
                 if (nodeInst.customElements.editor.value !== updatedData.markdownContent) {
-                    nodeInst.customElements.editor.value = updatedData.markdownContent;
-                    nodeInst.customElements.renderPreview();
+                    nodeInst.customElements.editor.value = updatedData.markdownContent; // Update the textarea
+                    nodeInst.customElements.renderPreview(); // Re-render the preview
                 }
             }
         }
     };
 
+    // --- Task List Node Definition ---
+    // Defines a custom node for managing a to-do list.
     const taskListNodetypeDefinition = {
+        /**
+         * Provides default data for a new Task List node.
+         * @param {object} initialData - Data passed during node creation.
+         * @returns {object} Default data object.
+         */
         getDefaults: (initialData) => ({
-            tasks: initialData?.tasks || [{id: 'task-init-1', text: 'First task', completed: false}],
+            tasks: initialData?.tasks || [{id: 'task-init-1', text: 'First task', completed: false}], // Default tasks
             width: initialData?.width || 300,
             height: initialData?.height || 280,
-            title: initialData?.title || 'My To-Do List',
+            title: initialData?.title || 'My To-Do List', // Default title for the list
             label: initialData?.label || initialData?.id || 'Task List',
-            ports: initialData?.ports || {
-                inputs: { add_task: { label: 'Add Task (text)', type: 'string'} },
+            ports: initialData?.ports || { // Define input/output ports
+                inputs: { add_task: { label: 'Add Task (text)', type: 'string'} }, // Input port to add a new task
                 outputs: {
-                    task_completed: { label: 'Task Completed (taskObj)', type: 'object'},
-                    tasks_updated: { label: 'Tasks Updated (allTasks)', type: 'array'}
+                    task_completed: { label: 'Task Completed (taskObj)', type: 'object'}, // Output port for completed tasks
+                    tasks_updated: { label: 'Tasks Updated (allTasks)', type: 'array'}    // Output port when the list changes
                 }
             }
         }),
+        /**
+         * Creates the HTML structure for the Task List node.
+         * @param {S.RegisteredNode} nodeInst - The node instance.
+         * @param {S.SpaceGraph} spaceGraph - The SpaceGraph instance.
+         * @returns {object} An object containing the `htmlElement`.
+         */
         onCreate: (nodeInst, spaceGraph) => {
             const three = spaceGraph.constructor.THREE;
             const CSS3DObject = three.CSS3DObject || window.CSS3DObject;
 
+            // Main container for the task list UI
             nodeInst.htmlElement = document.createElement('div');
-            nodeInst.htmlElement.classList.add('task-list-node-content'); // For specific styling
+            nodeInst.htmlElement.classList.add('task-list-node-content'); // For specific CSS styling
             nodeInst.htmlElement.style.width = `${nodeInst.data.width}px`;
             nodeInst.htmlElement.style.height = `${nodeInst.data.height}px`;
             nodeInst.htmlElement.style.display = 'flex';
             nodeInst.htmlElement.style.flexDirection = 'column';
-            nodeInst.htmlElement.style.overflow = 'hidden';
+            nodeInst.htmlElement.style.overflow = 'hidden'; // Important for managing internal scrolling
 
+            // Title element for the task list
             const titleEl = document.createElement('h3');
             titleEl.textContent = nodeInst.data.title;
 
+            // Container for the new task input field and add button
             const inputContainer = document.createElement('div');
             inputContainer.className = 'input-container';
 
@@ -281,49 +351,62 @@
             inputContainer.appendChild(newTaskInput);
             inputContainer.appendChild(addTaskButton);
 
+            // Unordered list (<ul>) to display the tasks
             const taskListUl = document.createElement('ul');
             taskListUl.className = 'task-list-ul';
 
+            // Assemble the HTML structure
             nodeInst.htmlElement.appendChild(titleEl);
             nodeInst.htmlElement.appendChild(inputContainer);
             nodeInst.htmlElement.appendChild(taskListUl);
 
-            // Prevent SpaceGraph's UIManager from processing events on these interactive elements
+            // IMPORTANT: Stop pointer events on interactive elements within the node
+            // to prevent interference with SpaceGraph's UIManager (e.g., node dragging).
             [titleEl, newTaskInput, addTaskButton, taskListUl].forEach(el => {
                 el.addEventListener('pointerdown', e => e.stopPropagation());
-                el.addEventListener('wheel', e => e.stopPropagation());
+                el.addEventListener('wheel', e => e.stopPropagation()); // Also prevents graph zoom while scrolling list
             });
 
+            /**
+             * Renders the list of tasks in the `taskListUl` element.
+             * Clears existing tasks and rebuilds the list based on `nodeInst.data.tasks`.
+             * Attaches event listeners for checkbox changes (task completion) and task deletion.
+             * Emits `tasks_updated` event after rendering.
+             */
             const renderTasks = () => {
-                taskListUl.innerHTML = '';
-                if (!Array.isArray(nodeInst.data.tasks)) nodeInst.data.tasks = [];
+                taskListUl.innerHTML = ''; // Clear current task list items
+                if (!Array.isArray(nodeInst.data.tasks)) nodeInst.data.tasks = []; // Ensure tasks is an array
 
                 nodeInst.data.tasks.forEach(task => {
                     const li = document.createElement('li');
 
+                    // Checkbox for task completion
                     const checkbox = document.createElement('input');
                     checkbox.type = 'checkbox';
                     checkbox.checked = task.completed;
                     checkbox.addEventListener('change', () => {
-                        task.completed = checkbox.checked;
+                        task.completed = checkbox.checked; // Update task state in node's data
+                        // If a task is completed and the output port is defined, emit an event
                         if (task.completed && nodeInst.data.ports?.outputs?.task_completed) {
-                            nodeInst.emit('task_completed', { ...task });
+                            nodeInst.emit('task_completed', { ...task }); // Emit a copy of the task object
                         }
-                        renderTasks();
+                        renderTasks(); // Re-render the list to reflect changes (e.g., strikethrough)
                     });
 
+                    // Span for task text
                     const span = document.createElement('span');
                     span.textContent = task.text;
                     if (task.completed) {
-                        span.classList.add('completed');
+                        span.classList.add('completed'); // Apply 'completed' style (strikethrough)
                     }
 
+                    // Delete button for each task
                     const deleteButton = document.createElement('button');
-                    deleteButton.textContent = 'X';
+                    deleteButton.textContent = 'X'; // Simple delete button
                     deleteButton.className = 'delete-task-button';
                     deleteButton.addEventListener('click', () => {
-                        nodeInst.data.tasks = nodeInst.data.tasks.filter(t => t.id !== task.id);
-                        renderTasks();
+                        nodeInst.data.tasks = nodeInst.data.tasks.filter(t => t.id !== task.id); // Remove task from data
+                        renderTasks(); // Re-render the list
                     });
 
                     li.appendChild(checkbox);
@@ -332,72 +415,99 @@
                     taskListUl.appendChild(li);
                 });
 
+                // Emit an event indicating the tasks list has been updated, if the port is defined
                 if (nodeInst.data.ports?.outputs?.tasks_updated) {
-                     nodeInst.emit('tasks_updated', [...nodeInst.data.tasks]); // Emit copy
+                     nodeInst.emit('tasks_updated', [...nodeInst.data.tasks]); // Emit a copy of the tasks array
                 }
             };
 
+            // Event listener for the "Add Task" button
             addTaskButton.addEventListener('click', () => {
                 const text = newTaskInput.value.trim();
-                if (text) {
+                if (text) { // Only add task if text is not empty
                     if (!Array.isArray(nodeInst.data.tasks)) nodeInst.data.tasks = [];
                     nodeInst.data.tasks.push({ id: 'task-' + Date.now(), text: text, completed: false });
-                    newTaskInput.value = '';
-                    renderTasks();
+                    newTaskInput.value = ''; // Clear the input field
+                    renderTasks(); // Re-render the list
                 }
             });
 
+            // Allow adding tasks by pressing Enter in the input field
             newTaskInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
-                    addTaskButton.click();
-                    e.preventDefault();
+                    addTaskButton.click(); // Simulate button click
+                    e.preventDefault(); // Prevent default form submission behavior if applicable
                 }
             });
 
-            renderTasks();
+            renderTasks(); // Initial rendering of tasks
+            // Store key elements for potential future access (e.g., in onDataUpdate)
             nodeInst.customElements = { titleEl, taskListUl, renderTasks, newTaskInput };
-            return { htmlElement: nodeInst.htmlElement };
+            return { htmlElement: nodeInst.htmlElement }; // Return the main HTML element
         },
+        /**
+         * Handles external updates to the node's data, such as receiving new tasks
+         * or a new title, or a direct command to add a task via the 'add_task' input port.
+         * @param {S.RegisteredNode} nodeInst - The node instance.
+         * @param {object} updatedData - The new data.
+         */
         onDataUpdate: (nodeInst, updatedData) => {
             let needsRender = false;
+            // If 'tasks' array is provided in updatedData, replace the current tasks
             if (updatedData.tasks !== undefined) {
+                // Basic check to see if tasks actually changed to avoid unnecessary re-renders
                 if (JSON.stringify(nodeInst.data.tasks) !== JSON.stringify(updatedData.tasks)) {
                     nodeInst.data.tasks = Array.isArray(updatedData.tasks) ? [...updatedData.tasks] : [];
                     needsRender = true;
                 }
             }
+            // If 'title' is provided, update the title element
             if (updatedData.title !== undefined && nodeInst.customElements?.titleEl) {
                 if (nodeInst.customElements.titleEl.textContent !== updatedData.title) {
                     nodeInst.customElements.titleEl.textContent = updatedData.title;
-                    nodeInst.data.title = updatedData.title; // Update internal data as well
+                    nodeInst.data.title = updatedData.title; // Also update the internal data representation
                 }
             }
-            if (typeof updatedData.add_task === 'string') { // Check if add_task is a string
+            // If 'add_task' (our defined input port name) is a string in updatedData, add it as a new task
+            if (typeof updatedData.add_task === 'string') {
                 const text = updatedData.add_task.trim();
-                if (text) {
+                if (text) { // Ensure the task text is not empty
                      if (!Array.isArray(nodeInst.data.tasks)) nodeInst.data.tasks = [];
                      nodeInst.data.tasks.push({ id: 'task-' + Date.now(), text: text, completed: false });
                      needsRender = true;
                 }
-                // Important: "Consume" the add_task data to prevent re-adding on subsequent updates
-                // if updatedData is directly nodeInst.data, this would be nodeInst.data.add_task = null or delete nodeInst.data.add_task
-                // Since updatedData is a separate object, this action is implicitly handled by not re-applying it unless it changes again.
-                // For explicit consumption if updatedData could be nodeInst.data:
-                // if (nodeInst.data.hasOwnProperty('add_task')) delete nodeInst.data.add_task;
+                // It's good practice to "consume" data received via input ports if it represents a one-time action.
+                // If updatedData could be a direct reference to nodeInst.data, you might do:
+                // delete nodeInst.data.add_task;
+                // However, SpaceGraph's default port-to-data mapping creates a new updatedData object,
+                // so this specific deletion isn't strictly necessary here as the value won't persist in nodeInst.data unless explicitly set.
             }
 
+            // If any changes occurred that require re-rendering the task list
             if (needsRender && nodeInst.customElements?.renderTasks) {
                 nodeInst.customElements.renderTasks();
             }
         },
+        /**
+         * Calculates the bounding sphere radius for layout and focusing.
+         * @param {S.RegisteredNode} nodeInst - The node instance.
+         * @returns {number} The bounding sphere radius.
+         */
         getBoundingSphereRadius: (nodeInst) => {
             return Math.sqrt(nodeInst.data.width**2 + nodeInst.data.height**2) / 2;
         },
+        /**
+         * Cleans up when the node is disposed.
+         * @param {S.RegisteredNode} nodeInst - The node instance.
+         */
         onDispose: (nodeInst) => {
-            nodeInst.customElements = null;
+            nodeInst.customElements = null; // Clear references
         }
     };
 
+    // --- Initialization Function ---
+    // Sets up the SpaceGraph instance, registers custom node types,
+    // adds initial nodes, and sets up inter-node communication examples.
     function init() {
         const container = S.$('#space');
         if (!container) {
@@ -407,21 +517,28 @@
 
         try {
             const space = new S.SpaceGraph(container);
-            window.space = space; // Make it globally accessible for debugging
+            window.space = space; // Make it globally accessible for easy debugging from the console
 
-            // Register node types
+            // Register the custom node type definitions with SpaceGraph.
+            // The first argument is the type name (string) used when adding nodes.
+            // The second argument is the TypeDefinition object.
             space.registerNodeType('markdown-editor', markdownEditorNodeDefinition);
             space.registerNodeType('task-list', taskListNodetypeDefinition);
 
-            // Add initial nodes
-            const mdEditor1 = space.addNode({ type: 'markdown-editor', id: 'md-editor-1', x: -250, y: 0, z: 0 });
+            // Add initial instances of our custom nodes to the graph.
+            const mdEditor1 = space.addNode({
+                type: 'markdown-editor', // Use the registered type name
+                id: 'md-editor-1',       // Unique ID for this node
+                x: -250, y: 0, z: 0      // Initial position
+            });
+
             const taskNode1 = space.addNode({
                 type: 'task-list',
                 id: 'tasks-1',
-                x: 200, y: -150, z: 0, // Adjusted y to not overlap mdEditor1
-                data: { // Pass custom data for this instance
+                x: 200, y: -150, z: 0,
+                data: { // Custom data for this specific instance of task-list
                     title: 'Project Bravo Tasks',
-                    tasks: [ // Example initial tasks
+                    tasks: [
                         {id: 'task-a', text: 'Design phase for Bravo', completed: true},
                         {id: 'task-b', text: 'Bravo Implementation', completed: false},
                         {id: 'task-c', text: 'Testing & QA for Bravo', completed: false},
@@ -429,116 +546,153 @@
                 }
             });
 
-            // Example of a listener node (simple NoteNode for now)
+            // Create a simple listener node (using the built-in 'note' type)
+            // to demonstrate receiving data from the Markdown editor's 'html_out' port.
             const listenerNode = space.addNode({
-                type: 'note', // Using built-in NoteNode
+                type: 'note',
                 id: 'html-listener-1',
-                x: 200, y: 0, z: 0,
+                x: 200, y: 150, z: 0, // Positioned to receive from mdEditor1
                 width: 300, height: 250,
-                content: 'Waiting for HTML output...'
+                content: 'Waiting for HTML output from Markdown Editor...'
             });
 
+            // --- Inter-node Communication Example: Markdown Editor to Listener Node ---
             if (mdEditor1 && listenerNode) {
-                // Ensure the listener node's instance is available for the callback
-                const listenerNodeInstance = space.getNodeById('html-listener-1');
-                if (listenerNodeInstance) {
-                     mdEditor1.listenTo('html-listener-1', 'html_out', (htmlPayload, senderNode) => {
-                        // This callback is incorrect. The listenTo should be ON the listenerNode, listening TO mdEditor1
-                    });
+                // Get the actual instance of the listener node (SpaceGraph.addNode returns the instance directly)
+                const listenerNodeInstance = listenerNode; // listenerNode is already the instance
 
-                    // Corrected: Listener node listens to mdEditor1
-                    listenerNodeInstance.listenTo(mdEditor1, 'html_out', (htmlPayload, senderNode) => {
-                        console.log(`Listener node ${listenerNodeInstance.id} received HTML from ${senderNode.id}`);
-                        // Update the content of the NoteNode. NoteNode uses 'content' in data.
+                // INCORRECT USAGE (kept for illustrative comment, then corrected below):
+                // mdEditor1.listenTo('html-listener-1', 'html_out', (htmlPayload, senderNode) => {
+                //    // This callback setup is conceptually wrong. The LISTENER node should be the one calling listenTo.
+                // });
+
+                // CORRECTED USAGE: The listenerNodeInstance calls `listenTo`, specifying the sender (mdEditor1)
+                // and the port name ('html_out') on the sender to listen to.
+                // `listenTo` sets up an internal mechanism where listenerNodeInstance will react to 'html_out' events from mdEditor1.
+                listenerNodeInstance.listenTo(
+                    mdEditor1,         // The sender node instance to listen to
+                    'html_out',        // The name of the output port on mdEditor1 to listen to
+                    (htmlPayload, senderNode) => { // Callback function when data is received
+                        console.log(`Listener node ${listenerNodeInstance.id} received HTML from ${senderNode.id}.`);
+                        // Update the content of the listener NoteNode.
+                        // NoteNode uses 'content' in its `data` object to store its display HTML.
                         listenerNodeInstance.data.content = htmlPayload;
-                        // For NoteNode, its internal HTML needs to be updated based on data.content
+                        // For a NoteNode (or any HtmlNodeElement), to make the change visible,
+                        // its internal HTML also needs to be updated.
                         const contentDiv = listenerNodeInstance.htmlElement?.querySelector('.node-content');
                         if(contentDiv) contentDiv.innerHTML = htmlPayload;
-                    });
-                     console.log(`Node ${listenerNodeInstance.id} is now listening to 'html_out' events from ${mdEditor1.id}`);
-                }
+                    }
+                );
+                console.log(`Node ${listenerNodeInstance.id} is now listening to 'html_out' events from ${mdEditor1.id}`);
             }
 
-            // Setup palette for this example
-            const mdPaletteBtn = S.$('#btn-create-md-editor');
-            if (mdPaletteBtn) {
-                mdPaletteBtn.addEventListener('dragstart', (event) => {
-                    const nodeData = {
-                        type: 'markdown-editor',
-                        label: 'Markdown Editor D&D',
-                    };
-                    event.dataTransfer.effectAllowed = 'copy';
-                    event.dataTransfer.setData('application/x-spacegraph-node-type', JSON.stringify(nodeData));
-                });
-            }
-            const taskPaletteBtn = S.$('#btn-create-task-list');
-            if (taskPaletteBtn) {
-                taskPaletteBtn.addEventListener('dragstart', (event) => {
-                    const nodeData = {
-                        type: 'task-list',
-                        label: 'To-Dos D&D',
-                        data: { title: 'New List (D&D)' }
-                    };
-                    event.dataTransfer.effectAllowed = 'copy';
-                    event.dataTransfer.setData('application/x-spacegraph-node-type', JSON.stringify(nodeData));
-                });
-            }
+            // --- Inter-node Communication Example: Task List to Listener Node ---
+            // Reusing listenerNode for simplicity to also listen to taskNode1's 'tasks_updated' port.
+            if (taskNode1 && listenerNode) {
+                const taskListenerNodeInstance = listenerNode; // Reusing the same listener node instance
 
-            // Optional: Test port communication for task list
-            if (taskNode1 && listenerNode) { // listenerNode was for mdEditor1, let's make a new one or reuse
-                 const taskListenerNode = space.getNodeById('html-listener-1'); // Reuse for simplicity
-                 if (taskListenerNode) {
-                    taskNode1.listenTo(taskListenerNode.id, 'tasks_updated', (tasksPayload, senderNode) => {
-                         // This is incorrect, listenerNode should listen TO taskNode1
-                    });
-                    // Corrected:
-                    taskListenerNode.listenTo(taskNode1, 'tasks_updated', (tasksPayload, senderNode) => {
-                        console.log(`Listener node ${taskListenerNode.id} received tasks_updated from ${senderNode.id}:`, tasksPayload);
-                        let content = `<h3>Tasks from ${senderNode.id}</h3><ul>`;
+                // CORRECTED USAGE: taskListenerNodeInstance listens to taskNode1's 'tasks_updated' output port.
+                taskListenerNodeInstance.listenTo(
+                    taskNode1,          // The sender node instance (Task List)
+                    'tasks_updated',    // The name of the output port on taskNode1
+                    (tasksPayload, senderNode) => { // Callback when tasks are updated
+                        console.log(`Listener node ${taskListenerNodeInstance.id} received 'tasks_updated' from ${senderNode.id}:`, tasksPayload);
+                        // Display the received task list in the listener node.
+                        let content = `<h3>Tasks from ${senderNode.id} (${senderNode.data.title || ''})</h3><ul>`;
                         tasksPayload.forEach(task => {
                             content += `<li>${task.text} (${task.completed ? 'Done' : 'Pending'})</li>`;
                         });
                         content += `</ul>`;
-                        taskListenerNode.data.content = content;
-                        const contentDiv = taskListenerNode.htmlElement?.querySelector('.node-content');
-                        if(contentDiv) contentDiv.innerHTML = content;
-                    });
-                    console.log(`Node ${taskListenerNode.id} is now listening to 'tasks_updated' events from ${taskNode1.id}`);
+                        taskListenerNodeInstance.data.content = content; // Update data
+                        const contentDiv = taskListenerNodeInstance.htmlElement?.querySelector('.node-content');
+                        if(contentDiv) contentDiv.innerHTML = content; // Update HTML view
+                    }
+                );
+                console.log(`Node ${taskListenerNodeInstance.id} is now listening to 'tasks_updated' events from ${taskNode1.id}`);
 
-                    // Example of sending data to 'add_task' input port of taskNode1
-                    // setTimeout(() => {
-                    //    console.log("Attempting to add task to taskNode1 via port...");
-                    //    space.updateNodeData(taskNode1.id, { add_task: "Task added via port!" });
-                    //    // Or: taskNode1.emit('add_task', "A task from another node!"); // This is if taskNode was listening to itself.
-                    //    // Correct way for external trigger if `add_task` was an event it listened to:
-                    //    // someOtherNode.emitTo(taskNode1.id, 'add_task', "A task sent via another node's emitTo");
-                    //    // For direct data update to trigger onDataUpdate:
-                    //    // taskNode1.data.add_task = "A new task by direct data manipulation";
-                    //    // taskNode1.spaceGraph.nodeNeedsUpdate(taskNode1); // if direct data manipulation needs manual update trigger
-                    // }, 5000);
+                // Example of sending data TO the 'add_task' input port of taskNode1.
+                // This is typically done from another node or an external trigger.
+                // Here, we simulate it with a timeout.
+                // The `space.updateNodeData` method will trigger the `onDataUpdate` callback
+                // in the taskListNodetypeDefinition if the 'add_task' port is configured
+                // (implicitly or explicitly) to update the node's data.
+                setTimeout(() => {
+                   console.log("Attempting to add task to taskNode1 via its 'add_task' input port...");
+                   // This sends data to the 'add_task' input port of taskNode1.
+                   // The Task List node's onDataUpdate method is designed to handle this.
+                   space.updateNodeData(taskNode1.id, { add_task: "Task added via updateNodeData!" });
 
-                }
+                   // Alternative ways to send data or trigger actions (for conceptual understanding):
+                   // 1. If taskNode1 was directly listening for an event named 'add_task':
+                   //    taskNode1.emit('add_task', "A task from taskNode1 listening to itself");
+                   //
+                   // 2. If another node (e.g., someOtherNode) wanted to send data to taskNode1's 'add_task' port:
+                   //    (Assuming someOtherNode is an instance of a RegisteredNode with emitTo capability)
+                   //    someOtherNode.emitTo(taskNode1.id, 'add_task', "Task sent from another node's emitTo");
+                   //
+                   // 3. Direct data manipulation (less recommended for triggering port logic, but possible):
+                   //    taskNode1.data.add_task = "New task by direct data manipulation";
+                   //    // This would require taskNode1.onDataUpdate to be called, possibly manually or by a graph refresh.
+                   //    // space.nodeNeedsUpdate(taskNode1); // Or similar mechanism if available.
+                }, 5000);
             }
 
+            // --- Palette Setup for Drag-and-Drop Node Creation ---
+            // Get the button for creating Markdown editors
+            const mdPaletteBtn = S.$('#btn-create-md-editor');
+            if (mdPaletteBtn) {
+                // Add event listener for when dragging starts from this button
+                mdPaletteBtn.addEventListener('dragstart', (event) => {
+                    // Data to be associated with the new node when dropped
+                    const nodeData = {
+                        type: 'markdown-editor', // Must match a registered node type
+                        label: 'Markdown Editor (D&D)', // Custom label for the new node
+                        // Other default data can be included here
+                    };
+                    // Set the drag effect (visual feedback)
+                    event.dataTransfer.effectAllowed = 'copy';
+                    // Set the data being dragged, using a custom type for SpaceGraph to recognize
+                    event.dataTransfer.setData('application/x-spacegraph-node-type', JSON.stringify(nodeData));
+                });
+            }
 
+            // Get the button for creating Task Lists
+            const taskPaletteBtn = S.$('#btn-create-task-list');
+            if (taskPaletteBtn) {
+                // Add event listener for when dragging starts
+                taskPaletteBtn.addEventListener('dragstart', (event) => {
+                    const nodeData = {
+                        type: 'task-list',
+                        label: 'To-Dos (D&D)',
+                        data: { title: 'New List (D&D)' } // Initial data for this specific node type
+                    };
+                    event.dataTransfer.effectAllowed = 'copy';
+                    event.dataTransfer.setData('application/x-spacegraph-node-type', JSON.stringify(nodeData));
+                });
+            }
+
+            // Perform initial layout and center the view
             space.layoutEngine.runOnce(100);
-            space.centerView();
+            space.centerView(); // Center the camera on the graph content
 
+            // Display a status message
             const statusEl = S.$('#status-indicator') || document.body.appendChild(document.createElement('div'));
             statusEl.id = 'status-indicator'; // Ensure it has an ID if newly created
-            statusEl.textContent = 'App Node Example Initialized.';
-            setTimeout(() => statusEl.classList.add('hidden'), 2000);
+            statusEl.textContent = 'App Node Example Initialized. Custom nodes (Markdown Editor, Task List) are registered and added.';
+            setTimeout(() => statusEl.classList.add('hidden'), 3000); // Hide after 3 seconds
 
         } catch (error) {
             console.error("App Node Example Initialization Failed:", error);
-            container.innerHTML = `<div style="color: red; padding: 20px;">Error initializing: ${error.message}<br><pre>${error.stack}</pre></div>`;
+            // Display error message in the container if initialization fails
+            container.innerHTML = `<div style="color: red; padding: 20px;">Error initializing SpaceGraph App Node Example: ${error.message}<br><pre>${error.stack}</pre></div>`;
         }
     }
 
+    // Ensure DOM is fully loaded before running the init function
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
-        init();
+        init(); // DOM is already loaded
     }
 </script>
 </body>

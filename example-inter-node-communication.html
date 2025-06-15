@@ -62,6 +62,16 @@
     }
 </script>
 <script type="module">
+    // This example demonstrates various methods for inter-node communication within SpaceGraph.
+    // It showcases:
+    // 1. Direct event emission and listening: A 'data-source' node emits an event ('data_out')
+    //    when its button is clicked, and a 'data-receiver' node directly listens to this event
+    //    using `node.listenTo()`. This is suitable for direct, instance-to-instance communication.
+    // 2. Port-based data updates via `onDataUpdate`: Another 'data-receiver' node defines an
+    //    input port ('data_in'). Data sent to this port (simulated here using
+    //    `space.updateNodeData()`) is processed by the node's `onDataUpdate` lifecycle method.
+    //    This pattern is useful for more structured data flow, especially when edges visually
+    //    represent these connections.
     import * as S from './spacegraph.js';
 
     function init() {
@@ -73,119 +83,153 @@
 
         try {
             const space = new S.SpaceGraph(container, {});
-            window.space = space;
+            window.space = space; // Make accessible for debugging
 
-            // Node Type 1: Data Source (HTML based)
+            // --- Node Type Definition: Data Source ---
+            // This node type has a button that, when clicked, emits data on an output port.
             const dataSourceNodeType = {
+                // Provides default properties for 'data-source' nodes.
                 getDefaults: (data) => ({
                     label: data.label || 'Data Source',
                     width: 180, height: 100,
-                    counter: 0,
-                    ports: { outputs: { data_out: { label: 'Data Output', type: 'string' } } }
+                    counter: 0, // Internal counter for generating unique messages
+                    ports: { // Defines an output port named 'data_out'
+                        outputs: { data_out: { label: 'Data Output', type: 'string' } }
+                    }
                 }),
+                // Creates the HTML structure and behavior for 'data-source' nodes.
                 onCreate: (nodeInst, sg) => {
                     nodeInst.htmlElement = document.createElement('div');
-                    nodeInst.htmlElement.className = 'data-source-node';
+                    nodeInst.htmlElement.className = 'data-source-node'; // For CSS styling
                     nodeInst.htmlElement.innerHTML = `<h4>\${nodeInst.data.label}</h4><p>Counter: <span class="count">0</span></p><button>Send Data</button>`;
 
                     const button = nodeInst.htmlElement.querySelector('button');
                     const countSpan = nodeInst.htmlElement.querySelector('.count');
 
+                    // Event listener for the button click
                     button.addEventListener('click', (e) => {
-                        e.stopPropagation(); // Prevent UIManager drag
-                        nodeInst.data.counter++;
+                        e.stopPropagation(); // Prevent UIManager from interpreting this as a node drag
+                        nodeInst.data.counter++; // Increment internal counter
                         countSpan.textContent = nodeInst.data.counter;
                         const message = `Message #${nodeInst.data.counter} from ${nodeInst.id}`;
 
-                        // Emit data via the output port
+                        // Emit data from the 'data_out' output port.
+                        // Any node listening to this specific source node and this port name will receive it.
                         if (nodeInst.data.ports?.outputs?.data_out) {
                             console.log(`${nodeInst.id} emitting 'data_out':`, message);
-                            nodeInst.emit('data_out', message);
+                            nodeInst.emit('data_out', message); // `emit(portName, payload)`
                         }
                     });
 
-                    nodeInst.customElements = { countSpan }; // For potential external updates if needed
-                    return { htmlElement: nodeInst.htmlElement };
+                    nodeInst.customElements = { countSpan }; // Store for potential external updates
+                    return { htmlElement: nodeInst.htmlElement }; // Return the HTML element for rendering
                 },
+                // Calculates bounding sphere for layout and focusing.
                 getBoundingSphereRadius: (nodeInst) => Math.max(nodeInst.data.width, nodeInst.data.height) / 2,
             };
-            space.registerNodeType('data-source', dataSourceNodeType);
+            space.registerNodeType('data-source', dataSourceNodeType); // Register this custom node type
 
-            // Node Type 2: Data Receiver (HTML based)
+            // --- Node Type Definition: Data Receiver ---
+            // This node type can receive data either via direct listening or through its input port processed by onDataUpdate.
             const dataReceiverNodeType = {
+                // Provides default properties for 'data-receiver' nodes.
                 getDefaults: (data) => ({
                     label: data.label || 'Data Receiver',
                     width: 220, height: 120,
-                    receivedMessage: 'Waiting for data...',
-                    ports: { inputs: { data_in: { label: 'Data Input', type: 'string' } } }
+                    receivedMessage: 'Waiting for data...', // Default message
+                    ports: { // Defines an input port named 'data_in'
+                        inputs: { data_in: { label: 'Data Input', type: 'string' } }
+                    }
                 }),
+                // Creates the HTML structure for 'data-receiver' nodes.
                 onCreate: (nodeInst, sg) => {
                     nodeInst.htmlElement = document.createElement('div');
                     nodeInst.htmlElement.className = 'data-receiver-node';
                     nodeInst.htmlElement.innerHTML = `<h4>\${nodeInst.data.label}</h4><div class="receiver-content">\${nodeInst.data.receivedMessage}</div>`;
 
+                    // Store the content div for easy access in onDataUpdate or listeners
                     nodeInst.customElements = { contentDiv: nodeInst.htmlElement.querySelector('.receiver-content') };
                     return { htmlElement: nodeInst.htmlElement };
                 },
+                /**
+                 * Handles incoming data when `space.updateNodeData(nodeId, { ... })` is called
+                 * with a key matching one of its input ports (e.g., 'data_in').
+                 * This is the standard way RegisteredNodes react to data arriving at defined input ports.
+                 * @param {S.RegisteredNode} nodeInst - The instance of this node.
+                 * @param {object} updatedData - The data object that was passed to updateNodeData.
+                 */
                 onDataUpdate: (nodeInst, updatedData) => {
-                    // This is the primary way for RegisteredNodes to react to "port" data.
-                    // When an edge connects to 'data_in', an external system (or another node's emit via a more complex setup)
-                    // would call `space.updateNodeData(receiverNode.id, { data_in: "some value" })`.
+                    // Check if the 'data_in' property (matching our input port name) exists in updatedData
                     if (updatedData.data_in !== undefined && nodeInst.customElements?.contentDiv) {
-                        nodeInst.data.receivedMessage = updatedData.data_in; // Store it
-                        nodeInst.customElements.contentDiv.textContent = updatedData.data_in;
-                        console.log(`${nodeInst.id} received via onDataUpdate (data_in):`, updatedData.data_in);
-                        // Optional: "consume" data if it's directly on nodeInst.data
-                        // if (nodeInst.data.hasOwnProperty('data_in')) delete nodeInst.data.data_in;
+                        nodeInst.data.receivedMessage = updatedData.data_in; // Store the new message
+                        nodeInst.customElements.contentDiv.textContent = updatedData.data_in; // Update the display
+                        console.log(`${nodeInst.id} received via onDataUpdate (port 'data_in'):`, updatedData.data_in);
+
+                        // Optional: "consume" the data if it represents a one-time event.
+                        // If updatedData was a direct reference to nodeInst.data, you might:
+                        // delete nodeInst.data.data_in;
+                        // However, space.updateNodeData typically passes a new object, so this is often not needed
+                        // unless the port is configured to merge data directly into nodeInst.data.
                     }
                 },
+                // Calculates bounding sphere for layout and focusing.
                 getBoundingSphereRadius: (nodeInst) => Math.max(nodeInst.data.width, nodeInst.data.height) / 2,
             };
-            space.registerNodeType('data-receiver', dataReceiverNodeType);
+            space.registerNodeType('data-receiver', dataReceiverNodeType); // Register this custom node type
 
-            // Create instances
+            // --- Create Node Instances ---
             const source1 = space.addNode({ type: 'data-source', id: 'source1', x: -200, y: 0 });
             const receiver1 = space.addNode({ type: 'data-receiver', id: 'receiver1', x: 200, y: 0 });
-            const receiver2 = space.addNode({ type: 'data-receiver', id: 'receiver2', x: 200, y: 180, label: 'Receiver B'});
+            const receiver2 = space.addNode({ type: 'data-receiver', id: 'receiver2', x: 200, y: 180, label: 'Receiver B (via Port)'});
 
-            // Scenario 1: Direct emit/listenTo for RegisteredNode instances
-            // This demonstrates that RegisteredNode instances inherit BaseNode's emit/listenTo.
+            // --- Scenario 1: Direct Event Listening (emit/listenTo) ---
+            // `receiver1` directly listens to `source1` for 'data_out' events.
+            // This demonstrates the built-in event mechanism inherited from BaseNode.
             if (source1 && receiver1) {
+                // `receiver1.listenTo(senderNode, eventName/portName, callback)`
                 receiver1.listenTo(source1, 'data_out', (payload, senderNode) => {
-                    console.log(`${receiver1.id} received directly from ${senderNode.id} via listenTo:`, payload);
+                    console.log(`${receiver1.id} received directly from ${senderNode.id} via listenTo ('data_out'):`, payload);
                     if (receiver1.customElements?.contentDiv) {
                         receiver1.customElements.contentDiv.innerHTML =
                             `Directly heard from ${senderNode.id}: <br><i>"${payload}"</i>`;
                     }
                 });
-                console.log(`${receiver1.id} is listening to 'data_out' on ${source1.id}`);
+                console.log(`${receiver1.id} is now listening to 'data_out' events on ${source1.id}`);
             }
 
-            // Create an edge. This edge signifies a potential data path.
-            // The actual data flow for onDataUpdate relies on external calls to space.updateNodeData
-            // or a more sophisticated event bus that interprets these edges.
-            // For this example, the emit/listenTo above handles direct communication.
-            // The edge here is more for visual representation and potential future use by a data flow manager.
+            // --- Scenario 2: Port-Based Communication via `onDataUpdate` (Simulated) ---
+            // An edge is drawn between `source1`'s 'data_out' port and `receiver2`'s 'data_in' port.
+            // Visually, this suggests a data flow path.
+            // However, for `onDataUpdate` on `receiver2` to be triggered with data from `source1`
+            // based on this edge, some mechanism needs to:
+            //   1. Detect that `source1` emitted 'data_out'.
+            //   2. Identify that `receiver2` is connected to this port via an edge.
+            //   3. Call `space.updateNodeData(receiver2.id, { data_in: <payload_from_source1> })`.
+            // SpaceGraph itself does not automatically do this data propagation based on edges alone.
+            // This example simulates step 3 using a timeout.
             if (source1 && receiver2) {
                  space.addEdge(source1, receiver2, {
-                    sourcePort: 'data_out', // from source1
-                    targetPort: 'data_in'   // to receiver2
+                    sourcePort: 'data_out', // Specifies the name of the output port on source1
+                    targetPort: 'data_in'   // Specifies the name of the input port on receiver2
                 });
-                // To make this edge functional with onDataUpdate for receiver2,
-                // source1's button click would need to know about its connections
-                // and explicitly call space.updateNodeData for connected nodes.
-                // Or, a global event handler could watch for 'data_out' and propagate.
-                // For simplicity, we'll manually trigger an update to receiver2's port below.
+                // Note: The edge above is primarily for visual representation and semantic connection.
+                // To make this edge "functional" for onDataUpdate in receiver2 when source1's button is clicked,
+                // source1's button handler would need to:
+                //   a) Know about its outgoing connections (e.g., by inspecting graph.edges).
+                //   b) For each connected receiver listening on the 'data_in' port, call:
+                //      `space.updateNodeData(connectedReceiver.id, { data_in: message })`.
+                // This example simplifies by manually triggering the update below.
             }
 
-            // Manually trigger onDataUpdate for receiver2 to simulate data arriving at its 'data_in' port
+            // Manually trigger `onDataUpdate` for `receiver2` to simulate data arriving at its 'data_in' port.
+            // This is how data would be "sent" to an input port to be handled by `onDataUpdate`.
             setTimeout(() => {
-                console.log("Manually pushing data to receiver2's 'data_in' port via updateNodeData...");
-                space.updateNodeData(receiver2.id, { data_in: "Simulated message for receiver2's input port." });
+                console.log("Manually pushing data to receiver2's 'data_in' port via space.updateNodeData()...");
+                space.updateNodeData(receiver2.id, { data_in: "Simulated message for receiver2's 'data_in' port." });
             }, 7000);
 
 
-            // Add a general NoteNode to explain
+            // Add a general NoteNode to explain the setup and interactions.
             space.addNode({
                 type: 'note', id: 'info', x: 0, y: -200, width: 400, height: 170,
                 content: `<h3>Inter-Node Communication</h3>
@@ -195,7 +239,7 @@
                           <p>Check console for logs.</p>`
             });
 
-            space.layoutEngine.runOnce(100);
+            space.layoutEngine.runOnce(100); // Perform initial layout
             space.centerView();
 
             const statusEl = S.$('#status-indicator');

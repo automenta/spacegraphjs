@@ -47,6 +47,10 @@
     }
 </script>
 <script type="module">
+    // This example demonstrates how to create a custom WebGL-based node (a "Crystal")
+    // by defining a `TypeDefinition` and registering it with SpaceGraph.
+    // It covers creating custom Three.js geometry and materials, handling data updates
+    // to modify appearance (color, wireframe), and providing a custom bounding sphere.
     import * as S from './spacegraph.js';
     import * as THREE from 'three'; // Import THREE directly for geometry/material access
 
@@ -59,104 +63,159 @@
 
         try {
             const space = new S.SpaceGraph(container, {});
-            window.space = space; // For debugging
+            window.space = space; // For debugging convenience
 
-            // 1. Define the TypeDefinition for our WebGL-based custom node
+            // 1. Define the TypeDefinition for our WebGL-based "Crystal" custom node.
             const crystalNodeDefinition = {
+                /**
+                 * Provides default data for new 'crystal-node' instances.
+                 * @param {object} initialData - Data passed during node creation.
+                 * @returns {object} The default data object.
+                 */
                 getDefaults: (initialData) => ({
-                    size: initialData?.size || 50,
-                    color: initialData?.color || 0x00ffdd, // Default teal
-                    wireframe: initialData?.wireframe || false,
-                    label: initialData?.label || initialData?.id || 'Crystal Node',
-                    // No explicit ports in this example, but could be added
+                    size: initialData?.size || 50,                 // Default size (diameter-like)
+                    color: initialData?.color || 0x00ffdd,        // Default color: a teal/cyan
+                    wireframe: initialData?.wireframe || false,     // Default to solid, not wireframe
+                    label: initialData?.label || initialData?.id || 'Crystal Node', // Default label
+                    // No explicit ports are defined in this example, but they could be added similarly
+                    // to the HTML registered node example if communication is needed.
                 }),
 
+                /**
+                 * Creates the WebGL visual representation (a Three.js Mesh) for the 'crystal-node'.
+                 * Also creates an optional 3D label.
+                 * @param {S.RegisteredNode} nodeInst - The instance of the RegisteredNode being created.
+                 * @param {S.SpaceGraph} spaceGraph - The SpaceGraph instance.
+                 * @returns {object} An object containing `mesh` (the Three.js Mesh) and optionally `labelObject`.
+                 */
                 onCreate: (nodeInst, spaceGraph) => {
-                    // Geometry: Icosahedron for a crystal-like shape
-                    const geometry = new THREE.IcosahedronGeometry(nodeInst.data.size / 2, 0); // radius, detail
+                    // Create the geometry for the crystal. An Icosahedron is a good base for a crystal-like shape.
+                    // The `nodeInst.data.size / 2` is used because IcosahedronGeometry takes radius.
+                    const geometry = new THREE.IcosahedronGeometry(nodeInst.data.size / 2, 0); // (radius, detail level)
 
-                    // Material
+                    // Create the material for the crystal. MeshStandardMaterial allows for PBR-like properties.
                     const material = new THREE.MeshStandardMaterial({
-                        color: nodeInst.data.color,
-                        wireframe: nodeInst.data.wireframe,
-                        roughness: 0.3,
-                        metalness: 0.6,
-                        flatShading: true // Gives a faceted look
+                        color: nodeInst.data.color,          // Set color from node data
+                        wireframe: nodeInst.data.wireframe,  // Set wireframe from node data
+                        roughness: 0.3,                      // Adjust for shininess
+                        metalness: 0.6,                      // Adjust for metallic look
+                        flatShading: true                    // `true` gives a faceted, low-poly look which suits crystals
                     });
 
+                    // Create the Three.js Mesh object.
                     const mesh = new THREE.Mesh(geometry, material);
-                    mesh.userData.nodeId = nodeInst.id; // Important for UIManager
+                    mesh.userData.nodeId = nodeInst.id; // Associate mesh with node ID for UIManager interactions (e.g., picking)
 
-                    // Label for the node
+                    // Create a 3D label for the node.
                     const labelDiv = document.createElement('div');
-                    labelDiv.className = 'node-label-3d'; // Use default styling
+                    labelDiv.className = 'node-label-3d'; // Apply default 3D label styling
                     labelDiv.textContent = nodeInst.data.label;
+                    // Use spaceGraph.constructor.THREE.CSS3DObject to ensure the correct THREE version is used.
                     const labelObject = new spaceGraph.constructor.THREE.CSS3DObject(labelDiv);
+                    // Position of the label is usually handled in the node's `update` method or by `ShapeNode` logic if extending it.
+                    // For RegisteredNode, if not overriding `update`, label positioning relative to the mesh might need manual handling
+                    // or rely on `RegisteredNode`'s default label positioning if `labelObject` is returned.
 
-                    nodeInst.customElements = { material }; // Store material for updates
+                    // Store the material on `nodeInst.customElements` for easy access in `onDataUpdate` or other methods
+                    // if we need to change its properties dynamically (e.g., color, wireframe).
+                    nodeInst.customElements = { material: material };
 
-                    return { mesh, labelObject };
+                    // Return the created mesh and labelObject. SpaceGraph will add these to the appropriate scenes.
+                    return { mesh: mesh, labelObject: labelObject };
                 },
 
+                /**
+                 * Handles updates to the node's data (e.g., from `space.updateNodeData()`).
+                 * This method should update the visual appearance of the node based on the new data.
+                 * @param {S.RegisteredNode} nodeInst - The node instance.
+                 * @param {object} updatedData - An object containing the properties that were updated.
+                 */
                 onDataUpdate: (nodeInst, updatedData) => {
+                    // Retrieve the material stored in `onCreate`.
                     const material = nodeInst.customElements?.material;
-                    if (!material) return;
+                    if (!material) return; // Should not happen if onCreate was successful
 
+                    // If 'color' was updated, change the material's color.
                     if (updatedData.color !== undefined) {
                         material.color.setHex(updatedData.color);
-                        nodeInst.data.color = updatedData.color; // Update internal data
+                        nodeInst.data.color = updatedData.color; // Important: update the node's internal data state.
                     }
+                    // If 'wireframe' was updated, toggle the material's wireframe property.
                     if (updatedData.wireframe !== undefined) {
                         material.wireframe = updatedData.wireframe;
-                        nodeInst.data.wireframe = updatedData.wireframe;
+                        nodeInst.data.wireframe = updatedData.wireframe; // Update internal data state.
                     }
+                    // If 'size' was updated, adjust the mesh's scale.
+                    // Note: For complex geometry changes, recreating the geometry might be necessary.
+                    // For simple uniform scaling of an Icosahedron, `mesh.scale.set()` is effective.
+                    // This example assumes the original geometry's "size" maps to its scale.
                     if (updatedData.size !== undefined) {
-                        // Recreating geometry on size change is complex for this example.
-                        // A simpler approach for mesh nodes is to use mesh.scale.
-                        // This requires the original geometry to be based on a unit size,
-                        // or calculate scale based on current vs new size.
-                        // For now, we'll assume size is mostly for initial creation or requires manual scaling.
-                        // If nodeInst.mesh is accessible and geometry is simple:
-                        if (nodeInst.mesh) {
-                            const oldSize = nodeInst.data.size || 50;
+                        if (nodeInst.mesh) { // Ensure the mesh exists
+                            const oldSize = nodeInst.data.size || 50; // Use current data or a fallback
                             const newSize = updatedData.size;
-                            const scale = newSize / oldSize;
-                            nodeInst.mesh.scale.multiplyScalar(scale);
-                            nodeInst.data.size = newSize; // Update internal data
+                            const scaleFactor = newSize / oldSize;
+                            // This assumes the mesh was initially scaled uniformly (1,1,1) relative to its geometry definition.
+                            // And that the geometry was created with `oldSize/2` as radius.
+                            // We apply the scale factor relative to the current scale.
+                            nodeInst.mesh.scale.multiplyScalar(scaleFactor);
+                            nodeInst.data.size = newSize; // Update internal data state.
                         }
                     }
+                    // If 'label' was updated, change the text content of the label's HTML element.
                     if (updatedData.label !== undefined && nodeInst.labelObject?.element) {
                          nodeInst.labelObject.element.textContent = updatedData.label;
-                         nodeInst.data.label = updatedData.label;
+                         nodeInst.data.label = updatedData.label; // Update internal data state.
                     }
                 },
 
+                /**
+                 * Calculates the bounding sphere radius, used for camera focusing and layout.
+                 * @param {S.RegisteredNode} nodeInst - The node instance.
+                 * @returns {number} The radius.
+                 */
                 getBoundingSphereRadius: (nodeInst) => {
-                    // Based on IcosahedronGeometry radius
-                    return (nodeInst.data.size / 2) * 1.1; // A little padding
+                    // The IcosahedronGeometry was created with radius `nodeInst.data.size / 2`.
+                    // Add a small padding factor if desired.
+                    return (nodeInst.data.size / 2) * 1.1; // 10% padding
                 },
 
+                /**
+                 * Defines custom behavior when the node is selected or deselected.
+                 * @param {S.RegisteredNode} nodeInst - The node instance.
+                 * @param {boolean} isSelected - True if the node is being selected, false if deselected.
+                 */
                 onSetSelectedStyle: (nodeInst, isSelected) => {
-                    // Example: make it slightly emissive when selected
-                    if (nodeInst.mesh?.material) {
-                        nodeInst.mesh.material.emissive?.setHex(isSelected ? 0x333333 : 0x000000);
+                    // Example: make the crystal slightly emissive when selected for a glow effect.
+                    if (nodeInst.mesh?.material && nodeInst.mesh.material.emissive) { // Check if material and emissive property exist
+                        nodeInst.mesh.material.emissive.setHex(isSelected ? 0x333333 : 0x000000); // Dark grey glow or no glow
                     }
+                    // Toggle a 'selected' class on the label's HTML element for potential CSS styling.
                     if (nodeInst.labelObject?.element) {
                         nodeInst.labelObject.element.classList.toggle('selected', isSelected);
                     }
                 },
 
+                /**
+                 * Cleans up resources when the node is disposed.
+                 * The mesh's geometry and material are typically handled by `RegisteredNode`'s base dispose method
+                 * if they are assigned to `nodeInst.mesh`.
+                 * This is for any additional custom cleanup.
+                 * @param {S.RegisteredNode} nodeInst - The node instance.
+                 */
                 onDispose: (nodeInst) => {
-                    // Geometry and material are part of the mesh, which SpaceGraph handles.
-                    // If we created separate geometries/materials not assigned to mesh, dispose here.
-                    nodeInst.customElements = null;
+                    // If `onCreate` created any Three.js objects (geometries, materials, textures)
+                    // that were NOT directly assigned to `nodeInst.mesh` or `nodeInst.labelObject.element`,
+                    // they should be explicitly disposed of here to prevent memory leaks.
+                    // e.g., if material was stored in customElements but not on the mesh directly:
+                    // nodeInst.customElements?.material?.dispose();
+                    nodeInst.customElements = null; // Clear references
                 }
             };
 
-            // 2. Register the new node type
+            // 2. Register the new node type with SpaceGraph.
             space.registerNodeType('crystal-node', crystalNodeDefinition);
 
-            // 3. Add instances of the custom node
+            // 3. Add instances of the 'crystal-node'.
             const crystal1 = space.addNode({
                 type: 'crystal-node',
                 id: 'crystal1',

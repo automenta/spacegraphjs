@@ -98,27 +98,45 @@
     }
 </script>
 <script type="module">
+    // This example demonstrates how to dynamically update node properties (content, color, size),
+    // and add new nodes and edges to the graph after the initial setup.
+    // It showcases direct manipulation of node data and underlying Three.js objects,
+    // as well as using SpaceGraph methods to expand the graph.
     import * as S from './spacegraph.js';
 
-    let space; 
-    let statusIndicatorElement; // Will be dynamically created by UIManager
+    let space;
+    let statusIndicatorElement; // Will be dynamically created by UIManager or found if pre-existing.
 
+    /**
+     * Displays a short status message to the user.
+     * Relies on a #status-indicator element, which UIManager typically creates.
+     * @param {string} message - The message to display.
+     */
     function showStatus(message) {
         if (!statusIndicatorElement) {
-            statusIndicatorElement = S.$('#status-indicator'); // Try to find it if already created
+            // Attempt to find the status indicator element if not already cached.
+            // UIManager usually creates an element with id 'status-indicator'.
+            statusIndicatorElement = S.$('#status-indicator');
         }
         if (statusIndicatorElement) {
             statusIndicatorElement.textContent = message;
-            statusIndicatorElement.classList.remove('hidden');
-            setTimeout(() => statusIndicatorElement.classList.add('hidden'), 2500);
+            statusIndicatorElement.classList.remove('hidden'); // Make it visible
+            setTimeout(() => statusIndicatorElement.classList.add('hidden'), 2500); // Hide after a delay
         } else {
+            // Fallback if the UIManager or its status indicator isn't ready/found.
             console.warn("Status indicator element not found for message:", message);
         }
     }
 
+    /**
+     * Initializes the SpaceGraph instance, creates the initial graph structure,
+     * and sets up event listeners for dynamic control buttons.
+     */
     function init() {
         const container = S.$('#space');
-        // UI elements are now auto-created by UIManager if not found.
+        // The UIManager (part of SpaceGraph) will automatically create UI elements like
+        // context menus, dialogs, and the status indicator if they are not found in the DOM.
+        // So, no need to explicitly pass them unless using custom pre-existing elements.
         if (!container) {
             console.error("Initialization Failed: Missing required #space container element.");
             document.body.innerHTML = "<p style='color:red; padding: 20px;'>Error: Missing required #space container HTML element.</p>";
@@ -126,60 +144,88 @@
         }
 
         try {
-            space = new S.SpaceGraph(container, {}); // Pass empty object for uiElements
+            // Instantiate SpaceGraph. The UIManager (including status indicator) gets set up here.
+            space = new S.SpaceGraph(container, {}); // Pass empty object for uiElements to use defaults
+
+            // Create the initial set of nodes and edges.
             createInitialGraph(space);
+
+            // Set up event listeners for the control buttons to trigger dynamic updates.
             setupDynamicControls(space);
             
-            // Attempt to get a reference to the dynamically created status indicator
+            // Attempt to get a reference to the status indicator, which should now be created by UIManager.
             statusIndicatorElement = S.$('#status-indicator');
 
 
+            // Perform initial layout and center the view.
             space.layoutEngine.runOnce(100);
-            space.centerView(null, 0.5);
+            space.centerView(null, 0.5); // Center view with a 0.5s animation
             
-            window.space = space; 
+            window.space = space; // Make 'space' globally accessible for debugging.
             showStatus('Dynamic Updates Example Ready ✨');
 
         } catch (error) {
             console.error("Dynamic Updates Example Initialization Failed:", error);
+            // Fallback error display if SpaceGraph or UIManager fails.
             const tempStatus = S.$('#status-indicator') || document.body.appendChild(document.createElement('div'));
-            tempStatus.id = 'status-indicator';
+            tempStatus.id = 'status-indicator'; // Ensure it has an ID for styling
             tempStatus.textContent = `Error: ${error.message}`;
-            tempStatus.style.backgroundColor = 'var(--delete-button-bg)';
+            tempStatus.style.backgroundColor = 'var(--delete-button-bg)'; // Use a visible error style
             tempStatus.classList.remove('hidden');
+            // Display detailed error in the main container.
             container.innerHTML = `<div style="color: red; padding: 20px;">Error initializing: ${error.message}<br><pre>${error.stack}</pre></div>`;
         }
     }
 
+    /**
+     * Creates the initial set of nodes and edges for the graph.
+     * @param {S.SpaceGraph} currentSpace - The SpaceGraph instance.
+     */
     function createInitialGraph(currentSpace) {
+        // Create an initial NoteNode that will be targeted for content updates.
         const note1 = currentSpace.addNode(new S.NoteNode('dynamic-note', { x: -150, y: 0, z: 0 }, {
             content: "<h2>Initial Note</h2><p>This content will be updated dynamically.</p>",
-            width: 250, height: 100, backgroundColor: "#3a3a70"
+            width: 250, height: 100, backgroundColor: "#3a3a70" // Custom background color
         }));
 
+        // Create an initial ShapeNode that will be targeted for color and size updates.
         const shape1 = currentSpace.addNode(new S.ShapeNode('dynamic-shape', { x: 150, y: 0, z: 0 }, {
-            label: "Dynamic Shape", shape: 'sphere', size: 60, color: 0xff8800
+            label: "Dynamic Shape", shape: 'sphere', size: 60, color: 0xff8800 // Orange sphere
         }));
         
+        // Create another node to serve as a target for dynamically added edges.
         const targetNode = currentSpace.addNode(new S.NoteNode('target-for-edge', { x: 0, y: 150, z: -30 }, {
             content: "<h3>Target Node</h3><p>A new edge might connect here.</p>",
-            width: 200, height: 90, backgroundColor: "#2a502a"
+            width: 200, height: 90, backgroundColor: "#2a502a" // Greenish background
         }));
 
-        currentSpace.addEdge(note1, shape1, {constraintParams: {idealLength: 300}});
+        // Add initial edges connecting the nodes.
+        currentSpace.addEdge(note1, shape1, {constraintParams: {idealLength: 300}}); // Longer ideal length
         currentSpace.addEdge(shape1, targetNode, {constraintParams: {idealLength: 180}});
         showStatus('Initial graph created.');
     }
 
-    let newNodeCounter = 0;
-    let lastAddedNodeId = null;
+    let newNodeCounter = 0; // Counter for uniquely naming new nodes.
+    let lastAddedNodeId = null; // Stores the ID of the most recently added node.
 
+    /**
+     * Sets up event listeners for the UI controls that trigger dynamic graph updates.
+     * @param {S.SpaceGraph} currentSpace - The SpaceGraph instance.
+     */
     function setupDynamicControls(currentSpace) {
+        // Event listener for updating the content of a NoteNode.
         S.$('#update-note-button').addEventListener('click', () => {
             const noteToUpdate = currentSpace.getNodeById('dynamic-note');
             const newContent = S.$('#note-content-input').value;
-            if (noteToUpdate instanceof S.HtmlNodeElement) { 
-                noteToUpdate.data.content = newContent; 
+            if (noteToUpdate instanceof S.HtmlNodeElement) { // Ensure it's an HTML-based node
+                // Update the node's data object. This is important for data persistence and
+                // if `onDataUpdate` (for RegisteredNode) or other mechanisms rely on this data.
+                noteToUpdate.data.content = newContent;
+
+                // Directly manipulate the innerHTML of the node's content display area.
+                // For NoteNode (which extends HtmlNodeElement), this is a common way to update its view.
+                // If this were a RegisteredNode with a complex `onCreate`, its `onDataUpdate`
+                // callback would ideally handle translating `data.content` changes to the view.
                 const contentDiv = S.$('.node-content', noteToUpdate.htmlElement);
                 if (contentDiv) contentDiv.innerHTML = newContent;
                 showStatus("Note content updated.");
@@ -188,16 +234,23 @@
             }
         });
 
-        let shapeColors = [0x00ff00, 0x0000ff, 0xff00ff, 0xffff00];
+        // Cycle through a predefined list of colors for the ShapeNode.
+        let shapeColors = [0x00ff00, 0x0000ff, 0xff00ff, 0xffff00]; // Green, Blue, Magenta, Yellow
         let currentColorIndex = 0;
+        // Event listener for changing the color of a ShapeNode.
         S.$('#change-shape-color-button').addEventListener('click', () => {
             const shapeToUpdate = currentSpace.getNodeById('dynamic-shape');
-            if (shapeToUpdate instanceof S.ShapeNode) {
+            if (shapeToUpdate instanceof S.ShapeNode) { // Ensure it's a ShapeNode
                 currentColorIndex = (currentColorIndex + 1) % shapeColors.length;
                 const newColor = shapeColors[currentColorIndex];
-                shapeToUpdate.data.color = newColor; 
+
+                // Update the node's data object.
+                shapeToUpdate.data.color = newColor;
+
+                // Directly update the color of the Three.js mesh material.
+                // This is necessary for ShapeNode as its appearance is tied to its mesh.
                 if (shapeToUpdate.mesh && shapeToUpdate.mesh.material) {
-                    shapeToUpdate.mesh.material.color.setHex(newColor); 
+                    shapeToUpdate.mesh.material.color.setHex(newColor);
                 }
                 showStatus(`Shape color changed to #${newColor.toString(16)}.`);
             } else {
@@ -205,49 +258,77 @@
             }
         });
         
+        // Toggle between two sizes for the ShapeNode.
         let isShapeLarge = false;
+        // Event listener for changing the size of a ShapeNode.
         S.$('#change-shape-size-button').addEventListener('click', () => {
             const shapeToUpdate = currentSpace.getNodeById('dynamic-shape');
             if (shapeToUpdate instanceof S.ShapeNode) {
                 isShapeLarge = !isShapeLarge;
-                const newSize = isShapeLarge ? 90 : 50;
-                const oldSize = shapeToUpdate.data.size;
-                shapeToUpdate.data.size = newSize; 
+                const newSize = isShapeLarge ? 90 : 50; // Toggle between 90 and 50
+                const oldSize = shapeToUpdate.data.size; // Get current size from data
+
+                // Update the node's data object with the new size.
+                shapeToUpdate.data.size = newSize;
                 
+                // Directly update the scale of the Three.js mesh.
+                // This approach scales the existing geometry.
+                // For significant size changes or if non-uniform scaling was previously applied,
+                // recreating the geometry (shapeNode._createMesh()) might be more robust,
+                // but simple scaling is often sufficient for basic shapes.
                 if (shapeToUpdate.mesh) {
-                    const scaleFactor = newSize / (oldSize || 50) ; 
-                    shapeToUpdate.mesh.scale.multiplyScalar(scaleFactor / shapeToUpdate.mesh.scale.x);
+                    // Calculate scale factor relative to the current scale, assuming uniform scaling.
+                    // If oldSize wasn't stored or was 0, default to a sensible previous size like 50.
+                    // The (scaleFactor / shapeToUpdate.mesh.scale.x) is to correctly adjust from any previous scale,
+                    // assuming the mesh was initially scaled uniformly (scale.x = scale.y = scale.z).
+                    // A more direct way if original geometry was unit size: shapeToUpdate.mesh.scale.set(newSize, newSize, newSize);
+                    // However, ShapeNode creates geometry with actual size, so we scale relative to its current scale.
+                    const currentMeshSizeApproximation = shapeToUpdate.mesh.scale.x * (oldSize || 50); // Approx current visual size based on scale and old data
+                    const scaleMultiplier = newSize / currentMeshSizeApproximation;
+                    shapeToUpdate.mesh.scale.multiplyScalar(scaleMultiplier);
 
                 }
-                currentSpace.layoutEngine.kick(); 
+                // Inform the layout engine that the node's size has changed, so it can readjust.
+                currentSpace.layoutEngine.kick();
                 showStatus(`Shape size toggled to ${newSize}.`);
             } else {
                 showStatus("Error: 'dynamic-shape' not found or not a ShapeNode.");
             }
         });
 
+        // Event listener for adding a new NoteNode to the graph.
         S.$('#add-node-button').addEventListener('click', () => {
             newNodeCounter++;
             const newNodeId = `new-node-${newNodeCounter}`;
-            lastAddedNodeId = newNodeId;
-            const randomX = Math.random() * 400 - 200;
-            const randomY = Math.random() * 300 - 150;
-            const newNode = currentSpace.addNode(new S.NoteNode(newNodeId, { x: randomX, y: randomY, z: Math.random()*50 - 25 }, {
+            lastAddedNodeId = newNodeId; // Keep track of the last added node for edge creation.
+
+            // Generate random positions and color for the new node.
+            const randomX = Math.random() * 400 - 200; // Random X between -200 and 200
+            const randomY = Math.random() * 300 - 150; // Random Y between -150 and 150
+            const randomZ = Math.random() * 50 - 25;   // Random Z between -25 and 25
+            const randomHue = Math.random() * 360;     // Random hue for background color
+
+            // Add the new node using SpaceGraph's addNode method.
+            const newNode = currentSpace.addNode(new S.NoteNode(newNodeId, { x: randomX, y: randomY, z: randomZ }, {
                 content: `<h3>New Node ${newNodeCounter}</h3><p>Added dynamically!</p>`,
-                width: 200, height: 80, backgroundColor: `hsl(${Math.random()*360}, 50%, 30%)`
+                width: 200, height: 80, backgroundColor: `hsl(${randomHue}, 50%, 60%)` // Lighter background
             }));
+
+            // Kick the layout engine to accommodate the new node.
             currentSpace.layoutEngine.kick();
             showStatus(`Node '${newNode.id}' added.`);
         });
 
+        // Event listener for adding a new edge.
         S.$('#add-edge-button').addEventListener('click', () => {
-            const shapeNode = currentSpace.getNodeById('dynamic-shape');
+            const shapeNode = currentSpace.getNodeById('dynamic-shape'); // Source node for the new edge.
             if (lastAddedNodeId) {
-                const newlyAddedNode = currentSpace.getNodeById(lastAddedNodeId);
+                const newlyAddedNode = currentSpace.getNodeById(lastAddedNodeId); // Target node (the last one added).
                 if (shapeNode && newlyAddedNode) {
+                    // Check if an edge already exists between these two nodes to prevent duplicates.
                     const existingEdge = [...currentSpace.edges.values()].find(edge =>
                         (edge.source === shapeNode && edge.target === newlyAddedNode) ||
-                        (edge.source === newlyAddedNode && edge.target === shapeNode)
+                        (edge.source === newlyAddedNode && edge.target === shapeNode) // Check both directions
                     );
                     if (!existingEdge) {
                         currentSpace.addEdge(shapeNode, newlyAddedNode);
@@ -264,10 +345,11 @@
         });
     }
 
+    // Ensure DOM is fully loaded before initializing.
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
-        init(); 
+        init(); // DOM is already loaded.
     }
 </script>
 </body>

@@ -44,6 +44,9 @@
     }
     </script>
     <script type="module">
+        // This example demonstrates the event emitter capabilities of SpaceGraph.
+        // It shows how to subscribe to various graph events (like node/edge addition,
+        // removal, selection) and log them to an on-screen display.
         import { SpaceGraph } from './spacegraph.js';
 
         const container = document.getElementById('graph-container');
@@ -56,41 +59,68 @@
          */
         function logEvent(message) {
             const formattedMessage = `${new Date().toLocaleTimeString()}: ${message}\n`;
-            eventLog.innerHTML += formattedMessage;
-            eventLog.scrollTop = eventLog.scrollHeight; // Auto-scroll to the latest event
-            console.log(message);
+            eventLog.innerHTML += formattedMessage; // Append message to the log display
+            eventLog.scrollTop = eventLog.scrollHeight; // Auto-scroll to show the latest event
+            console.log(message); // Also log to browser console for detailed inspection
         }
 
-        // Register event listeners
+        // --- Registering Event Listeners ---
+        // SpaceGraph uses an event emitter pattern. The `graph.on(eventName, callback)` method
+        // is used to subscribe to specific events. The callback function receives an `eventData`
+        // object containing information relevant to that event.
+
+        // Listen for the 'nodeAdded' event, which fires after a node is successfully added to the graph.
         graph.on('nodeAdded', (eventData) => {
+            // eventData for 'nodeAdded' typically includes:
+            // - node: The BaseNode instance that was added.
             logEvent(`EVENT: nodeAdded - ID: ${eventData.node.id}, Type: ${eventData.node.data.type}`);
         });
 
+        // Listen for the 'nodeRemoved' event, which fires after a node is removed.
         graph.on('nodeRemoved', (eventData) => {
+            // eventData for 'nodeRemoved' typically includes:
+            // - nodeId: The ID of the node that was removed.
+            // - node: The BaseNode instance that was removed (useful for accessing its last state).
             logEvent(`EVENT: nodeRemoved - ID: ${eventData.nodeId}, Original Node Type: ${eventData.node.data.type}`);
         });
 
+        // Listen for the 'edgeAdded' event.
         graph.on('edgeAdded', (eventData) => {
+            // eventData for 'edgeAdded' typically includes:
+            // - edge: The Edge instance that was added.
             logEvent(`EVENT: edgeAdded - ID: ${eventData.edge.id} (From: ${eventData.edge.source.id} To: ${eventData.edge.target.id})`);
         });
 
+        // Listen for the 'edgeRemoved' event.
         graph.on('edgeRemoved', (eventData) => {
+            // eventData for 'edgeRemoved' typically includes:
+            // - edgeId: The ID of the edge that was removed.
+            // - edge: The Edge instance that was removed.
             logEvent(`EVENT: edgeRemoved - ID: ${eventData.edgeId}`);
         });
 
+        // Listen for the 'nodeSelected' event, which fires when a node is selected or deselected.
         graph.on('nodeSelected', (eventData) => {
+            // eventData for 'nodeSelected' typically includes:
+            // - selectedNode: The BaseNode instance that is now selected, or null if deselected.
+            // - previouslySelectedNode: The BaseNode instance that was previously selected, or null.
             const selectedId = eventData.selectedNode ? eventData.selectedNode.id : 'none';
             const previouslySelectedId = eventData.previouslySelectedNode ? eventData.previouslySelectedNode.id : 'none';
             logEvent(`EVENT: nodeSelected - Selected: ${selectedId}, Previously: ${previouslySelectedId}`);
         });
 
+        // Listen for the 'edgeSelected' event.
         graph.on('edgeSelected', (eventData) => {
+            // eventData for 'edgeSelected' typically includes:
+            // - selectedEdge: The Edge instance that is now selected, or null if deselected.
+            // - previouslySelectedEdge: The Edge instance that was previously selected, or null.
             const selectedId = eventData.selectedEdge ? eventData.selectedEdge.id : 'none';
             const previouslySelectedId = eventData.previouslySelectedEdge ? eventData.previouslySelectedEdge.id : 'none';
             logEvent(`EVENT: edgeSelected - Selected: ${selectedId}, Previously: ${previouslySelectedId}`);
         });
 
-        let nodeCounter = 0;
+        // --- Control Button Logic ---
+        let nodeCounter = 0; // Simple counter to generate unique node IDs for this example
         let lastAddedNodeId = null;
         const addedNodeIds = [];
 
