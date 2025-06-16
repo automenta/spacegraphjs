@@ -9,7 +9,7 @@ const basePlugins = [
 
 export default {
   input: 'spacegraph.js',
-  external: [], // three and gsap will now be bundled
+  external: ['three', 'gsap'], // three and gsap will now be external
   output: [
     // Non-minified outputs
     {
@@ -24,12 +24,9 @@ export default {
       name: 'SpaceGraphZUI',
       sourcemap: true,
       // globals are mainly for external UMD dependencies
-      // Since three and gsap are now bundled, these might not be strictly needed for them
-      // but leaving them won't harm for other potential externals.
-      // For a cleaner setup, if NO externals remain, globals could be removed or emptied.
       globals: {
-        'three': 'THREE', // Kept in case of other externals, or future changes
-        'gsap': 'gsap'    // Kept in case of other externals
+        'three': 'THREE',
+        'gsap': 'gsap'
       },
       plugins: basePlugins // Apply base plugins
     },

@@ -33,12 +33,25 @@
     "type": "git",
     "url": "git+https://github.com/automenta/spacegraphjs.git"
   },
-  "keywords": [],
+  "keywords": [
+    "zui",
+    "zoomable interface",
+    "graph",
+    "graph visualization",
+    "data visualization",
+    "2d",
+    "3d",
+    "webgl",
+    "threejs",
+    "gsap",
+    "javascript",
+    "library"
+  ],
   "bugs": {
     "url": "https://github.com/automenta/spacegraphjs/issues"
   },
   "homepage": "https://github.com/automenta/spacegraphjs#readme",
-  "dependencies": {
+  "peerDependencies": {
     "gsap": "^3.13.0",
     "three": "^0.177.0"
   },
@@ -53,6 +66,8 @@
     "jsdom": "^24.0.0",
     "prettier": "^3.3.3",
     "rollup": "^4.43.0",
-    "vitest": "^1.6.1"
+    "vitest": "^1.6.1",
+    "gsap": "^3.13.0",
+    "three": "^0.177.0"
   }
 }
