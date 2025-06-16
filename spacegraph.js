@@ -9,6 +9,16 @@ import * as THREE from 'three';
 import {CSS3DObject, CSS3DRenderer} from 'three/addons/renderers/CSS3DRenderer.js';
 import {gsap} from "gsap";
 
+// UI Manager Imports
+import { PointerInputHandler } from './js/ui/PointerInputHandler.js';
+import { KeyboardInputHandler } from './js/ui/KeyboardInputHandler.js';
+import { WheelInputHandler } from './js/ui/WheelInputHandler.js';
+import { DragAndDropHandler } from './js/ui/DragAndDropHandler.js';
+import { ContextMenuManager } from './js/ui/ContextMenuManager.js';
+import { LinkingManager } from './js/ui/LinkingManager.js';
+import { EdgeMenuManager } from './js/ui/EdgeMenuManager.js';
+import { DialogManager } from './js/ui/DialogManager.js';
+
 export const $ = (selector, context = document) => context.querySelector(selector);
 export const $$ = (selector, context = document) => Array.from(context.querySelectorAll(selector));
 export const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
@@ -686,7 +696,7 @@ export class SpaceGraph {
     _updateNodesAndEdges() {
         this.nodes.forEach(node => node.update(this)); // `this` (SpaceGraph instance) is passed for context
         this.edges.forEach(edge => edge.update(this)); // `this` (SpaceGraph instance) is passed for context
-        this.uiManager?.updateEdgeMenuPosition();
+        this.uiManager?.edgeMenuManager?.update();
     }
 
     /**
@@ -2782,67 +2792,45 @@ export class UIManager {
     spaceGraph = null;
     /** @type {HTMLElement} */
     container = null;
-    /** @type {HTMLElement | null} */
-    contextMenuElement = null;
-    /** @type {HTMLElement | null} */
-    confirmDialogElement = null;
-    /** @type {CSS3DObject | null} */
-    edgeMenuObject = null;
 
-    /** @type {BaseNode | null} */
-    draggedNode = null;
-    /** @type {HtmlNodeElement | null} */
-    resizedNode = null;
+    // UI Elements, potentially created by UIManager if not provided
+    /** @type {HTMLElement | null} */
+    contextMenuEl = null;
+    /** @type {HTMLElement | null} */
+    confirmDialogEl = null;
+    /** @type {HTMLElement | null} */
+    statusIndicatorEl = null;
+
+    // Handlers for different UI aspects
+    /** @type {PointerInputHandler} */
+    pointerInputHandler = null;
+    /** @type {KeyboardInputHandler} */
+    keyboardInputHandler = null;
+    /** @type {WheelInputHandler} */
+    wheelInputHandler = null;
+    /** @type {DragAndDropHandler} */
+    dragAndDropHandler = null;
+    /** @type {ContextMenuManager} */
+    contextMenuManager = null;
+    /** @type {LinkingManager} */
+    linkingManager = null;
+    /** @type {EdgeMenuManager} */
+    edgeMenuManager = null;
+    /** @type {DialogManager} */
+    dialogManager = null;
+
     /** @type {Edge | null} */
-    hoveredEdge = null;
-    /** @type {{x: number, y: number}} */
-    resizeStartPos = {x: 0, y: 0};
-    /** @type {{width: number, height: number}} */
-    resizeStartSize = {width: 0, height: 0};
-    /** @type {THREE.Vector3} */
-    dragOffset = new THREE.Vector3();
-
-    /** @type {object} */
-    pointerState = {
-        down: false, primary: false, secondary: false, middle: false,
-        potentialClick: true, lastPos: {x: 0, y: 0}, startPos: {x: 0, y: 0}
-    };
-    /** @type {function | null} */
-    confirmCallback = null;
-    /** @type {HTMLElement | null} */
-    statusIndicatorElement = null;
-
-    /**
-     * @type {HTMLElement | null}
-     * @private
-     */
-    linkingTargetPortElement = null;
+    _hoveredEdge = null; // Managed by UIManager facade for handleEdgeHover
 
     /**
      * @typedef {object} UIElements
      * @description An optional object that can be passed to the {@link UIManager} constructor
-     * to provide pre-existing DOM elements for UI components. If elements are not provided,
-     * the UIManager will attempt to find them by ID or create them.
-     * @property {HTMLElement} [contextMenuEl] - A pre-existing DOM element to be used for the main context menu.
-     *                                           If not provided, UIManager searches for `#context-menu` or creates one.
-     * @property {HTMLElement} [confirmDialogEl] - A pre-existing DOM element for confirmation dialogs.
-     *                                             If not provided, UIManager searches for `#confirm-dialog` or creates one.
-     * @property {HTMLElement} [statusIndicatorEl] - A pre-existing DOM element for displaying status messages.
-     *                                               If not provided, UIManager searches for `#status-indicator` or creates one.
+     * to provide pre-existing DOM elements for UI components.
+     * @property {HTMLElement} [contextMenuEl]
+     * @property {HTMLElement} [confirmDialogEl]
+     * @property {HTMLElement} [statusIndicatorEl]
      */
 
-    /**
-     * Creates an instance of UIManager.
-     * Initializes UI elements (context menu, confirmation dialog, status indicator) by either using
-     * provided elements, finding them in the DOM by specific IDs, or creating them dynamically.
-     * It then binds all necessary event listeners for user interactions.
-     *
-     * @constructor
-     * @param {SpaceGraph} spaceGraph - The {@link SpaceGraph} instance this UIManager will manage interactions for.
-     * @param {UIElements} [uiElements={}] - Optional object containing pre-existing DOM elements for UI components.
-     *                                       See {@link UIElements}.
-     * @throws {Error} If `spaceGraph` is not provided.
-     */
     constructor(spaceGraph, uiElements = {}) {
         if (!spaceGraph) {
             throw new Error("UIManager requires a SpaceGraph instance.");
@@ -2850,282 +2838,83 @@ export class UIManager {
         this.spaceGraph = spaceGraph;
         this.container = spaceGraph.container;
 
-        // Initialize UI elements, creating them if not provided
-        this.contextMenuElement = uiElements.contextMenuEl || document.querySelector('#context-menu');
-        if (!this.contextMenuElement || !document.body.contains(this.contextMenuElement)) {
-            this.contextMenuElement = document.createElement('div');
-            this.contextMenuElement.id = 'context-menu';
-            this.contextMenuElement.className = 'context-menu'; // For CSS styling
-            document.body.appendChild(this.contextMenuElement);
+        // Initialize UI elements, creating them if not provided or found
+        this.contextMenuEl = uiElements.contextMenuEl || document.querySelector('#context-menu');
+        if (!this.contextMenuEl || !document.body.contains(this.contextMenuEl)) {
+            this.contextMenuEl = document.createElement('div');
+            this.contextMenuEl.id = 'context-menu';
+            this.contextMenuEl.className = 'context-menu';
+            document.body.appendChild(this.contextMenuEl);
         }
 
-        this.confirmDialogElement = uiElements.confirmDialogEl || document.querySelector('#confirm-dialog');
-        if (!this.confirmDialogElement || !document.body.contains(this.confirmDialogElement)) {
-            this.confirmDialogElement = document.createElement('div');
-            this.confirmDialogElement.id = 'confirm-dialog';
-            this.confirmDialogElement.className = 'dialog'; // For CSS styling
-            this.confirmDialogElement.innerHTML = '<p id="confirm-message">Are you sure?</p><button id="confirm-yes">Yes</button><button id="confirm-no">No</button>';
-            document.body.appendChild(this.confirmDialogElement);
+        this.confirmDialogEl = uiElements.confirmDialogEl || document.querySelector('#confirm-dialog');
+        if (!this.confirmDialogEl || !document.body.contains(this.confirmDialogEl)) {
+            this.confirmDialogEl = document.createElement('div');
+            this.confirmDialogEl.id = 'confirm-dialog';
+            this.confirmDialogEl.className = 'dialog';
+            this.confirmDialogEl.innerHTML = '<p id="confirm-message">Are you sure?</p><button id="confirm-yes">Yes</button><button id="confirm-no">No</button>';
+            document.body.appendChild(this.confirmDialogEl);
         }
 
-        this.statusIndicatorElement = uiElements.statusIndicatorEl || document.querySelector('#status-indicator');
-        if (!this.statusIndicatorElement || !document.body.contains(this.statusIndicatorElement)) {
-            this.statusIndicatorElement = document.createElement('div');
-            this.statusIndicatorElement.id = 'status-indicator';
-            // CSS typically handles initial visibility/fade-in
-            document.body.appendChild(this.statusIndicatorElement);
+        this.statusIndicatorEl = uiElements.statusIndicatorEl || document.querySelector('#status-indicator');
+        if (!this.statusIndicatorEl || !document.body.contains(this.statusIndicatorEl)) {
+            this.statusIndicatorEl = document.createElement('div');
+            this.statusIndicatorEl.id = 'status-indicator';
+            document.body.appendChild(this.statusIndicatorEl);
         }
+
+        // Instantiate new handlers, passing `this` as the facade
+        this.pointerInputHandler = new PointerInputHandler(this.spaceGraph, this);
+        this.keyboardInputHandler = new KeyboardInputHandler(this.spaceGraph, this);
+        this.wheelInputHandler = new WheelInputHandler(this.spaceGraph, this);
+        this.dragAndDropHandler = new DragAndDropHandler(this.spaceGraph, this);
+        this.contextMenuManager = new ContextMenuManager(this.spaceGraph, this);
+        this.linkingManager = new LinkingManager(this.spaceGraph, this);
+        this.edgeMenuManager = new EdgeMenuManager(this.spaceGraph, this);
+        this.dialogManager = new DialogManager(this.spaceGraph, this);
 
         this._bindEvents();
     }
 
-    /**
-     * Binds all necessary event listeners for UI interactions.
-     * @private
-     */
     _bindEvents() {
-        const opts = { passive: false }; // For event listeners where preventDefault might be called
-        this.container.addEventListener('pointerdown', this._onPointerDown.bind(this), false);
-        window.addEventListener('pointermove', this._onPointerMove.bind(this), false); // Listen on window for dragging/resizing outside container
-        window.addEventListener('pointerup', this._onPointerUp.bind(this), false); // Listen on window for releasing outside container
-        this.container.addEventListener('contextmenu', this._onContextMenu.bind(this), opts); // For right-click context menu
+        this.pointerInputHandler.bindEvents();
+        this.keyboardInputHandler.bindEvents();
+        this.wheelInputHandler.bindEvents();
+        this.dragAndDropHandler.bindEvents();
+        this.contextMenuManager.bindEvents();
+        // LinkingManager, EdgeMenuManager, DialogManager are controlled by other handlers/facade calls.
 
-        // Drag and Drop for node creation (e.g., from a palette)
-        this.container.addEventListener('dragover', this._onDragOver.bind(this), false);
-        this.container.addEventListener('drop', this._onDrop.bind(this), false);
-
-        // Global click listener (capture phase) to handle clicks outside of active UI elements (e.g., to close menus)
         document.addEventListener('click', this._onDocumentClick.bind(this), true);
-
-        // Event listeners for UI elements (context menu, confirm dialog buttons)
-        this.contextMenuElement?.addEventListener('click', this._onContextMenuClick.bind(this), false);
-        $('#confirm-yes', this.confirmDialogElement)?.addEventListener('click', this._onConfirmYes.bind(this), false);
-        $('#confirm-no', this.confirmDialogElement)?.addEventListener('click', this._onConfirmNo.bind(this), false);
-
-        // Global keydown listener for shortcuts
-        window.addEventListener('keydown', this._onKeyDown.bind(this), false);
-        // Wheel listener on the container for zooming and potentially other wheel-based interactions
-        this.container.addEventListener('wheel', this._onWheel.bind(this), opts);
     }
 
-    /**
-     * Updates the internal `this.pointerState` object based on a given {@link PointerEvent}.
-     * This method is called by pointer event handlers like `_onPointerDown` and `_onPointerUp`.
-     *
-     * @param {PointerEvent} event - The DOM {@link PointerEvent} that triggered the update.
-     * @param {boolean} isDown - `true` if a pointer button is being pressed, `false` if it's being released.
-     * @private
-     */
-    _updatePointerState(event, isDown) {
-        this.pointerState.down = isDown;
-        this.pointerState.primary = isDown && event.button === 0;
-    _bindEvents() {
-        const opts = { passive: false }; // For event listeners where preventDefault might be called
-        this.container.addEventListener('pointerdown', this._onPointerDown.bind(this), false);
-        window.addEventListener('pointermove', this._onPointerMove.bind(this), false); // Listen on window for dragging/resizing outside container
-        window.addEventListener('pointerup', this._onPointerUp.bind(this), false); // Listen on window for releasing outside container
-        this.container.addEventListener('contextmenu', this._onContextMenu.bind(this), opts); // For right-click context menu
-
-        // Drag and Drop for node creation (e.g., from a palette)
-        this.container.addEventListener('dragover', this._onDragOver.bind(this), false);
-        this.container.addEventListener('drop', this._onDrop.bind(this), false);
-
-        // Global click listener (capture phase) to handle clicks outside of active UI elements (e.g., to close menus)
-        document.addEventListener('click', this._onDocumentClick.bind(this), true);
-
-        // Event listeners for UI elements (context menu, confirm dialog buttons)
-        this.contextMenuElement?.addEventListener('click', this._onContextMenuClick.bind(this), false);
-        $('#confirm-yes', this.confirmDialogElement)?.addEventListener('click', this._onConfirmYes.bind(this), false);
-        $('#confirm-no', this.confirmDialogElement)?.addEventListener('click', this._onConfirmNo.bind(this), false);
-
-        // Global keydown listener for shortcuts
-        window.addEventListener('keydown', this._onKeyDown.bind(this), false);
-        // Wheel listener on the container for zooming and potentially other wheel-based interactions
-        this.container.addEventListener('wheel', this._onWheel.bind(this), opts);
+    _onDocumentClick(event) {
+        this.contextMenuManager.hideContextMenuIfNeeded(event);
+        this.edgeMenuManager.hideEdgeMenuIfNeeded(event);
     }
 
-    /**
-     * Updates the internal `this.pointerState` object based on a given {@link PointerEvent}.
-     * This method is called by pointer event handlers like `_onPointerDown` and `_onPointerUp`.
-     *
-     * @param {PointerEvent} event - The DOM {@link PointerEvent} that triggered the update.
-     * @param {boolean} isDown - `true` if a pointer button is being pressed, `false` if it's being released.
-     * @private
-     */
-    _updatePointerState(event, isDown) {
-        this.pointerState.down = isDown;
-        this.pointerState.primary = isDown && event.button === 0;
-        this.pointerState.secondary = isDown && event.button === 2;
-        this.pointerState.middle = isDown && event.button === 1;
-        if (isDown) {
-            this.pointerState.potentialClick = true; // Reset on new mousedown/pointerdown
-            this.pointerState.startPos = {x: event.clientX, y: event.clientY};
-        }
-        this.pointerState.lastPos = {x: event.clientX, y: event.clientY};
+    // --- Facade Methods for Sub-Managers ---
+    getDomElement(name) {
+        if (name === 'contextMenu') return this.contextMenuEl;
+        if (name === 'confirmDialog') return this.confirmDialogEl;
+        if (name === 'statusIndicator') return this.statusIndicatorEl;
+        return null;
     }
 
-    /**
-     * Gathers information about the UI element and graph object (node or edge) currently under the cursor/pointer.
-     * It checks for direct DOM element interactions (HTML nodes, resize handles, controls) first,
-     * then performs raycasting via {@link SpaceGraph#intersectedObject} for 3D objects like {@link ShapeNode}s and {@link Edge}s.
-     *
-     * @param {MouseEvent | PointerEvent} event - The mouse or pointer event providing clientX/clientY coordinates.
-     * @returns {{
-     *   element: HTMLElement | null,
-     *   nodeHtmlElement: HTMLElement | null,
-     *   resizeHandle: HTMLElement | null,
-     *   nodeControlsButton: HTMLElement | null,
-     *   contentEditable: HTMLElement | null,
-     *   interactiveInNode: HTMLElement | null,
-     *   node: BaseNode | null,
-     *   intersectedEdge: Edge | null
-     * }} An object containing references to the targeted elements and graph objects.
-     *    - `element`: The direct DOM element at the event coordinates.
-     *    - `nodeHtmlElement`: The closest ancestor element with class '.node-html', if any.
-     *    - `resizeHandle`: The closest ancestor element with class '.resize-handle', if any.
-     *    - `nodeControlsButton`: The closest button within '.node-controls', if any.
-     *    - `contentEditable`: The closest contenteditable element, if any.
-     *    - `interactiveInNode`: The closest interactive element (button, input, a) within '.node-content', if any.
-     *    - `node`: The {@link BaseNode} instance associated with `nodeHtmlElement` or a raycasted {@link ShapeNode}.
-     *    - `intersectedEdge`: The {@link Edge} instance found by raycasting, if any.
-     * @private
-     */
-    _getTargetInfo(event) {
-        const element = document.elementFromPoint(event.clientX, event.clientY);
-        const nodeHtmlElement = element?.closest('.node-html');
-        const resizeHandle = element?.closest('.resize-handle');
-        const nodeControlsButton = element?.closest('.node-controls button');
-        const contentEditable = element?.closest('[contenteditable="true"]');
-        const interactiveInNode = element?.closest('.node-content button, .node-content input, .node-content a');
+    getTargetInfoForWheel(event) { return this.pointerInputHandler._getTargetInfo(event); }
+    getTargetInfoForMenu(event) { return this.pointerInputHandler._getTargetInfo(event); }
+    getTargetInfoForLink(event) { return this.pointerInputHandler._getTargetInfo(event); }
 
-        let node = null;
-        if (nodeHtmlElement?.dataset.nodeId) {
-            node = this.spaceGraph.getNodeById(nodeHtmlElement.dataset.nodeId);
-        }
+    showConfirmDialog(message, onConfirm) { this.dialogManager.showConfirm(message, onConfirm); }
+    showStatus(message, type, duration) { this.dialogManager.showStatus(message, type, duration); }
+    hideContextMenu() { this.contextMenuManager.hideContextMenu(); }
 
-        let intersectedEdge = null;
-        let intersectedShapeNode = null;
-
-        // Prioritize direct DOM interactions for HTML nodes.
-        // If not interacting with a specific part of an HTML node, then raycast.
-        const isDirectHtmlNodePartInteraction = nodeHtmlElement && (resizeHandle || nodeControlsButton || contentEditable || interactiveInNode);
-
-        if (!isDirectHtmlNodePartInteraction) {
-            const intersectedObject = this.spaceGraph.intersectedObject(event.clientX, event.clientY);
-            if (intersectedObject) {
-                if (intersectedObject instanceof Edge) {
-                    intersectedEdge = intersectedObject;
-                } else if (intersectedObject instanceof BaseNode) { // Could be ShapeNode or even a RegisteredNode with a mesh
-                    // If 'node' is already found via DOM (HtmlNodeElement), usually prefer that.
-                    // But if raycasting finds a different node (e.g. ShapeNode behind a transparent HtmlNodeElement), prioritize raycasted.
-                    // For simplicity here, if DOM found an HTML node, we assume it's the primary target.
-                    // If no DOM node, then the raycasted node is the one.
-                    if (!node) {
-                        node = intersectedObject;
-                    } else if (node !== intersectedObject && intersectedObject instanceof ShapeNode) {
-                        // This case might occur if a ShapeNode is visually behind/near an HTML node but raycaster picks it.
-                        // Depending on desired interaction model, one might be prioritized.
-                        // For now, if an HTML node was found via DOM, it's likely the intended target.
-                    }
-                }
-            }
-        }
-        
-        return {
-            element, nodeHtmlElement, resizeHandle, nodeControlsButton, contentEditable, interactiveInNode,
-            node: node, // This will be the HtmlNodeElement if found by DOM, or a raycasted node otherwise.
-            intersectedEdge
-        };
-    }
-
-    /**
-     * Handles `pointerdown` events on the {@link SpaceGraph} container.
-     * This is the entry point for many interactions:
-     * - Initiates node dragging if a node is clicked.
-     * - Initiates node resizing if a resize handle is clicked.
-     * - Initiates edge linking if a node port is clicked.
-     * - Handles clicks on node internal controls (e.g., delete button).
-     * - Selects nodes or edges.
-     * - Initiates camera panning if the background is clicked.
-     *
-     * @param {PointerEvent} event - The DOM {@link PointerEvent}.
-     * @private
-     */
-    _onPointerDown(event) {
-        this._updatePointerState(event, true);
-        const targetInfo = this._getTargetInfo(event);
-
-        // 1. Handle clicks on specific UI parts of an HTML node first
-        if (targetInfo.nodeControlsButton && targetInfo.node instanceof HtmlNodeElement) {
-            event.preventDefault(); event.stopPropagation();
-            this._handleNodeControlButtonClick(targetInfo.nodeControlsButton, targetInfo.node);
-            this._hideContextMenu(); return;
-        }
-
-        const portElement = targetInfo.element?.closest('.node-port');
-        if (portElement && targetInfo.node) { // Clicked on a node port
-            event.preventDefault(); event.stopPropagation();
-            this._startLinking(targetInfo.node, portElement); // Initiate edge linking
-            this._hideContextMenu(); return;
-        }
-
-        if (targetInfo.resizeHandle && targetInfo.node instanceof HtmlNodeElement) { // Clicked on resize handle
-            event.preventDefault(); event.stopPropagation();
-            this.resizedNode = targetInfo.node;
-            this.resizedNode.startResize(); // Notify node & fix in layout
-            this.resizeStartPos = {x: event.clientX, y: event.clientY};
-            this.resizeStartSize = {...this.resizedNode.size};
-            this.container.style.cursor = 'nwse-resize';
-            this._hideContextMenu(); return;
-        }
-
-        // 2. Handle interactions with the node itself (dragging or selection)
-        if (targetInfo.node) {
-            if (targetInfo.interactiveInNode || targetInfo.contentEditable) { // Click on interactive content within a node
-                 event.stopPropagation(); // Allow native interaction (e.g., button click, text selection)
-                 if(this.spaceGraph.selectedNode !== targetInfo.node) this.spaceGraph.setSelectedNode(targetInfo.node); // Select if not already
-                 this._hideContextMenu();
-            } else { // Click on the main body of a node - initiate drag
-                event.preventDefault();
-                this.draggedNode = targetInfo.node;
-                this.draggedNode.startDrag(); // Notify node & fix in layout
-                if (this.draggedNode instanceof HtmlNodeElement && this.draggedNode.htmlElement) {
-                    this.draggedNode.htmlElement.classList.add('node-dragging-html');
-                }
-                // Calculate offset from node origin for smooth dragging
-                const worldPos = this.spaceGraph.screenToWorld(event.clientX, event.clientY, this.draggedNode.position.z);
-                this.dragOffset = worldPos ? worldPos.sub(this.draggedNode.position) : new THREE.Vector3();
-                this.container.style.cursor = 'grabbing';
-                if(this.spaceGraph.selectedNode !== targetInfo.node) this.spaceGraph.setSelectedNode(targetInfo.node);
-                this._hideContextMenu(); return;
-            }
-        } else if (targetInfo.intersectedEdge) { // 3. Handle interaction with an edge
-            event.preventDefault();
-            this.spaceGraph.setSelectedEdge(targetInfo.intersectedEdge);
-            this._hideContextMenu(); return;
-        } else { // 4. Clicked on the background
-            this._hideContextMenu();
-            // If something was selected, a background click might deselect it (handled in _onPointerUp if it's a simple click).
-            // If primary button is down on background and nothing specific is targeted, start camera panning.
-            if (this.pointerState.primary && !this.spaceGraph.selectedNode && !this.spaceGraph.selectedEdge) {
-                this.spaceGraph.cameraController?.startPan(event);
-            }
-        }
-    }
-
-    /**
-     * Handles clicks on internal control buttons of an {@link HtmlNodeElement} (e.g., delete, zoom content).
-     * Actions are determined by the button's CSS class.
-     *
-     * @param {HTMLElement} buttonElement - The clicked button HTML element.
-     * @param {HtmlNodeElement} node - The {@link HtmlNodeElement} to which the button belongs.
-     * @private
-     */
-    _handleNodeControlButtonClick(buttonElement, node) {
+    handleNodeControlButtonClick(buttonElement, node) {
+        // Logic from original UIManager._handleNodeControlButtonClick
+        // Assuming HtmlNodeElement is available in this scope (e.g. imported or defined in spacegraph.js)
         if (!(node instanceof HtmlNodeElement)) return;
 
         const actionMap = {
-            'node-delete': () => this._showConfirm(`Delete node "${node.id.substring(0,10)}..."?`, () => this.spaceGraph.removeNode(node.id)),
+            'node-delete': () => this.showConfirmDialog(`Delete node "${node.id.substring(0,10)}..."?`, () => this.spaceGraph.removeNode(node.id)),
             'node-content-zoom-in': () => node.adjustContentScale(1.15),
             'node-content-zoom-out': () => node.adjustContentScale(1/1.15),
             'node-grow': () => node.adjustNodeSize(1.2),
@@ -3139,1006 +2928,83 @@ export class UIManager {
         }
     }
 
-    /**
-     * Handles `pointermove` events on the window.
-     * - Updates node dragging if `this.draggedNode` is set.
-     * - Updates node resizing if `this.resizedNode` is set.
-     * - Updates the temporary linking line if `this.spaceGraph.isLinking` is true.
-     * - Updates camera panning if `this.spaceGraph.cameraController.isPanning` is true.
-     * - Handles edge hovering effect.
-     *
-     * @param {PointerEvent} event - The DOM {@link PointerEvent}.
-     * @private
-     */
-    _onPointerMove(event) {
-        const dx = event.clientX - this.pointerState.lastPos.x;
-        const dy = event.clientY - this.pointerState.lastPos.y;
-        if (dx !== 0 || dy !== 0) this.pointerState.potentialClick = false; // Moved significantly, not a click
-        this.pointerState.lastPos = {x: event.clientX, y: event.clientY};
-
-        if (this.resizedNode) { // Handle node resizing
-            event.preventDefault();
-            const newWidth = this.resizeStartSize.width + (event.clientX - this.resizeStartPos.x);
-            const newHeight = this.resizeStartSize.height + (event.clientY - this.resizeStartPos.y);
-            this.resizedNode.resize(newWidth, newHeight); return;
-        }
-        if (this.draggedNode) { // Handle node dragging
-            event.preventDefault();
-            const worldPos = this.spaceGraph.screenToWorld(event.clientX, event.clientY, this.draggedNode.position.z);
-            if (worldPos) this.draggedNode.drag(worldPos.sub(this.dragOffset)); return;
-        }
-        if (this.spaceGraph.isLinking) { // Handle edge linking (drawing temporary line)
-            event.preventDefault();
-            this._updateTempLinkLine(event.clientX, event.clientY); // Update visual feedback for linking
-
-            // Clear previous target port/node highlighting
-            if (this.linkingTargetPortElement) {
-                this.linkingTargetPortElement.classList.remove('linking-target-port');
-                this.linkingTargetPortElement = null;
+    handleEdgeHover(event) {
+        const { intersectedEdge } = this.pointerInputHandler._getTargetInfo(event);
+        if (this._hoveredEdge !== intersectedEdge) {
+            if (this._hoveredEdge && this._hoveredEdge !== this.spaceGraph.selectedEdge) {
+                this._hoveredEdge.setHighlight(false);
             }
-            $$('.node-html.linking-target', this.container).forEach(el => el.classList.remove('linking-target'));
-
-            const targetInfoMove = this._getTargetInfo(event);
-            const targetNode = targetInfoMove.node;
-            const targetPortElement = targetInfoMove.element?.closest('.node-port');
-
-            if (targetPortElement && targetNode && targetNode !== this.spaceGraph.linkSourceNode) {
-                const sourcePortType = this.spaceGraph.linkSourcePortInfo?.type;
-                const targetPortType = targetPortElement.dataset.portType;
-                if (sourcePortType && targetPortType && sourcePortType !== targetPortType) { // Basic validation: output to input or vice-versa
-                    targetPortElement.classList.add('linking-target-port');
-                    this.linkingTargetPortElement = targetPortElement;
-                    if (targetNode.htmlElement) targetNode.htmlElement.classList.add('linking-target');
-                }
-            } else if (targetNode && targetNode !== this.spaceGraph.linkSourceNode && targetNode.htmlElement) {
-                // Highlight node if it's a valid target but not a specific port (for node-to-node linking)
-                 targetNode.htmlElement.classList.add('linking-target');
-            }
-            return;
-        }
-
-        if (this.pointerState.primary && this.spaceGraph.cameraController?.isPanning) { // Handle camera panning
-             this.spaceGraph.cameraController.pan(event);
-        }
-
-        // Handle edge hovering visual feedback when no other interaction is active
-        if (!this.pointerState.down && !this.resizedNode && !this.draggedNode && !this.spaceGraph.isLinking) {
-            const { intersectedEdge } = this._getTargetInfo(event);
-            if (this.hoveredEdge !== intersectedEdge) {
-                if (this.hoveredEdge && this.hoveredEdge !== this.spaceGraph.selectedEdge) {
-                    this.hoveredEdge.setHighlight(false); // Unhighlight previously hovered edge
-                }
-                this.hoveredEdge = intersectedEdge;
-                if (this.hoveredEdge && this.hoveredEdge !== this.spaceGraph.selectedEdge) {
-                    this.hoveredEdge.setHighlight(true); // Highlight newly hovered edge
-                }
+            this._hoveredEdge = intersectedEdge;
+            if (this._hoveredEdge && this._hoveredEdge !== this.spaceGraph.selectedEdge) {
+                this._hoveredEdge.setHighlight(true);
             }
         }
     }
 
-    /**
-     * Handles `pointerup` events on the window.
-     * Finalizes actions like node dragging, resizing, or linking.
-     * Determines if a "click" action should occur (e.g., selecting/deselecting, auto-zooming).
-     *
-     * @param {PointerEvent} event - The DOM {@link PointerEvent}.
-     * @private
-     */
-    _onPointerUp(event) {
-        this.container.style.cursor = this.spaceGraph.isLinking ? 'crosshair' : 'grab'; // Reset cursor
-
-        if (this.resizedNode) {
-            this.resizedNode.endResize(); this.resizedNode = null;
-        } else if (this.draggedNode) {
-            if (this.draggedNode instanceof HtmlNodeElement && this.draggedNode.htmlElement) {
-                this.draggedNode.htmlElement.classList.remove('node-dragging-html');
-            }
-            this.draggedNode.endDrag(); this.draggedNode = null;
-        } else if (this.spaceGraph.isLinking && event.button === 0) { // Finalize linking on primary button release
-            this._completeLinking(event);
-        } else if (event.button === 1 && this.pointerState.potentialClick) { // Middle mouse button click for auto-zoom
-            const {node} = this._getTargetInfo(event);
-            if (node) { this.spaceGraph.autoZoom(node); event.preventDefault(); }
-        } else if (event.button === 0 && this.pointerState.potentialClick) { // Primary button click
-             const targetInfo = this._getTargetInfo(event);
-             // If clicked on background (not a node or edge) and not during a camera pan, deselect everything.
-             if (!targetInfo.node && !targetInfo.intersectedEdge && !this.spaceGraph.cameraController?.isPanning) {
-                this.spaceGraph.setSelectedNode(null);
-                this.spaceGraph.setSelectedEdge(null);
-            }
-            // If a node was clicked, selection is handled in _onPointerDown or by context menu.
+    handleEscape() {
+        if (this.linkingManager.isLinking()) { this.linkingManager.cancelLinking(); return true; }
+        // Check contextMenuEl style directly as ContextMenuManager doesn't expose an isVisible method
+        if (this.contextMenuEl && this.contextMenuEl.style.display === 'block') { this.contextMenuManager.hideContextMenu(); return true; }
+        // Same for confirmDialogEl
+        if (this.confirmDialogEl && this.confirmDialogEl.style.display === 'block') { this.dialogManager._hideConfirm(); return true; } // DialogManager needs public hide or handles escape internally
+        if (this.edgeMenuManager._edgeMenuObject) { this.spaceGraph.setSelectedEdge(null); return true; } // Deselecting edge hides its menu
+        if (this.spaceGraph.selectedNode || this.spaceGraph.selectedEdge) {
+            this.spaceGraph.setSelectedNode(null);
+            this.spaceGraph.setSelectedEdge(null);
+            return true;
         }
-
-        this.spaceGraph.cameraController?.endPan(); // Ensure any camera panning is stopped
-        this._updatePointerState(event, false); // Update pointer state to "up"
-
-        // Clear any lingering visual cues for linking targets
-        $$('.node-html.linking-target', this.container).forEach(el => el.classList.remove('linking-target'));
-        if (this.linkingTargetPortElement) {
-            this.linkingTargetPortElement.classList.remove('linking-target-port');
-            this.linkingTargetPortElement = null;
-        }
+        return false;
     }
 
-    /**
-     * Handles `contextmenu` events (typically right-click) on the {@link SpaceGraph} container.
-     * Prevents the default browser context menu and displays a custom, context-sensitive menu
-     * using `_showContextMenu` with items generated by `_getContextMenuItems*` methods.
-     *
-     * @param {MouseEvent} event - The DOM {@link MouseEvent}.
-     * @private
-     */
-    _onContextMenu(event) {
-        event.preventDefault();
-        this._hideContextMenu(); // Hide any currently visible context menu
-        const targetInfo = this._getTargetInfo(event);
-        let menuItems = [];
-
-        if (targetInfo.node) { // Right-clicked on a node
-            if (this.spaceGraph.selectedNode !== targetInfo.node) this.spaceGraph.setSelectedNode(targetInfo.node); // Select if not already
-            menuItems = this._getContextMenuItemsNode(targetInfo.node);
-        } else if (targetInfo.intersectedEdge) { // Right-clicked on an edge
-            if (this.spaceGraph.selectedEdge !== targetInfo.intersectedEdge) this.spaceGraph.setSelectedEdge(targetInfo.intersectedEdge); // Select if not already
-            menuItems = this._getContextMenuItemsEdge(targetInfo.intersectedEdge);
-        } else { // Right-clicked on the background
-            this.spaceGraph.setSelectedNode(null); this.spaceGraph.setSelectedEdge(null); // Deselect anything
-            const worldPos = this.spaceGraph.screenToWorld(event.clientX, event.clientY, 0); // Get world position for "create here"
-            menuItems = this._getContextMenuItemsBackground(worldPos);
-        }
-        if (menuItems.length > 0) this._showContextMenu(event.clientX, event.clientY, menuItems);
-    }
-
-    /**
-     * Handles global `click` events on the document (capture phase).
-     * Its primary purpose is to hide active UI elements like the context menu or edge menu
-     * if a click occurs outside of them.
-     *
-     * @param {MouseEvent} event - The DOM {@link MouseEvent}.
-     * @private
-     */
-    _onDocumentClick(event) {
-        const clickedContextMenu = this.contextMenuElement?.contains(event.target);
-        const clickedEdgeMenu = this.edgeMenuObject?.element?.contains(event.target);
-        // const clickedConfirmDialog = this.confirmDialogElement?.contains(event.target); // Confirm dialog is modal, not typically hidden this way
-
-        if (!clickedContextMenu) this._hideContextMenu();
-
-        if (!clickedEdgeMenu && this.edgeMenuObject) {
-            // If edge menu is visible and click was not on it or its edge, hide it by deselecting the edge.
-            const targetInfo = this._getTargetInfo(event);
-            if (this.spaceGraph.selectedEdge && this.spaceGraph.selectedEdge !== targetInfo.intersectedEdge) {
-                 this.spaceGraph.setSelectedEdge(null); // This will trigger hideEdgeMenu
-            }
-        }
-    }
-
-    /**
-     * @private
-     */
-     * Generates an array of context menu item objects for a given {@link BaseNode}.
-     * These items are then used by `_showContextMenu` to populate the menu.
-     *
-     * @param {BaseNode} node - The {@link BaseNode} for which to generate context menu items.
-     * @returns {Array<object>} An array of menu item objects, where each object can define
-     *                          `label`, `action`, `nodeId`, `type ('separator')`, `class`, etc.
-     * @private
-     */
-    _getContextMenuItemsNode(node) {
-        const items = [];
-        if (node instanceof HtmlNodeElement && node.data.editable) {
-            items.push({ label: "Edit Content 📝", action: "edit-node", nodeId: node.id });
-        }
-        items.push({label: "Start Link (Node) ✨", action: "start-link-node", nodeId: node.id});
-        items.push({label: "Auto Zoom / Back 🖱️", action: "autozoom-node", nodeId: node.id});
-        items.push({type: 'separator'});
-        items.push({label: "Delete Node 🗑️", action: "delete-node", nodeId: node.id, class: 'delete-action'});
-        return items;
-    }
-
-    /**
-     * Generates an array of context menu item objects for a given {@link Edge}.
-     *
-     * @param {Edge} edge - The {@link Edge} for which to generate context menu items.
-     * @returns {Array<object>} An array of menu item objects.
-     * @private
-     */
-    _getContextMenuItemsEdge(edge) {
-        return [
-            {label: "Edit Edge Style...", action: "edit-edge", edgeId: edge.id}, // Placeholder
-            {label: "Reverse Edge Direction", action: "reverse-edge", edgeId: edge.id},
-            {type: 'separator'},
-            {label: "Delete Edge 🗑️", action: "delete-edge", edgeId: edge.id, class: 'delete-action'},
-        ];
-    }
-
-    /**
-     * Generates an array of context menu item objects for the graph background.
-     * Includes actions like creating new nodes at the clicked position, centering view, etc.
-     *
-     * @param {THREE.Vector3 | null} worldPos - The world position (on Z=0 plane) where the context menu was invoked.
-     *                                          Used for placing new nodes. Can be `null` if projection failed.
-     * @returns {Array<object>} An array of menu item objects.
-     * @private
-     */
-    _getContextMenuItemsBackground(worldPos) {
-        const items = [];
-        if (worldPos) {
-            const posStr = JSON.stringify({x: Math.round(worldPos.x), y: Math.round(worldPos.y), z: Math.round(worldPos.z)});
-            items.push({label: "Create Note Here 📝", action: "create-note", position: posStr});
-            items.push({label: "Create Box Here 📦", action: "create-box", position: posStr});
-            items.push({label: "Create Sphere Here 🌐", action: "create-sphere", position: posStr});
-        }
-        items.push({type: 'separator'});
-        items.push({label: "Center View 🧭", action: "center-view"});
-        items.push({label: "Reset Zoom & Pan", action: "reset-view"});
-        items.push({
-            label: this.spaceGraph.background.alpha === 0 ? "Set Dark Background" : "Set Transparent BG",
-            action: "toggle-background"
-        });
-        return items;
-    }
-
-    /**
-     * Handles clicks on items within the main context menu (`this.contextMenuElement`).
-     * It determines the action associated with the clicked menu item (via `data-action` attribute)
-     * and executes the corresponding logic (e.g., deleting a node, creating a new node, centering view).
-     *
-     * @param {MouseEvent} event - The DOM {@link MouseEvent} from a click on a context menu item.
-     * @private
-     */
-    _onContextMenuClick(event) {
-        const listItem = event.target.closest('li');
-        if (!listItem || !listItem.dataset.action) return; // Click was not on a valid action item
-
-        const action = listItem.dataset.action;
-        const nodeId = listItem.dataset.nodeId;
-        const edgeId = listItem.dataset.edgeId;
-        const position = listItem.dataset.position; // JSON string
-        this._hideContextMenu();
-
-        const actions = {
-            'edit-node': () => {
-                const node = this.spaceGraph.getNodeById(nodeId);
-                if (node instanceof HtmlNodeElement && node.data.editable) {
-                    node.htmlElement?.querySelector('.node-content')?.focus();
-                }
-            },
-            'delete-node': () => this._showConfirm(`Delete node "${nodeId?.substring(0,10)}..."?`, () => this.spaceGraph.removeNode(nodeId)),
-            'delete-edge': () => this._showConfirm(`Delete edge "${edgeId?.substring(0,10)}..."?`, () => this.spaceGraph.removeEdge(edgeId)),
-            'autozoom-node': () => { const node = this.spaceGraph.getNodeById(nodeId); if(node) this.spaceGraph.autoZoom(node); },
-            'create-note': () => this._createNodeFromMenu(position, NoteNode, {content: 'New Note ✨'}),
-            'create-box': () => this._createNodeFromMenu(position, ShapeNode, {label: 'Box', shape: 'box', color: Math.random() * 0xffffff}),
-            'create-sphere': () => this._createNodeFromMenu(position, ShapeNode, {label: 'Sphere', shape: 'sphere', color: Math.random() * 0xffffff}),
-            'center-view': () => this.spaceGraph.centerView(),
-            'reset-view': () => this.spaceGraph.cameraController?.resetView(),
-            'start-link-node': () => {
-                const node = this.spaceGraph.getNodeById(nodeId);
-                if(node) this._startLinking(node); // Initiate linking from the node itself (no specific port)
-            },
-            'reverse-edge': () => {
-                const edge = this.spaceGraph.getEdgeById(edgeId);
-                if (edge && edge.source && edge.target) {
-                    [edge.source, edge.target] = [edge.target, edge.source]; // Swap source and target
-                    edge.update(); // Update visual representation
-                    this.spaceGraph.layoutEngine?.kick(); // Re-evaluate layout
-                    this.spaceGraph._emit('edgeReversed', { edge }); // Optional: emit an event
-                }
-            },
-            'edit-edge': () => { // Selects the edge, which typically shows the edge-specific menu
-                const edge = this.spaceGraph.getEdgeById(edgeId); if(edge) this.spaceGraph.setSelectedEdge(edge);
-            },
-            'toggle-background': () => this.spaceGraph.setBackground(
-                this.spaceGraph.background.alpha === 0 ? 0x101018 : 0x000000, // Toggle color
-                this.spaceGraph.background.alpha === 0 ? 1.0 : 0.0            // Toggle alpha
-            ),
-        };
-        if (actions[action]) {
-            actions[action]();
-        } else {
-            console.warn("Unknown context menu action:", action);
-        }
-    }
-
-    /**
-     * Helper function to create a new node based on a context menu action.
-     * It parses the position data, instantiates the specified node type, adds it to the graph,
-     * and then focuses on the new node.
-     *
-     * @param {string | undefined} positionDataJson - JSON string representing the target position `{x, y, z}`.
-     * @param {typeof BaseNode} NodeTypeClass - The constructor of the node class to instantiate (e.g., {@link NoteNode}, {@link ShapeNode}).
-     * @param {object} nodeDataParams - Additional data parameters to pass to the new node's constructor.
-     * @private
-     */
-    _createNodeFromMenu(positionDataJson, NodeTypeClass, nodeDataParams) {
-        if (!positionDataJson) { console.error("Position data missing for node creation from menu."); return; }
-        try {
-            const pos = JSON.parse(positionDataJson);
-            // Note: SpaceGraph.addNode can also take a NodeDataObject. Here we pre-instantiate for clarity
-            // on NodeTypeClass usage, but could also do: this.spaceGraph.addNode({type: ..., ...pos, ...nodeDataParams})
-            // if types were mapped to strings.
-            const newNode = this.spaceGraph.addNode(new NodeTypeClass(null, pos, nodeDataParams));
-            if (newNode) {
-                this.spaceGraph.layoutEngine?.kick();
-                setTimeout(() => { // Delay to allow rendering before focusing
-                    this.spaceGraph.focusOnNode(newNode, 0.6, true);
-                    this.spaceGraph.setSelectedNode(newNode);
-                    if (newNode instanceof NoteNode && newNode.htmlElement) {
-                        newNode.htmlElement.querySelector('.node-content')?.focus();
-                    }
-                }, 100);
-            }
-        } catch (err) { console.error("Failed to create node from menu:", err, "Position data:", positionDataJson); }
-    }
-
-    /**
-     * Displays the main context menu at the given screen coordinates with the specified menu items.
-     * The menu is dynamically populated based on the `items` array.
-     * It also handles positioning to ensure the menu stays within the viewport.
-     *
-     * @param {number} x - Screen X coordinate for the top-left corner of the menu.
-     * @param {number} y - Screen Y coordinate for the top-left corner of the menu.
-     * @param {Array<object>} items - Array of menu item objects to display. Each item object can have properties like:
-     *                                `label` (string), `action` (string for `data-action`), `type` ('separator'),
-     *                                `disabled` (boolean), `class` (string for CSS class), and other `data-*` attributes.
-     * @private
-     */
-    _showContextMenu(x, y, items) {
-        if (!this.contextMenuElement) return;
-        this.contextMenuElement.innerHTML = ''; // Clear previous items
-        const ul = document.createElement('ul');
-        items.forEach(item => {
-            const li = document.createElement('li');
-            if (item.type === 'separator') {
-                li.className = 'separator';
-            } else {
-                li.textContent = item.label;
-                if(item.class) li.classList.add(item.class);
-                if(item.disabled) li.classList.add('disabled');
-
-                // Store all other item properties as data attributes for action handling
-                Object.entries(item).forEach(([key, value]) => {
-                    if (value !== undefined && value !== null && !['type', 'label', 'class', 'disabled'].includes(key)) {
-                        li.dataset[key] = typeof value === 'object' ? JSON.stringify(value) : String(value);
-                    }
-                });
-            }
-            ul.appendChild(li);
-        });
-        this.contextMenuElement.appendChild(ul);
-
-        // Position the menu, adjusting to stay within the viewport
-        const menuWidth = this.contextMenuElement.offsetWidth;
-        const menuHeight = this.contextMenuElement.offsetHeight;
-        let finalX = x + 5; // Small offset from cursor
-        let finalY = y + 5;
-        if (finalX + menuWidth > window.innerWidth) finalX = x - menuWidth - 5; // Flip to left if out of bounds right
-        if (finalY + menuHeight > window.innerHeight) finalY = y - menuHeight - 5; // Flip to top if out of bounds bottom
-        finalX = Math.max(5, finalX); // Clamp to ensure it's not off-screen left
-        finalY = Math.max(5, finalY); // Clamp to ensure it's not off-screen top
-
-        this.contextMenuElement.style.left = `${finalX}px`;
-        this.contextMenuElement.style.top = `${finalY}px`;
-        this.contextMenuElement.style.display = 'block';
-    }
-
-    /**
-     * Hides the main context menu by setting its display style to 'none'.
-     * @private
-     */
-    _hideContextMenu = () => { if (this.contextMenuElement) this.contextMenuElement.style.display = 'none'; }
-
-    /**
-     * Shows a confirmation dialog with a specified message and sets a callback for when the user confirms.
-     *
-     * @param {string} message - The message to display in the confirmation dialog.
-     * @param {function} onConfirm - The callback function to execute if the "Yes" button is clicked.
-     * @private
-     */
-    _showConfirm(message, onConfirm) {
-        const msgEl = $('#confirm-message', this.confirmDialogElement);
-        if (msgEl) msgEl.textContent = message;
-        this.confirmCallback = onConfirm;
-        if (this.confirmDialogElement) this.confirmDialogElement.style.display = 'block'; // Assumes CSS handles centering/styling
-    }
-
-    /**
-     * Hides the confirmation dialog and clears the `confirmCallback`.
-     * @private
-     */
-    _hideConfirm = () => { if (this.confirmDialogElement) this.confirmDialogElement.style.display = 'none'; this.confirmCallback = null; }
-
-    /**
-     * Handles the "Yes" click in the confirmation dialog. Executes the stored `confirmCallback` and hides the dialog.
-     * @private
-     */
-    _onConfirmYes = () => { this.confirmCallback?.(); this._hideConfirm(); }
-
-    /**
-     * Handles the "No" click in the confirmation dialog. Simply hides the dialog.
-     * @private
-     */
-    _onConfirmNo = () => { this._hideConfirm(); }
-
-    /**
-     * Initiates the node linking process.
-     * @param {BaseNode} sourceNode - The node from which the link starts.
-     * @param {HTMLElement | null} [sourcePortElement=null] - Optional source port element if linking from a specific port.
-     * @private
-     */
-    /**
-     * Initiates the process of creating a new edge (link) starting from a source node and optionally a specific port.
-     * Sets `this.spaceGraph.isLinking` to `true` and stores information about the source.
-     * Creates a temporary visual line ({@link SpaceGraph#tempLinkLine}) to guide the user.
-     *
-     * @param {BaseNode} sourceNode - The {@link BaseNode} from which the link originates.
-     * @param {HTMLElement | null} [sourcePortElement=null] - Optional HTML element representing the specific port on the `sourceNode`
-     *                                                       from which the link starts. If `null`, linking is node-to-node.
-     * @private
-     */
-    _startLinking(sourceNode, sourcePortElement = null) {
-        if (!sourceNode) return;
-        this.spaceGraph.isLinking = true;
-        this.spaceGraph.linkSourceNode = sourceNode;
-
-        if (sourcePortElement) {
-            this.spaceGraph.linkSourcePortInfo = {
-                name: sourcePortElement.dataset.portName,
-                type: sourcePortElement.dataset.portType, // 'input' or 'output'
-                element: sourcePortElement // For potential visual feedback on the source port
-            };
-        } else {
-            this.spaceGraph.linkSourcePortInfo = null; // Indicates node-to-node linking
-        }
-        this.container.style.cursor = 'crosshair';
-        this._createTempLinkLine(sourceNode /*, sourcePortElement */); // sourcePortElement currently not used by _createTempLinkLine for positioning
-    }
-
-    /**
-     * Creates a temporary visual line (a dashed {@link THREE.Line}) when a linking operation begins.
-     * The line starts at the source node's position and its end point will follow the mouse cursor
-     * (updated by `_updateTempLinkLine`).
-     *
-     * @param {BaseNode} sourceNode - The source {@link BaseNode} of the link.
-     * @private
-     */
-    _createTempLinkLine(sourceNode /*, sourcePortElement = null */) { // sourcePortElement currently unused
-        this._removeTempLinkLine(); // Ensure any previous temporary line is removed
-
-        const startPos = sourceNode.position.clone();
-        // TODO: If sourcePortElement is provided, adjust startPos to the port's actual 3D position.
-
-        const material = new THREE.LineDashedMaterial({
-            color: 0xffaa00, // Orange color for the temp line
-            linewidth: 2,    // Note: WebGL limitations might affect actual rendered width
-            dashSize: 8,
-            gapSize: 4,
-            transparent: true,
-            opacity: 0.9,
-            depthTest: false // Render on top for visibility
-        });
-        const points = [startPos.clone(), startPos.clone()]; // Line starts and ends at the same point initially
-        const geometry = new THREE.BufferGeometry().setFromPoints(points);
-
-        this.spaceGraph.tempLinkLine = new THREE.Line(geometry, material);
-        this.spaceGraph.tempLinkLine.computeLineDistances(); // Required for dashed lines to render correctly
-        this.spaceGraph.tempLinkLine.renderOrder = 1; // Render above other lines/objects if possible
-        this.spaceGraph.scene.add(this.spaceGraph.tempLinkLine);
-    }
-
-    /**
-     * Updates the endpoint of the temporary linking line (`this.spaceGraph.tempLinkLine`)
-     * to follow the current mouse/pointer coordinates during a linking operation.
-     *
-     * @param {number} screenX - Current X-coordinate of the pointer on the screen.
-     * @param {number} screenY - Current Y-coordinate of the pointer on the screen.
-     * @private
-     */
-    _updateTempLinkLine(screenX, screenY) {
-        if (!this.spaceGraph.tempLinkLine || !this.spaceGraph.linkSourceNode) return;
-
-        // Project screen coordinates to world space at the Z-depth of the source node (simplification)
-        const targetPos = this.spaceGraph.screenToWorld(screenX, screenY, this.spaceGraph.linkSourceNode.position.z);
-        if (targetPos) {
-            const positions = this.spaceGraph.tempLinkLine.geometry.attributes.position;
-            positions.setXYZ(1, targetPos.x, targetPos.y, targetPos.z); // Update the end point of the line
-            positions.needsUpdate = true;
-            this.spaceGraph.tempLinkLine.geometry.computeBoundingSphere(); // Important for rendering and culling
-            this.spaceGraph.tempLinkLine.computeLineDistances(); // Recompute for dashed lines
-        }
-    }
-
-    /**
-     * Removes the temporary linking line (`this.spaceGraph.tempLinkLine`) from the scene and disposes of its resources.
-     * @private
-     */
-    _removeTempLinkLine() {
-        if (this.spaceGraph.tempLinkLine) {
-            this.spaceGraph.tempLinkLine.geometry?.dispose();
-            this.spaceGraph.tempLinkLine.material?.dispose();
-            this.spaceGraph.scene.remove(this.spaceGraph.tempLinkLine);
-            this.spaceGraph.tempLinkLine = null;
-        }
-    }
-
-    /**
-     * Finalizes a linking operation when the pointer is released.
-     * If released over a valid target node (and optionally, a valid port), it creates a new {@link Edge}
-     * via {@link SpaceGraph#addEdge}. Cleans up the linking state afterwards using `cancelLinking`.
-     *
-     * @param {PointerEvent} event - The DOM {@link PointerEvent} (typically `pointerup`).
-     * @private
-     */
-    _completeLinking(event) {
-        this._removeTempLinkLine();
-        const targetInfo = this._getTargetInfo(event);
-        const sourceNode = this.spaceGraph.linkSourceNode;
-        const targetNode = targetInfo.node;
-        const sourcePortInfo = this.spaceGraph.linkSourcePortInfo;
-        const targetPortElement = targetInfo.element?.closest('.node-port');
-        let edgeData = {};
-
-        if (sourceNode && targetNode && targetNode !== sourceNode) { // Must be a different node
-            if (sourcePortInfo && targetPortElement) { // Port-to-port connection
-                const targetPortType = targetPortElement.dataset.portType;
-                // Basic validation: output can connect to input, or input to output
-                if (sourcePortInfo.type && targetPortType && sourcePortInfo.type !== targetPortType) {
-                    edgeData = {
-                        sourcePort: sourcePortInfo.name,
-                        targetPort: targetPortElement.dataset.portName,
-                    };
-                    this.spaceGraph.addEdge(sourceNode, targetNode, edgeData);
-                } else {
-                    console.warn("Link rejected: Cannot connect port of type", sourcePortInfo.type, "to port of type", targetPortType);
-                }
-            } else if (!sourcePortInfo && !targetPortElement) { // Node-to-node connection (no specific ports involved)
-                this.spaceGraph.addEdge(sourceNode, targetNode, {});
-            } else {
-                // Mixed mode (e.g., from a port to a node without ports, or from a node without ports to a port)
-                // This logic could be expanded if such connections are desired.
-                console.warn("Link rejected: Mixed port/node connection not directly handled by default.");
-            }
-        }
-        this.cancelLinking(); // Always clean up the linking state
-    }
-
-    /**
-     * Cancels an in-progress linking operation.
-     * Removes the temporary linking line, clears linking state variables (`isLinking`, `linkSourceNode`, etc.),
-     * and resets the cursor. Also clears any visual highlighting on potential target ports/nodes.
-     * @public
-     */
-    cancelLinking() {
-        this._removeTempLinkLine();
-
-        // Clear visual feedback on the source port if it was applied (example)
-        // if (this.spaceGraph.linkSourcePortInfo?.element) {
-        //    this.spaceGraph.linkSourcePortInfo.element.classList.remove('linking-source-port-active');
-        // }
-
-        // Clear target port/node highlighting
-        if (this.linkingTargetPortElement) {
-            this.linkingTargetPortElement.classList.remove('linking-target-port');
-            this.linkingTargetPortElement = null;
-        }
-        $$('.node-html.linking-target', this.container).forEach(el => el.classList.remove('linking-target'));
-
-        this.spaceGraph.isLinking = false;
-        this.spaceGraph.linkSourceNode = null;
-        this.spaceGraph.linkSourcePortInfo = null;
-        this.container.style.cursor = 'grab'; // Reset to default graph cursor
-    }
-
-    /**
-     * Handles global `keydown` events for implementing keyboard shortcuts.
-     * Actions include deleting selected nodes/edges, escaping current operations (linking, menus),
-     * focusing content, adjusting node/content size, and navigating between nodes.
-     * Ignores keydowns if the user is typing in an input, textarea, or contenteditable element (except for Escape).
-     *
-     * @param {KeyboardEvent} event - The DOM {@link KeyboardEvent}.
-     * @private
-     */
-    _onKeyDown(event) {
-        const activeEl = document.activeElement;
-        const isEditing = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable);
-        if (isEditing && event.key !== 'Escape') return; // Allow typing, but Escape should still work
-
-        const { selectedNode, selectedEdge } = this.spaceGraph;
-        let handled = false;
-
-        switch (event.key) {
-            case 'Delete':
-            case 'Backspace':
-                if (selectedNode) {
-                    this._showConfirm(`Delete node "${selectedNode.id.substring(0,10)}..."?`, () => this.spaceGraph.removeNode(selectedNode.id));
-                    handled = true;
-                } else if (selectedEdge) {
-                    this._showConfirm(`Delete edge "${selectedEdge.id.substring(0,10)}..."?`, () => this.spaceGraph.removeEdge(selectedEdge.id));
-                    handled = true;
-                }
-                break;
-            case 'Escape':
-                if (this.spaceGraph.isLinking) { this.cancelLinking(); handled = true; }
-                else if (this.contextMenuElement?.style.display === 'block') { this._hideContextMenu(); handled = true; }
-                else if (this.confirmDialogElement?.style.display === 'block') { this._hideConfirm(); handled = true; }
-                else if (this.edgeMenuObject) { this.spaceGraph.setSelectedEdge(null); handled = true; } // Hides edge menu
-                else if (selectedNode || selectedEdge) { this.spaceGraph.setSelectedNode(null); this.spaceGraph.setSelectedEdge(null); handled = true; }
-                break;
-            case 'Enter':
-                if (selectedNode instanceof NoteNode) {
-                    selectedNode.htmlElement?.querySelector('.node-content')?.focus();
-                    handled = true;
-                }
-                break;
-            case '+':
-            case '=': // Often grouped with + on keyboards
-                if (selectedNode instanceof HtmlNodeElement) {
-                    event.ctrlKey || event.metaKey ? selectedNode.adjustNodeSize(1.2) : selectedNode.adjustContentScale(1.15);
-                    handled = true;
-                }
-                break;
-            case '-':
-            case '_': // Often grouped with -
-                if (selectedNode instanceof HtmlNodeElement) {
-                     event.ctrlKey || event.metaKey ? selectedNode.adjustNodeSize(0.8) : selectedNode.adjustContentScale(1/1.15);
-                     handled = true;
-                }
-                break;
-            case ' ': // Space bar
-                if (selectedNode) { this.spaceGraph.focusOnNode(selectedNode, 0.5, true); handled = true; }
-                else if (selectedEdge) { // Focus on midpoint of edge
-                    const midPoint = new THREE.Vector3().lerpVectors(selectedEdge.source.position, selectedEdge.target.position, 0.5);
-                    const dist = selectedEdge.source.position.distanceTo(selectedEdge.target.position);
-                    this.spaceGraph.cameraController?.pushState();
-                    this.spaceGraph.cameraController?.moveTo(midPoint.x, midPoint.y, midPoint.z + dist * 0.6 + 100, 0.5, midPoint);
-                    handled = true;
-                } else { this.spaceGraph.centerView(); handled = true; }
-                break;
-            case 'Tab':
-                event.preventDefault(); // Prevent default focus change
-                const nodes = Array.from(this.spaceGraph.nodes.values()).sort((a, b) => a.id.localeCompare(b.id));
-                if (nodes.length === 0) break;
-                let currentIndex = selectedNode ? nodes.findIndex(n => n === selectedNode) : -1;
-                let nextIndex = event.shiftKey ? (currentIndex > 0 ? currentIndex - 1 : nodes.length - 1)
-                                               : (currentIndex < nodes.length - 1 ? currentIndex + 1 : 0);
-                if (nodes[nextIndex]) {
-                    this.spaceGraph.setSelectedNode(nodes[nextIndex]);
-                    this.spaceGraph.focusOnNode(nodes[nextIndex], 0.3, true);
-                }
-                handled = true;
-                break;
-            case 'ArrowUp': case 'ArrowDown': case 'ArrowLeft': case 'ArrowRight':
-                event.preventDefault();
-                this._navigateNodesWithArrows(event.key);
-                handled = true;
-                break;
-        }
-        if (handled) event.preventDefault(); // Prevent default browser action if the key was handled by the UIManager
-    }
-
-    /**
-     * Handles spatial navigation between nodes using arrow keys.
-     * Finds the best candidate node in the specified direction relative to the currently selected node.
-     * @param {string} key - The arrow key pressed ('ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight').
-     * @private
-     */
-    _navigateNodesWithArrows(key) {
-        let currentNode = this.spaceGraph.selectedNode;
-        const allGraphNodes = Array.from(this.spaceGraph.nodes.values());
-
-        if (!currentNode) { // If no node is selected, select the "first" one based on ID sort
-            if (allGraphNodes.length > 0) {
-                allGraphNodes.sort((a, b) => a.id.localeCompare(b.id));
-                currentNode = allGraphNodes[0];
-                this.spaceGraph.setSelectedNode(currentNode);
-                this.spaceGraph.focusOnNode(currentNode, 0.3, true);
-                return; // Navigation will start from this node on next arrow key press
-            }
-            return; // No nodes to navigate
-        }
-
-        const directionVector = new THREE.Vector3();
-        if (key === 'ArrowUp') directionVector.set(0, 1, 0);
-        else if (key === 'ArrowDown') directionVector.set(0, -1, 0);
-        else if (key === 'ArrowLeft') directionVector.set(-1, 0, 0);
-        else if (key === 'ArrowRight') directionVector.set(1, 0, 0);
-
-        let bestCandidateNode = null;
-        let minScore = Infinity;
-        const currentPosition = currentNode.position;
-        const vectorToOther = new THREE.Vector3();
-
-        for (const otherNode of allGraphNodes) {
-            if (otherNode === currentNode) continue;
-
-            vectorToOther.subVectors(otherNode.position, currentPosition);
-            const distance = vectorToOther.length();
-            if (distance === 0) continue;
-
-            const normalizedVectorToOther = vectorToOther.clone().normalize(); // Use clone to preserve original vectorToOther for distance
-            const dotProduct = normalizedVectorToOther.dot(directionVector);
-
-            // Prefer nodes that are generally in the arrow key's direction (dotProduct > threshold)
-            // Threshold of 0.3 means roughly within a 140-degree cone in the direction of the arrow.
-            if (dotProduct > 0.3) {
-                // Score prioritizes alignment (higher dotProduct) and proximity (lower distance).
-                // (1.5 - dotProduct) makes alignment factor stronger. Lower score is better.
-                const score = distance * (1.5 - dotProduct);
-                if (score < minScore) {
-                    minScore = score;
-                    bestCandidateNode = otherNode;
-                }
-            }
-        }
-
-        if (bestCandidateNode) {
-            this.spaceGraph.setSelectedNode(bestCandidateNode);
-            this.spaceGraph.focusOnNode(bestCandidateNode, 0.3, true);
-        }
-    }
-
-
-    /**
-     * Handles `wheel` events on the {@link SpaceGraph} container.
-     * - Default behavior: Zooms the camera via {@link CameraController#zoom}.
-     * - Ctrl/Meta + Wheel: Adjusts content scale of the hovered {@link HtmlNodeElement}
-     *   via {@link HtmlNodeElement#adjustContentScale}.
-     * Prevents graph interaction if wheeling over specific UI elements like node controls or editable content.
-     *
-     * @param {WheelEvent} event - The DOM {@link WheelEvent}.
-     * @private
-     */
-    _onWheel = (event) => {
-        const targetInfo = this._getTargetInfo(event);
-        // Do not interfere if wheeling over node controls, edge menu, or inside an editable area that handles scroll
-        if (event.target.closest('.node-controls, .edge-menu-frame') || targetInfo.contentEditable) {
-            // Allow native scroll for contentEditable if it's scrollable
-            if (targetInfo.contentEditable) {
-                const el = targetInfo.contentEditable;
-                if (el.scrollHeight > el.clientHeight || el.scrollWidth > el.clientWidth) {
-                    return; // Let the browser handle scrolling within the element
-                }
-            } else {
-                return; // Other specific UI elements, don't interfere
-            }
-        }
-
-        event.preventDefault(); // Prevent default browser scroll/zoom for the container
-
-        if (event.ctrlKey || event.metaKey) { // Ctrl/Meta + Wheel for content scaling
-            if (targetInfo.node instanceof HtmlNodeElement) {
-                event.stopPropagation(); // Stop propagation to prevent graph zoom as well
-                targetInfo.node.adjustContentScale(event.deltaY < 0 ? 1.1 : (1 / 1.1));
-            }
-        } else { // Default wheel action: graph zoom
-            this.spaceGraph.cameraController?.zoom(event);
-        }
-    }
-
-    /**
-     * Shows a small, interactive menu near a selected {@link Edge}.
-     * The menu provides quick actions like deleting the edge or (in the future) modifying its style.
-     * The menu is a {@link CSS3DObject} added to the CSS scene.
-     *
-     * @param {Edge} edge - The {@link Edge} for which to show the menu.
-     * @public
-     */
+    // --- Edge Menu specific methods now part of EdgeMenuManager, but UIManager may need to trigger show/hide ---
+    // Called by SpaceGraph.setSelectedEdge
     showEdgeMenu(edge) {
-        if (!edge || !(edge instanceof Edge)) {
-            console.warn("showEdgeMenu: Invalid edge provided.", edge);
-            return;
-        }
-        if (this.edgeMenuObject) this.hideEdgeMenu(); // Hide any existing menu
-
-        const menuElement = document.createElement('div');
-        menuElement.className = 'edge-menu-frame';
-        menuElement.dataset.edgeId = edge.id;
-        // Buttons for edge actions. NYI = Not Yet Implemented.
-        menuElement.innerHTML = `
-          <button title="Change Color (NYI)" data-action="color">🎨</button>
-          <button title="Adjust Thickness (NYI)" data-action="thickness">➖</button>
-          <button title="Change Style (NYI)" data-action="style">〰️</button>
-          <button title="Edit Constraint (NYI)" data-action="constraint">🔗</button>
-          <button title="Delete Edge" class="delete" data-action="delete">×</button>
-      `;
-
-        menuElement.addEventListener('click', (e) => {
-            const button = e.target.closest('button');
-            if (!button) return;
-            e.stopPropagation(); // Prevent click from propagating to graph background & deselecting edge
-            const action = button.dataset.action;
-            switch (action) {
-                case 'delete':
-                    this._showConfirm(`Delete edge "${edge.id.substring(0,10)}..."?`, () => this.spaceGraph.removeEdge(edge.id));
-                    break;
-                case 'color': case 'thickness': case 'style': case 'constraint':
-                    this.showStatus(`Action '${action}' for edge ${edge.id} is not yet implemented.`, 'info');
-                    break;
-                default: console.warn("Unknown edge menu action:", action);
-            }
-        });
-        
-        menuElement.addEventListener('pointerdown', e => e.stopPropagation()); // Prevent graph interactions
-        menuElement.addEventListener('wheel', e => e.stopPropagation());       // Prevent graph zoom
-
-        this.edgeMenuObject = new CSS3DObject(menuElement);
-        this.spaceGraph.cssScene.add(this.edgeMenuObject);
-        this.updateEdgeMenuPosition(); // Position it
+        this.edgeMenuManager.showEdgeMenu(edge);
     }
 
-    /**
-     * Hides the currently visible edge menu, if any.
-     * Removes the menu's {@link CSS3DObject} from the scene and its HTML element from the DOM.
-     * @public
-     */
     hideEdgeMenu() {
-        if (this.edgeMenuObject) {
-            this.edgeMenuObject.element?.remove();
-            this.edgeMenuObject.parent?.remove(this.edgeMenuObject);
-            this.edgeMenuObject = null;
-        }
+        this.edgeMenuManager.hideEdgeMenu();
     }
 
-    /**
-     * Updates the position of the edge menu to be near the midpoint of the currently selected edge.
-     * Also ensures the menu billboards to face the camera. Called during graph updates if the menu is visible.
-     * @public
-     */
+    // Called by SpaceGraph._updateNodesAndEdges (animation loop)
     updateEdgeMenuPosition() {
-        if (!this.edgeMenuObject || !this.spaceGraph.selectedEdge) return;
-        const edge = this.spaceGraph.selectedEdge;
-        const midPoint = new THREE.Vector3().lerpVectors(edge.source.position, edge.target.position, 0.5);
-        this.edgeMenuObject.position.copy(midPoint);
-        if (this.spaceGraph._camera) {
-             this.edgeMenuObject.quaternion.copy(this.spaceGraph._camera.quaternion);
-        }
+        this.edgeMenuManager.update(); // EdgeMenuManager's update calls its own updateEdgeMenuPosition
     }
 
-    /**
-     * Displays a brief status message to the user using `this.statusIndicatorElement`.
-     * The message automatically fades out after a short duration.
-     *
-     * @param {string} message - The text message to display.
-     * @param {'info' | 'warning' | 'error'} [type='info'] - The type of message, used for styling (CSS classes).
-     * @param {number} [duration=3000] - How long the message should be visible in milliseconds.
-     * @public
-     * @example
-     * uiManager.showStatus("Node saved successfully!", "info");
-     * uiManager.showStatus("Failed to load resource.", "error", 5000);
-     */
-    showStatus(message, type = 'info', duration = 3000) {
-        if (!this.statusIndicatorElement) return;
-        this.statusIndicatorElement.textContent = message;
-        this.statusIndicatorElement.className = `status-indicator status-${type}`; // Base class + type class
-        this.statusIndicatorElement.style.opacity = '1';
-        this.statusIndicatorElement.style.display = 'block';
-
-        setTimeout(() => {
-            this.statusIndicatorElement.style.opacity = '0';
-            // Optional: set display to none after transition
-            // setTimeout(() => { if(this.statusIndicatorElement.style.opacity === '0') this.statusIndicatorElement.style.display = 'none'; }, 500);
-        }, duration);
+    // --- Linking specific methods are now part of LinkingManager, but UIManager may need to trigger cancel ---
+    // Called by SpaceGraph if needed, or by KeyboardInputHandler via facade's handleEscape
+    cancelLinking() {
+        this.linkingManager.cancelLinking();
     }
 
 
-    /**
-     * Cleans up all resources and event listeners used by the UIManager.
-     * This includes removing DOM elements it created (if not provided externally)
-     * and detaching all event listeners from the window, document, and container.
-     * @public
-     */
     dispose() {
-        // Remove event listeners
-        this.container.removeEventListener('pointerdown', this._onPointerDown.bind(this));
-        window.removeEventListener('pointermove', this._onPointerMove.bind(this));
-        window.removeEventListener('pointerup', this._onPointerUp.bind(this));
-        this.container.removeEventListener('contextmenu', this._onContextMenu.bind(this));
+        this.pointerInputHandler.dispose();
+        this.keyboardInputHandler.dispose();
+        this.wheelInputHandler.dispose();
+        this.dragAndDropHandler.dispose();
+        this.contextMenuManager.dispose();
+        this.linkingManager.dispose();
+        this.edgeMenuManager.dispose();
+        this.dialogManager.dispose();
+
         document.removeEventListener('click', this._onDocumentClick.bind(this), true);
-        this.contextMenuElement?.removeEventListener('click', this._onContextMenuClick.bind(this));
 
-        const confirmYesButton = $('#confirm-yes', this.confirmDialogElement);
-        if (confirmYesButton) confirmYesButton.removeEventListener('click', this._onConfirmYes.bind(this));
-        const confirmNoButton = $('#confirm-no', this.confirmDialogElement);
-        if (confirmNoButton) confirmNoButton.removeEventListener('click', this._onConfirmNo.bind(this));
-
-        window.removeEventListener('keydown', this._onKeyDown.bind(this));
-        this.container.removeEventListener('wheel', this._onWheel.bind(this));
-        this.container.removeEventListener('dragover', this._onDragOver.bind(this));
-        this.container.removeEventListener('drop', this._onDrop.bind(this));
-
-        // Clean up UI elements
-        this.hideEdgeMenu();
-        // Remove elements only if UIManager created them (i.e., they have the default IDs and are children of body/container)
-        // This logic assumes UIManager adds them to document.body if created.
-        // A more robust way would be to track which elements it created.
-        if (this.contextMenuElement?.id === 'context-menu' && this.contextMenuElement.parentElement === document.body) {
-            this.contextMenuElement.remove();
+        // Remove DOM elements if UIManager was responsible for creating them
+        if (this.contextMenuEl && this.contextMenuEl.id === 'context-menu' && this.contextMenuEl.parentElement === document.body) {
+            this.contextMenuEl.remove();
         }
-        if (this.confirmDialogElement?.id === 'confirm-dialog' && this.confirmDialogElement.parentElement === document.body) {
-            this.confirmDialogElement.remove();
+        if (this.confirmDialogEl && this.confirmDialogEl.id === 'confirm-dialog' && this.confirmDialogEl.parentElement === document.body) {
+            this.confirmDialogEl.remove();
         }
-        if (this.statusIndicatorElement?.id === 'status-indicator' && this.statusIndicatorElement.parentElement === document.body) {
-            this.statusIndicatorElement.remove();
+        if (this.statusIndicatorEl && this.statusIndicatorEl.id === 'status-indicator' && this.statusIndicatorEl.parentElement === document.body) {
+            this.statusIndicatorEl.remove();
         }
 
-        // Nullify references
         this.spaceGraph = null; this.container = null;
-        this.contextMenuElement = null; this.confirmDialogElement = null; this.statusIndicatorElement = null;
-        this.edgeMenuObject = null; this.draggedNode = null; this.resizedNode = null; this.hoveredEdge = null;
-        this.confirmCallback = null; this.linkingTargetPortElement = null;
-
-        console.log("UIManager disposed.");
-    }
-
-    // --- Drag and Drop Node Creation ---
-    /**
-     * Handles `dragover` events on the container, typically for drag-and-drop node creation.
-     * Prevents default handling and sets `dropEffect` to 'copy' if the dragged data is of a recognized type.
-     * @param {DragEvent} event - The DOM {@link DragEvent}.
-     * @private
-     */
-    _onDragOver(event) {
-        event.preventDefault(); // Necessary to allow drop
-        if (event.dataTransfer?.types.includes('application/x-spacegraph-node-type')) {
-            event.dataTransfer.dropEffect = 'copy';
-            this.container.classList.add('drag-over-active'); // Visual feedback for droppable area
-        } else {
-            event.dataTransfer.dropEffect = 'none';
-        }
-    }
-
-    /**
-     * Handles `drop` events on the container, typically for creating new nodes from dragged data.
-     * Parses the dragged data (expected to be JSON string with at least a `type` property),
-     * converts drop position to world coordinates, and calls {@link SpaceGraph#addNode}.
-     *
-     * @param {DragEvent} event - The DOM {@link DragEvent}.
-     * @private
-     */
-    _onDrop(event) {
-        event.preventDefault();
-        this.container.classList.remove('drag-over-active');
-
-        const rawData = event.dataTransfer?.getData('application/x-spacegraph-node-type');
-        if (!rawData) {
-            console.warn("Drop event without 'application/x-spacegraph-node-type' data.");
-            return;
-        }
-
-        let nodeCreationData;
-        try {
-            nodeCreationData = JSON.parse(rawData);
-        } catch (err) {
-            console.error("Failed to parse dragged node data JSON:", err, "Raw data:", rawData);
-            return;
-        }
-
-        if (!nodeCreationData.type) {
-            console.error("Dragged node data is missing 'type' property.", nodeCreationData);
-            return;
-        }
-
-        // Convert drop screen coordinates to world coordinates on the Z=0 plane
-        const worldPos = this.spaceGraph.screenToWorld(event.clientX, event.clientY, 0);
-        if (!worldPos) {
-            console.error("Could not convert drop position to world coordinates.");
-            return;
-        }
-
-        // Merge world position into the node creation data, allowing dragged data to override x,y,z if already present
-        const finalNodeData = { x: worldPos.x, y: worldPos.y, z: worldPos.z, ...nodeCreationData };
-
-        const newNode = this.spaceGraph.addNode(finalNodeData);
-
-        if (newNode) {
-            console.log(`Node of type '${finalNodeData.type}' created by drop:`, newNode.id);
-            this.spaceGraph.setSelectedNode(newNode); // Select the newly created node
-            this.spaceGraph.layoutEngine?.kick();      // Adjust layout for the new node
-            // Optional: Focus on the new node, similar to _createNodeFromMenu
-            // setTimeout(() => this.spaceGraph.focusOnNode(newNode, 0.6, true), 100);
-        } else {
-            // Error messages would typically be logged by SpaceGraph.addNode if creation failed
-            this.showStatus(`Failed to create node of type '${finalNodeData.type}' from drop.`, 'error');
-        }
+        this.contextMenuEl = null; this.confirmDialogEl = null; this.statusIndicatorEl = null;
+        this._hoveredEdge = null;
+        console.log("UIManager (Facade) disposed.");
     }
 }
 
