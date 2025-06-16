@@ -45,14 +45,14 @@
   "devDependencies": {
     "@rollup/plugin-commonjs": "^28.0.5",
     "@rollup/plugin-node-resolve": "^16.0.1",
-    "jsdoc": "^4.0.4",
-    "rollup": "^4.43.0",
     "@rollup/plugin-terser": "^0.4.4",
-    "vitest": "^1.2.0",
-    "jsdom": "^24.0.0",
     "eslint": "^8.57.0",
-    "prettier": "^3.3.3",
+    "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.2.1",
-    "eslint-config-prettier": "^9.1.0"
+    "jsdoc": "^4.0.4",
+    "jsdom": "^24.0.0",
+    "prettier": "^3.3.3",
+    "rollup": "^4.43.0",
+    "vitest": "^1.6.1"
   }
 }
