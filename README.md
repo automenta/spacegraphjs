@@ -49,7 +49,11 @@ Spacegraph.js is a general-purpose, extensible JavaScript library for creating i
     *   Sourcemap files (`.map`) are also provided for debugging. The main library file is `spacegraph.js` in the root (source) or the appropriate file in `dist/`.
 
 3.  **Include in HTML:**
-    Create an HTML file and include your chosen version of `spacegraph.js` (e.g., `dist/spacegraph.esm.min.js` for modern projects). You'll also need to include `three.js` and `gsap` (typically via CDN using an import map).
+    Create an HTML file and include your chosen version of `spacegraph.js` (e.g., `dist/spacegraph.esm.min.js` for modern projects).
+    The library now bundles its core dependencies, `three.js` and `gsap`. If you are using the UMD build (`dist/spacegraph.umd.js` or `dist/spacegraph.umd.min.js`) directly in a `<script>` tag without a module system, `THREE` and `gsap` will be expected to be available globally (e.g., included via CDN separately).
+    However, if you are using the ES Module build (`dist/spacegraph.esm.js` or `dist/spacegraph.esm.min.js`) as shown in the example below, `three.js` and `gsap` are included in the bundle and no separate import map or CDN include is strictly necessary for them to work with `spacegraph-zui`.
+
+    The example below includes an `importmap` for `three` and `gsap`. This can be useful if you wish to use these libraries directly in your own code with specific versions or share them with other libraries, but it's not required for `spacegraph-zui` itself when using the ESM build.
 
     ```html
     <!DOCTYPE html>
@@ -99,6 +103,8 @@ Once published to npm, you will be able to install it via:
 ```bash
 npm install spacegraph-zui --save
 ```
+`three.js` and `gsap` are now bundled with `spacegraph-zui`, so you no longer need to install them separately.
+
 And then import it:
 ```javascript
 import { SpaceGraph } from 'spacegraph-zui';

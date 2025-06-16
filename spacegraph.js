@@ -1357,7 +1357,7 @@ export class SpaceGraph {
  * @property {CSS3DObject | null} labelObject - Optional {@link CSS3DObject} for rendering a text label associated with the node,
  *                                             typically used by {@link ShapeNode}s or custom nodes requiring separate 3D labels.
  */
-class BaseNode {
+export class BaseNode {
     /** @type {string} */
     id = null;
     /** @type {SpaceGraph | null} */

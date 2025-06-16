@@ -1,6 +1,6 @@
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
-import { terser } from 'rollup-plugin-terser';
+import terser from '@rollup/plugin-terser'; // Updated import
 
 const basePlugins = [
   resolve(),
@@ -9,7 +9,7 @@ const basePlugins = [
 
 export default {
   input: 'spacegraph.js',
-  external: ['three', 'gsap'],
+  external: [], // three and gsap will now be bundled
   output: [
     // Non-minified outputs
     {
@@ -23,9 +23,13 @@ export default {
       format: 'umd',
       name: 'SpaceGraphZUI',
       sourcemap: true,
+      // globals are mainly for external UMD dependencies
+      // Since three and gsap are now bundled, these might not be strictly needed for them
+      // but leaving them won't harm for other potential externals.
+      // For a cleaner setup, if NO externals remain, globals could be removed or emptied.
       globals: {
-        'three': 'THREE',
-        'gsap': 'gsap'
+        'three': 'THREE', // Kept in case of other externals, or future changes
+        'gsap': 'gsap'    // Kept in case of other externals
       },
       plugins: basePlugins // Apply base plugins
     },

@@ -21,7 +21,10 @@
     "build": "npx rollup -c",
     "test": "vitest",
     "docs:build": "jsdoc -c jsdoc.conf.json",
-    "docs:view": "echo \"Open ./docs/api/index.html in your browser to view the documentation.\""
+    "docs:view": "echo \"Open ./docs/api/index.html in your browser to view the documentation.\"",
+    "lint": "eslint . --ext .js",
+    "lint:fix": "eslint . --ext .js --fix",
+    "format": "prettier --write \"**/*.{js,json,md,html,css}\""
   },
   "author": "SpaceGraph Contributors",
   "license": "MIT",
@@ -44,8 +47,12 @@
     "@rollup/plugin-node-resolve": "^16.0.1",
     "jsdoc": "^4.0.4",
     "rollup": "^4.43.0",
-    "rollup-plugin-terser": "^7.0.2",
+    "@rollup/plugin-terser": "^0.4.4",
     "vitest": "^1.2.0",
-    "jsdom": "^24.0.0"
+    "jsdom": "^24.0.0",
+    "eslint": "^8.57.0",
+    "prettier": "^3.3.3",
+    "eslint-plugin-prettier": "^5.2.1",
+    "eslint-config-prettier": "^9.1.0"
   }
 }
