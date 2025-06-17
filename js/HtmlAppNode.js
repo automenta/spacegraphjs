@@ -1,5 +1,5 @@
-import { RegisteredNode } from '../spacegraph.js'; // Assuming spacegraph.js is in the root
-import { $ } from '../spacegraph.js'; // Import utility
+import { RegisteredNode } from './RegisteredNode.js';
+import { $ } from './utils.js'; // Import utility
 
 /**
  * @class HtmlAppNode

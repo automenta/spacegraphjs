@@ -104,6 +104,45 @@ You **do not** need to create `this.htmlElement` yourself. `HtmlAppNode`'s const
     -   `<typeName>-node` (e.g., `my-custom-node-node`) for your specific styles.
 -   It sets up basic flexbox styling: `display: flex`, `flex-direction: column`, `overflow: hidden`. This makes it easy to add children that fill the node or stack vertically.
 
+### HtmlAppNode Subclasses and `TypeDefinition`
+
+When you create a custom node by extending `HtmlAppNode` (e.g., `class MyCustomNode extends HtmlAppNode { ... }`) and then register it with SpaceGraph, it's important to understand how your class methods and the `TypeDefinition` object work together:
+
+-   **Lifecycle Methods in Your Class:** The core lifecycle logic for your node (like setting up its HTML, reacting to data changes, and cleaning up) should be implemented as methods directly within your `MyCustomNode` class. These are typically:
+    -   `onInit()`: For initial DOM setup and event listeners.
+    -   `onDataUpdate(updatedData)`: To react to changes in `this.data`.
+    -   `onDispose()`: For any custom cleanup.
+
+-   **Role of `TypeDefinition`:** The `TypeDefinition` object you pass to `spaceGraph.registerNodeType(typeName, typeDefinition)` then serves these primary purposes:
+    -   `typeName` (string): This is the key you use for registration (e.g., `'my-custom-node'`).
+    -   `nodeClass` (class reference): This **must point to your custom class** (e.g., `MyCustomNode`). This tells SpaceGraph to instantiate your class.
+    -   `getDefaults` (function): This method should be part of the `TypeDefinition`. It's called early in the node creation process to provide default values for `this.data` (like `width`, `height`, `label`, and any custom properties your node needs).
+
+-   **What Not to Put in `TypeDefinition` (Usually):**
+    -   Functional callbacks like `onCreate`, `onUpdate` (the ones that are properties of the `TypeDefinition` object itself) are generally **not needed** when using an `HtmlAppNode` subclass.
+    -   `HtmlAppNode` internally handles the equivalent of `onCreate` (by calling your class's `onInit()` method and setting up declarative bindings) and `onUpdate` (by handling declarative data bindings within its own `onDataUpdate` which you can extend with `super.onDataUpdate()`).
+    -   It's cleaner and more object-oriented to keep all the behavioral logic within your `HtmlAppNode` subclass methods.
+
+**In Summary:** Focus your node's unique logic within its class methods. The `TypeDefinition` becomes a simpler object that primarily tells SpaceGraph about your class and its default data.
+
+```javascript
+// Example: TypeDefinition for an HtmlAppNode subclass named MyFancyNode
+
+// const myFancyNodeDefinition = {
+//   // typeName is the key for registration: graph.registerNodeType('my-fancy-node', myFancyNodeDefinition);
+//   nodeClass: MyFancyNode, // Your class extending HtmlAppNode
+//   getDefaults: (nodeInstance) => ({ // nodeInstance is your MyFancyNode instance
+//     width: 300,
+//     height: 200,
+//     label: nodeInstance.id ? `Node ${nodeInstance.id}` : 'Fancy Node',
+//     initialCounter: 5,
+//     backgroundColor: 'cornflowerblue'
+//     // ... other custom defaults ...
+//   })
+//   // No onCreate, onUpdate, onDispose, etc., here if MyFancyNode handles them.
+// };
+```
+
 ## 4. Key Methods to Implement in Your Subclass
 
 Your custom class (e.g., `MyCustomNode`) will primarily implement these lifecycle methods:
