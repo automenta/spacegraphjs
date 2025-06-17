@@ -81,7 +81,9 @@ export class PointerInputHandler {
         }
 
         let intersectedEdge = null;
-        const isDirectHtmlNodePartInteraction = nodeHtmlElement && (resizeHandle || nodeControlsButton || contentEditable || interactiveInNode || portElement);
+        const isDirectHtmlNodePartInteraction =
+            nodeHtmlElement &&
+            (resizeHandle || nodeControlsButton || contentEditable || interactiveInNode || portElement);
 
         if (!isDirectHtmlNodePartInteraction) {
             const intersectedObject = this.spaceGraph.intersectedObject(event.clientX, event.clientY);
@@ -89,7 +91,8 @@ export class PointerInputHandler {
                 if (intersectedObject instanceof Edge) {
                     intersectedEdge = intersectedObject;
                 } else if (intersectedObject instanceof BaseNode) {
-                    if (!node) { // If DOM didn't find an HTML node, use the raycasted one
+                    if (!node) {
+                        // If DOM didn't find an HTML node, use the raycasted one
                         node = intersectedObject;
                     }
                     // If DOM found an HTML node, and raycast found a different one (e.g. ShapeNode behind),
@@ -100,9 +103,15 @@ export class PointerInputHandler {
         }
 
         return {
-            element, nodeHtmlElement, resizeHandle, nodeControlsButton, contentEditable, interactiveInNode, portElement,
+            element,
+            nodeHtmlElement,
+            resizeHandle,
+            nodeControlsButton,
+            contentEditable,
+            interactiveInNode,
+            portElement,
             node: node,
-            intersectedEdge
+            intersectedEdge,
         };
     }
 
@@ -123,32 +132,38 @@ export class PointerInputHandler {
 
         // Example of direct management within PointerInputHandler for drag/resize:
         if (targetInfo.nodeControlsButton && targetInfo.node instanceof HtmlNodeElement) {
-            event.preventDefault(); event.stopPropagation();
+            event.preventDefault();
+            event.stopPropagation();
             this.uiManager.handleNodeControlButtonClick(targetInfo.nodeControlsButton, targetInfo.node); // Facade method
-            this.uiManager.hideContextMenu(); return;
+            this.uiManager.hideContextMenu();
+            return;
         }
 
         if (targetInfo.portElement && targetInfo.node) {
-            event.preventDefault(); event.stopPropagation();
+            event.preventDefault();
+            event.stopPropagation();
             this.uiManager.linkingManager.startLinking(targetInfo.node, targetInfo.portElement);
-            this.uiManager.hideContextMenu(); return;
+            this.uiManager.hideContextMenu();
+            return;
         }
 
         if (targetInfo.resizeHandle && targetInfo.node instanceof HtmlNodeElement) {
-            event.preventDefault(); event.stopPropagation();
+            event.preventDefault();
+            event.stopPropagation();
             this.resizedNode = targetInfo.node;
             this.resizedNode.startResize();
             this.resizeStartPos = { x: event.clientX, y: event.clientY };
             this.resizeStartSize = { ...this.resizedNode.size };
             this.container.style.cursor = 'nwse-resize';
-            this.uiManager.hideContextMenu(); return;
+            this.uiManager.hideContextMenu();
+            return;
         }
 
         if (targetInfo.node) {
             if (targetInfo.interactiveInNode || targetInfo.contentEditable) {
-                 event.stopPropagation();
-                 if(this.spaceGraph.selectedNode !== targetInfo.node) this.spaceGraph.setSelectedNode(targetInfo.node);
-                 this.uiManager.hideContextMenu();
+                event.stopPropagation();
+                if (this.spaceGraph.selectedNode !== targetInfo.node) this.spaceGraph.setSelectedNode(targetInfo.node);
+                this.uiManager.hideContextMenu();
             } else {
                 event.preventDefault();
                 this.draggedNode = targetInfo.node;
@@ -156,17 +171,24 @@ export class PointerInputHandler {
                 if (this.draggedNode instanceof HtmlNodeElement && this.draggedNode.htmlElement) {
                     this.draggedNode.htmlElement.classList.add('node-dragging-html');
                 }
-                const worldPos = this.spaceGraph.screenToWorld(event.clientX, event.clientY, this.draggedNode.position.z);
+                const worldPos = this.spaceGraph.screenToWorld(
+                    event.clientX,
+                    event.clientY,
+                    this.draggedNode.position.z
+                );
                 this.dragOffset = worldPos ? worldPos.sub(this.draggedNode.position) : new THREE.Vector3();
                 this.container.style.cursor = 'grabbing';
-                if(this.spaceGraph.selectedNode !== targetInfo.node) this.spaceGraph.setSelectedNode(targetInfo.node);
-                this.uiManager.hideContextMenu(); return;
+                if (this.spaceGraph.selectedNode !== targetInfo.node) this.spaceGraph.setSelectedNode(targetInfo.node);
+                this.uiManager.hideContextMenu();
+                return;
             }
         } else if (targetInfo.intersectedEdge) {
             event.preventDefault();
             this.spaceGraph.setSelectedEdge(targetInfo.intersectedEdge);
-            this.uiManager.hideContextMenu(); return;
-        } else { // Background click
+            this.uiManager.hideContextMenu();
+            return;
+        } else {
+            // Background click
             this.uiManager.hideContextMenu();
             if (this.pointerState.primary && !this.spaceGraph.selectedNode && !this.spaceGraph.selectedEdge) {
                 this.spaceGraph.cameraController?.startPan(event);
@@ -185,14 +207,17 @@ export class PointerInputHandler {
             event.preventDefault();
             const newWidth = this.resizeStartSize.width + (event.clientX - this.resizeStartPos.x);
             const newHeight = this.resizeStartSize.height + (event.clientY - this.resizeStartPos.y);
-            this.resizedNode.resize(newWidth, newHeight); return;
+            this.resizedNode.resize(newWidth, newHeight);
+            return;
         }
         if (this.draggedNode) {
             event.preventDefault();
             const worldPos = this.spaceGraph.screenToWorld(event.clientX, event.clientY, this.draggedNode.position.z);
-            if (worldPos) this.draggedNode.drag(worldPos.sub(this.dragOffset)); return;
+            if (worldPos) this.draggedNode.drag(worldPos.sub(this.dragOffset));
+            return;
         }
-        if (this.uiManager.linkingManager.isLinking()) { // isLinking is managed by LinkingManager now, accessed via uiManager
+        if (this.uiManager.linkingManager.isLinking()) {
+            // isLinking is managed by LinkingManager now, accessed via uiManager
             event.preventDefault();
             // Delegate to LinkingManager
             this.uiManager.linkingManager.updateTempLinkLine(event.clientX, event.clientY);
@@ -201,12 +226,17 @@ export class PointerInputHandler {
         }
 
         if (this.pointerState.primary && this.spaceGraph.cameraController?.isPanning) {
-             this.spaceGraph.cameraController.pan(event);
+            this.spaceGraph.cameraController.pan(event);
         }
 
         // Edge hovering logic will be moved to UIManager facade or a dedicated HoverManager
         // For now, keep it out of PointerInputHandler's direct responsibility during move
-        if (!this.pointerState.down && !this.resizedNode && !this.draggedNode && !this.uiManager.linkingManager.isLinking()) {
+        if (
+            !this.pointerState.down &&
+            !this.resizedNode &&
+            !this.draggedNode &&
+            !this.uiManager.linkingManager.isLinking()
+        ) {
             this.uiManager.handleEdgeHover(event); // Delegate to UIManager facade
         }
     }
@@ -216,20 +246,28 @@ export class PointerInputHandler {
         this.container.style.cursor = this.uiManager.linkingManager.isLinking() ? 'crosshair' : 'grab'; // Check LinkingManager state
 
         if (this.resizedNode) {
-            this.resizedNode.endResize(); this.resizedNode = null;
+            this.resizedNode.endResize();
+            this.resizedNode = null;
         } else if (this.draggedNode) {
             if (this.draggedNode instanceof HtmlNodeElement && this.draggedNode.htmlElement) {
                 this.draggedNode.htmlElement.classList.remove('node-dragging-html');
             }
-            this.draggedNode.endDrag(); this.draggedNode = null;
-        } else if (this.uiManager.linkingManager.isLinking() && event.button === 0) { // Check linkingManager state
+            this.draggedNode.endDrag();
+            this.draggedNode = null;
+        } else if (this.uiManager.linkingManager.isLinking() && event.button === 0) {
+            // Check linkingManager state
             this.uiManager.linkingManager.completeLinking(event);
-        } else if (event.button === 1 && this.pointerState.potentialClick) { // Middle mouse click
+        } else if (event.button === 1 && this.pointerState.potentialClick) {
+            // Middle mouse click
             const { node } = this._getTargetInfo(event);
-            if (node) { this.spaceGraph.autoZoom(node); event.preventDefault(); }
-        } else if (event.button === 0 && this.pointerState.potentialClick) { // Primary click
-             const targetInfo = this._getTargetInfo(event);
-             if (!targetInfo.node && !targetInfo.intersectedEdge && !this.spaceGraph.cameraController?.isPanning) {
+            if (node) {
+                this.spaceGraph.autoZoom(node);
+                event.preventDefault();
+            }
+        } else if (event.button === 0 && this.pointerState.potentialClick) {
+            // Primary click
+            const targetInfo = this._getTargetInfo(event);
+            if (!targetInfo.node && !targetInfo.intersectedEdge && !this.spaceGraph.cameraController?.isPanning) {
                 this.spaceGraph.setSelectedNode(null);
                 this.spaceGraph.setSelectedEdge(null);
             }
@@ -237,8 +275,9 @@ export class PointerInputHandler {
 
         this.spaceGraph.cameraController?.endPan();
         this._updatePointerState(event, false);
-        if (this.uiManager.linkingManager.isLinking()) { // Ensure linking target highlights are cleared
-             this.uiManager.linkingManager.clearLinkingTargetHighlight();
+        if (this.uiManager.linkingManager.isLinking()) {
+            // Ensure linking target highlights are cleared
+            this.uiManager.linkingManager.clearLinkingTargetHighlight();
         }
     }
 }

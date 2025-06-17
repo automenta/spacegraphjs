@@ -54,7 +54,8 @@ const mockUIManagerFacade = {
     handleNodeControlButtonClick: vi.fn(),
     handleEdgeHover: vi.fn(),
     handleEscape: vi.fn(),
-    linkingManager: { // Mock linking manager interactions
+    linkingManager: {
+        // Mock linking manager interactions
         startLinking: vi.fn(),
         updateTempLinkLine: vi.fn(),
         updateLinkingTargetHighlight: vi.fn(),
@@ -143,7 +144,8 @@ describe('handlePointerDown', () => {
         const mockEvent = { button: 0, clientX: 50, clientY: 50, preventDefault: vi.fn(), stopPropagation: vi.fn() };
         // Ensure _getTargetInfo (called by handlePointerDown) returns no node/edge
         vi.spyOn(pointerInputHandler, '_getTargetInfo').mockReturnValue({
-            node: null, intersectedEdge: null,
+            node: null,
+            intersectedEdge: null,
             element: mockContainerElement, // Simulate click on container itself
         });
 

@@ -1,172 +1,239 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
-    <title>SpaceGraph - Shape Node Examples</title>
-    <link href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧊</text></svg>"
-          rel="icon">
-    <link href="index.css" rel="stylesheet"/> 
-</head>
-<body>
+    <head>
+        <meta charset="UTF-8" />
+        <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
+        <title>SpaceGraph - Shape Node Examples</title>
+        <link
+            href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧊</text></svg>"
+            rel="icon"
+        />
+        <link href="index.css" rel="stylesheet" />
+    </head>
+    <body>
+        <div id="space">
+            <canvas id="webgl-canvas"></canvas>
+            <div id="css3d-container"></div>
+        </div>
 
-<div id="space"> 
-    <canvas id="webgl-canvas"></canvas>
-    <div id="css3d-container"></div>
-</div>
+        <script type="importmap">
+            {
+                "imports": {
+                    "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
+                    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
+                    "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
+                }
+            }
+        </script>
+        <script type="module">
+            // This example demonstrates the creation and usage of `ShapeNode` instances in SpaceGraph.
+            // `ShapeNode` is a built-in node type that renders WebGL geometric shapes (like spheres and boxes).
+            // The example showcases how to customize properties such as shape type, size, color, label, and mass.
+            import * as S from './spacegraph.js';
 
-<script type="importmap">
-    {
-        "imports": {
-            "three":         "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
-            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
-            "gsap":          "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
-        }
-    }
-</script>
-<script type="module">
-    // This example demonstrates the creation and usage of `ShapeNode` instances in SpaceGraph.
-    // `ShapeNode` is a built-in node type that renders WebGL geometric shapes (like spheres and boxes).
-    // The example showcases how to customize properties such as shape type, size, color, label, and mass.
-    import * as S from './spacegraph.js';
+            function init() {
+                const container = S.$('#space');
+                // UI elements like contextMenuEl, confirmDialogEl, statusIndicator are now auto-created
+                // by the UIManager within SpaceGraph if they are not found in the DOM.
+                if (!container) {
+                    console.error('Initialization Failed: Missing required #space container element.');
+                    document.body.innerHTML =
+                        "<p style='color:red; padding: 20px;'>Error: Missing required #space container HTML element for the demo.</p>";
+                    return;
+                }
 
-    function init() {
-        const container = S.$('#space');
-        // UI elements like contextMenuEl, confirmDialogEl, statusIndicator are now auto-created
-        // by the UIManager within SpaceGraph if they are not found in the DOM.
-        if (!container) {
-            console.error("Initialization Failed: Missing required #space container element.");
-            document.body.innerHTML = "<p style='color:red; padding: 20px;'>Error: Missing required #space container HTML element for the demo.</p>";
-            return;
-        }
+                try {
+                    // Initialize SpaceGraph. We pass an empty object for uiElements to use default auto-creation.
+                    const space = new S.SpaceGraph(container, {});
 
-        try {
-            // Initialize SpaceGraph. We pass an empty object for uiElements to use default auto-creation.
-            const space = new S.SpaceGraph(container, {});
+                    // Call a function to populate the graph with ShapeNode examples.
+                    createShapeNodesExample(space);
 
-            // Call a function to populate the graph with ShapeNode examples.
-            createShapeNodesExample(space);
+                    // Perform an initial layout simulation for a set number of steps.
+                    space.layoutEngine.runOnce(200);
+                    // Center the camera view on the graph content with a smooth animation.
+                    space.centerView(null, 0.7);
 
-            // Perform an initial layout simulation for a set number of steps.
-            space.layoutEngine.runOnce(200);
-            // Center the camera view on the graph content with a smooth animation.
-            space.centerView(null, 0.7);
-            
-            window.space = space; // Make the SpaceGraph instance globally accessible for debugging.
+                    window.space = space; // Make the SpaceGraph instance globally accessible for debugging.
 
-            // Display a status message indicating successful initialization.
-            const statusEl = S.$('#status-indicator'); // Find the auto-created status indicator.
-            if (statusEl) {
-                statusEl.textContent = 'Shape Node Example Ready ✨';
-                setTimeout(() => statusEl.classList.add('hidden'), 1500); // Hide after 1.5 seconds.
+                    // Display a status message indicating successful initialization.
+                    const statusEl = S.$('#status-indicator'); // Find the auto-created status indicator.
+                    if (statusEl) {
+                        statusEl.textContent = 'Shape Node Example Ready ✨';
+                        setTimeout(() => statusEl.classList.add('hidden'), 1500); // Hide after 1.5 seconds.
+                    }
+                } catch (error) {
+                    console.error('Shape Node Example Initialization Failed:', error);
+                    // Fallback error display if initialization fails.
+                    const statusEl =
+                        S.$('#status-indicator') || document.body.appendChild(document.createElement('div'));
+                    statusEl.id = 'status-indicator'; // Ensure it has an ID if newly created.
+                    statusEl.textContent = `Error: ${error.message}`;
+                    statusEl.style.backgroundColor = 'var(--delete-button-bg)'; // Use a distinct error style.
+                    statusEl.classList.remove('hidden');
+                    container.innerHTML = `<div style="color: red; padding: 20px;">Error initializing: ${error.message}<br><pre>${error.stack}</pre></div>`;
+                }
             }
 
-        } catch (error) {
-            console.error("Shape Node Example Initialization Failed:", error);
-            // Fallback error display if initialization fails.
-            const statusEl = S.$('#status-indicator') || document.body.appendChild(document.createElement('div'));
-            statusEl.id = 'status-indicator'; // Ensure it has an ID if newly created.
-            statusEl.textContent = `Error: ${error.message}`;
-            statusEl.style.backgroundColor = 'var(--delete-button-bg)'; // Use a distinct error style.
-            statusEl.classList.remove('hidden');
-            container.innerHTML = `<div style="color: red; padding: 20px;">Error initializing: ${error.message}<br><pre>${error.stack}</pre></div>`;
-        }
-    }
+            /**
+             * Creates and adds various ShapeNode instances to the graph to demonstrate different configurations.
+             * @param {S.SpaceGraph} space - The SpaceGraph instance.
+             */
+            function createShapeNodesExample(space) {
+                console.log('Creating Shape Nodes Example Graph...');
 
-    /**
-     * Creates and adds various ShapeNode instances to the graph to demonstrate different configurations.
-     * @param {S.SpaceGraph} space - The SpaceGraph instance.
-     */
-    function createShapeNodesExample(space) {
-        console.log("Creating Shape Nodes Example Graph...");
+                // An informational NoteNode at the center to describe the example.
+                // Mass is set to 2.0, making it relatively heavier in the layout.
+                const n_info = space.addNode(
+                    new S.NoteNode(
+                        'info-node',
+                        { x: 0, y: 0, z: 0 },
+                        {
+                            content:
+                                '<h1>ShapeNode Showcase</h1><p>This example demonstrates various <code>ShapeNode</code> properties like shape, size, color, label, and mass.</p>',
+                            width: 300,
+                            height: 130,
+                            backgroundColor: '#222831',
+                            contentScale: 1.0,
+                        },
+                        2.0
+                    )
+                ); /* mass = 2.0 */
 
-        // An informational NoteNode at the center to describe the example.
-        // Mass is set to 2.0, making it relatively heavier in the layout.
-        const n_info = space.addNode(new S.NoteNode('info-node', { x: 0, y: 0, z: 0 }, {
-            content: "<h1>ShapeNode Showcase</h1><p>This example demonstrates various <code>ShapeNode</code> properties like shape, size, color, label, and mass.</p>",
-            width: 300, height: 130, backgroundColor: "#222831", contentScale: 1.0
-        }, 2.0)); /* mass = 2.0 */
+                // A default ShapeNode (sphere, size 50) with a custom label and color.
+                // If 'shape' is not specified, ShapeNode defaults to 'sphere'.
+                // If 'size' is not specified, it defaults to 50 (as per ShapeNode class default).
+                const n_sphere_default = space.addNode(
+                    new S.ShapeNode(
+                        'sphere-default',
+                        { x: -250, y: 100, z: 20 },
+                        {
+                            label: 'Default Sphere (Size 50)', // Custom label text
+                            color: 0x0099ff, // Custom color (blue)
+                        }
+                    )
+                );
+                space.addEdge(n_info, n_sphere_default, { constraintParams: { idealLength: 280 } });
 
-        // A default ShapeNode (sphere, size 50) with a custom label and color.
-        // If 'shape' is not specified, ShapeNode defaults to 'sphere'.
-        // If 'size' is not specified, it defaults to 50 (as per ShapeNode class default).
-        const n_sphere_default = space.addNode(new S.ShapeNode('sphere-default', { x: -250, y: 100, z: 20 }, {
-            label: "Default Sphere (Size 50)", // Custom label text
-            color: 0x0099ff                    // Custom color (blue)
-        }));
-        space.addEdge(n_info, n_sphere_default, { constraintParams: { idealLength: 280 }});
+                // A ShapeNode explicitly defined as a 'box' with custom size and color.
+                const n_box_custom = space.addNode(
+                    new S.ShapeNode(
+                        'box-custom',
+                        { x: -250, y: -100, z: -30 },
+                        {
+                            label: 'Custom Box (Size 70)',
+                            shape: 'box', // Explicitly set shape to 'box'
+                            size: 70, // Custom size
+                            color: 0xff6600, // Custom color (orange)
+                        }
+                    )
+                );
+                space.addEdge(n_info, n_box_custom, { constraintParams: { idealLength: 280 } });
 
-        // A ShapeNode explicitly defined as a 'box' with custom size and color.
-        const n_box_custom = space.addNode(new S.ShapeNode('box-custom', { x: -250, y: -100, z: -30 }, {
-            label: "Custom Box (Size 70)",
-            shape: 'box',    // Explicitly set shape to 'box'
-            size: 70,        // Custom size
-            color: 0xff6600  // Custom color (orange)
-        }));
-        space.addEdge(n_info, n_box_custom, { constraintParams: { idealLength: 280 }});
+                // A small green sphere.
+                const n_sphere_small = space.addNode(
+                    new S.ShapeNode(
+                        'sphere-small',
+                        { x: 0, y: 250, z: 10 },
+                        {
+                            label: 'Small Sphere (Size 30)',
+                            shape: 'sphere', // Explicitly 'sphere'
+                            size: 30, // Smaller size
+                            color: 0x33cc33, // Custom color (green)
+                        }
+                    )
+                );
+                space.addEdge(n_info, n_sphere_small, { constraintParams: { idealLength: 260 } });
 
-        // A small green sphere.
-        const n_sphere_small = space.addNode(new S.ShapeNode('sphere-small', { x: 0, y: 250, z: 10 }, {
-            label: "Small Sphere (Size 30)",
-            shape: 'sphere', // Explicitly 'sphere'
-            size: 30,        // Smaller size
-            color: 0x33cc33  // Custom color (green)
-        }));
-        space.addEdge(n_info, n_sphere_small, { constraintParams: { idealLength: 260 }});
-        
-        // A large purple box.
-        const n_box_large = space.addNode(new S.ShapeNode('box-large', { x: 250, y: 200, z: -20 }, {
-            label: "Large Box (Size 100)",
-            shape: 'box',
-            size: 100,       // Larger size
-            color: 0x9933ff  // Custom color (purple)
-        }));
-        space.addEdge(n_sphere_small, n_box_large, { constraintParams: { idealLength: 180 }});
+                // A large purple box.
+                const n_box_large = space.addNode(
+                    new S.ShapeNode(
+                        'box-large',
+                        { x: 250, y: 200, z: -20 },
+                        {
+                            label: 'Large Box (Size 100)',
+                            shape: 'box',
+                            size: 100, // Larger size
+                            color: 0x9933ff, // Custom color (purple)
+                        }
+                    )
+                );
+                space.addEdge(n_sphere_small, n_box_large, { constraintParams: { idealLength: 180 } });
 
-        // Another sphere, demonstrating default size with a custom color.
-        const n_sphere_green = space.addNode(new S.ShapeNode('sphere-green', { x: 280, y: -50, z: 40 }, {
-            label: "Green Sphere", // Size will default to 50
-            color: 0x00ff00       // Custom color (bright green)
-        }));
-        space.addEdge(n_info, n_sphere_green, { constraintParams: { idealLength: 300 }});
+                // Another sphere, demonstrating default size with a custom color.
+                const n_sphere_green = space.addNode(
+                    new S.ShapeNode(
+                        'sphere-green',
+                        { x: 280, y: -50, z: 40 },
+                        {
+                            label: 'Green Sphere', // Size will default to 50
+                            color: 0x00ff00, // Custom color (bright green)
+                        }
+                    )
+                );
+                space.addEdge(n_info, n_sphere_green, { constraintParams: { idealLength: 300 } });
 
-        // A "heavy" box, demonstrating custom mass.
-        // The third argument to the ShapeNode constructor is mass.
-        const n_box_heavy = space.addNode(new S.ShapeNode('box-heavy', { x: 150, y: -250, z: -50 }, {
-            label: "Heavy Box (Mass 5.0)",
-            shape: 'box',
-            size: 80,
-            color: 0xaaaaaa  // Grey color
-        }, 5.0)); /* mass = 5.0 */
-        space.addEdge(n_info, n_box_heavy, { constraintParams: { idealLength: 280 }});
+                // A "heavy" box, demonstrating custom mass.
+                // The third argument to the ShapeNode constructor is mass.
+                const n_box_heavy = space.addNode(
+                    new S.ShapeNode(
+                        'box-heavy',
+                        { x: 150, y: -250, z: -50 },
+                        {
+                            label: 'Heavy Box (Mass 5.0)',
+                            shape: 'box',
+                            size: 80,
+                            color: 0xaaaaaa, // Grey color
+                        },
+                        5.0
+                    )
+                ); /* mass = 5.0 */
+                space.addEdge(n_info, n_box_heavy, { constraintParams: { idealLength: 280 } });
 
-        // A "light" sphere, demonstrating custom mass.
-        const n_sphere_light = space.addNode(new S.ShapeNode('sphere-light', { x: -100, y: -280, z: 10 }, {
-            label: "Light Sphere (Mass 0.5)",
-            shape: 'sphere',
-            size: 60,
-            color: 0xffff00 // Yellow color
-        }, 0.5)); /* mass = 0.5 */
-        space.addEdge(n_box_heavy, n_sphere_light, { constraintParams: { idealLength: 200 }});
-        space.addEdge(n_info, n_sphere_light, { constraintParams: { idealLength: 300 }});
-        
-        // Add more edges to create a more connected graph, showcasing different ideal lengths and stiffness.
-        space.addEdge(n_sphere_default, n_box_custom, { constraintParams: { idealLength: 220 }});
-        // Example of a "weaker" spring (lower stiffness)
-        space.addEdge(n_box_custom, n_sphere_light, { constraintParams: { idealLength: 200, stiffness: 0.0005 }});
-        space.addEdge(n_sphere_green, n_box_large, { constraintParams: { idealLength: 250 }});
-        // Example of a "stronger" spring (higher stiffness)
-        space.addEdge(n_sphere_green, n_box_heavy, { constraintParams: { idealLength: 300, stiffness: 0.002 }});
+                // A "light" sphere, demonstrating custom mass.
+                const n_sphere_light = space.addNode(
+                    new S.ShapeNode(
+                        'sphere-light',
+                        { x: -100, y: -280, z: 10 },
+                        {
+                            label: 'Light Sphere (Mass 0.5)',
+                            shape: 'sphere',
+                            size: 60,
+                            color: 0xffff00, // Yellow color
+                        },
+                        0.5
+                    )
+                ); /* mass = 0.5 */
+                space.addEdge(n_box_heavy, n_sphere_light, { constraintParams: { idealLength: 200 } });
+                space.addEdge(n_info, n_sphere_light, { constraintParams: { idealLength: 300 } });
 
-        console.log("Shape Nodes Example Graph created:", space.nodes.size, "nodes,", space.edges.size, "edges.");
-    }
+                // Add more edges to create a more connected graph, showcasing different ideal lengths and stiffness.
+                space.addEdge(n_sphere_default, n_box_custom, { constraintParams: { idealLength: 220 } });
+                // Example of a "weaker" spring (lower stiffness)
+                space.addEdge(n_box_custom, n_sphere_light, {
+                    constraintParams: { idealLength: 200, stiffness: 0.0005 },
+                });
+                space.addEdge(n_sphere_green, n_box_large, { constraintParams: { idealLength: 250 } });
+                // Example of a "stronger" spring (higher stiffness)
+                space.addEdge(n_sphere_green, n_box_heavy, {
+                    constraintParams: { idealLength: 300, stiffness: 0.002 },
+                });
 
-    // Ensure DOM is fully loaded before running the init function.
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init(); // DOM is already loaded.
-    }
-</script>
-</body>
+                console.log(
+                    'Shape Nodes Example Graph created:',
+                    space.nodes.size,
+                    'nodes,',
+                    space.edges.size,
+                    'edges.'
+                );
+            }
+
+            // Ensure DOM is fully loaded before running the init function.
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init(); // DOM is already loaded.
+            }
+        </script>
+    </body>
 </html>

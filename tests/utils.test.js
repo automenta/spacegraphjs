@@ -14,7 +14,7 @@ describe('Utility Functions', () => {
             const id2 = generateId();
             expect(id1).not.toBe(id2);
         });
-         it('should generate unique IDs even with the same prefix', () => {
+        it('should generate unique IDs even with the same prefix', () => {
             const id1 = generateId('prefix');
             const id2 = generateId('prefix');
             expect(id1).not.toBe(id2);
@@ -53,7 +53,7 @@ describe('Utility Functions', () => {
             expect(lerp(0, 100, 0.25)).toBe(25);
             expect(lerp(0, 100, 0.75)).toBe(75);
         });
-         it('should handle negative numbers', () => {
+        it('should handle negative numbers', () => {
             expect(lerp(-10, 10, 0.5)).toBe(0);
             expect(lerp(-20, -10, 0.5)).toBe(-15);
         });

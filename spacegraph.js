@@ -6,8 +6,8 @@
  * and a variety of node types to build complex, data-driven visualizations.
  */
 import * as THREE from 'three';
-import {CSS3DObject, CSS3DRenderer} from 'three/addons/renderers/CSS3DRenderer.js';
-import {gsap} from "gsap";
+import { CSS3DObject, CSS3DRenderer } from 'three/addons/renderers/CSS3DRenderer.js';
+import { gsap } from 'gsap';
 
 // UI Manager Imports
 import { PointerInputHandler } from './js/ui/PointerInputHandler.js';
@@ -23,7 +23,8 @@ export const $ = (selector, context = document) => context.querySelector(selecto
 export const $$ = (selector, context = document) => Array.from(context.querySelectorAll(selector));
 export const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
 export const lerp = (a, b, t) => a + (b - a) * t;
-export const generateId = (prefix = 'id') => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
+export const generateId = (prefix = 'id') =>
+    `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
 export const DEG2RAD = Math.PI / 180;
 
 /**
@@ -101,7 +102,7 @@ export class SpaceGraph {
     /** @property {ForceLayout | null} layoutEngine - Manages the physics-based layout of nodes and edges. See {@link ForceLayout}. */
     layoutEngine = null;
     /** @property {{color: number, alpha: number}} background - The background color and alpha (opacity) for the WebGL renderer. Default is `{color: 0x000000, alpha: 0.0}` (transparent black). */
-    background = {color: 0x000000, alpha: 0.0};
+    background = { color: 0x000000, alpha: 0.0 };
     /** @property {SpaceGraphConfig} config - Configuration object for SpaceGraph settings. Merges user-provided config with defaults. See {@link SpaceGraphConfig}. */
     config = {};
 
@@ -153,7 +154,7 @@ export class SpaceGraph {
      */
     constructor(containerElement, config = {}, uiElements = {}) {
         if (!containerElement || !(containerElement instanceof HTMLElement)) {
-            throw new Error("SpaceGraph requires a valid HTML container element.");
+            throw new Error('SpaceGraph requires a valid HTML container element.');
         }
         /** @property {HTMLElement} container - The main container DOM element for the graph. */
         this.container = containerElement;
@@ -165,12 +166,20 @@ export class SpaceGraph {
             this.config.defaults = { ...this.getDefaultConfig().defaults };
             if (config.defaults.node) {
                 this.config.defaults.node = { ...this.getDefaultConfig().defaults.node };
-                if (config.defaults.node.html) this.config.defaults.node.html = { ...this.getDefaultConfig().defaults.node.html, ...config.defaults.node.html };
-                if (config.defaults.node.shape) this.config.defaults.node.shape = { ...this.getDefaultConfig().defaults.node.shape, ...config.defaults.node.shape };
+                if (config.defaults.node.html)
+                    this.config.defaults.node.html = {
+                        ...this.getDefaultConfig().defaults.node.html,
+                        ...config.defaults.node.html,
+                    };
+                if (config.defaults.node.shape)
+                    this.config.defaults.node.shape = {
+                        ...this.getDefaultConfig().defaults.node.shape,
+                        ...config.defaults.node.shape,
+                    };
             }
-            if (config.defaults.edge) this.config.defaults.edge = { ...this.getDefaultConfig().defaults.edge, ...config.defaults.edge };
+            if (config.defaults.edge)
+                this.config.defaults.edge = { ...this.getDefaultConfig().defaults.edge, ...config.defaults.edge };
         }
-
 
         /** @property {THREE.Scene} scene - The main Three.js scene for WebGL objects (like shapes and edges). */
         this.scene = new THREE.Scene();
@@ -190,16 +199,17 @@ export class SpaceGraph {
         this._camera.position.z = this.config.camera.initialPositionZ;
 
         this._setupRenderers();
-        this.background = { // Initialize from config
+        this.background = {
+            // Initialize from config
             color: this.config.rendering.defaultBackgroundColor,
-            alpha: this.config.rendering.defaultBackgroundAlpha
+            alpha: this.config.rendering.defaultBackgroundAlpha,
         };
         this.setBackground(this.background.color, this.background.alpha);
 
         this.cameraController = new CameraController(this._camera, this.container, {
             zoomSpeed: this.config.camera.zoomSpeed,
             panSpeed: this.config.camera.panSpeed,
-            dampingFactor: this.config.camera.dampingFactor
+            dampingFactor: this.config.camera.dampingFactor,
         });
         this.layoutEngine = new ForceLayout(this);
         /** @property {Map<string, TypeDefinition>} nodeTypes - Registered custom node type definitions. */
@@ -235,21 +245,25 @@ export class SpaceGraph {
         this.webglRenderer = new THREE.WebGLRenderer({
             canvas: this.webglCanvas,
             antialias: true,
-            alpha: true
+            alpha: true,
         });
         this.webglRenderer.setSize(window.innerWidth, window.innerHeight);
         this.webglRenderer.setPixelRatio(window.devicePixelRatio);
 
         /** @property {HTMLElement} css3dContainer - The container div for the CSS3D renderer. */
         this.css3dContainer = $('#css3d-container', this.container);
-        if(!this.css3dContainer) {
+        if (!this.css3dContainer) {
             this.css3dContainer = document.createElement('div');
             this.css3dContainer.id = 'css3d-container';
             this.container.appendChild(this.css3dContainer);
         }
         Object.assign(this.css3dContainer.style, {
-            position: 'absolute', inset: '0', width: '100%',
-            height: '100%', pointerEvents: 'none', zIndex: '2'
+            position: 'absolute',
+            inset: '0',
+            width: '100%',
+            height: '100%',
+            pointerEvents: 'none',
+            zIndex: '2',
         });
 
         /** @property {CSS3DRenderer} cssRenderer - The renderer for CSS3D objects. */
@@ -381,10 +395,11 @@ export class SpaceGraph {
      * spaceGraph.setBackground(0x000000, 0.0);
      */
     setBackground(color = 0x000000, alpha = 0.0) {
-        this.background = {color, alpha};
+        this.background = { color, alpha };
         this.webglRenderer.setClearColor(color, alpha);
         // Set the canvas style for cases where WebGL context isn't fully opaque or for visual consistency
-        this.webglCanvas.style.backgroundColor = alpha === 0 ? 'transparent' : `#${color.toString(16).padStart(6, '0')}`;
+        this.webglCanvas.style.backgroundColor =
+            alpha === 0 ? 'transparent' : `#${color.toString(16).padStart(6, '0')}`;
     }
 
     /**
@@ -465,13 +480,18 @@ export class SpaceGraph {
             nodeInstance = dataOrInstance;
             if (!nodeInstance.id) nodeInstance.id = generateId('node'); // Ensure ID if missing
             if (this.nodes.has(nodeInstance.id)) {
-                console.warn(`Node instance with ID ${nodeInstance.id} already exists or ID is duplicated. Returning existing node.`);
+                console.warn(
+                    `Node instance with ID ${nodeInstance.id} already exists or ID is duplicated. Returning existing node.`
+                );
                 return this.nodes.get(nodeInstance.id);
             }
         } else if (typeof dataOrInstance === 'object' && dataOrInstance !== null) {
             const data = dataOrInstance; // data is a NodeDataObject
             if (!data.type) {
-                console.error("Node data must include a 'type' property to determine which node class to instantiate.", data);
+                console.error(
+                    "Node data must include a 'type' property to determine which node class to instantiate.",
+                    data
+                );
                 return null;
             }
             data.id = data.id ?? generateId('node'); // Ensure ID if missing
@@ -492,18 +512,21 @@ export class SpaceGraph {
                 nodeInstance = new NoteNode(data.id, position, data);
             } else if (data.type === 'html') {
                 nodeInstance = new HtmlNodeElement(data.id, position, data);
-            } else if (data.type === 'shape' || data.shape) { // data.shape for backward compatibility
+            } else if (data.type === 'shape' || data.shape) {
+                // data.shape for backward compatibility
                 nodeInstance = new ShapeNode(data.id, position, data);
             } else {
-                console.error(`Unknown or unregistered node type: "${data.type}". Please register it using spaceGraph.registerNodeType().`);
+                console.error(
+                    `Unknown or unregistered node type: "${data.type}". Please register it using spaceGraph.registerNodeType().`
+                );
                 return null;
             }
         } else {
-            throw new Error("Invalid argument to addNode. Must be a BaseNode instance or a NodeDataObject.");
+            throw new Error('Invalid argument to addNode. Must be a BaseNode instance or a NodeDataObject.');
         }
 
         if (!nodeInstance) {
-            console.error("Node instantiation failed for an unknown reason.", dataOrInstance);
+            console.error('Node instantiation failed for an unknown reason.', dataOrInstance);
             return null;
         }
 
@@ -544,8 +567,10 @@ export class SpaceGraph {
         if (this.linkSourceNode === nodeToRemove) this.uiManager?.cancelLinking(); // UIManager handles temp line removal
 
         // Find and remove all edges connected to this node
-        const edgesToRemove = [...this.edges.values()].filter(edge => edge.source === nodeToRemove || edge.target === nodeToRemove);
-        edgesToRemove.forEach(edge => this.removeEdge(edge.id)); // removeEdge will emit its own events
+        const edgesToRemove = [...this.edges.values()].filter(
+            (edge) => edge.source === nodeToRemove || edge.target === nodeToRemove
+        );
+        edgesToRemove.forEach((edge) => this.removeEdge(edge.id)); // removeEdge will emit its own events
 
         nodeToRemove.dispose(); // Call node's internal cleanup (removes from scenes, disposes geometry/materials)
         this.nodes.delete(nodeId);
@@ -610,23 +635,27 @@ export class SpaceGraph {
      */
     addEdge(sourceNode, targetNode, data = {}) {
         if (!sourceNode || !(sourceNode instanceof BaseNode) || !this.nodes.has(sourceNode.id)) {
-            console.error("addEdge: Invalid or non-existent source node.", sourceNode); return null;
+            console.error('addEdge: Invalid or non-existent source node.', sourceNode);
+            return null;
         }
         if (!targetNode || !(targetNode instanceof BaseNode) || !this.nodes.has(targetNode.id)) {
-            console.error("addEdge: Invalid or non-existent target node.", targetNode); return null;
+            console.error('addEdge: Invalid or non-existent target node.', targetNode);
+            return null;
         }
         if (sourceNode === targetNode) {
-            console.warn("addEdge: Source and target nodes cannot be the same."); return null;
+            console.warn('addEdge: Source and target nodes cannot be the same.');
+            return null;
         }
 
         // Check for duplicate edges (simple check, could be enhanced for directed graphs or multi-edges if needed)
-        const_duplicate = [...this.edges.values()].find(e =>
-            (e.source === sourceNode && e.target === targetNode) ||
-            (e.source === targetNode && e.target === sourceNode) // Considers undirected duplicates
+        const duplicate = [...this.edges.values()].find(
+            (e) =>
+                (e.source === sourceNode && e.target === targetNode) ||
+                (e.source === targetNode && e.target === sourceNode) // Considers undirected duplicates
         );
-        if (const_duplicate) {
-             console.warn(`addEdge: Duplicate edge between ${sourceNode.id} and ${targetNode.id} ignored.`);
-            return const_duplicate; // Or return null if duplicates are strictly disallowed
+        if (duplicate) {
+            console.warn(`addEdge: Duplicate edge between ${sourceNode.id} and ${targetNode.id} ignored.`);
+            return duplicate; // Or return null if duplicates are strictly disallowed
         }
 
         const edgeId = data.id ?? generateId('edge');
@@ -694,8 +723,8 @@ export class SpaceGraph {
      * @private
      */
     _updateNodesAndEdges() {
-        this.nodes.forEach(node => node.update(this)); // `this` (SpaceGraph instance) is passed for context
-        this.edges.forEach(edge => edge.update(this)); // `this` (SpaceGraph instance) is passed for context
+        this.nodes.forEach((node) => node.update(this)); // `this` (SpaceGraph instance) is passed for context
+        this.edges.forEach((edge) => edge.update(this)); // `this` (SpaceGraph instance) is passed for context
         this.uiManager?.edgeMenuManager?.update();
     }
 
@@ -760,14 +789,20 @@ export class SpaceGraph {
             targetFocusPoint = targetPosition.clone();
         } else if (this.nodes.size > 0) {
             targetFocusPoint = new THREE.Vector3();
-            this.nodes.forEach(node => targetFocusPoint.add(node.position));
+            this.nodes.forEach((node) => targetFocusPoint.add(node.position));
             targetFocusPoint.divideScalar(this.nodes.size);
         } else {
-             targetFocusPoint = new THREE.Vector3(0,0,0); // Default to origin if no nodes and no target
+            targetFocusPoint = new THREE.Vector3(0, 0, 0); // Default to origin if no nodes and no target
         }
         // Determine a suitable camera distance based on whether it's a general view or focusing on a specific point
         const cameraDistance = this.nodes.size > 1 || !targetPosition ? 700 : 400;
-        this.cameraController.moveTo(targetFocusPoint.x, targetFocusPoint.y, targetFocusPoint.z + cameraDistance, duration, targetFocusPoint);
+        this.cameraController.moveTo(
+            targetFocusPoint.x,
+            targetFocusPoint.y,
+            targetFocusPoint.z + cameraDistance,
+            duration,
+            targetFocusPoint
+        );
     }
 
     /**
@@ -788,7 +823,7 @@ export class SpaceGraph {
      */
     focusOnNode(node, duration = 0.6, pushHistory = false) {
         if (!node || !(node instanceof BaseNode) || !this.cameraController || !this._camera) {
-            console.warn("focusOnNode: Invalid node or camera controller.", node);
+            console.warn('focusOnNode: Invalid node or camera controller.', node);
             return;
         }
         const targetFocusPoint = node.position.clone();
@@ -797,16 +832,23 @@ export class SpaceGraph {
         // Determine node size for appropriate zoom level
         let nodeVisualSize = 100; // Default visual size if specific metrics are unavailable
         if (typeof node.getBoundingSphereRadius === 'function') {
-             nodeVisualSize = node.getBoundingSphereRadius() * 2; // Use diameter from bounding sphere
-        } else if (node.size && typeof node.size.width === 'number' && typeof node.size.height === 'number') { // For HtmlNodeElement-like nodes
-             // Consider aspect ratio for HTML nodes; use larger dimension relative to FoV
-             nodeVisualSize = Math.max(node.size.width / this._camera.aspect, node.size.height) * 1.2; // Add padding
+            nodeVisualSize = node.getBoundingSphereRadius() * 2; // Use diameter from bounding sphere
+        } else if (node.size && typeof node.size.width === 'number' && typeof node.size.height === 'number') {
+            // For HtmlNodeElement-like nodes
+            // Consider aspect ratio for HTML nodes; use larger dimension relative to FoV
+            nodeVisualSize = Math.max(node.size.width / this._camera.aspect, node.size.height) * 1.2; // Add padding
         }
         // Calculate camera distance to fit the node in view based on its size and camera FOV
-        const cameraDistance = (nodeVisualSize / (2 * Math.tan(fovRadians / 2))) + 50; // Add some padding distance
+        const cameraDistance = nodeVisualSize / (2 * Math.tan(fovRadians / 2)) + 50; // Add some padding distance
 
         if (pushHistory) this.cameraController.pushState();
-        this.cameraController.moveTo(targetFocusPoint.x, targetFocusPoint.y, targetFocusPoint.z + cameraDistance, duration, targetFocusPoint);
+        this.cameraController.moveTo(
+            targetFocusPoint.x,
+            targetFocusPoint.y,
+            targetFocusPoint.z + cameraDistance,
+            duration,
+            targetFocusPoint
+        );
     }
 
     /**
@@ -830,7 +872,7 @@ export class SpaceGraph {
      */
     autoZoom(node) {
         if (!node || !(node instanceof BaseNode) || !this.cameraController) {
-            console.warn("autoZoom: Invalid node or camera controller.", node);
+            console.warn('autoZoom: Invalid node or camera controller.', node);
             return;
         }
         const currentTargetNodeId = this.cameraController.getCurrentTargetNodeId();
@@ -1001,138 +1043,24 @@ export class SpaceGraph {
         raycaster.params.Line.threshold = this.config.rendering.lineIntersectionThreshold;
 
         // Check for node meshes first (typically more specific interaction)
-        const nodeMeshes = [...this.nodes.values()].map(n => n.mesh).filter(Boolean);
+        const nodeMeshes = [...this.nodes.values()].map((n) => n.mesh).filter(Boolean);
         if (nodeMeshes.length > 0) {
             const intersects = raycaster.intersectObjects(nodeMeshes);
             if (intersects.length > 0) {
                 const intersectedMesh = intersects[0].object;
                 // Find the node instance corresponding to this mesh
-                return [...this.nodes.values()].find(n => n.mesh === intersectedMesh);
+                return [...this.nodes.values()].find((n) => n.mesh === intersectedMesh);
             }
         }
 
         // Then check for edges
-        const edgeObjects = [...this.edges.values()].map(e => e.threeObject).filter(Boolean);
+        const edgeObjects = [...this.edges.values()].map((e) => e.threeObject).filter(Boolean);
         if (edgeObjects.length > 0) {
             const intersects = raycaster.intersectObjects(edgeObjects);
             if (intersects.length > 0) {
                 const intersectedLine = intersects[0].object;
                 // Find the edge instance corresponding to this line
-                return [...this.edges.values()].find(edge => edge.threeObject === intersectedLine);
-            }
-        }
-        return null; // No intersection
-    }
-
-    /**
-     * Cleans up all resources used by the SpaceGraph instance.
-     * to highlight the selected node and deselecting any previously selected node or edge.
-     * The actual styling change is often delegated to the node's `setSelectedStyle` method.
-     *
-     * @param {BaseNode | null} node - The node to select. Provide `null` to deselect the current node.
-     * @see BaseNode#setSelectedStyle
-     * @fires SpaceGraph#nodeSelected
-     * @example
-     * const myNode = spaceGraph.getNodeById('node-abc');
-     * if (myNode) {
-     *   spaceGraph.setSelectedNode(myNode); // Selects 'node-abc'
-     * }
-     * spaceGraph.setSelectedNode(null); // Deselects any currently selected node
-     */
-    setSelectedNode(node) {
-        if (this.selectedNode === node) return; // No change if already selected or deselecting null
-
-        const previouslySelectedNode = this.selectedNode;
-
-        // Deselect previously selected node
-        if (this.selectedNode) {
-            this.selectedNode.setSelectedStyle(false);
-            // Note: The 'selected' class toggle is now primarily handled within BaseNode's setSelectedStyle,
-            // which might be overridden by specific node types.
-            // However, if a generic class was being applied directly here, it should be reviewed.
-            // For now, assume setSelectedStyle(false) handles all necessary visual deselection.
-        }
-
-        this.selectedNode = node;
-
-        // Select new node
-        if (this.selectedNode) {
-            this.selectedNode.setSelectedStyle(true);
-            // Similar to deselection, assume setSelectedStyle(true) handles all visual selection.
-            if (this.selectedEdge) this.setSelectedEdge(null); // Deselect any currently selected edge
-        }
-        this._emit('nodeSelected', { selectedNode: this.selectedNode, previouslySelectedNode: previouslySelectedNode });
-    }
-
-    /**
-     * Sets the currently selected edge. This typically involves updating visual styles
-     * to highlight the selected edge and deselecting any previously selected edge or node.
-     * The {@link UIManager} might display an edge-specific menu.
-     * Emits an `edgeSelected` event.
-     *
-     * @param {Edge | null} edge - The edge to select. Provide `null` to deselect the current edge.
-     * @see Edge#setHighlight
-     * @fires SpaceGraph#edgeSelected
-     * @example
-     * const myEdge = spaceGraph.getEdgeById('edge-123');
-     * if (myEdge) {
-     *   spaceGraph.setSelectedEdge(myEdge); // Selects 'edge-123'
-     * }
-     * spaceGraph.setSelectedEdge(null); // Deselects any currently selected edge
-     */
-    setSelectedEdge(edge) {
-        if (this.selectedEdge === edge) return; // No change
-
-        const previouslySelectedEdge = this.selectedEdge;
-
-        // Deselect previously selected edge
-        if (this.selectedEdge) {
-            this.selectedEdge.setHighlight(false);
-            this.uiManager?.hideEdgeMenu();
-        }
-
-        this.selectedEdge = edge;
-
-        // Select new edge
-        if (this.selectedEdge) {
-            this.selectedEdge.setHighlight(true);
-            if (this.selectedNode) this.setSelectedNode(null); // Deselect any currently selected node
-            this.uiManager?.showEdgeMenu(this.selectedEdge);
-        }
-        this._emit('edgeSelected', { selectedEdge: this.selectedEdge, previouslySelectedEdge: previouslySelectedEdge });
-    }
-
-    /**
-     * Finds the topmost interactable graph object (node or edge) at given screen coordinates.
-     * @param {number} screenX - X-coordinate on the screen.
-     * @param {number} screenY - Y-coordinate on the screen.
-     * @returns {BaseNode | Edge | null} The intersected object, or null if none.
-     */
-    intersectedObject(screenX, screenY) {
-        const vec = new THREE.Vector2((screenX / window.innerWidth) * 2 - 1, -(screenY / window.innerHeight) * 2 + 1);
-        const raycaster = new THREE.Raycaster();
-        raycaster.setFromCamera(vec, this._camera);
-        raycaster.params.Line.threshold = this.config.rendering.lineIntersectionThreshold;
-
-        // Check for node meshes first (typically more specific interaction)
-        const nodeMeshes = [...this.nodes.values()].map(n => n.mesh).filter(Boolean);
-        if (nodeMeshes.length > 0) {
-            const intersects = raycaster.intersectObjects(nodeMeshes);
-            if (intersects.length > 0) {
-                const intersectedMesh = intersects[0].object;
-                // Find the node instance corresponding to this mesh
-                return [...this.nodes.values()].find(n => n.mesh === intersectedMesh);
-            }
-        }
-
-        // Then check for edges
-        const edgeObjects = [...this.edges.values()].map(e => e.threeObject).filter(Boolean);
-        if (edgeObjects.length > 0) {
-            const intersects = raycaster.intersectObjects(edgeObjects);
-            if (intersects.length > 0) {
-                const intersectedLine = intersects[0].object;
-                // Find the edge instance corresponding to this line
-                return [...this.edges.values()].find(edge => edge.threeObject === intersectedLine);
+                return [...this.edges.values()].find((edge) => edge.threeObject === intersectedLine);
             }
         }
         return null; // No intersection
@@ -1158,8 +1086,8 @@ export class SpaceGraph {
 
         // Dispose all nodes and edges
         // Iterate over copies as dispose() might modify the collections indirectly
-        [...this.nodes.values()].forEach(node => node.dispose());
-        [...this.edges.values()].forEach(edge => edge.dispose());
+        [...this.nodes.values()].forEach((node) => node.dispose());
+        [...this.edges.values()].forEach((edge) => edge.dispose());
         this.nodes.clear();
         this.edges.clear();
 
@@ -1177,7 +1105,6 @@ export class SpaceGraph {
         if (this.cssRenderer?.domElement) this.cssRenderer.domElement.remove();
         if (this.css3dContainer) this.css3dContainer.remove();
 
-
         // Remove event listeners attached by SpaceGraph itself
         window.removeEventListener('resize', this._onWindowResize.bind(this)); // Ensure correct bound function removal
 
@@ -1186,17 +1113,23 @@ export class SpaceGraph {
 
         // Nullify properties to help garbage collection
         this.container = null;
-        this.scene = null; this.cssScene = null;
-        this.webglRenderer = null; this.cssRenderer = null;
-        this.webglCanvas = null; this.css3dContainer = null;
+        this.scene = null;
+        this.cssScene = null;
+        this.webglRenderer = null;
+        this.cssRenderer = null;
+        this.webglCanvas = null;
+        this.css3dContainer = null;
         this._camera = null;
-        this.cameraController = null; this.layoutEngine = null; this.uiManager = null;
-        this.selectedNode = null; this.selectedEdge = null;
-        this.linkSourceNode = null; this.tempLinkLine = null;
+        this.cameraController = null;
+        this.layoutEngine = null;
+        this.uiManager = null;
+        this.selectedNode = null;
+        this.selectedEdge = null;
+        this.linkSourceNode = null;
+        this.tempLinkLine = null;
         this._events = null;
 
-
-        console.log("SpaceGraph disposed successfully.");
+        console.log('SpaceGraph disposed successfully.');
     }
 
     /**
@@ -1210,14 +1143,14 @@ export class SpaceGraph {
             rendering: {
                 defaultBackgroundColor: 0x000000,
                 defaultBackgroundAlpha: 0.0,
-                lineIntersectionThreshold: 5
+                lineIntersectionThreshold: 5,
             },
             camera: {
                 initialPositionZ: 700,
                 fov: 70,
                 zoomSpeed: 0.0015,
                 panSpeed: 0.8,
-                dampingFactor: 0.12
+                dampingFactor: 0.12,
             },
             defaults: {
                 node: {
@@ -1226,23 +1159,22 @@ export class SpaceGraph {
                         height: 70,
                         billboard: true,
                         contentScale: 1.0,
-                        backgroundColor: 'var(--node-bg-default)'
+                        backgroundColor: 'var(--node-bg-default)',
                     },
                     shape: {
                         shape: 'sphere',
                         size: 50,
-                        color: 0xffffff
-                    }
+                        color: 0xffffff,
+                    },
                 },
                 edge: {
                     color: 0x00d0ff,
                     thickness: 1.5,
-                    opacity: 0.6
-                }
-            }
+                    opacity: 0.6,
+                },
+            },
         };
     }
-
 
     // --- Event Emitter System ---
 
@@ -1326,7 +1258,7 @@ export class SpaceGraph {
     _emit(eventName, data = {}) {
         if (this._events.has(eventName)) {
             // Iterate over a copy in case a callback modifies the listeners Set (e.g., calls off())
-            [...this._events.get(eventName)].forEach(callback => {
+            [...this._events.get(eventName)].forEach((callback) => {
                 try {
                     callback(data);
                 } catch (error) {
@@ -1402,7 +1334,7 @@ export class BaseNode {
      * // Called from a subclass constructor:
      * // super(id, position, { ...myData, ...data }, mass);
      */
-    constructor(id, position = {x: 0, y: 0, z: 0}, data = {}, mass = 1.0) {
+    constructor(id, position = { x: 0, y: 0, z: 0 }, data = {}, mass = 1.0) {
         this.id = id ?? generateId('node');
         this.position.set(position.x ?? 0, position.y ?? 0, position.z ?? 0); // Ensure x,y,z defaults if not in position object
         this.data = { ...this.getDefaultData(), ...data }; // Merge provided data with defaults
@@ -1430,7 +1362,9 @@ export class BaseNode {
      *   };
      * }
      */
-    getDefaultData() { return { label: this.id }; }
+    getDefaultData() {
+        return { label: this.id };
+    }
 
     /**
      * Sets the 3D position of the node in world space.
@@ -1511,7 +1445,7 @@ export class BaseNode {
             this.mesh.geometry?.dispose();
             // Material disposal: check if material is an array (multi-material) or single
             if (Array.isArray(this.mesh.material)) {
-                this.mesh.material.forEach(m => m.dispose());
+                this.mesh.material.forEach((m) => m.dispose());
             } else if (this.mesh.material) {
                 this.mesh.material.dispose();
             }
@@ -1553,7 +1487,9 @@ export class BaseNode {
      * @returns {number} The radius of the node's bounding sphere.
      *                   Base implementation returns a small default value (`10`).
      */
-    getBoundingSphereRadius() { return 10; } // Default placeholder, subclasses must override for accurate behavior.
+    getBoundingSphereRadius() {
+        return 10;
+    } // Default placeholder, subclasses must override for accurate behavior.
 
     /**
      * Applies or removes a visual style indicating selection.
@@ -1573,7 +1509,9 @@ export class BaseNode {
      *   }
      * }
      */
-    setSelectedStyle(selected) { /* Base implementation does nothing. Subclasses should override. */ }
+    setSelectedStyle(selected) {
+        /* Base implementation does nothing. Subclasses should override. */
+    }
 
     /**
      * Called by {@link UIManager} when a drag operation starts on this node.
@@ -1631,8 +1569,8 @@ export class HtmlNodeElement extends BaseNode {
      * @type {{width: number, height: number}}
      * @description The dimensions of the HTML element.
      */
-    size = {width: 160, height: 70};
-     /**
+    size = { width: 160, height: 70 };
+    /**
      * @type {boolean}
      * @description If true, the node always faces the camera.
      */
@@ -1658,12 +1596,18 @@ export class HtmlNodeElement extends BaseNode {
      * });
      * spaceGraph.addNode(htmlNode);
      */
-    constructor(id, position = {x: 0, y: 0, z: 0}, data = {}) {
-        // BaseNode constructor will call getDefaultData, which needs spaceGraph to be set first
-        // Temporarily set it if passed in data for early access during getDefaultData call by super()
-        if (data.spaceGraph) this.spaceGraph = data.spaceGraph;
+    constructor(id, position = { x: 0, y: 0, z: 0 }, data = {}) {
+        // Temporarily set spaceGraph on data if passed, so super() can access it via this.getDefaultData()
+        // This is a bit of a workaround for the order of operations.
+        const tempData = { ...data };
+        if (data.spaceGraph) {
+            tempData.spaceGraphForDefault = data.spaceGraph;
+        }
 
-        super(id, position, data, data.mass ?? 1.0); // `data` here is merged with BaseNode's default by super()
+        super(id, position, tempData, data.mass ?? 1.0); // `tempData` here is merged with BaseNode's default by super()
+        // BaseNode constructor will call getDefaultData. We need spaceGraph available for that.
+        // After super() is called, this.spaceGraph is properly set up by BaseNode if spaceGraphForDefault was in tempData.
+        // Or, if it wasn't, it might be null, which is fine if getDefaultData handles it.
 
         // Finalize properties based on defaults from SpaceGraphConfig if available, then data, then class defaults.
         // this.data is now populated by super() call which invokes this.getDefaultData().
@@ -1674,8 +1618,8 @@ export class HtmlNodeElement extends BaseNode {
         this.billboard = this.data.billboard ?? htmlDefaults.billboard ?? true;
         // Ensure this.data reflects the chosen values for contentScale and backgroundColor
         this.data.contentScale = this.data.contentScale ?? htmlDefaults.contentScale ?? 1.0;
-        this.data.backgroundColor = this.data.backgroundColor ?? htmlDefaults.backgroundColor ?? 'var(--node-bg-default)';
-
+        this.data.backgroundColor =
+            this.data.backgroundColor ?? htmlDefaults.backgroundColor ?? 'var(--node-bg-default)';
 
         this.htmlElement = this._createHtmlElement(); // Uses this.size and this.data
         this.cssObject = new CSS3DObject(this.htmlElement);
@@ -1694,7 +1638,9 @@ export class HtmlNodeElement extends BaseNode {
      * @protected
      */
     getDefaultData() {
-        const graphHtmlDefaults = this.spaceGraph?.config?.defaults?.node?.html || {};
+        // Access spaceGraph via this.data.spaceGraphForDefault if set, or this.spaceGraph (which might be set by BaseNode if passed early)
+        const spaceGraphInstance = this.data.spaceGraphForDefault || this.spaceGraph;
+        const graphHtmlDefaults = spaceGraphInstance?.config?.defaults?.node?.html || {};
         return {
             ...super.getDefaultData(), // Includes label: this.id from BaseNode
             type: 'html',
@@ -1738,7 +1684,7 @@ export class HtmlNodeElement extends BaseNode {
           </div>
           <div class="resize-handle" title="Resize Node"></div>
       `;
-        if(this.data.editable) this._initContentEditable(el);
+        if (this.data.editable) this._initContentEditable(el);
         return el;
     }
 
@@ -1750,7 +1696,7 @@ export class HtmlNodeElement extends BaseNode {
     _initContentEditable(element) {
         const contentDiv = $('.node-content', element);
         if (contentDiv) {
-            contentDiv.contentEditable = "true";
+            contentDiv.contentEditable = 'true';
             let debounceTimer;
             contentDiv.addEventListener('input', () => {
                 clearTimeout(debounceTimer);
@@ -1762,14 +1708,21 @@ export class HtmlNodeElement extends BaseNode {
                 }, 300); // Debounce to avoid excessive updates
             });
             // Prevent pointer events (like dragging for graph panning) when interacting with editable content
-            contentDiv.addEventListener('pointerdown', e => e.stopPropagation());
-            contentDiv.addEventListener('touchstart', e => e.stopPropagation(), {passive: true}); // For touch devices
+            contentDiv.addEventListener('pointerdown', (e) => e.stopPropagation());
+            contentDiv.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true }); // For touch devices
             // Allow wheel scrolling within the content div if it overflows, preventing graph zoom
-            contentDiv.addEventListener('wheel', e => {
-                if (contentDiv.scrollHeight > contentDiv.clientHeight || contentDiv.scrollWidth > contentDiv.clientWidth) {
-                    e.stopPropagation(); // Stop wheel event from propagating to graph zoom/pan
-                }
-            }, {passive: false}); // `passive: false` is needed to call `stopPropagation` on wheel events
+            contentDiv.addEventListener(
+                'wheel',
+                (e) => {
+                    if (
+                        contentDiv.scrollHeight > contentDiv.clientHeight ||
+                        contentDiv.scrollWidth > contentDiv.clientWidth
+                    ) {
+                        e.stopPropagation(); // Stop wheel event from propagating to graph zoom/pan
+                    }
+                },
+                { passive: false }
+            ); // `passive: false` is needed to call `stopPropagation` on wheel events
         }
     }
 
@@ -1781,7 +1734,7 @@ export class HtmlNodeElement extends BaseNode {
      * @param {number} z - The new z-coordinate in world space.
      */
     setPosition(x, y, z) {
-        super.setPosition(x,y,z); // Updates this.position
+        super.setPosition(x, y, z); // Updates this.position
         if (this.cssObject) this.cssObject.position.copy(this.position); // Sync CSS3DObject's position
     }
 
@@ -1877,8 +1830,9 @@ export class HtmlNodeElement extends BaseNode {
     update(spaceGraphInstance) {
         if (this.cssObject) {
             this.cssObject.position.copy(this.position); // Sync position with BaseNode position
-            if (this.billboard && spaceGraphInstance?._camera) { // If billboard is true, make it face the camera
-                 this.cssObject.quaternion.copy(spaceGraphInstance._camera.quaternion);
+            if (this.billboard && spaceGraphInstance?._camera) {
+                // If billboard is true, make it face the camera
+                this.cssObject.quaternion.copy(spaceGraphInstance._camera.quaternion);
             }
         }
     }
@@ -1936,7 +1890,9 @@ export class HtmlNodeElement extends BaseNode {
      * @param {number} newWidth - The new target width for the node.
      * @param {number} newHeight - The new target height for the node.
      */
-    resize(newWidth, newHeight) { this.setSize(newWidth, newHeight); }
+    resize(newWidth, newHeight) {
+        this.setSize(newWidth, newHeight);
+    }
     /**
      * Called by {@link UIManager} when a resize operation ends.
      * Removes the 'resizing' CSS class and releases the node in the {@link ForceLayout} engine.
@@ -1966,7 +1922,7 @@ export class NoteNode extends HtmlNodeElement {
      * const myNote = new NoteNode('my-note-id', {x: 10, y: 20}, { content: "This is an important note!" });
      * spaceGraph.addNode(myNote);
      */
-    constructor(id, pos = {x: 0, y: 0, z: 0}, data = {content: ''}) {
+    constructor(id, pos = { x: 0, y: 0, z: 0 }, data = { content: '' }) {
         const mergedData = { ...data, type: 'note', editable: true, label: data.content || data.label }; // Ensure 'note' type and editable
         super(id, pos, mergedData);
     }
@@ -2007,10 +1963,12 @@ export class RegisteredNode extends BaseNode {
      * @param {SpaceGraph} spaceGraphRef - Reference to the parent {@link SpaceGraph} instance, needed for context in `TypeDefinition` callbacks.
      */
     constructor(id, initialUserData, typeDefinition, spaceGraphRef) {
-        super(id,
-              { x: initialUserData.x ?? 0, y: initialUserData.y ?? 0, z: initialUserData.z ?? 0 },
-              initialUserData, // Pass all initialUserData to BaseNode, it will merge with defaults
-              initialUserData.mass ?? typeDefinition.getDefaults?.(initialUserData)?.mass ?? 1.0);
+        super(
+            id,
+            { x: initialUserData.x ?? 0, y: initialUserData.y ?? 0, z: initialUserData.z ?? 0 },
+            initialUserData, // Pass all initialUserData to BaseNode, it will merge with defaults
+            initialUserData.mass ?? typeDefinition.getDefaults?.(initialUserData)?.mass ?? 1.0
+        );
 
         this.typeDefinition = typeDefinition;
         this.spaceGraph = spaceGraphRef; // Crucial for callbacks in typeDefinition
@@ -2027,7 +1985,7 @@ export class RegisteredNode extends BaseNode {
             if (this.mesh) this.mesh.userData = { nodeId: this.id, type: this.data.type };
             if (this.cssObject) this.cssObject.userData = { nodeId: this.id, type: this.data.type };
             if (this.htmlElement && !this.htmlElement.dataset.nodeId) this.htmlElement.dataset.nodeId = this.id; // Ensure htmlElement has nodeId
-            if (this.labelObject) this.labelObject.userData = { nodeId: this.id, type: `${this.data.type}-label`};
+            if (this.labelObject) this.labelObject.userData = { nodeId: this.id, type: `${this.data.type}-label` };
         }
 
         this.portElements = [];
@@ -2073,7 +2031,7 @@ export class RegisteredNode extends BaseNode {
         const nodeWidth = this.htmlElement.offsetWidth; // Needed if ports were top/bottom
 
         // Clear existing port elements from DOM if any (e.g. on a re-render call, though not typical now)
-        this.portElements.forEach(pE => pE.remove());
+        this.portElements.forEach((pE) => pE.remove());
         this.portElements = [];
 
         if (this.data.ports.inputs) {
@@ -2088,8 +2046,8 @@ export class RegisteredNode extends BaseNode {
                 portEl.title = portDef.label || portName; // Tooltip
 
                 // Position port on the left side, distributed vertically
-                portEl.style.left = `-${portSize/2}px`; // Half outside
-                const yPos = (nodeHeight / (inputKeys.length + 1)) * (i + 1) - (portSize / 2);
+                portEl.style.left = `-${portSize / 2}px`; // Half outside
+                const yPos = (nodeHeight / (inputKeys.length + 1)) * (i + 1) - portSize / 2;
                 portEl.style.top = `${Math.max(0, Math.min(nodeHeight - portSize, yPos))}px`;
 
                 this.htmlElement.appendChild(portEl);
@@ -2109,8 +2067,8 @@ export class RegisteredNode extends BaseNode {
                 portEl.title = portDef.label || portName;
 
                 // Position port on the right side
-                portEl.style.right = `-${portSize/2}px`;
-                const yPos = (nodeHeight / (outputKeys.length + 1)) * (i + 1) - (portSize / 2);
+                portEl.style.right = `-${portSize / 2}px`;
+                const yPos = (nodeHeight / (outputKeys.length + 1)) * (i + 1) - portSize / 2;
                 portEl.style.top = `${Math.max(0, Math.min(nodeHeight - portSize, yPos))}px`;
 
                 this.htmlElement.appendChild(portEl);
@@ -2139,7 +2097,7 @@ export class RegisteredNode extends BaseNode {
             if (this.labelObject && (this.spaceGraph?._camera || spaceGraphInstance?._camera)) {
                 const camera = this.spaceGraph?._camera || spaceGraphInstance?._camera;
                 // Position label above the node, adjusted by bounding sphere radius
-                const offset = (this.getBoundingSphereRadius() * 1.1) + 10;
+                const offset = this.getBoundingSphereRadius() * 1.1 + 10;
                 this.labelObject.position.copy(this.position).y += offset;
                 this.labelObject.quaternion.copy(camera.quaternion); // Billboard
             }
@@ -2156,7 +2114,7 @@ export class RegisteredNode extends BaseNode {
             this.typeDefinition.onDispose(this, this.spaceGraph);
         }
 
-        this.portElements.forEach(portEl => portEl.remove());
+        this.portElements.forEach((portEl) => portEl.remove());
         this.portElements = [];
 
         // BaseNode.dispose() will handle mesh, cssObject, labelObject, and their elements.
@@ -2173,8 +2131,8 @@ export class RegisteredNode extends BaseNode {
      * @param {number} y - The new y-coordinate.
      * @param {number} z - The new z-coordinate.
      */
-    setPosition(x,y,z) {
-        super.setPosition(x,y,z); // Updates this.position
+    setPosition(x, y, z) {
+        super.setPosition(x, y, z); // Updates this.position
         if (this.typeDefinition?.onSetPosition) {
             this.typeDefinition.onSetPosition(this, x, y, z, this.spaceGraph);
         } else {
@@ -2194,7 +2152,7 @@ export class RegisteredNode extends BaseNode {
      */
     setSelectedStyle(selected) {
         if (this.portElements && this.portElements.length > 0) {
-            this.portElements.forEach(portEl => {
+            this.portElements.forEach((portEl) => {
                 portEl.style.display = selected ? 'block' : 'none'; // Show ports when selected
             });
         }
@@ -2205,7 +2163,8 @@ export class RegisteredNode extends BaseNode {
             // Default selection behavior if not overridden by TypeDefinition
             if (this.htmlElement) {
                 this.htmlElement.classList.toggle('selected', selected);
-            } else if (this.mesh?.material?.emissive) { // Basic emissive highlight for mesh-based nodes
+            } else if (this.mesh?.material?.emissive) {
+                // Basic emissive highlight for mesh-based nodes
                 this.mesh.material.emissive.setHex(selected ? 0x888800 : 0x000000);
             }
             // Default for label object as well
@@ -2259,7 +2218,8 @@ export class RegisteredNode extends BaseNode {
      * @override
      */
     startDrag() {
-        if (this.typeDefinition?.onStartDrag) this.typeDefinition.onStartDrag(this, this.spaceGraph); else super.startDrag();
+        if (this.typeDefinition?.onStartDrag) this.typeDefinition.onStartDrag(this, this.spaceGraph);
+        else super.startDrag();
     }
     /**
      * Handles a drag operation. Delegates to `onDrag` from the {@link TypeDefinition} if provided,
@@ -2268,7 +2228,8 @@ export class RegisteredNode extends BaseNode {
      * @param {THREE.Vector3} newPosition - The new target position.
      */
     drag(newPosition) {
-        if (this.typeDefinition?.onDrag) this.typeDefinition.onDrag(this, newPosition, this.spaceGraph); else super.drag(newPosition);
+        if (this.typeDefinition?.onDrag) this.typeDefinition.onDrag(this, newPosition, this.spaceGraph);
+        else super.drag(newPosition);
     }
     /**
      * Handles the end of a drag operation. Delegates to `onEndDrag` from the {@link TypeDefinition} if provided,
@@ -2276,7 +2237,8 @@ export class RegisteredNode extends BaseNode {
      * @override
      */
     endDrag() {
-        if (this.typeDefinition?.onEndDrag) this.typeDefinition.onEndDrag(this, this.spaceGraph); else super.endDrag();
+        if (this.typeDefinition?.onEndDrag) this.typeDefinition.onEndDrag(this, this.spaceGraph);
+        else super.endDrag();
     }
 }
 
@@ -2325,9 +2287,12 @@ export class ShapeNode extends BaseNode {
      * spaceGraph.addNode(boxNode);
      */
     constructor(id, position, data = {}, mass = 1.5) {
-        // Temporarily set spaceGraph if provided in data for getDefaultData context
-        if (data.spaceGraph) this.spaceGraph = data.spaceGraph;
-        super(id, position, data, mass); // this.data is now populated
+        // Similar workaround as in HtmlNodeElement for spaceGraph access during super()
+        const tempData = { ...data };
+        if (data.spaceGraph) {
+            tempData.spaceGraphForDefault = data.spaceGraph;
+        }
+        super(id, position, tempData, mass); // this.data is now populated
 
         const shapeDefaults = this.spaceGraph?.config?.defaults?.node?.shape || {};
 
@@ -2343,11 +2308,11 @@ export class ShapeNode extends BaseNode {
         this.data.size = this.size;
         this.data.color = this.color;
 
-
         this.mesh = this._createMesh(); // Creates the Three.js mesh based on shape, size, color
         this.mesh.userData = { nodeId: this.id, type: 'shape-node' }; // For raycasting
 
-        if (this.data.label) { // If a label is provided in data
+        if (this.data.label) {
+            // If a label is provided in data
             this.labelObject = this._createLabel(); // Create a CSS3DObject for the label
             this.labelObject.userData = { nodeId: this.id, type: 'shape-label' };
         }
@@ -2362,7 +2327,8 @@ export class ShapeNode extends BaseNode {
      * @protected
      */
     getDefaultData() {
-        const graphShapeDefaults = this.spaceGraph?.config?.defaults?.node?.shape || {};
+        const spaceGraphInstance = this.data.spaceGraphForDefault || this.spaceGraph;
+        const graphShapeDefaults = spaceGraphInstance?.config?.defaults?.node?.shape || {};
         return {
             ...super.getDefaultData(), // Includes label: this.id from BaseNode
             type: 'shape',
@@ -2391,7 +2357,8 @@ export class ShapeNode extends BaseNode {
                 geometry = new THREE.SphereGeometry(effectiveSize / 2, 16, 12); // size is diameter, so radius is size/2
                 break;
         }
-        const material = new THREE.MeshStandardMaterial({ // Using MeshStandardMaterial for PBR-like appearance
+        const material = new THREE.MeshStandardMaterial({
+            // Using MeshStandardMaterial for PBR-like appearance
             color: this.color,
             roughness: 0.6,
             metalness: 0.2,
@@ -2410,7 +2377,8 @@ export class ShapeNode extends BaseNode {
         div.className = 'node-label-3d'; // For styling via external CSS
         div.textContent = this.data.label;
         div.dataset.nodeId = this.id; // For potential DOM-based interactions or debugging
-        Object.assign(div.style, { // Basic default inline styling (can be overridden by CSS class)
+        Object.assign(div.style, {
+            // Basic default inline styling (can be overridden by CSS class)
             color: 'white', // Text color
             backgroundColor: 'rgba(0,0,0,0.6)', // Semi-transparent black background
             padding: '3px 6px',
@@ -2436,7 +2404,8 @@ export class ShapeNode extends BaseNode {
             // Position label slightly above the node's mesh
             const offset = this.getBoundingSphereRadius() * 1.1 + 10; // 10 units padding above sphere
             this.labelObject.position.copy(this.position).y += offset;
-            if (spaceGraphInstance?._camera) { // Billboard the label to face the camera
+            if (spaceGraphInstance?._camera) {
+                // Billboard the label to face the camera
                 this.labelObject.quaternion.copy(spaceGraphInstance._camera.quaternion);
             }
         }
@@ -2568,7 +2537,7 @@ export class Edge {
         opacity: 0.6, // Default opacity added here for clarity
         style: 'solid',
         constraintType: 'elastic',
-        constraintParams: { stiffness: 0.001, idealLength: 200 } // Default for elastic
+        constraintParams: { stiffness: 0.001, idealLength: 200 }, // Default for elastic
     };
 
     /**
@@ -2597,16 +2566,15 @@ export class Edge {
      * }
      */
     constructor(id, sourceNode, targetNode, data = {}) {
-        if (!sourceNode || !(sourceNode instanceof BaseNode)) throw new Error("Edge requires a valid source BaseNode.");
-        if (!targetNode || !(targetNode instanceof BaseNode)) throw new Error("Edge requires a valid target BaseNode.");
+        if (!sourceNode || !(sourceNode instanceof BaseNode)) throw new Error('Edge requires a valid source BaseNode.');
+        if (!targetNode || !(targetNode instanceof BaseNode)) throw new Error('Edge requires a valid target BaseNode.');
         this.id = id;
         this.source = sourceNode;
         this.target = targetNode;
         this.spaceGraph = sourceNode.spaceGraph; // Inherit spaceGraph reference from a node
 
         const globalEdgeDefaults = this.spaceGraph?.config?.defaults?.edge || {};
-        const classLevelDefaults = this // Accessing the `data` property as defined on the class itself for its defaults
-            .constructor.prototype.data;
+        const classLevelDefaults = this.constructor.prototype.data; // Accessing the `data` property as defined on the class itself for its defaults
 
         // Determine smart default constraint parameters based on type
         const currentConstraintType = data.constraintType || classLevelDefaults.constraintType;
@@ -2618,19 +2586,19 @@ export class Edge {
         // 3. Instance-specific data passed to constructor
         // 4. Smart constraint params (which might depend on node positions/radii)
         this.data = {
-            ...classLevelDefaults,                         // Start with class's own hardcoded defaults
-            ...globalEdgeDefaults,                         // Override with global graph config defaults
-            ...data,                                       // Override with instance-specific data
-            constraintParams: {                            // Deep merge for constraintParams separately
-                ...classLevelDefaults.constraintParams,    // Base for constraint params
-                ...globalEdgeDefaults.constraintParams,    // Global defaults for constraint params
-                ...smartConstraintParams,                  // Type-specific smart defaults (calculated)
-                ...(data.constraintParams || {})          // Instance-specific constraint params
-            }
+            ...classLevelDefaults, // Start with class's own hardcoded defaults
+            ...globalEdgeDefaults, // Override with global graph config defaults
+            ...data, // Override with instance-specific data
+            constraintParams: {
+                // Deep merge for constraintParams separately
+                ...classLevelDefaults.constraintParams, // Base for constraint params
+                ...globalEdgeDefaults.constraintParams, // Global defaults for constraint params
+                ...smartConstraintParams, // Type-specific smart defaults (calculated)
+                ...(data.constraintParams || {}), // Instance-specific constraint params
+            },
         };
         // Ensure constraintType from data or defaults is correctly set
         this.data.constraintType = currentConstraintType;
-
 
         this.threeObject = this._createThreeObject(); // Uses this.data for color, thickness, opacity
         this.update(); // Set initial line positions
@@ -2656,18 +2624,18 @@ export class Edge {
             case 'rigid':
                 return {
                     distance: sourceNode.position.distanceTo(targetNode.position),
-                    stiffness: forceLayoutSettings?.defaultRigidStiffness ?? 0.1
+                    stiffness: forceLayoutSettings?.defaultRigidStiffness ?? 0.1,
                 };
             case 'weld':
                 return {
                     distance: sourceNode.getBoundingSphereRadius() + targetNode.getBoundingSphereRadius(),
-                    stiffness: forceLayoutSettings?.defaultWeldStiffness ?? 0.5
+                    stiffness: forceLayoutSettings?.defaultWeldStiffness ?? 0.5,
                 };
             case 'elastic':
             default:
                 return {
                     stiffness: forceLayoutSettings?.defaultElasticStiffness ?? 0.001,
-                    idealLength: forceLayoutSettings?.defaultElasticIdealLength ?? 200
+                    idealLength: forceLayoutSettings?.defaultElasticIdealLength ?? 200,
                 };
         }
     }
@@ -2833,7 +2801,7 @@ export class UIManager {
 
     constructor(spaceGraph, uiElements = {}) {
         if (!spaceGraph) {
-            throw new Error("UIManager requires a SpaceGraph instance.");
+            throw new Error('UIManager requires a SpaceGraph instance.');
         }
         this.spaceGraph = spaceGraph;
         this.container = spaceGraph.container;
@@ -2852,7 +2820,8 @@ export class UIManager {
             this.confirmDialogEl = document.createElement('div');
             this.confirmDialogEl.id = 'confirm-dialog';
             this.confirmDialogEl.className = 'dialog';
-            this.confirmDialogEl.innerHTML = '<p id="confirm-message">Are you sure?</p><button id="confirm-yes">Yes</button><button id="confirm-no">No</button>';
+            this.confirmDialogEl.innerHTML =
+                '<p id="confirm-message">Are you sure?</p><button id="confirm-yes">Yes</button><button id="confirm-no">No</button>';
             document.body.appendChild(this.confirmDialogEl);
         }
 
@@ -2900,13 +2869,25 @@ export class UIManager {
         return null;
     }
 
-    getTargetInfoForWheel(event) { return this.pointerInputHandler._getTargetInfo(event); }
-    getTargetInfoForMenu(event) { return this.pointerInputHandler._getTargetInfo(event); }
-    getTargetInfoForLink(event) { return this.pointerInputHandler._getTargetInfo(event); }
+    getTargetInfoForWheel(event) {
+        return this.pointerInputHandler._getTargetInfo(event);
+    }
+    getTargetInfoForMenu(event) {
+        return this.pointerInputHandler._getTargetInfo(event);
+    }
+    getTargetInfoForLink(event) {
+        return this.pointerInputHandler._getTargetInfo(event);
+    }
 
-    showConfirmDialog(message, onConfirm) { this.dialogManager.showConfirm(message, onConfirm); }
-    showStatus(message, type, duration) { this.dialogManager.showStatus(message, type, duration); }
-    hideContextMenu() { this.contextMenuManager.hideContextMenu(); }
+    showConfirmDialog(message, onConfirm) {
+        this.dialogManager.showConfirm(message, onConfirm);
+    }
+    showStatus(message, type, duration) {
+        this.dialogManager.showStatus(message, type, duration);
+    }
+    hideContextMenu() {
+        this.contextMenuManager.hideContextMenu();
+    }
 
     handleNodeControlButtonClick(buttonElement, node) {
         // Logic from original UIManager._handleNodeControlButtonClick
@@ -2914,11 +2895,14 @@ export class UIManager {
         if (!(node instanceof HtmlNodeElement)) return;
 
         const actionMap = {
-            'node-delete': () => this.showConfirmDialog(`Delete node "${node.id.substring(0,10)}..."?`, () => this.spaceGraph.removeNode(node.id)),
+            'node-delete': () =>
+                this.showConfirmDialog(`Delete node "${node.id.substring(0, 10)}..."?`, () =>
+                    this.spaceGraph.removeNode(node.id)
+                ),
             'node-content-zoom-in': () => node.adjustContentScale(1.15),
-            'node-content-zoom-out': () => node.adjustContentScale(1/1.15),
+            'node-content-zoom-out': () => node.adjustContentScale(1 / 1.15),
             'node-grow': () => node.adjustNodeSize(1.2),
-            'node-shrink': () => node.adjustNodeSize(0.8)
+            'node-shrink': () => node.adjustNodeSize(0.8),
         };
         for (const cls of buttonElement.classList) {
             if (actionMap[cls]) {
@@ -2942,12 +2926,24 @@ export class UIManager {
     }
 
     handleEscape() {
-        if (this.linkingManager.isLinking()) { this.linkingManager.cancelLinking(); return true; }
+        if (this.linkingManager.isLinking()) {
+            this.linkingManager.cancelLinking();
+            return true;
+        }
         // Check contextMenuEl style directly as ContextMenuManager doesn't expose an isVisible method
-        if (this.contextMenuEl && this.contextMenuEl.style.display === 'block') { this.contextMenuManager.hideContextMenu(); return true; }
+        if (this.contextMenuEl && this.contextMenuEl.style.display === 'block') {
+            this.contextMenuManager.hideContextMenu();
+            return true;
+        }
         // Same for confirmDialogEl
-        if (this.confirmDialogEl && this.confirmDialogEl.style.display === 'block') { this.dialogManager._hideConfirm(); return true; } // DialogManager needs public hide or handles escape internally
-        if (this.edgeMenuManager._edgeMenuObject) { this.spaceGraph.setSelectedEdge(null); return true; } // Deselecting edge hides its menu
+        if (this.confirmDialogEl && this.confirmDialogEl.style.display === 'block') {
+            this.dialogManager._hideConfirm();
+            return true;
+        } // DialogManager needs public hide or handles escape internally
+        if (this.edgeMenuManager._edgeMenuObject) {
+            this.spaceGraph.setSelectedEdge(null);
+            return true;
+        } // Deselecting edge hides its menu
         if (this.spaceGraph.selectedNode || this.spaceGraph.selectedEdge) {
             this.spaceGraph.setSelectedNode(null);
             this.spaceGraph.setSelectedEdge(null);
@@ -2977,7 +2973,6 @@ export class UIManager {
         this.linkingManager.cancelLinking();
     }
 
-
     dispose() {
         this.pointerInputHandler.dispose();
         this.keyboardInputHandler.dispose();
@@ -2991,20 +2986,35 @@ export class UIManager {
         document.removeEventListener('click', this._onDocumentClick.bind(this), true);
 
         // Remove DOM elements if UIManager was responsible for creating them
-        if (this.contextMenuEl && this.contextMenuEl.id === 'context-menu' && this.contextMenuEl.parentElement === document.body) {
+        if (
+            this.contextMenuEl &&
+            this.contextMenuEl.id === 'context-menu' &&
+            this.contextMenuEl.parentElement === document.body
+        ) {
             this.contextMenuEl.remove();
         }
-        if (this.confirmDialogEl && this.confirmDialogEl.id === 'confirm-dialog' && this.confirmDialogEl.parentElement === document.body) {
+        if (
+            this.confirmDialogEl &&
+            this.confirmDialogEl.id === 'confirm-dialog' &&
+            this.confirmDialogEl.parentElement === document.body
+        ) {
             this.confirmDialogEl.remove();
         }
-        if (this.statusIndicatorEl && this.statusIndicatorEl.id === 'status-indicator' && this.statusIndicatorEl.parentElement === document.body) {
+        if (
+            this.statusIndicatorEl &&
+            this.statusIndicatorEl.id === 'status-indicator' &&
+            this.statusIndicatorEl.parentElement === document.body
+        ) {
             this.statusIndicatorEl.remove();
         }
 
-        this.spaceGraph = null; this.container = null;
-        this.contextMenuEl = null; this.confirmDialogEl = null; this.statusIndicatorEl = null;
+        this.spaceGraph = null;
+        this.container = null;
+        this.contextMenuEl = null;
+        this.confirmDialogEl = null;
+        this.statusIndicatorEl = null;
         this._hoveredEdge = null;
-        console.log("UIManager (Facade) disposed.");
+        console.log('UIManager (Facade) disposed.');
     }
 }
 
@@ -3120,7 +3130,7 @@ export class CameraController {
         if (!this.initialState) {
             this.initialState = {
                 position: this.targetPosition.clone(), // Current target, not actual camera position, for consistency
-                lookAt: this.targetLookAt.clone()
+                lookAt: this.targetLookAt.clone(),
             };
         }
     }
@@ -3162,7 +3172,7 @@ export class CameraController {
         const viewportHeight = this.domElement.clientHeight || window.innerHeight;
 
         const panXAmount = -(deltaX / viewportHeight) * viewPlaneHeightAtLookAt * this.panSpeed;
-        const panYAmount =  (deltaY / viewportHeight) * viewPlaneHeightAtLookAt * this.panSpeed;
+        const panYAmount = (deltaY / viewportHeight) * viewPlaneHeightAtLookAt * this.panSpeed;
 
         // Get camera's local right and up vectors to pan relative to camera orientation.
         const rightVector = new THREE.Vector3().setFromMatrixColumn(this.camera.matrixWorld, 0);
@@ -3217,15 +3227,15 @@ export class CameraController {
     }
 
     /**
-      * Calculates the intersection point of a ray cast from screen coordinates (e.g., mouse cursor)
-      * with the plane defined by the camera's current `targetLookAt` point and oriented perpendicular
-      * to the camera's view direction. This is useful for "zoom to cursor" or placing objects on that plane.
-      *
-      * @param {number} screenX - The X-coordinate on the screen (e.g., `event.clientX`).
-      * @param {number} screenY - The Y-coordinate on the screen (e.g., `event.clientY`).
-      * @returns {THREE.Vector3 | null} The intersection point in world space, or `null` if no intersection occurs (rare for a plane).
-      * @private
-      */
+     * Calculates the intersection point of a ray cast from screen coordinates (e.g., mouse cursor)
+     * with the plane defined by the camera's current `targetLookAt` point and oriented perpendicular
+     * to the camera's view direction. This is useful for "zoom to cursor" or placing objects on that plane.
+     *
+     * @param {number} screenX - The X-coordinate on the screen (e.g., `event.clientX`).
+     * @param {number} screenY - The Y-coordinate on the screen (e.g., `event.clientY`).
+     * @returns {THREE.Vector3 | null} The intersection point in world space, or `null` if no intersection occurs (rare for a plane).
+     * @private
+     */
     _getLookAtPlaneIntersection(screenX, screenY) {
         // Normalize screen coordinates to NDC (-1 to +1 range)
         const normalizedScreenCoords = new THREE.Vector3(
@@ -3241,7 +3251,10 @@ export class CameraController {
         this.camera.getWorldDirection(cameraDirection);
 
         // Create a plane that is normal to the camera's viewing direction and passes through the targetLookAt point.
-        const lookAtPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(cameraDirection.negate(), this.targetLookAt);
+        const lookAtPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(
+            cameraDirection.negate(),
+            this.targetLookAt
+        );
 
         const intersectionPoint = new THREE.Vector3();
         return raycaster.ray.intersectPlane(lookAtPlane, intersectionPoint) ? intersectionPoint : null;
@@ -3268,22 +3281,28 @@ export class CameraController {
         this.setInitialState(); // Ensure initial state is captured if this is the first significant move.
         const targetPositionVec = new THREE.Vector3(x, y, z);
         // Default lookAt to a point on Z=0 plane below the camera's new X,Y, or use the specified target.
-        const targetLookAtVec = lookAtTarget ? lookAtTarget.clone() : new THREE.Vector3(targetPositionVec.x, targetPositionVec.y, 0);
+        const targetLookAtVec = lookAtTarget
+            ? lookAtTarget.clone()
+            : new THREE.Vector3(targetPositionVec.x, targetPositionVec.y, 0);
 
         gsap.killTweensOf(this.targetPosition); // Interrupt existing position animations.
-        gsap.killTweensOf(this.targetLookAt);   // Interrupt existing look-at animations.
+        gsap.killTweensOf(this.targetLookAt); // Interrupt existing look-at animations.
 
         gsap.to(this.targetPosition, {
-            x: targetPositionVec.x, y: targetPositionVec.y, z: targetPositionVec.z,
+            x: targetPositionVec.x,
+            y: targetPositionVec.y,
+            z: targetPositionVec.z,
             duration,
-            ease: "power3.out", // Smooth easing function
-            overwrite: true      // Overwrite any conflicting tweens on the same properties
+            ease: 'power3.out', // Smooth easing function
+            overwrite: true, // Overwrite any conflicting tweens on the same properties
         });
         gsap.to(this.targetLookAt, {
-            x: targetLookAtVec.x, y: targetLookAtVec.y, z: targetLookAtVec.z,
+            x: targetLookAtVec.x,
+            y: targetLookAtVec.y,
+            z: targetLookAtVec.z,
             duration,
-            ease: "power3.out",
-            overwrite: true
+            ease: 'power3.out',
+            overwrite: true,
         });
     }
 
@@ -3296,10 +3315,16 @@ export class CameraController {
      */
     resetView(duration = 0.7) {
         if (this.initialState) {
-            this.moveTo(this.initialState.position.x, this.initialState.position.y, this.initialState.position.z, duration, this.initialState.lookAt);
+            this.moveTo(
+                this.initialState.position.x,
+                this.initialState.position.y,
+                this.initialState.position.z,
+                duration,
+                this.initialState.lookAt
+            );
         } else {
             // Fallback to a default俯瞰view if initialState was somehow not set.
-            this.moveTo(0, 0, 700, duration, new THREE.Vector3(0,0,0));
+            this.moveTo(0, 0, 700, duration, new THREE.Vector3(0, 0, 0));
         }
         this.viewHistory = []; // Clear navigation history.
         this.currentTargetNodeId = null; // Clear any auto-zoom target.
@@ -3317,7 +3342,7 @@ export class CameraController {
         this.viewHistory.push({
             position: this.targetPosition.clone(),
             lookAt: this.targetLookAt.clone(),
-            targetNodeId: this.currentTargetNodeId
+            targetNodeId: this.currentTargetNodeId,
         });
     }
 
@@ -3349,7 +3374,9 @@ export class CameraController {
      * This is typically used by {@link SpaceGraph#autoZoom}.
      * @param {string | null} nodeId - The ID of the {@link BaseNode} to target, or `null` to clear the target.
      */
-    setCurrentTargetNodeId = (nodeId) => { this.currentTargetNodeId = nodeId; };
+    setCurrentTargetNodeId = (nodeId) => {
+        this.currentTargetNodeId = nodeId;
+    };
 
     /**
      * The main update loop for the camera controller, driven by `requestAnimationFrame`.
@@ -3372,14 +3399,15 @@ export class CameraController {
         } else if (!gsap.isTweening(this.targetPosition) && !gsap.isTweening(this.targetLookAt)) {
             // If very close to target and no GSAP animation is running for either target,
             // snap to the target values to avoid tiny, perpetual interpolations ("drifting").
-            if (positionDelta > 0 || lookAtDelta > 0) { // Check if not already exactly at target
+            if (positionDelta > 0 || lookAtDelta > 0) {
+                // Check if not already exactly at target
                 this.camera.position.copy(this.targetPosition);
                 this.currentLookAt.copy(this.targetLookAt);
                 this.camera.lookAt(this.currentLookAt);
             }
         }
         this.animationFrameId = requestAnimationFrame(this._updateLoop);
-    }
+    };
 
     /**
      * Cleans up resources used by the CameraController.
@@ -3393,12 +3421,12 @@ export class CameraController {
             this.animationFrameId = null;
         }
         gsap.killTweensOf(this.targetPosition); // Stop any GSAP animations on targetPosition.
-        gsap.killTweensOf(this.targetLookAt);   // Stop any GSAP animations on targetLookAt.
+        gsap.killTweensOf(this.targetLookAt); // Stop any GSAP animations on targetLookAt.
 
         this.camera = null;
         this.domElement = null;
         this.viewHistory = []; // Clear history.
-        console.log("CameraController disposed.");
+        console.log('CameraController disposed.');
     }
 }
 
@@ -3501,7 +3529,7 @@ export class ForceLayout {
     constructor(spaceGraphInstance, config = {}) {
         this.spaceGraph = spaceGraphInstance;
         // Merge provided config with default settings
-        this.settings = {...this.settings, ...config};
+        this.settings = { ...this.settings, ...config };
         // Ensure default elastic parameters are consistent with general attraction/idealEdgeLength settings
         this.settings.defaultElasticStiffness = this.settings.attraction;
         this.settings.defaultElasticIdealLength = this.settings.idealEdgeLength;
@@ -3536,10 +3564,11 @@ export class ForceLayout {
      * // spaceGraph.removeNode internally calls layoutEngine.removeNode(nodeInstance);
      */
     removeNode(node) {
-        this.nodes = this.nodes.filter(n => n !== node);
+        this.nodes = this.nodes.filter((n) => n !== node);
         this.velocities.delete(node.id);
         this.fixedNodes.delete(node);
-        if (this.nodes.length < 2 && this.isRunning) this.stop(); else this.kick();
+        if (this.nodes.length < 2 && this.isRunning) this.stop();
+        else this.kick();
     }
 
     /**
@@ -3554,7 +3583,12 @@ export class ForceLayout {
      * const newEdge = spaceGraph.addEdge(nodeA, nodeB);
      * // spaceGraph.addEdge internally calls layoutEngine.addEdge(newEdge);
      */
-    addEdge(edge) { if (!this.edges.includes(edge)) { this.edges.push(edge); this.kick(); } }
+    addEdge(edge) {
+        if (!this.edges.includes(edge)) {
+            this.edges.push(edge);
+            this.kick();
+        }
+    }
 
     /**
      * Removes an edge from the layout simulation.
@@ -3565,7 +3599,10 @@ export class ForceLayout {
      * @example
      * // spaceGraph.removeEdge internally calls layoutEngine.removeEdge(edgeInstance);
      */
-    removeEdge(edge) { this.edges = this.edges.filter(e => e !== edge); this.kick(); }
+    removeEdge(edge) {
+        this.edges = this.edges.filter((e) => e !== edge);
+        this.kick();
+    }
 
     /**
      * Fixes a {@link BaseNode}'s position, preventing it from being moved by layout forces.
@@ -3577,7 +3614,10 @@ export class ForceLayout {
      * const specialNode = spaceGraph.getNodeById('special');
      * if (specialNode) spaceGraph.layoutEngine.fixNode(specialNode);
      */
-    fixNode(node) { this.fixedNodes.add(node); this.velocities.get(node.id)?.set(0,0,0); }
+    fixNode(node) {
+        this.fixedNodes.add(node);
+        this.velocities.get(node.id)?.set(0, 0, 0);
+    }
 
     /**
      * Releases a previously fixed {@link BaseNode}, allowing it to be moved by layout forces again.
@@ -3588,7 +3628,9 @@ export class ForceLayout {
      * const specialNode = spaceGraph.getNodeById('special');
      * if (specialNode) spaceGraph.layoutEngine.releaseNode(specialNode);
      */
-    releaseNode(node) { this.fixedNodes.delete(node);  }
+    releaseNode(node) {
+        this.fixedNodes.delete(node);
+    }
 
     /**
      * Runs a fixed number of simulation steps ({@link ForceLayout#_calculateStep}).
@@ -3627,13 +3669,17 @@ export class ForceLayout {
      */
     start() {
         if (this.isRunning || this.nodes.length < 2) return; // Don't start if already running or too few nodes
-        console.log("ForceLayout: Starting simulation.");
-        this.isRunning = true; this.lastKickTime = Date.now();
+        console.log('ForceLayout: Starting simulation.');
+        this.isRunning = true;
+        this.lastKickTime = Date.now();
         const loop = () => {
             if (!this.isRunning) return;
             this.energy = this._calculateStep();
             // Check for auto-stop condition
-            if (this.energy < this.settings.minEnergyThreshold && Date.now() - this.lastKickTime > this.settings.autoStopDelay) {
+            if (
+                this.energy < this.settings.minEnergyThreshold &&
+                Date.now() - this.lastKickTime > this.settings.autoStopDelay
+            ) {
                 this.stop();
             } else {
                 this.animationFrameId = requestAnimationFrame(loop);
@@ -3654,8 +3700,9 @@ export class ForceLayout {
         this.isRunning = false;
         if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId);
         clearTimeout(this.autoStopTimeout); // Clear any pending auto-stop
-        this.animationFrameId = null; this.autoStopTimeout = null;
-        console.log("ForceLayout: Simulation stopped. Energy:", this.energy?.toFixed(4));
+        this.animationFrameId = null;
+        this.autoStopTimeout = null;
+        console.log('ForceLayout: Simulation stopped. Energy:', this.energy?.toFixed(4));
     }
 
     /**
@@ -3673,12 +3720,18 @@ export class ForceLayout {
      */
     kick(intensity = 1) {
         if (this.nodes.length === 0) return;
-        this.lastKickTime = Date.now(); this.energy = Infinity; // Reset energy and kick time
-        this.nodes.forEach(node => {
+        this.lastKickTime = Date.now();
+        this.energy = Infinity; // Reset energy and kick time
+        this.nodes.forEach((node) => {
             if (!this.fixedNodes.has(node)) {
                 this.velocities.get(node.id)?.add(
-                    new THREE.Vector3(Math.random()-0.5, Math.random()-0.5, (Math.random()-0.5)*this.settings.zSpreadFactor)
-                    .normalize().multiplyScalar(intensity * (1 + Math.random()*2)) // Add some randomness to kick strength
+                    new THREE.Vector3(
+                        Math.random() - 0.5,
+                        Math.random() - 0.5,
+                        (Math.random() - 0.5) * this.settings.zSpreadFactor
+                    )
+                        .normalize()
+                        .multiplyScalar(intensity * (1 + Math.random() * 2)) // Add some randomness to kick strength
                 );
             }
         });
@@ -3708,11 +3761,11 @@ export class ForceLayout {
      * });
      */
     setSettings(newSettings) {
-        this.settings = {...this.settings, ...newSettings};
+        this.settings = { ...this.settings, ...newSettings };
         // Propagate relevant general settings to specific defaults
         this.settings.defaultElasticStiffness = this.settings.attraction;
         this.settings.defaultElasticIdealLength = this.settings.idealEdgeLength;
-        console.log("ForceLayout settings updated:", this.settings);
+        console.log('ForceLayout settings updated:', this.settings);
         this.kick(); // Re-energize simulation with new settings
     }
 
@@ -3743,7 +3796,7 @@ export class ForceLayout {
         if (this.nodes.length < 2 && this.edges.length === 0) return 0; // Not enough elements for forces
         let totalSystemEnergy = 0;
         // Initialize forces for each node
-        const forces = new Map(this.nodes.map(node => [node.id, new THREE.Vector3()]));
+        const forces = new Map(this.nodes.map((node) => [node.id, new THREE.Vector3()]));
         const { repulsion, centerStrength, gravityCenter, zSpreadFactor, damping, nodePadding } = this.settings;
         const tempDelta = new THREE.Vector3(); // Reusable vector for delta calculations
 
@@ -3754,7 +3807,8 @@ export class ForceLayout {
                 const nodeB = this.nodes[j];
                 tempDelta.subVectors(nodeB.position, nodeA.position);
                 let distSq = tempDelta.lengthSq();
-                if (distSq < 1e-4) { // Avoid division by zero or extreme forces if nodes are too close
+                if (distSq < 1e-4) {
+                    // Avoid division by zero or extreme forces if nodes are too close
                     distSq = 1e-4;
                     tempDelta.randomDirection().multiplyScalar(0.01); // Add a tiny random offset
                 }
@@ -3766,7 +3820,8 @@ export class ForceLayout {
                 const overlap = combinedRadius - dist;
 
                 let forceMag = -repulsion / distSq; // Standard Coulomb repulsion
-                if (overlap > 0) { // Add extra repulsion if nodes overlap
+                if (overlap > 0) {
+                    // Add extra repulsion if nodes overlap
                     forceMag -= (repulsion * Math.pow(overlap, 2) * 0.01) / dist; // Stronger force for overlap
                 }
                 const forceVec = tempDelta.normalize().multiplyScalar(forceMag);
@@ -3777,8 +3832,8 @@ export class ForceLayout {
         }
 
         // Calculate attractive forces for edges (spring forces)
-        this.edges.forEach(edge => {
-            const {source, target, data: edgeData} = edge;
+        this.edges.forEach((edge) => {
+            const { source, target, data: edgeData } = edge;
             if (!source || !target || !this.velocities.has(source.id) || !this.velocities.has(target.id)) return; // Ensure nodes exist
             tempDelta.subVectors(target.position, source.position);
             const distance = tempDelta.length() + 1e-6; // Add epsilon to prevent division by zero
@@ -3787,22 +3842,27 @@ export class ForceLayout {
             const type = edgeData.constraintType || 'elastic';
 
             switch (type) {
-                case 'rigid':
+                case 'rigid': {
                     const targetDist = params.distance ?? source.position.distanceTo(target.position); // Use current distance if not specified
                     const rStiffness = params.stiffness ?? this.settings.defaultRigidStiffness;
                     forceMag = rStiffness * (distance - targetDist);
                     break;
-                case 'weld': // Similar to rigid but might use node radii for default distance
-                    const weldDist = params.distance ?? (source.getBoundingSphereRadius() + target.getBoundingSphereRadius());
+                }
+                case 'weld': {
+                    // Similar to rigid but might use node radii for default distance
+                    const weldDist =
+                        params.distance ?? source.getBoundingSphereRadius() + target.getBoundingSphereRadius();
                     const wStiffness = params.stiffness ?? this.settings.defaultWeldStiffness;
                     forceMag = wStiffness * (distance - weldDist);
                     break;
+                }
                 case 'elastic':
-                default:
+                default: {
                     const idealLen = params.idealLength ?? this.settings.defaultElasticIdealLength;
                     const eStiffness = params.stiffness ?? this.settings.defaultElasticStiffness;
                     forceMag = eStiffness * (distance - idealLen); // Hooke's Law
                     break;
+                }
             }
             const forceVec = tempDelta.normalize().multiplyScalar(forceMag);
             forceVec.z *= zSpreadFactor; // Apply Z-spread
@@ -3812,7 +3872,7 @@ export class ForceLayout {
 
         // Apply centering force (gravity towards a central point)
         if (centerStrength > 0) {
-            this.nodes.forEach(node => {
+            this.nodes.forEach((node) => {
                 if (this.fixedNodes.has(node)) return;
                 const forceVec = tempDelta.subVectors(gravityCenter, node.position).multiplyScalar(centerStrength);
                 forceVec.z *= zSpreadFactor * 0.5; // May want different Z spread for centering
@@ -3821,7 +3881,7 @@ export class ForceLayout {
         }
 
         // Update velocities and positions for each node
-        this.nodes.forEach(node => {
+        this.nodes.forEach((node) => {
             if (this.fixedNodes.has(node)) return; // Skip fixed nodes
             const force = forces.get(node.id);
             const velocity = this.velocities.get(node.id);
@@ -3852,9 +3912,11 @@ export class ForceLayout {
      */
     dispose() {
         this.stop();
-        this.nodes = []; this.edges = [];
-        this.velocities.clear(); this.fixedNodes.clear();
+        this.nodes = [];
+        this.edges = [];
+        this.velocities.clear();
+        this.fixedNodes.clear();
         this.spaceGraph = null;
-        console.log("ForceLayout disposed.");
+        console.log('ForceLayout disposed.');
     }
 }

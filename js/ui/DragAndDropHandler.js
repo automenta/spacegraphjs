@@ -62,22 +62,22 @@ export class DragAndDropHandler {
         try {
             nodeCreationData = JSON.parse(rawData);
         } catch (err) {
-            console.error("Failed to parse dragged node data JSON:", err, "Raw data:", rawData);
+            console.error('Failed to parse dragged node data JSON:', err, 'Raw data:', rawData);
             // Use uiManager to show status, assuming DialogManager is part of it or accessible
-            this.uiManager.showStatus("Error: Could not parse node data for drop.", "error");
+            this.uiManager.showStatus('Error: Could not parse node data for drop.', 'error');
             return;
         }
 
         if (!nodeCreationData.type) {
             console.error("Dragged node data is missing 'type' property.", nodeCreationData);
-            this.uiManager.showStatus("Error: Node data from drop is missing 'type'.", "error");
+            this.uiManager.showStatus("Error: Node data from drop is missing 'type'.", 'error');
             return;
         }
 
         const worldPos = this.spaceGraph.screenToWorld(event.clientX, event.clientY, 0);
         if (!worldPos) {
-            console.error("Could not convert drop position to world coordinates.");
-            this.uiManager.showStatus("Error: Could not determine drop location.", "error");
+            console.error('Could not convert drop position to world coordinates.');
+            this.uiManager.showStatus('Error: Could not determine drop location.', 'error');
             return;
         }
 
@@ -88,7 +88,7 @@ export class DragAndDropHandler {
             // console.log(`Node of type '${finalNodeData.type}' created by drop:`, newNode.id);
             this.spaceGraph.setSelectedNode(newNode);
             this.spaceGraph.layoutEngine?.kick();
-            this.uiManager.showStatus(`Node '${newNode.data.label || newNode.id}' created.`, "info");
+            this.uiManager.showStatus(`Node '${newNode.data.label || newNode.id}' created.`, 'info');
             // Optional: Focus on the new node
             // setTimeout(() => this.spaceGraph.focusOnNode(newNode, 0.6, true), 100);
         } else {

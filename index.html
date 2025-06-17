@@ -1,91 +1,118 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
-    <title>SpaceGraph Keystone Example 🧠</title>
-    <link href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>"
-          rel="icon">
-    <link href="index.css" rel="stylesheet"/>
-</head>
-<body>
+    <head>
+        <meta charset="UTF-8" />
+        <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
+        <title>SpaceGraph Keystone Example 🧠</title>
+        <link
+            href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>"
+            rel="icon"
+        />
+        <link href="index.css" rel="stylesheet" />
+    </head>
+    <body>
+        <div id="space">
+            <canvas id="webgl-canvas"></canvas>
+            <div id="css3d-container"></div>
+        </div>
 
-<div id="space"> 
-    <canvas id="webgl-canvas"></canvas> 
-    <div id="css3d-container"></div> 
-</div>
+        <script type="importmap">
+            {
+                "imports": {
+                    "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
+                    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
+                    "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
+                }
+            }
+        </script>
+        <script type="module">
+            import * as S from './spacegraph.js';
 
-<script type="importmap">
-    {
-        "imports": {
-            "three":         "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
-            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
-            "gsap":          "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
-        }
-    }
-</script>
-<script type="module">
-    import * as S from './spacegraph.js';
+            function init() {
+                const container = S.$('#space');
+                const container = S.$('#space');
+                // const contextMenuEl = S.$('#context-menu'); // No longer needed to pass explicitly
+                // const confirmDialogEl = S.$('#confirm-dialog'); // No longer needed to pass explicitly
+                // const statusIndicator = S.$('#status-indicator'); // No longer needed to pass explicitly
 
-    function init() {
-        const container = S.$('#space');
-        const container = S.$('#space');
-        // const contextMenuEl = S.$('#context-menu'); // No longer needed to pass explicitly
-        // const confirmDialogEl = S.$('#confirm-dialog'); // No longer needed to pass explicitly
-        // const statusIndicator = S.$('#status-indicator'); // No longer needed to pass explicitly
+                if (!container) {
+                    // Only need to check for the main container
+                    console.error('Initialization Failed: Missing required #space container element.');
+                    document.body.innerHTML =
+                        "<p style='color:red; padding: 20px;'>Error: Missing required #space container HTML element for the demo.</p>";
+                    return;
+                }
 
-        if (!container) { // Only need to check for the main container
-            console.error("Initialization Failed: Missing required #space container element.");
-            document.body.innerHTML = "<p style='color:red; padding: 20px;'>Error: Missing required #space container HTML element for the demo.</p>";
-            return;
-        }
+                try {
+                    // UIManager will now create UI elements if not found.
+                    // Pass empty uiElements or specific ones if they *were* on the page.
+                    // For this cleanup, we assume they are not on the page and will be auto-created.
+                    const space = new S.SpaceGraph(container, {});
 
-        try {
-            // UIManager will now create UI elements if not found.
-            // Pass empty uiElements or specific ones if they *were* on the page.
-            // For this cleanup, we assume they are not on the page and will be auto-created.
-            const space = new S.SpaceGraph(container, {}); 
+                    createKeystoneExampleGraph(space);
 
-            createKeystoneExampleGraph(space);
+                    space.layoutEngine.runOnce(250);
+                    space.centerView(null, 0.8);
 
-            space.layoutEngine.runOnce(250); 
-            space.centerView(null, 0.8);     
-
-            window.space = space; 
-            // UIManager should handle its own status indicator if necessary, or examples can manage it if a specific one is on page.
-            // For now, let's assume the UIManager's dynamically created one is sufficient or CSS handles initial state.
-            const statusEl = S.$('#status-indicator'); // Find the auto-created one
-            if (statusEl) {
-                statusEl.textContent = 'SpaceGraph Ready ✨';
-                setTimeout(() => statusEl.classList.add('hidden'), 1500);
+                    window.space = space;
+                    // UIManager should handle its own status indicator if necessary, or examples can manage it if a specific one is on page.
+                    // For now, let's assume the UIManager's dynamically created one is sufficient or CSS handles initial state.
+                    const statusEl = S.$('#status-indicator'); // Find the auto-created one
+                    if (statusEl) {
+                        statusEl.textContent = 'SpaceGraph Ready ✨';
+                        setTimeout(() => statusEl.classList.add('hidden'), 1500);
+                    }
+                } catch (error) {
+                    console.error('Initialization Failed:', error);
+                    const statusEl =
+                        S.$('#status-indicator') || document.body.appendChild(document.createElement('div'));
+                    statusEl.id = 'status-indicator'; // Ensure it has an ID if newly created
+                    statusEl.textContent = `Error: ${error.message}`;
+                    statusEl.style.backgroundColor = 'var(--delete-button-bg)';
+                    statusEl.classList.remove('hidden');
+                    container.innerHTML = `<div style="color: red; padding: 20px;">Error initializing SpaceGraph: ${error.message}<br><pre>${error.stack}</pre></div>`;
+                }
             }
 
+            function createKeystoneExampleGraph(space) {
+                console.log('Creating Keystone Example Graph...');
+                const colors = [
+                    '#2a2a50',
+                    '#2a402a',
+                    '#402a2a',
+                    '#40402a',
+                    '#2a4040',
+                    '#402a40',
+                    '#503030',
+                    '#305030',
+                    '#303050',
+                ];
+                let colorIndex = 0;
+                const nextColor = () => colors[colorIndex++ % colors.length];
 
-        } catch (error) {
-            console.error("Initialization Failed:", error);
-            const statusEl = S.$('#status-indicator') || document.body.appendChild(document.createElement('div'));
-            statusEl.id = 'status-indicator'; // Ensure it has an ID if newly created
-            statusEl.textContent = `Error: ${error.message}`;
-            statusEl.style.backgroundColor = 'var(--delete-button-bg)';
-            statusEl.classList.remove('hidden');
-            container.innerHTML = `<div style="color: red; padding: 20px;">Error initializing SpaceGraph: ${error.message}<br><pre>${error.stack}</pre></div>`;
-        }
-    }
+                const n_core = space.addNode(
+                    new S.NoteNode(
+                        'core',
+                        { x: 0, y: 0, z: 0 },
+                        {
+                            content:
+                                '<h1>🚀 SpaceGraph Keystone 🧠</h1><p>A 3D interactive information space.</p><ul><li>HTML & 3D Nodes</li><li>Customizable Edges</li><li>Physics Layout</li></ul>',
+                            width: 320,
+                            height: 160,
+                            backgroundColor: nextColor(),
+                            contentScale: 1.1,
+                        },
+                        2.0
+                    )
+                );
 
-    function createKeystoneExampleGraph(space) {
-        console.log("Creating Keystone Example Graph...");
-        const colors = ['#2a2a50', '#2a402a', '#402a2a', '#40402a', '#2a4040', '#402a40', '#503030', '#305030', '#303050'];
-        let colorIndex = 0;
-        const nextColor = () => colors[colorIndex++ % colors.length];
-
-        const n_core = space.addNode(new S.NoteNode('core', { x: 0, y: 0, z: 0 }, {
-            content: "<h1>🚀 SpaceGraph Keystone 🧠</h1><p>A 3D interactive information space.</p><ul><li>HTML & 3D Nodes</li><li>Customizable Edges</li><li>Physics Layout</li></ul>",
-            width: 320, height: 160, backgroundColor: nextColor(), contentScale: 1.1
-        }, 2.0)); 
-
-        const interactiveNodeId = S.generateId('interactive'); 
-        const n_interactive = space.addNode(new S.NoteNode(interactiveNodeId, { x: 380, y: 100, z: 30 }, {
-            content: `<h2>Interactive Content</h2>
+                const interactiveNodeId = S.generateId('interactive');
+                const n_interactive = space.addNode(
+                    new S.NoteNode(
+                        interactiveNodeId,
+                        { x: 380, y: 100, z: 30 },
+                        {
+                            content: `<h2>Interactive Content</h2>
                       <p>Slider: <span class="slider-val-${interactiveNodeId}">50</span></p>
                       <input type="range" min="0" max="100" value="50" style="width: 90%; pointer-events: auto; cursor: pointer;"
                              oninput="document.querySelector('.slider-val-${interactiveNodeId}').textContent = this.value; event.stopPropagation();"
@@ -97,77 +124,144 @@
                               style="pointer-events: auto; cursor: pointer; margin-top: 8px;">Update Text
                       </button>
                       <p id="dynamic-text-${interactiveNodeId}">Original Text</p>`,
-            width: 260, height: 220, backgroundColor: nextColor()
-        }));
-        space.addEdge(n_core, n_interactive, { constraintType: 'elastic', constraintParams: { idealLength: 300, stiffness: 0.002 }});
-        
-        const updateBtn = S.$(`#update-content-btn-${interactiveNodeId}`, n_interactive.htmlElement);
-        if (updateBtn) {
-            updateBtn.addEventListener('click', (e) => {
-                e.stopPropagation(); 
-                const textEl = S.$(`#dynamic-text-${interactiveNodeId}`, n_interactive.htmlElement);
-                if (textEl) textEl.textContent = `Text updated at ${new Date().toLocaleTimeString()}`;
-            });
-        } else {
-            console.warn(`Button #update-content-btn-${interactiveNodeId} not found for event listener setup.`);
-        }
+                            width: 260,
+                            height: 220,
+                            backgroundColor: nextColor(),
+                        }
+                    )
+                );
+                space.addEdge(n_core, n_interactive, {
+                    constraintType: 'elastic',
+                    constraintParams: { idealLength: 300, stiffness: 0.002 },
+                });
 
-        const n_box = space.addNode(new S.ShapeNode('shapeBox', { x: -350, y: 120, z: -20 }, {
-            label: "3D Box Node 📦", shape: 'box', size: 80, color: 0xcc8833
-        }, 1.5));
-        space.addEdge(n_core, n_box, { constraintType: 'rigid', constraintParams: { distance: 280, stiffness: 0.05 } });
+                const updateBtn = S.$(`#update-content-btn-${interactiveNodeId}`, n_interactive.htmlElement);
+                if (updateBtn) {
+                    updateBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const textEl = S.$(`#dynamic-text-${interactiveNodeId}`, n_interactive.htmlElement);
+                        if (textEl) textEl.textContent = `Text updated at ${new Date().toLocaleTimeString()}`;
+                    });
+                } else {
+                    console.warn(`Button #update-content-btn-${interactiveNodeId} not found for event listener setup.`);
+                }
 
-        const n_sphere = space.addNode(new S.ShapeNode('shapeSphere', { x: -400, y: -100, z: 50 }, {
-            label: "3D Sphere 🌐", shape: 'sphere', size: 70, color: 0x33aabb
-        })); 
-        space.addEdge(n_core, n_sphere, { constraintType: 'elastic', constraintParams: { idealLength: 320, stiffness: 0.001 }});
-        space.addEdge(n_box, n_sphere, { constraintType: 'weld', constraintParams: { stiffness: 0.1 } }); 
+                const n_box = space.addNode(
+                    new S.ShapeNode(
+                        'shapeBox',
+                        { x: -350, y: 120, z: -20 },
+                        {
+                            label: '3D Box Node 📦',
+                            shape: 'box',
+                            size: 80,
+                            color: 0xcc8833,
+                        },
+                        1.5
+                    )
+                );
+                space.addEdge(n_core, n_box, {
+                    constraintType: 'rigid',
+                    constraintParams: { distance: 280, stiffness: 0.05 },
+                });
 
-        const n_details = space.addNode(new S.NoteNode('details', { x: 50, y: -280, z: -40 }, {
-            content: "<h3>Node Details</h3><p>This node shows more connections and different edge types.</p><p>Try context menus (right-click) on nodes, edges, or background.</p>",
-            width: 280, height: 130, backgroundColor: nextColor()
-        }));
-        space.addEdge(n_core, n_details, {
-            color: 0xff8800, 
-            thickness: 2.5,
-            constraintType: 'elastic',
-            constraintParams: { idealLength: 250, stiffness: 0.003 }
-        });
-        space.addEdge(n_interactive, n_details, {
-            color: 0x88ff00,
-            constraintType: 'rigid',
-            constraintParams: { distance: 350, stiffness: 0.01 }
-        });
-        space.addEdge(n_sphere, n_details, {
-             color: 0x0088ff,
-             constraintType: 'elastic',
-             constraintParams: { idealLength: 300, stiffness: 0.0015 }
-        });
+                const n_sphere = space.addNode(
+                    new S.ShapeNode(
+                        'shapeSphere',
+                        { x: -400, y: -100, z: 50 },
+                        {
+                            label: '3D Sphere 🌐',
+                            shape: 'sphere',
+                            size: 70,
+                            color: 0x33aabb,
+                        }
+                    )
+                );
+                space.addEdge(n_core, n_sphere, {
+                    constraintType: 'elastic',
+                    constraintParams: { idealLength: 320, stiffness: 0.001 },
+                });
+                space.addEdge(n_box, n_sphere, { constraintType: 'weld', constraintParams: { stiffness: 0.1 } });
 
-        const n_fractal_root = space.addNode(new S.NoteNode('fractalRoot', {x: n_box.position.x + 150, y: n_box.position.y + 150, z: n_box.position.z - 50}, {
-            content: "<h4>Sub-Cluster</h4>", width: 130, height: 60, backgroundColor: nextColor()
-        }));
-        space.addEdge(n_box, n_fractal_root, { constraintType: 'rigid', constraintParams: { distance: 150, stiffness: 0.02 } });
+                const n_details = space.addNode(
+                    new S.NoteNode(
+                        'details',
+                        { x: 50, y: -280, z: -40 },
+                        {
+                            content:
+                                '<h3>Node Details</h3><p>This node shows more connections and different edge types.</p><p>Try context menus (right-click) on nodes, edges, or background.</p>',
+                            width: 280,
+                            height: 130,
+                            backgroundColor: nextColor(),
+                        }
+                    )
+                );
+                space.addEdge(n_core, n_details, {
+                    color: 0xff8800,
+                    thickness: 2.5,
+                    constraintType: 'elastic',
+                    constraintParams: { idealLength: 250, stiffness: 0.003 },
+                });
+                space.addEdge(n_interactive, n_details, {
+                    color: 0x88ff00,
+                    constraintType: 'rigid',
+                    constraintParams: { distance: 350, stiffness: 0.01 },
+                });
+                space.addEdge(n_sphere, n_details, {
+                    color: 0x0088ff,
+                    constraintType: 'elastic',
+                    constraintParams: { idealLength: 300, stiffness: 0.0015 },
+                });
 
-        for (let i = 0; i < 2; i++) {
-            const angle = (i / 2) * Math.PI * 2 + Math.PI/4;
-            const n_level1 = space.addNode(new S.NoteNode(null, {
-                x: n_fractal_root.position.x + Math.cos(angle) * 120,
-                y: n_fractal_root.position.y + Math.sin(angle) * 120,
-                z: n_fractal_root.position.z + (Math.random() - 0.5) * 60
-            }, {content: `L1-${i+1}`, width: 90, height: 45, backgroundColor: nextColor(), contentScale: 0.9}));
-            space.addEdge(n_fractal_root, n_level1, { constraintType: 'elastic', constraintParams: { idealLength: 100, stiffness: 0.005 }});
-        }
+                const n_fractal_root = space.addNode(
+                    new S.NoteNode(
+                        'fractalRoot',
+                        { x: n_box.position.x + 150, y: n_box.position.y + 150, z: n_box.position.z - 50 },
+                        {
+                            content: '<h4>Sub-Cluster</h4>',
+                            width: 130,
+                            height: 60,
+                            backgroundColor: nextColor(),
+                        }
+                    )
+                );
+                space.addEdge(n_box, n_fractal_root, {
+                    constraintType: 'rigid',
+                    constraintParams: { distance: 150, stiffness: 0.02 },
+                });
 
+                for (let i = 0; i < 2; i++) {
+                    const angle = (i / 2) * Math.PI * 2 + Math.PI / 4;
+                    const n_level1 = space.addNode(
+                        new S.NoteNode(
+                            null,
+                            {
+                                x: n_fractal_root.position.x + Math.cos(angle) * 120,
+                                y: n_fractal_root.position.y + Math.sin(angle) * 120,
+                                z: n_fractal_root.position.z + (Math.random() - 0.5) * 60,
+                            },
+                            {
+                                content: `L1-${i + 1}`,
+                                width: 90,
+                                height: 45,
+                                backgroundColor: nextColor(),
+                                contentScale: 0.9,
+                            }
+                        )
+                    );
+                    space.addEdge(n_fractal_root, n_level1, {
+                        constraintType: 'elastic',
+                        constraintParams: { idealLength: 100, stiffness: 0.005 },
+                    });
+                }
 
-        console.log("Keystone Example Graph created:", space.nodes.size, "nodes,", space.edges.size, "edges.");
-    }
+                console.log('Keystone Example Graph created:', space.nodes.size, 'nodes,', space.edges.size, 'edges.');
+            }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init(); 
-    }
-</script>
-</body>
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+        </script>
+    </body>
 </html>

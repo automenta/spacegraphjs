@@ -89,7 +89,7 @@ export class DialogManager {
             this.statusIndicatorElement.style.opacity = '0';
             // Set display to none after transition, only if opacity is still 0 (not re-shown)
             this.statusIndicatorElement._hideTimeout = setTimeout(() => {
-                if(this.statusIndicatorElement.style.opacity === '0') {
+                if (this.statusIndicatorElement.style.opacity === '0') {
                     this.statusIndicatorElement.style.display = 'none';
                 }
             }, 500); // Duration of typical CSS opacity transition

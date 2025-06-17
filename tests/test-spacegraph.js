@@ -21,7 +21,6 @@ vi.mock('gsap', async () => {
     return mockGsap; // GSAP mock exports `gsap` as a named export and default
 });
 
-
 // Import classes from spacegraph.js
 // Assuming tests are run from `tests/` directory, and spacegraph.js is in root.
 import * as S from '../spacegraph.js';
@@ -32,7 +31,7 @@ let mockContainer, mockContextMenu, mockConfirmDialog, mockStatusIndicator;
 function setupMockDOM() {
     mockContainer = document.createElement('div');
     mockContainer.id = 'space'; // Matching the ID used in examples
-    
+
     // SpaceGraph's _setupRenderers looks for these within the container
     const webglCanvas = document.createElement('canvas');
     webglCanvas.id = 'webgl-canvas'; // Ensure this ID matches what SpaceGraph expects
@@ -41,13 +40,14 @@ function setupMockDOM() {
     const css3dContainer = document.createElement('div');
     css3dContainer.id = 'css3d-container'; // Ensure this ID matches
     mockContainer.appendChild(css3dContainer);
-    
+
     mockContextMenu = document.createElement('div');
     mockContextMenu.id = 'context-menu';
-    
+
     mockConfirmDialog = document.createElement('div');
     mockConfirmDialog.id = 'confirm-dialog';
-    mockConfirmDialog.innerHTML = '<p id="confirm-message"></p><button id="confirm-yes"></button><button id="confirm-no"></button>';
+    mockConfirmDialog.innerHTML =
+        '<p id="confirm-message"></p><button id="confirm-yes"></button><button id="confirm-no"></button>';
 
     mockStatusIndicator = document.createElement('div');
     mockStatusIndicator.id = 'status-indicator';
@@ -69,7 +69,6 @@ function teardownMockDOM() {
     mockStatusIndicator = null;
 }
 
-
 describe('SpaceGraph Core', () => {
     let space;
 
@@ -77,11 +76,16 @@ describe('SpaceGraph Core', () => {
         setupMockDOM();
         // Pass the mock elements to SpaceGraph.
         // Ensure the config structure matches what SpaceGraph expects for UI elements.
-        space = new S.SpaceGraph(mockContainer, {}, { // config is second, uiElements is third
-            contextMenuEl: mockContextMenu,
-            confirmDialogEl: mockConfirmDialog,
-            statusIndicatorEl: mockStatusIndicator // Assuming UIManager might use this
-        });
+        space = new S.SpaceGraph(
+            mockContainer,
+            {},
+            {
+                // config is second, uiElements is third
+                contextMenuEl: mockContextMenu,
+                confirmDialogEl: mockConfirmDialog,
+                statusIndicatorEl: mockStatusIndicator, // Assuming UIManager might use this
+            }
+        );
     });
 
     afterEach(() => {
@@ -101,7 +105,7 @@ describe('SpaceGraph Core', () => {
     });
 
     it('should add and retrieve a NoteNode', () => {
-        const note = new S.NoteNode('note1', {x:10, y:20, z:0}, {content: 'Test Note'});
+        const note = new S.NoteNode('note1', { x: 10, y: 20, z: 0 }, { content: 'Test Note' });
         space.addNode(note);
         expect(space.nodes.size).toBe(1);
         expect(space.getNodeById('note1')).toBe(note);
@@ -109,13 +113,17 @@ describe('SpaceGraph Core', () => {
     });
 
     it('should add and retrieve a ShapeNode', () => {
-        const shape = new S.ShapeNode('shape1', {x:30, y:40, z:0}, {label: 'Test Shape', shape: 'box', size: 50});
+        const shape = new S.ShapeNode(
+            'shape1',
+            { x: 30, y: 40, z: 0 },
+            { label: 'Test Shape', shape: 'box', size: 50 }
+        );
         space.addNode(shape);
         expect(space.nodes.size).toBe(1);
         expect(space.getNodeById('shape1')).toBe(shape);
         expect(shape.spaceGraph).toBe(space);
     });
-    
+
     it('should remove a Node and its connected Edges', () => {
         const node1 = new S.NoteNode('n1');
         const node2 = new S.NoteNode('n2');
@@ -141,8 +149,8 @@ describe('SpaceGraph Core', () => {
         const node2 = new S.NoteNode('n2');
         space.addNode(node1);
         space.addNode(node2);
-        const edge = space.addEdge(node1, node2, {color: 0xff0000});
-        
+        const edge = space.addEdge(node1, node2, { color: 0xff0000 });
+
         expect(edge).not.toBeNull();
         expect(space.edges.size).toBe(1);
         expect(space.getEdgeById(edge.id)).toBe(edge);
@@ -162,7 +170,7 @@ describe('SpaceGraph Core', () => {
         expect(space.edges.size).toBe(0);
         expect(space.getEdgeById(edge.id)).toBeNull();
     });
-    
+
     it('should not add duplicate edges', () => {
         const node1 = new S.NoteNode('n10');
         const node2 = new S.NoteNode('n11');
@@ -171,7 +179,7 @@ describe('SpaceGraph Core', () => {
         space.addEdge(node1, node2);
         const edge2 = space.addEdge(node1, node2); // Attempt to add duplicate
         const edge3 = space.addEdge(node2, node1); // Attempt to add reverse duplicate
-        
+
         expect(space.edges.size).toBe(1);
         expect(edge2).toBeNull();
         expect(edge3).toBeNull();
@@ -186,7 +194,7 @@ describe('SpaceGraph Core', () => {
         // Ensure cssObject is accessed to trigger htmlElement creation before checking classList.
         expect(node1.cssObject).toBeDefined(); // Trigger htmlElement creation
         expect(node1.htmlElement.classList.contains('selected')).toBe(true);
-        
+
         space.setSelectedNode(null); // This calls node.setSelected(false)
         expect(space.selectedNode).toBeNull();
         expect(node1.htmlElement.classList.contains('selected')).toBe(false);
@@ -198,10 +206,10 @@ describe('SpaceGraph Core', () => {
         space.addNode(node1);
         space.addNode(node2);
         const edge = space.addEdge(node1, node2);
-        
+
         space.setSelectedNode(node1);
         space.setSelectedEdge(edge);
-        
+
         expect(space.selectedEdge).toBe(edge);
         // The mock LineBasicMaterial needs to support opacity for this check
         expect(edge.threeObject.material.opacity).toBe(1.0);
@@ -214,10 +222,14 @@ describe('Node Classes', () => {
 
     beforeEach(() => {
         setupMockDOM();
-        space = new S.SpaceGraph(mockContainer, {}, {
-            contextMenuEl: mockContextMenu,
-            confirmDialogEl: mockConfirmDialog
-        });
+        space = new S.SpaceGraph(
+            mockContainer,
+            {},
+            {
+                contextMenuEl: mockContextMenu,
+                confirmDialogEl: mockConfirmDialog,
+            }
+        );
     });
     afterEach(() => {
         space?.dispose();
@@ -225,17 +237,21 @@ describe('Node Classes', () => {
     });
 
     it('BaseNode should instantiate with ID, position, data, mass', () => {
-        const pos = {x:1, y:2, z:3};
-        const data = {custom: 'value'};
+        const pos = { x: 1, y: 2, z: 3 };
+        const data = { custom: 'value' };
         const node = new S.BaseNode('base1', pos, data, 2.5);
         expect(node.id).toBe('base1');
         expect(node.position.x).toBe(1);
         expect(node.data.custom).toBe('value');
         expect(node.mass).toBe(2.5);
     });
-    
+
     it('HtmlNodeElement should instantiate and create HTML element', () => {
-        const node = new S.HtmlNodeElement('html1', {x:0,y:0,z:0}, {label: 'HTML Test', width: 200, height: 100});
+        const node = new S.HtmlNodeElement(
+            'html1',
+            { x: 0, y: 0, z: 0 },
+            { label: 'HTML Test', width: 200, height: 100 }
+        );
         // Access cssObject to trigger htmlElement creation
         expect(node.cssObject).toBeDefined();
         expect(node.htmlElement).toBeDefined();
@@ -245,28 +261,33 @@ describe('Node Classes', () => {
     });
 
     it('NoteNode should instantiate as editable HtmlNodeElement', () => {
-        const note = new S.SgNode('note-edit', {x:0,y:0,z:0}, {content: 'Editable', type: 'note'});
-        space.registerNodeType('note', S.NoteNode); // Ensure type is registered
-        const actualNode = space.createNodeInstance(note.id, note.position, note.data);
+        const nodeData = { type: 'note', id: 'note-edit', x: 0, y: 0, z: 0, content: 'Editable' };
+        // NoteNode type is typically registered by SpaceGraph itself if using built-in types,
+        // but explicit registration is fine for testing.
+        // If 'note' is a built-in type that auto-registers NoteNode, this might not be strictly needed
+        // but doesn't harm. The main point is using addNode.
+        space.registerNodeType('note', S.NoteNode);
+        const actualNode = space.addNode(nodeData);
 
+        expect(actualNode).toBeInstanceOf(S.NoteNode); // Check for NoteNode instance
         expect(actualNode).toBeInstanceOf(S.HtmlNodeElement); // NoteNode extends HtmlNodeElement
         expect(actualNode.data.editable).toBe(true);
         // Access cssObject to trigger htmlElement creation
         expect(actualNode.cssObject).toBeDefined();
         expect(actualNode.htmlElement.querySelector('.node-content[contenteditable="true"]')).not.toBeNull();
     });
-    
+
     it('HtmlNodeElement setSize and setContentScale should update properties', () => {
-        const node = new S.HtmlNodeElement('html-resize', {x:0,y:0,z:0}, {width:100, height:50});
+        const node = new S.HtmlNodeElement('html-resize', { x: 0, y: 0, z: 0 }, { width: 100, height: 50 });
         node.spaceGraph = space;
-        
+
         // Access cssObject to trigger htmlElement creation
         expect(node.cssObject).toBeDefined();
 
         node.setSize(150, 75);
         expect(node.size.width).toBe(150);
         expect(node.htmlElement.style.width).toBe('150px');
-        
+
         node.setContentScale(1.5);
         expect(node.data.contentScale).toBe(1.5);
         const contentEl = node.htmlElement.querySelector('.node-content');
@@ -274,10 +295,11 @@ describe('Node Classes', () => {
     });
 
     it('ShapeNode should instantiate with shape, size, color, label, and mesh', () => {
-        const data = {label: 'MyBox', shape: 'box', size: 60, color: 0xabcdef, type: 'shape'};
+        const nodeData = { type: 'shape', id: 'shape-box1', x: 0, y: 0, z: 0, label: 'MyBox', shape: 'box', size: 60, color: 0xabcdef, mass: 1.8 };
+        // Similar to NoteNode, 'shape' might be auto-registered. Explicit registration for test is okay.
         space.registerNodeType('shape', S.ShapeNode);
-        const node = space.createNodeInstance('shape-box1', {x:0,y:0,z:0}, data, 1.8);
-        
+        const node = space.addNode(nodeData);
+
         expect(node.data.shape).toBe('box');
         expect(node.data.size).toBe(60);
         expect(node.data.color).toBe(0xabcdef);
@@ -299,9 +321,9 @@ describe('Edge Class', () => {
     });
 
     it('should instantiate with ID, source, target, and data', () => {
-        const data = {color: 0x123456, thickness: 2.0, constraintType: 'rigid'};
+        const data = { color: 0x123456, thickness: 2.0, constraintType: 'rigid' };
         const edge = new S.Edge('edge1', node1, node2, data);
-        
+
         expect(edge.id).toBe('edge1');
         expect(edge.source).toBe(node1);
         expect(edge.target).toBe(node2);
@@ -316,7 +338,7 @@ describe('Edge Class', () => {
         edge.data.color = 0xabcdef;
         edge.data.thickness = 3.0;
         edge.data.constraintParams.idealLength = 250;
-        
+
         expect(edge.data.color).toBe(0xabcdef);
         expect(edge.data.thickness).toBe(3.0);
         expect(edge.data.constraintParams.idealLength).toBe(250);
@@ -328,12 +350,16 @@ describe('ForceLayout Class (Basic Interactions)', () => {
 
     beforeEach(() => {
         setupMockDOM();
-        spaceInstance = new S.SpaceGraph(mockContainer, {}, { contextMenuEl: mockContextMenu, confirmDialogEl: mockConfirmDialog });
+        spaceInstance = new S.SpaceGraph(
+            mockContainer,
+            {},
+            { contextMenuEl: mockContextMenu, confirmDialogEl: mockConfirmDialog }
+        );
         layout = spaceInstance.layoutEngine;
 
         spaceInstance.registerNodeType('note', S.NoteNode); // Ensure 'note' type is registered
-        node1 = spaceInstance.addNode({id: 'ln1', type: 'note'});
-        node2 = spaceInstance.addNode({id: 'ln2', type: 'note'});
+        node1 = spaceInstance.addNode({ id: 'ln1', type: 'note' });
+        node2 = spaceInstance.addNode({ id: 'ln2', type: 'note' });
         edge = spaceInstance.addEdge(node1, node2);
     });
     afterEach(() => {
@@ -342,23 +368,23 @@ describe('ForceLayout Class (Basic Interactions)', () => {
     });
 
     it('should have nodes and edges added via SpaceGraph', () => {
-        expect(layout.nodes.map(n => n.id)).toContain(node1.id);
-        expect(layout.nodes.map(n => n.id)).toContain(node2.id);
-        expect(layout.edges.map(e => e.id)).toContain(edge.id);
+        expect(layout.nodes.map((n) => n.id)).toContain(node1.id);
+        expect(layout.nodes.map((n) => n.id)).toContain(node2.id);
+        expect(layout.edges.map((e) => e.id)).toContain(edge.id);
     });
-    
+
     it('should remove nodes and edges when removed from SpaceGraph', () => {
         spaceInstance.removeEdge(edge.id);
-        expect(layout.edges.map(e => e.id)).not.toContain(edge.id);
+        expect(layout.edges.map((e) => e.id)).not.toContain(edge.id);
         spaceInstance.removeNode(node1.id);
-        expect(layout.nodes.map(n => n.id)).not.toContain(node1.id);
+        expect(layout.nodes.map((n) => n.id)).not.toContain(node1.id);
     });
 
     it('kick() should run and potentially change energy, and move non-fixed nodes', () => {
-        node1.position.set(0,0,0);
-        node1.velocity.set(0,0,0);
-        node2.position.set(1,0,0); // Ensure not at the same spot
-        node2.velocity.set(0,0,0);
+        node1.position.set(0, 0, 0);
+        node1.velocity.set(0, 0, 0);
+        node2.position.set(1, 0, 0); // Ensure not at the same spot
+        node2.velocity.set(0, 0, 0);
 
         layout.releaseNode(node1); // Ensure node1 is not fixed
         layout.releaseNode(node2); // Ensure node2 is not fixed
@@ -370,18 +396,18 @@ describe('ForceLayout Class (Basic Interactions)', () => {
 
         // After a kick, non-fixed nodes should have some velocity if layout is running
         // This assumes the kick imparts some motion.
-        if (layout.nodes.length >=2 && layout.isRunning) {
+        if (layout.nodes.length >= 2 && layout.isRunning) {
             // If nodes are not fixed and layout is running, they should have some velocity after kick
             // unless they are perfectly balanced, which is unlikely with a generic kick.
             // Check node1 as it's explicitly not fixed.
             // The velocity might be very small, so check for non-zero.
-            const v1 = node1.velocity;
+            const v1 = layout.velocities.get(node1.id);
             expect(v1.x !== 0 || v1.y !== 0 || v1.z !== 0).toBe(true);
         }
     });
 
     it('should move nodes apart with repulsion', () => {
-        node1.position.set(0,0,0);
+        node1.position.set(0, 0, 0);
         node2.position.set(0.1, 0, 0); // Very close
         const initialDistance = node1.position.distanceTo(node2.position);
 
@@ -394,11 +420,11 @@ describe('ForceLayout Class (Basic Interactions)', () => {
     it('should pull nodes together with edge attraction (elastic constraint)', () => {
         // Ensure the edge is 'elastic' or has attractive properties
         edge.data.constraintType = 'elastic';
-        edge.data.constraintParams = { idealLength: 50, springConstant: 0.1 }; // Example params
-        layout.updateEdgeConstraint(edge); // Force re-evaluation of constraint from data
+        edge.data.constraintParams = { idealLength: 50, stiffness: 0.1 }; // springConstant is usually stiffness
+        // layout.updateEdgeConstraint(edge); // This method does not exist; properties are read directly.
 
-        node1.position.set(0,0,0);
-        node2.position.set(200,0,0); // Far apart
+        node1.position.set(0, 0, 0);
+        node2.position.set(200, 0, 0); // Far apart
         const initialDistance = node1.position.distanceTo(node2.position);
 
         layout.runOnce(10); // Run for a few iterations
@@ -430,14 +456,14 @@ describe('CameraController Class (Basic Interactions)', () => {
         // Reset GSAP mocks for call counts if needed, though typically vi.clearAllMocks() in global afterEach is better
         gsap.to.mockClear();
     });
-    
+
     afterEach(() => {
         cameraCtrl?.dispose();
         mockDomEl = null;
     });
 
     it('moveTo() should update targetPosition and targetLookAt, and camera directly if duration is 0', () => {
-        const lookAtVec = new THREE.Vector3(50,50,0);
+        const lookAtVec = new THREE.Vector3(50, 50, 0);
         cameraCtrl.moveTo(100, 200, 300, 0, lookAtVec);
 
         expect(gsap.to).toHaveBeenCalled();
@@ -501,7 +527,7 @@ describe('CameraController Class (Basic Interactions)', () => {
 
     it('zoom() should change targetPosition based on zoom direction via GSAP', () => {
         const initialZ = cameraCtrl.targetPosition.z;
-        cameraCtrl.zoom({ clientX:0, clientY:0, deltaY: -100, preventDefault: () => {} });
+        cameraCtrl.zoom({ clientX: 0, clientY: 0, deltaY: -100, preventDefault: () => {} });
 
         expect(gsap.to).toHaveBeenCalled();
         // Check the state that GSAP would animate to
@@ -513,12 +539,12 @@ describe('CameraController Class (Basic Interactions)', () => {
     });
 
     it('pushState() and popState() should manage viewHistory', () => {
-        cameraCtrl.moveTo(10,20,30,0);
+        cameraCtrl.moveTo(10, 20, 30, 0);
         cameraCtrl.pushState();
         expect(cameraCtrl.viewHistory.length).toBe(1);
         expect(cameraCtrl.viewHistory[0].position.x).toBe(10);
 
-        cameraCtrl.moveTo(50,60,70,0);
+        cameraCtrl.moveTo(50, 60, 70, 0);
         cameraCtrl.pushState();
         expect(cameraCtrl.viewHistory.length).toBe(2);
 
@@ -539,11 +565,15 @@ describe('SpaceGraph Event Emitter', () => {
 
     beforeEach(() => {
         setupMockDOM();
-        space = new S.SpaceGraph(mockContainer, {}, {
-            contextMenuEl: mockContextMenu,
-            confirmDialogEl: mockConfirmDialog,
-            statusIndicatorEl: mockStatusIndicator
-        });
+        space = new S.SpaceGraph(
+            mockContainer,
+            {},
+            {
+                contextMenuEl: mockContextMenu,
+                confirmDialogEl: mockConfirmDialog,
+                statusIndicatorEl: mockStatusIndicator,
+            }
+        );
         mockListener = vi.fn();
     });
 
@@ -661,10 +691,14 @@ describe('SpaceGraph Event Emitter', () => {
 describe('UIManager Class (Basic Instantiation)', () => {
     it('should instantiate with SpaceGraph and DOM elements', () => {
         setupMockDOM();
-        const spaceInstance = new S.SpaceGraph(mockContainer, {}, {
-            contextMenuEl: mockContextMenu, 
-            confirmDialogEl: mockConfirmDialog 
-        });
+        const spaceInstance = new S.SpaceGraph(
+            mockContainer,
+            {},
+            {
+                contextMenuEl: mockContextMenu,
+                confirmDialogEl: mockConfirmDialog,
+            }
+        );
         expect(spaceInstance.uiManager).not.toBeNull();
         expect(spaceInstance.uiManager).toBeInstanceOf(S.UIManager);
         spaceInstance.dispose();
@@ -678,10 +712,14 @@ describe('RegisteredNode Lifecycle and Custom Types', () => {
 
     beforeEach(() => {
         setupMockDOM();
-        space = new S.SpaceGraph(mockContainer, {}, {
-            contextMenuEl: mockContextMenu,
-            confirmDialogEl: mockConfirmDialog
-        });
+        space = new S.SpaceGraph(
+            mockContainer,
+            {},
+            {
+                contextMenuEl: mockContextMenu,
+                confirmDialogEl: mockConfirmDialog,
+            }
+        );
 
         // Reset mocks for each test
         mockOnCreate = vi.fn().mockImplementation((nodeInst, sg) => {
@@ -795,7 +833,6 @@ describe('RegisteredNode Lifecycle and Custom Types', () => {
         expect(mockOnDispose).toHaveBeenCalledWith(customNode, space);
     });
 });
-
 
 // No need for manual runTests() call; Vitest handles test execution.
 // No need for DOMContentLoaded listener; JSDOM is typically ready.

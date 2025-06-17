@@ -24,7 +24,7 @@ export class EdgeMenuManager {
     showEdgeMenu(edge) {
         // Logic from UIManager.showEdgeMenu
         if (!edge || !(edge instanceof Edge)) {
-            console.warn("EdgeMenuManager.showEdgeMenu: Invalid edge provided.", edge);
+            console.warn('EdgeMenuManager.showEdgeMenu: Invalid edge provided.', edge);
             return;
         }
         if (this._edgeMenuObject) this.hideEdgeMenu(); // Hide any existing menu
@@ -48,19 +48,25 @@ export class EdgeMenuManager {
             switch (action) {
                 case 'delete':
                     // Delegate to UIManager facade for confirm dialog
-                    this.uiManager.showConfirmDialog(`Delete edge "${edge.id.substring(0,10)}..."?`, () => this.spaceGraph.removeEdge(edge.id));
+                    this.uiManager.showConfirmDialog(`Delete edge "${edge.id.substring(0, 10)}..."?`, () =>
+                        this.spaceGraph.removeEdge(edge.id)
+                    );
                     break;
-                case 'color': case 'thickness': case 'style': case 'constraint':
+                case 'color':
+                case 'thickness':
+                case 'style':
+                case 'constraint':
                     // Delegate to UIManager facade for status message
                     this.uiManager.showStatus(`Action '${action}' for edge ${edge.id} is not yet implemented.`, 'info');
                     break;
-                default: console.warn("Unknown edge menu action:", action);
+                default:
+                    console.warn('Unknown edge menu action:', action);
             }
         });
 
         // Prevent graph interactions when interacting with the menu
-        menuElement.addEventListener('pointerdown', e => e.stopPropagation());
-        menuElement.addEventListener('wheel', e => e.stopPropagation());
+        menuElement.addEventListener('pointerdown', (e) => e.stopPropagation());
+        menuElement.addEventListener('wheel', (e) => e.stopPropagation());
 
         this._edgeMenuObject = new CSS3DObject(menuElement);
         this.spaceGraph.cssScene.add(this._edgeMenuObject);
@@ -78,19 +84,25 @@ export class EdgeMenuManager {
 
     // Called by UIManager facade's _onDocumentClick or when edge selection changes
     hideEdgeMenuIfNeeded(event) {
-        if (this._edgeMenuObject && this._edgeMenuObject.element && event && !this._edgeMenuObject.element.contains(event.target)) {
+        if (
+            this._edgeMenuObject &&
+            this._edgeMenuObject.element &&
+            event &&
+            !this._edgeMenuObject.element.contains(event.target)
+        ) {
             // Check if the click was outside the menu AND not on the currently selected edge itself
             const targetInfo = this.uiManager.getTargetInfoForMenu(event); // Re-evaluate target
             if (this.spaceGraph.selectedEdge && this.spaceGraph.selectedEdge !== targetInfo.intersectedEdge) {
                 this.spaceGraph.setSelectedEdge(null); // This will trigger hideEdgeMenu via selection change logic
-            } else if (!this.spaceGraph.selectedEdge) { // If no edge is selected anymore for other reasons
-                 this.hideEdgeMenu();
+            } else if (!this.spaceGraph.selectedEdge) {
+                // If no edge is selected anymore for other reasons
+                this.hideEdgeMenu();
             }
-        } else if (!event && this._edgeMenuObject) { // Called without event, e.g. direct deselection
+        } else if (!event && this._edgeMenuObject) {
+            // Called without event, e.g. direct deselection
             this.hideEdgeMenu();
         }
     }
-
 
     updateEdgeMenuPosition() {
         // Logic from UIManager.updateEdgeMenuPosition
@@ -103,7 +115,7 @@ export class EdgeMenuManager {
         const midPoint = new THREE.Vector3().lerpVectors(edge.source.position, edge.target.position, 0.5);
         this._edgeMenuObject.position.copy(midPoint);
         if (this.spaceGraph._camera) {
-             this._edgeMenuObject.quaternion.copy(this.spaceGraph._camera.quaternion); // Billboard
+            this._edgeMenuObject.quaternion.copy(this.spaceGraph._camera.quaternion); // Billboard
         }
     }
 

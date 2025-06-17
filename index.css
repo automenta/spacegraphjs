@@ -17,7 +17,9 @@
     --menu-border: var(--accent-color);
     --menu-hover-bg: rgba(0, 208, 255, 0.15);
     --dialog-bg: rgba(25, 25, 50, 0.98);
-    --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    --font-family:
+        system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans',
+        'Helvetica Neue', sans-serif;
     --font-mono: 'Fira Code', 'Consolas', 'Monaco', monospace;
     --transition-fast: 0.15s ease-out;
     --transition-med: 0.3s ease-out;
@@ -25,7 +27,9 @@
     --node-button-hover-bg: rgba(0, 208, 255, 0.3);
 }
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
     box-sizing: border-box;
 }
 
@@ -44,21 +48,25 @@ body {
 }
 
 /* Main container for the SpaceGraph instance */
-#space { /* Updated from #mindmap-container to match index.html */
+#space {
+    /* Updated from #mindmap-container to match index.html */
     position: fixed;
     inset: 0;
     cursor: grab;
 }
 
-#space.panning { /* Class added by CameraController */
+#space.panning {
+    /* Class added by CameraController */
     cursor: grabbing;
 }
 
-#space.linking { /* Class added by UIManager */
+#space.linking {
+    /* Class added by UIManager */
     cursor: crosshair;
 }
 
-#webgl-canvas, #css3d-container {
+#webgl-canvas,
+#css3d-container {
     position: absolute;
     inset: 0;
     width: 100%;
@@ -85,7 +93,10 @@ body {
     color: var(--primary-color);
     pointer-events: auto; /* Nodes themselves are interactive */
     cursor: grab;
-    transition: transform var(--transition-fast), box-shadow var(--transition-med), border-color var(--transition-med);
+    transition:
+        transform var(--transition-fast),
+        box-shadow var(--transition-med),
+        border-color var(--transition-med);
     box-shadow: 0 2px 8px 1px var(--node-shadow);
     min-width: 80px;
     min-height: 40px;
@@ -119,7 +130,8 @@ body {
     transition: none; /* Disable transition during resize */
 }
 
-.node-html.linking-target { /* Highlight for potential link target */
+.node-html.linking-target {
+    /* Highlight for potential link target */
     border-color: #ffaa00;
     box-shadow: 0 0 20px 5px rgba(255, 170, 0, 0.5);
 }
@@ -149,33 +161,91 @@ body {
     transform-origin: top left;
 }
 
-.node-content::-webkit-scrollbar { width: 6px; }
-.node-content::-webkit-scrollbar-track { background: transparent; }
-.node-content::-webkit-scrollbar-thumb { background-color: var(--accent-color-darker); border-radius: 3px; }
+.node-content::-webkit-scrollbar {
+    width: 6px;
+}
+.node-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+.node-content::-webkit-scrollbar-thumb {
+    background-color: var(--accent-color-darker);
+    border-radius: 3px;
+}
 
-.node-content:focus { /* Visual cue when content is focused for editing */
+.node-content:focus {
+    /* Visual cue when content is focused for editing */
     box-shadow: inset 0 0 0 1px var(--accent-color);
     margin: -1px; /* Prevent layout shift due to box-shadow */
 }
 
 /* Rich text styling within node-content */
-.node-content > *:first-child { margin-top: 0; }
-.node-content > *:last-child { margin-bottom: 0; }
-.node-content h1, .node-content h2, .node-content h3 { margin: 0.5em 0; color: var(--accent-color); font-weight: 600; }
-.node-content h1 { font-size: 1.3em; }
-.node-content h2 { font-size: 1.15em; }
-.node-content h3 { font-size: 1.05em; }
-.node-content p { margin: 0.5em 0; }
-.node-content ul, .node-content ol { margin: 0.5em 0; padding-left: 20px; }
-.node-content li { margin-bottom: 0.2em; }
-.node-content code { font-family: var(--font-mono); background-color: rgba(0,0,0,0.2); padding: 0.1em 0.3em; border-radius: 3px; font-size: 0.9em; }
-.node-content pre { font-family: var(--font-mono); background-color: rgba(0,0,0,0.2); padding: 0.5em; border-radius: 4px; overflow-x: auto; font-size: 0.9em; }
-.node-content blockquote { border-left: 3px solid var(--accent-color-darker); margin: 0.5em 0 0.5em 10px; padding-left: 10px; color: #bbb; }
-.node-content a { color: var(--accent-color); text-decoration: none; }
-.node-content a:hover { text-decoration: underline; }
+.node-content > *:first-child {
+    margin-top: 0;
+}
+.node-content > *:last-child {
+    margin-bottom: 0;
+}
+.node-content h1,
+.node-content h2,
+.node-content h3 {
+    margin: 0.5em 0;
+    color: var(--accent-color);
+    font-weight: 600;
+}
+.node-content h1 {
+    font-size: 1.3em;
+}
+.node-content h2 {
+    font-size: 1.15em;
+}
+.node-content h3 {
+    font-size: 1.05em;
+}
+.node-content p {
+    margin: 0.5em 0;
+}
+.node-content ul,
+.node-content ol {
+    margin: 0.5em 0;
+    padding-left: 20px;
+}
+.node-content li {
+    margin-bottom: 0.2em;
+}
+.node-content code {
+    font-family: var(--font-mono);
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 0.1em 0.3em;
+    border-radius: 3px;
+    font-size: 0.9em;
+}
+.node-content pre {
+    font-family: var(--font-mono);
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 0.5em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-size: 0.9em;
+}
+.node-content blockquote {
+    border-left: 3px solid var(--accent-color-darker);
+    margin: 0.5em 0 0.5em 10px;
+    padding-left: 10px;
+    color: #bbb;
+}
+.node-content a {
+    color: var(--accent-color);
+    text-decoration: none;
+}
+.node-content a:hover {
+    text-decoration: underline;
+}
 
 /* Interactive elements within node-content */
-.node-content button, .node-content input, .node-content select, .node-content textarea {
+.node-content button,
+.node-content input,
+.node-content select,
+.node-content textarea {
     pointer-events: auto; /* Crucial for interaction */
     margin: 5px;
     padding: 5px 10px;
@@ -185,118 +255,261 @@ body {
     border-radius: 4px;
     cursor: pointer;
 }
-.node-content input[type="range"] { padding: 0; }
-.node-content button:hover { background-color: var(--accent-color); }
+.node-content input[type='range'] {
+    padding: 0;
+}
+.node-content button:hover {
+    background-color: var(--accent-color);
+}
 
 /* Node Controls (hover buttons) */
 .node-controls {
     position: absolute;
-    top: 4px; right: 4px;
+    top: 4px;
+    right: 4px;
     display: flex;
     gap: 4px;
     opacity: 0;
     transition: opacity var(--transition-fast);
     pointer-events: none;
 }
-.node-html:hover .node-controls, .node-html.selected .node-controls {
+.node-html:hover .node-controls,
+.node-html.selected .node-controls {
     opacity: 0.9;
     pointer-events: auto;
 }
 .node-quick-button {
     background-color: var(--node-button-bg);
     color: var(--primary-color);
-    border: none; border-radius: 4px;
-    width: 22px; height: 22px;
-    font-size: 14px; line-height: 22px; text-align: center;
+    border: none;
+    border-radius: 4px;
+    width: 22px;
+    height: 22px;
+    font-size: 14px;
+    line-height: 22px;
+    text-align: center;
     cursor: pointer;
-    transition: background-color var(--transition-fast), transform var(--transition-fast);
+    transition:
+        background-color var(--transition-fast),
+        transform var(--transition-fast);
 }
-.node-quick-button:hover { background-color: var(--node-button-hover-bg); transform: scale(1.1); }
-.node-quick-button.delete-button { background-color: var(--delete-button-bg); color: var(--delete-button-text); font-weight: bold; }
-.node-quick-button.delete-button:hover { background-color: #ff5555; }
+.node-quick-button:hover {
+    background-color: var(--node-button-hover-bg);
+    transform: scale(1.1);
+}
+.node-quick-button.delete-button {
+    background-color: var(--delete-button-bg);
+    color: var(--delete-button-text);
+    font-weight: bold;
+}
+.node-quick-button.delete-button:hover {
+    background-color: #ff5555;
+}
 
 /* Resize Handle */
 .resize-handle {
     position: absolute;
-    bottom: -1px; right: -1px;
-    width: 16px; height: 16px;
+    bottom: -1px;
+    right: -1px;
+    width: 16px;
+    height: 16px;
     background-color: var(--accent-color);
     border-top: 1px solid var(--bg-color);
     border-left: 1px solid var(--bg-color);
     border-bottom-right-radius: 7px;
     cursor: nwse-resize;
     opacity: 0;
-    transition: opacity var(--transition-fast), transform var(--transition-fast);
+    transition:
+        opacity var(--transition-fast),
+        transform var(--transition-fast);
     pointer-events: auto;
     z-index: 10;
 }
-.node-html:hover .resize-handle, .node-html.selected .resize-handle { opacity: 0.7; }
-.resize-handle:hover { opacity: 1; transform: scale(1.15); }
+.node-html:hover .resize-handle,
+.node-html.selected .resize-handle {
+    opacity: 0.7;
+}
+.resize-handle:hover {
+    opacity: 1;
+    transform: scale(1.15);
+}
 
 /* Context Menu & Dialogs */
-.context-menu, .dialog {
+.context-menu,
+.dialog {
     position: fixed;
     background-color: var(--menu-bg);
     border: 1px solid var(--menu-border);
     border-radius: 6px;
-    box-shadow: 0 5px 25px rgba(0,0,0,0.6);
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.6);
     z-index: 10000; /* Ensure UI is on top of everything */
     display: none; /* Controlled by JS */
     backdrop-filter: blur(8px);
     animation: fadeIn 0.1s ease-out forwards;
 }
-@keyframes fadeIn { from { opacity:0; transform:scale(0.95); } to { opacity:1; transform:scale(1); } }
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
 
-.context-menu { padding: 6px 0; min-width: 180px; }
-.context-menu ul { list-style:none; padding:0; margin:0; }
-.context-menu li { padding: 8px 18px; cursor:pointer; transition: background-color var(--transition-fast), color var(--transition-fast); color: var(--primary-color); white-space:nowrap; }
-.context-menu li:hover { background-color: var(--menu-hover-bg); color: var(--accent-color); }
-.context-menu li.separator { height:1px; background-color:var(--accent-color-darker); margin:5px 0; padding:0; cursor:default; }
-.context-menu li.separator:hover { background-color:var(--accent-color-darker); } /* No hover effect for separator */
-.context-menu li[data-action^="delete"], .context-menu li.delete-action { color: var(--delete-button-bg); } /* Match delete button color */
-.context-menu li[data-action^="delete"]:hover, .context-menu li.delete-action:hover { background-color: rgba(208,48,48,0.2); }
+.context-menu {
+    padding: 6px 0;
+    min-width: 180px;
+}
+.context-menu ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.context-menu li {
+    padding: 8px 18px;
+    cursor: pointer;
+    transition:
+        background-color var(--transition-fast),
+        color var(--transition-fast);
+    color: var(--primary-color);
+    white-space: nowrap;
+}
+.context-menu li:hover {
+    background-color: var(--menu-hover-bg);
+    color: var(--accent-color);
+}
+.context-menu li.separator {
+    height: 1px;
+    background-color: var(--accent-color-darker);
+    margin: 5px 0;
+    padding: 0;
+    cursor: default;
+}
+.context-menu li.separator:hover {
+    background-color: var(--accent-color-darker);
+} /* No hover effect for separator */
+.context-menu li[data-action^='delete'],
+.context-menu li.delete-action {
+    color: var(--delete-button-bg);
+} /* Match delete button color */
+.context-menu li[data-action^='delete']:hover,
+.context-menu li.delete-action:hover {
+    background-color: rgba(208, 48, 48, 0.2);
+}
 
-.dialog { top:50%; left:50%; transform:translate(-50%,-50%); padding:25px 30px; text-align:center; color:var(--primary-color); min-width:300px; }
-.dialog p { margin:0 0 25px 0; font-size:1.1em; }
-.dialog button { background-color:var(--accent-color); color:var(--bg-color); border:none; padding:10px 22px; margin:0 10px; border-radius:5px; cursor:pointer; font-weight:600; transition: background-color var(--transition-fast), box-shadow var(--transition-fast); min-width:80px; }
-.dialog button:hover { background-color:#3fffff; box-shadow:0 0 12px var(--accent-color); }
-.dialog button#confirm-no { background-color:#555; color:var(--primary-color); }
-.dialog button#confirm-no:hover { background-color:#777; box-shadow:none; }
+.dialog {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 25px 30px;
+    text-align: center;
+    color: var(--primary-color);
+    min-width: 300px;
+}
+.dialog p {
+    margin: 0 0 25px 0;
+    font-size: 1.1em;
+}
+.dialog button {
+    background-color: var(--accent-color);
+    color: var(--bg-color);
+    border: none;
+    padding: 10px 22px;
+    margin: 0 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    transition:
+        background-color var(--transition-fast),
+        box-shadow var(--transition-fast);
+    min-width: 80px;
+}
+.dialog button:hover {
+    background-color: #3fffff;
+    box-shadow: 0 0 12px var(--accent-color);
+}
+.dialog button#confirm-no {
+    background-color: #555;
+    color: var(--primary-color);
+}
+.dialog button#confirm-no:hover {
+    background-color: #777;
+    box-shadow: none;
+}
 
 /* Status Indicator */
 #status-indicator {
-    position:fixed; bottom:10px; left:10px;
-    background-color:rgba(0,0,0,0.7); color:var(--primary-color);
-    padding:5px 12px; border-radius:4px; font-size:12px;
-    z-index:5; opacity:1; transition:opacity 0.5s ease 1s;
-    pointer-events:none;
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: var(--primary-color);
+    padding: 5px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    z-index: 5;
+    opacity: 1;
+    transition: opacity 0.5s ease 1s;
+    pointer-events: none;
 }
-#status-indicator.hidden { opacity:0; }
+#status-indicator.hidden {
+    opacity: 0;
+}
 
 /* Edge Menu (for selected edges) */
 .edge-menu-frame {
-    position:absolute; /* Managed by CSS3DRenderer */
-    background:var(--menu-bg); border:1px solid var(--accent-color); border-radius:4px;
-    padding:4px; display:flex; gap:3px;
-    pointer-events:auto; /* Interactive */
-    z-index:100; opacity:0.9; transition:opacity 0.1s;
+    position: absolute; /* Managed by CSS3DRenderer */
+    background: var(--menu-bg);
+    border: 1px solid var(--accent-color);
+    border-radius: 4px;
+    padding: 4px;
+    display: flex;
+    gap: 3px;
+    pointer-events: auto; /* Interactive */
+    z-index: 100;
+    opacity: 0.9;
+    transition: opacity 0.1s;
 }
-.edge-menu-frame button, .edge-menu-frame input, .edge-menu-frame select {
-    background:var(--node-button-bg); color:var(--primary-color);
-    border:none; border-radius:3px;
-    height:22px; font-size:12px; line-height:20px; text-align:center;
-    cursor:pointer; padding: 0 5px;
+.edge-menu-frame button,
+.edge-menu-frame input,
+.edge-menu-frame select {
+    background: var(--node-button-bg);
+    color: var(--primary-color);
+    border: none;
+    border-radius: 3px;
+    height: 22px;
+    font-size: 12px;
+    line-height: 20px;
+    text-align: center;
+    cursor: pointer;
+    padding: 0 5px;
 }
-.edge-menu-frame button { width:22px; }
-.edge-menu-frame button:hover, .edge-menu-frame input:hover, .edge-menu-frame select:hover { background:var(--node-button-hover-bg); }
-.edge-menu-frame input[type="color"] { width: 30px; padding: 1px 2px; }
-.edge-menu-frame input[type="range"] { width: 60px; }
-.edge-menu-frame button.delete { background-color:var(--delete-button-bg); color:var(--delete-button-text); }
+.edge-menu-frame button {
+    width: 22px;
+}
+.edge-menu-frame button:hover,
+.edge-menu-frame input:hover,
+.edge-menu-frame select:hover {
+    background: var(--node-button-hover-bg);
+}
+.edge-menu-frame input[type='color'] {
+    width: 30px;
+    padding: 1px 2px;
+}
+.edge-menu-frame input[type='range'] {
+    width: 60px;
+}
+.edge-menu-frame button.delete {
+    background-color: var(--delete-button-bg);
+    color: var(--delete-button-text);
+}
 
 /* 3D Labels for ShapeNodes */
 .node-label-3d {
     color: white;
-    background-color: rgba(0,0,0,0.6);
+    background-color: rgba(0, 0, 0, 0.6);
     padding: 3px 6px;
     border-radius: 4px;
     font-size: 14px;
@@ -304,16 +517,19 @@ body {
     pointer-events: none; /* Labels themselves are not interactive */
     white-space: nowrap;
 }
-.node-label-3d.selected { /* Example style for selected ShapeNode label */
+.node-label-3d.selected {
+    /* Example style for selected ShapeNode label */
     background-color: rgba(0, 208, 255, 0.3); /* Similar to node selection shadow */
     color: #fff;
 }
 
 /* Common class for node highlighting during linking (applied by JS) */
-.node-common.linking-target { /* For ShapeNode labels */
+.node-common.linking-target {
+    /* For ShapeNode labels */
     outline: 2px dashed #ffaa00;
 }
-.node-html.linking-target { /* For HtmlNodeElement itself */
+.node-html.linking-target {
+    /* For HtmlNodeElement itself */
     border-color: #ffaa00; /* Already defined, but ensure consistency */
     box-shadow: 0 0 20px 5px rgba(255, 170, 0, 0.5);
 }
@@ -321,7 +537,7 @@ body {
 /* Styles for HtmlNodeElement when it's being dragged */
 .node-html.node-dragging-html {
     opacity: 0.7 !important; /* Ensure opacity change takes precedence */
-    box-shadow: 0px 10px 20px rgba(0,0,0,0.4) !important; /* Ensure shadow change takes precedence */
+    box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.4) !important; /* Ensure shadow change takes precedence */
     transform: scale(1.02); /* Optional: slight scale up */
     /* Transitions might conflict with rapid drag updates, so commented out by default */
     /* transition: opacity 0.1s ease-out, transform 0.1s ease-out, box-shadow 0.1s ease-out; */
@@ -338,7 +554,9 @@ body {
     z-index: 10; /* Ensure ports are above node content but below node controls if any */
     cursor: pointer; /* Indicate interactivity */
     box-sizing: border-box;
-    transition: transform 0.1s ease-out, border-color 0.1s ease-out;
+    transition:
+        transform 0.1s ease-out,
+        border-color 0.1s ease-out;
     display: none; /* Hidden by default, shown on selection */
 }
 

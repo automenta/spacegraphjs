@@ -1,211 +1,237 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
-    <title>SpaceGraph - Hierarchical Data Example</title>
-    <link href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌳</text></svg>"
-          rel="icon">
-    <link href="index.css" rel="stylesheet"/>
-    <style>
-        /* Additional styles can be added here if needed */
-        .folder-node .node-html-content-wrapper { /* Target wrapper for specific styling */
-            background-color: var(--node-bg-alt, #3a5078) !important; /* Darker blue for folders */
-            border: 1px solid var(--accent-color-dark, #5c789c) !important;
-        }
-        .file-node .node-html-content-wrapper {
-            background-color: var(--node-bg-light, #607d8b) !important; /* Lighter grey-blue for files */
-             border: 1px solid var(--accent-color-lighter, #88a0af) !important;
-        }
-        .node-html-content-wrapper p {
-            margin: 5px 0;
-            font-size: 14px;
-        }
-    </style>
-</head>
-<body>
+    <head>
+        <meta charset="UTF-8" />
+        <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
+        <title>SpaceGraph - Hierarchical Data Example</title>
+        <link
+            href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌳</text></svg>"
+            rel="icon"
+        />
+        <link href="index.css" rel="stylesheet" />
+        <style>
+            /* Additional styles can be added here if needed */
+            .folder-node .node-html-content-wrapper {
+                /* Target wrapper for specific styling */
+                background-color: var(--node-bg-alt, #3a5078) !important; /* Darker blue for folders */
+                border: 1px solid var(--accent-color-dark, #5c789c) !important;
+            }
+            .file-node .node-html-content-wrapper {
+                background-color: var(--node-bg-light, #607d8b) !important; /* Lighter grey-blue for files */
+                border: 1px solid var(--accent-color-lighter, #88a0af) !important;
+            }
+            .node-html-content-wrapper p {
+                margin: 5px 0;
+                font-size: 14px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="space">
+            <canvas id="webgl-canvas"></canvas>
+            <div id="css3d-container"></div>
+        </div>
 
-<div id="space">
-    <canvas id="webgl-canvas"></canvas>
-    <div id="css3d-container"></div>
-</div>
-
-<script type="importmap">
-    {
-        "imports": {
-            "three":         "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
-            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
-            "gsap":          "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
-        }
-    }
-</script>
-<script type="module">
-    // This example demonstrates how to visualize hierarchical data (like a file system structure)
-    // using SpaceGraph. It recursively traverses a data object, creating nodes for each item
-    // and edges to represent parent-child relationships.
-    import * as S from './spacegraph.js';
-
-    // Sample hierarchical data representing a file system structure.
-    const fileSystemData = {
-        id: 'root',
-        name: 'Root',
-        type: 'folder',
-        children: [
+        <script type="importmap">
             {
-                id: 'docs',
-                name: 'Documents',
+                "imports": {
+                    "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
+                    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
+                    "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
+                }
+            }
+        </script>
+        <script type="module">
+            // This example demonstrates how to visualize hierarchical data (like a file system structure)
+            // using SpaceGraph. It recursively traverses a data object, creating nodes for each item
+            // and edges to represent parent-child relationships.
+            import * as S from './spacegraph.js';
+
+            // Sample hierarchical data representing a file system structure.
+            const fileSystemData = {
+                id: 'root',
+                name: 'Root',
                 type: 'folder',
                 children: [
-                    { id: 'work', name: 'Work', type: 'folder', children: [
-                        { id: 'report.docx', name: 'Report.docx', type: 'file', size: '120KB' },
-                        { id: 'presentation.pptx', name: 'Presentation.pptx', type: 'file', size: '2.5MB' }
-                    ]},
-                    { id: 'personal', name: 'Personal', type: 'folder', children: [
-                        { id: 'resume.pdf', name: 'Resume.pdf', type: 'file', size: '80KB' },
-                        { id: 'photo.jpg', name: 'HolidayPhoto.jpg', type: 'file', size: '1.2MB' }
-                    ]}
-                ]
-            },
-            {
-                id: 'apps',
-                name: 'Applications',
-                type: 'folder',
-                children: [
-                    { id: 'app1.exe', name: 'UtilityApp.exe', type: 'file', size: '5.0MB' },
-                    { id: 'app2.dmg', name: 'GraphicsSuite.dmg', type: 'file', size: '250MB' }
-                ]
-            },
-            { id: 'readme.txt', name: 'Readme.txt', type: 'file', size: '2KB' }
-        ]
-    };
+                    {
+                        id: 'docs',
+                        name: 'Documents',
+                        type: 'folder',
+                        children: [
+                            {
+                                id: 'work',
+                                name: 'Work',
+                                type: 'folder',
+                                children: [
+                                    { id: 'report.docx', name: 'Report.docx', type: 'file', size: '120KB' },
+                                    { id: 'presentation.pptx', name: 'Presentation.pptx', type: 'file', size: '2.5MB' },
+                                ],
+                            },
+                            {
+                                id: 'personal',
+                                name: 'Personal',
+                                type: 'folder',
+                                children: [
+                                    { id: 'resume.pdf', name: 'Resume.pdf', type: 'file', size: '80KB' },
+                                    { id: 'photo.jpg', name: 'HolidayPhoto.jpg', type: 'file', size: '1.2MB' },
+                                ],
+                            },
+                        ],
+                    },
+                    {
+                        id: 'apps',
+                        name: 'Applications',
+                        type: 'folder',
+                        children: [
+                            { id: 'app1.exe', name: 'UtilityApp.exe', type: 'file', size: '5.0MB' },
+                            { id: 'app2.dmg', name: 'GraphicsSuite.dmg', type: 'file', size: '250MB' },
+                        ],
+                    },
+                    { id: 'readme.txt', name: 'Readme.txt', type: 'file', size: '2KB' },
+                ],
+            };
 
-    /**
-     * Recursively creates SpaceGraph nodes and edges from a hierarchical data structure.
-     * @param {S.SpaceGraph} graph - The SpaceGraph instance.
-     * @param {object} dataNode - The current node in the hierarchical data structure.
-     * @param {S.BaseNode | null} parentGraphNode - The SpaceGraph node corresponding to the parent of dataNode (null for root).
-     * @param {number} xOffset - The current horizontal offset for positioning new nodes.
-     * @param {number} yLevel - The current vertical level for positioning new nodes.
-     * @param {number} siblingIndex - The index of the current node among its siblings.
-     * @param {number} totalSiblings - The total number of siblings at the current level.
-     * @returns {number} The updated xOffset after placing this node and its children.
-     */
-    function createNodesAndEdgesFromHierarchy(graph, dataNode, parentGraphNode, xOffset, yLevel, siblingIndex = 0, totalSiblings = 1) {
-        // Determine visual properties based on type (folder or file)
-        const isFolder = dataNode.type === 'folder';
-        const nodeWidth = isFolder ? 180 : 150;
-        const nodeHeight = isFolder ? 80 : 60;
-        const contentPrefix = isFolder ? '📁 ' : '📄 ';
-        const nodeClassName = isFolder ? 'folder-node' : 'file-node'; // For CSS styling via .node-html.<classname>
+            /**
+             * Recursively creates SpaceGraph nodes and edges from a hierarchical data structure.
+             * @param {S.SpaceGraph} graph - The SpaceGraph instance.
+             * @param {object} dataNode - The current node in the hierarchical data structure.
+             * @param {S.BaseNode | null} parentGraphNode - The SpaceGraph node corresponding to the parent of dataNode (null for root).
+             * @param {number} xOffset - The current horizontal offset for positioning new nodes.
+             * @param {number} yLevel - The current vertical level for positioning new nodes.
+             * @param {number} siblingIndex - The index of the current node among its siblings.
+             * @param {number} totalSiblings - The total number of siblings at the current level.
+             * @returns {number} The updated xOffset after placing this node and its children.
+             */
+            function createNodesAndEdgesFromHierarchy(
+                graph,
+                dataNode,
+                parentGraphNode,
+                xOffset,
+                yLevel,
+                siblingIndex = 0,
+                totalSiblings = 1
+            ) {
+                // Determine visual properties based on type (folder or file)
+                const isFolder = dataNode.type === 'folder';
+                const nodeWidth = isFolder ? 180 : 150;
+                const nodeHeight = isFolder ? 80 : 60;
+                const contentPrefix = isFolder ? '📁 ' : '📄 ';
+                const nodeClassName = isFolder ? 'folder-node' : 'file-node'; // For CSS styling via .node-html.<classname>
 
-        // Calculate position: Spread siblings horizontally, place children below parent.
-        const levelHeight = 180; // Vertical separation between levels
-        const siblingSpacing = 220; // Horizontal separation between sibling branches
+                // Calculate position: Spread siblings horizontally, place children below parent.
+                const levelHeight = 180; // Vertical separation between levels
+                const siblingSpacing = 220; // Horizontal separation between sibling branches
 
-        // Calculate the starting x-offset for this level based on the number of siblings
-        // This helps center the current node relative to its potential children's spread.
-        let currentX = xOffset;
+                // Calculate the starting x-offset for this level based on the number of siblings
+                // This helps center the current node relative to its potential children's spread.
+                let currentX = xOffset;
 
-        // Create the SpaceGraph node (using NoteNode for simplicity)
-        const graphNode = graph.addNode({
-            type: 'note', // Using built-in NoteNode
-            id: dataNode.id,
-            x: currentX,
-            y: yLevel * levelHeight,
-            z: 0, // Keep it 2D for this example
-            width: nodeWidth,
-            height: nodeHeight,
-            content: `<p><strong>${contentPrefix}${dataNode.name}</strong></p>${dataNode.size ? `<p><small>Size: ${dataNode.size}</small></p>` : ''}`,
-            // Custom class for specific styling (see <style> block)
-            // This needs to be handled by NoteNode or a custom node type that applies classes to htmlElement.
-            // For now, we'll rely on the CSS targeting '.folder-node .node-html-content-wrapper' by ensuring
-            // the node's htmlElement gets this class. We can't add it directly via NoteNode options.
-            // A workaround: update class after creation.
-        });
+                // Create the SpaceGraph node (using NoteNode for simplicity)
+                const graphNode = graph.addNode({
+                    type: 'note', // Using built-in NoteNode
+                    id: dataNode.id,
+                    x: currentX,
+                    y: yLevel * levelHeight,
+                    z: 0, // Keep it 2D for this example
+                    width: nodeWidth,
+                    height: nodeHeight,
+                    content: `<p><strong>${contentPrefix}${dataNode.name}</strong></p>${dataNode.size ? `<p><small>Size: ${dataNode.size}</small></p>` : ''}`,
+                    // Custom class for specific styling (see <style> block)
+                    // This needs to be handled by NoteNode or a custom node type that applies classes to htmlElement.
+                    // For now, we'll rely on the CSS targeting '.folder-node .node-html-content-wrapper' by ensuring
+                    // the node's htmlElement gets this class. We can't add it directly via NoteNode options.
+                    // A workaround: update class after creation.
+                });
 
-        if (graphNode && graphNode.htmlElement) {
-            graphNode.htmlElement.classList.add(nodeClassName);
-        }
+                if (graphNode && graphNode.htmlElement) {
+                    graphNode.htmlElement.classList.add(nodeClassName);
+                }
 
+                // If a parent SpaceGraph node exists, create an edge to it.
+                if (parentGraphNode && graphNode) {
+                    graph.addEdge(parentGraphNode, graphNode, {
+                        // Optional: customize edge appearance or physics
+                        constraintParams: { idealLength: levelHeight * 0.8, stiffness: 0.002 },
+                    });
+                }
 
-        // If a parent SpaceGraph node exists, create an edge to it.
-        if (parentGraphNode && graphNode) {
-            graph.addEdge(parentGraphNode, graphNode, {
-                // Optional: customize edge appearance or physics
-                constraintParams: { idealLength: levelHeight * 0.8, stiffness: 0.002 }
-            });
-        }
+                let childXOffset = currentX; // Initial x-offset for the children of this node.
 
-        let childXOffset = currentX; // Initial x-offset for the children of this node.
+                // If the current data item has children, recursively call this function for each child.
+                if (dataNode.children && dataNode.children.length > 0) {
+                    const numChildren = dataNode.children.length;
+                    // Calculate the starting x-position for the first child to center the children block under the parent.
+                    // This is a simplified calculation; a true tree layout algorithm would be more complex.
+                    let childrenStartX = currentX - ((numChildren - 1) * siblingSpacing) / 2;
 
-        // If the current data item has children, recursively call this function for each child.
-        if (dataNode.children && dataNode.children.length > 0) {
-            const numChildren = dataNode.children.length;
-            // Calculate the starting x-position for the first child to center the children block under the parent.
-            // This is a simplified calculation; a true tree layout algorithm would be more complex.
-            let childrenStartX = currentX - ((numChildren - 1) * siblingSpacing) / 2;
+                    dataNode.children.forEach((child, index) => {
+                        // Recursively create nodes for children, adjusting xOffset and yLevel.
+                        // The xOffset for each child branch is managed by the return value of the recursive call.
+                        childrenStartX = createNodesAndEdgesFromHierarchy(
+                            graph,
+                            child,
+                            graphNode,
+                            childrenStartX,
+                            yLevel + 1,
+                            index,
+                            numChildren
+                        );
+                    });
+                    // The next sibling at the current level should start after the space taken by this node and all its children.
+                    // This is a simplification; a proper layout would measure the actual width of the subtree.
+                    // For now, each direct child branch advances the offset.
+                    return childrenStartX; // Return the x-offset after the last child of this branch.
+                }
 
-            dataNode.children.forEach((child, index) => {
-                // Recursively create nodes for children, adjusting xOffset and yLevel.
-                // The xOffset for each child branch is managed by the return value of the recursive call.
-                childrenStartX = createNodesAndEdgesFromHierarchy(graph, child, graphNode, childrenStartX, yLevel + 1, index, numChildren);
-            });
-            // The next sibling at the current level should start after the space taken by this node and all its children.
-            // This is a simplification; a proper layout would measure the actual width of the subtree.
-            // For now, each direct child branch advances the offset.
-            return childrenStartX; // Return the x-offset after the last child of this branch.
-        }
-
-        // If no children, the next sibling starts after this node.
-        return currentX + siblingSpacing;
-    }
-
-    /**
-     * Initializes the SpaceGraph instance and populates it from the hierarchical data.
-     */
-    function init() {
-        const container = S.$('#space');
-        if (!container) {
-            console.error("Initialization Failed: Missing #space container.");
-            return;
-        }
-
-        try {
-            // Instantiate SpaceGraph.
-            const graph = new S.SpaceGraph(container, {});
-            window.space = graph; // Make accessible for debugging.
-
-            // Start creating nodes from the root of the hierarchical data.
-            // Initial xOffset can be 0, yLevel 0.
-            createNodesAndEdgesFromHierarchy(graph, fileSystemData, null, 0, 0);
-
-            // Optionally, run the layout engine for a bit to stabilize positions.
-            // The simple hierarchical placement might be good enough for some cases,
-            // but force layout can help spread things out if nodes overlap.
-            graph.layoutEngine.setSettings({ repulsion: 4000, idealEdgeLength: 150, zSpreadFactor: 0.05 });
-            graph.layoutEngine.runOnce(250); // Run for 250 iterations.
-
-            // Center the view on the generated graph.
-            graph.centerView();
-
-            const statusEl = S.$('#status-indicator');
-            if (statusEl) {
-                statusEl.textContent = 'Hierarchical Data Example Initialized.';
-                setTimeout(() => statusEl.classList.add('hidden'), 2000);
+                // If no children, the next sibling starts after this node.
+                return currentX + siblingSpacing;
             }
 
-        } catch (error) {
-            console.error("Hierarchical Data Example Initialization Failed:", error);
-            container.innerHTML = `<div style="color:red; padding:20px;">Error: ${error.message}<br><pre>${error.stack}</pre></div>`;
-        }
-    }
+            /**
+             * Initializes the SpaceGraph instance and populates it from the hierarchical data.
+             */
+            function init() {
+                const container = S.$('#space');
+                if (!container) {
+                    console.error('Initialization Failed: Missing #space container.');
+                    return;
+                }
 
-    // Run init when the DOM is fully loaded.
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
-    }
-</script>
-</body>
+                try {
+                    // Instantiate SpaceGraph.
+                    const graph = new S.SpaceGraph(container, {});
+                    window.space = graph; // Make accessible for debugging.
+
+                    // Start creating nodes from the root of the hierarchical data.
+                    // Initial xOffset can be 0, yLevel 0.
+                    createNodesAndEdgesFromHierarchy(graph, fileSystemData, null, 0, 0);
+
+                    // Optionally, run the layout engine for a bit to stabilize positions.
+                    // The simple hierarchical placement might be good enough for some cases,
+                    // but force layout can help spread things out if nodes overlap.
+                    graph.layoutEngine.setSettings({ repulsion: 4000, idealEdgeLength: 150, zSpreadFactor: 0.05 });
+                    graph.layoutEngine.runOnce(250); // Run for 250 iterations.
+
+                    // Center the view on the generated graph.
+                    graph.centerView();
+
+                    const statusEl = S.$('#status-indicator');
+                    if (statusEl) {
+                        statusEl.textContent = 'Hierarchical Data Example Initialized.';
+                        setTimeout(() => statusEl.classList.add('hidden'), 2000);
+                    }
+                } catch (error) {
+                    console.error('Hierarchical Data Example Initialization Failed:', error);
+                    container.innerHTML = `<div style="color:red; padding:20px;">Error: ${error.message}<br><pre>${error.stack}</pre></div>`;
+                }
+            }
+
+            // Run init when the DOM is fully loaded.
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+        </script>
+    </body>
 </html>

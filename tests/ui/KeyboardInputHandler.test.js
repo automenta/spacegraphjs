@@ -1,7 +1,7 @@
 // tests/ui/KeyboardInputHandler.test.js
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { KeyboardInputHandler } from '../../js/ui/KeyboardInputHandler.js'; // Adjust if needed
-import { SpaceGraph, HtmlNodeElement, NoteNode } from '../../spacegraph.js'; // For mocks and types
+import { SpaceGraph, HtmlNodeElement, NoteNode, BaseNode } from '../../spacegraph.js'; // For mocks and types
 import * as THREE from 'three';
 
 // Mock SpaceGraph and UIManager facade
@@ -24,7 +24,9 @@ vi.mock('../../spacegraph.js', async (importOriginal) => {
             // Add other SpaceGraph methods/properties mocked as needed by KeyboardInputHandler
             removeNode: vi.fn(),
             removeEdge: vi.fn(),
-            setSelectedNode: vi.fn(function(node) { this.selectedNode = node; }), // Allow selectedNode to be set on the mock
+            setSelectedNode: vi.fn(function (node) {
+                this.selectedNode = node;
+            }), // Allow selectedNode to be set on the mock
             focusOnNode: vi.fn(),
             centerView: vi.fn(),
             autoZoom: vi.fn(),
@@ -151,7 +153,7 @@ describe('handleKeyDown', () => {
 
         keyboardInputHandler.handleKeyDown(mockEvent);
 
-        expect(mockHtmlNode.adjustContentScale).toHaveBeenCalledWith(1/1.15);
+        expect(mockHtmlNode.adjustContentScale).toHaveBeenCalledWith(1 / 1.15);
         expect(mockEvent.preventDefault).toHaveBeenCalled();
     });
 
@@ -216,7 +218,13 @@ describe('handleKeyDown', () => {
         const midPoint = new THREE.Vector3(50, 0, 0); // Expected midpoint
         const distance = 100; // Expected distance
         const expectedZ = midPoint.z + distance * 0.6 + 100;
-        expect(mockSpaceGraphInstance.cameraController.moveTo).toHaveBeenCalledWith(midPoint.x, midPoint.y, expectedZ, 0.5, midPoint);
+        expect(mockSpaceGraphInstance.cameraController.moveTo).toHaveBeenCalledWith(
+            midPoint.x,
+            midPoint.y,
+            expectedZ,
+            0.5,
+            midPoint
+        );
         expect(mockEvent.preventDefault).toHaveBeenCalled();
     });
 
@@ -232,9 +240,9 @@ describe('handleKeyDown', () => {
     });
 
     it('should handle Tab key for node navigation', () => {
-        const nodeA = new NoteNode('nodeA', {x:0,y:0});
-        const nodeB = new NoteNode('nodeB', {x:100,y:0});
-        const nodeC = new NoteNode('nodeC', {x:200,y:0});
+        const nodeA = new NoteNode('nodeA', { x: 0, y: 0 });
+        const nodeB = new NoteNode('nodeB', { x: 100, y: 0 });
+        const nodeC = new NoteNode('nodeC', { x: 200, y: 0 });
         mockSpaceGraphInstance.nodes.set(nodeA.id, nodeA);
         mockSpaceGraphInstance.nodes.set(nodeB.id, nodeB);
         mockSpaceGraphInstance.nodes.set(nodeC.id, nodeC);
@@ -263,9 +271,9 @@ describe('handleKeyDown', () => {
     });
 
     it('should handle Shift+Tab key for reverse node navigation', () => {
-        const nodeA = new NoteNode('nodeA', {x:0,y:0});
-        const nodeB = new NoteNode('nodeB', {x:100,y:0});
-        const nodeC = new NoteNode('nodeC', {x:200,y:0});
+        const nodeA = new NoteNode('nodeA', { x: 0, y: 0 });
+        const nodeB = new NoteNode('nodeB', { x: 100, y: 0 });
+        const nodeC = new NoteNode('nodeC', { x: 200, y: 0 });
         mockSpaceGraphInstance.nodes.set(nodeA.id, nodeA);
         mockSpaceGraphInstance.nodes.set(nodeB.id, nodeB);
         mockSpaceGraphInstance.nodes.set(nodeC.id, nodeC);
@@ -300,28 +308,27 @@ describe('handleKeyDown', () => {
         expect(spy).toHaveBeenCalledWith('ArrowUp');
         expect(mockEvent.preventDefault).toHaveBeenCalled();
     });
-     it('should call _navigateNodesWithArrows for ArrowDown', () => {
+    it('should call _navigateNodesWithArrows for ArrowDown', () => {
         const spy = vi.spyOn(keyboardInputHandler, '_navigateNodesWithArrows');
         const mockEvent = { key: 'ArrowDown', preventDefault: vi.fn() };
         keyboardInputHandler.handleKeyDown(mockEvent);
         expect(spy).toHaveBeenCalledWith('ArrowDown');
         expect(mockEvent.preventDefault).toHaveBeenCalled();
     });
-     it('should call _navigateNodesWithArrows for ArrowLeft', () => {
+    it('should call _navigateNodesWithArrows for ArrowLeft', () => {
         const spy = vi.spyOn(keyboardInputHandler, '_navigateNodesWithArrows');
         const mockEvent = { key: 'ArrowLeft', preventDefault: vi.fn() };
         keyboardInputHandler.handleKeyDown(mockEvent);
         expect(spy).toHaveBeenCalledWith('ArrowLeft');
         expect(mockEvent.preventDefault).toHaveBeenCalled();
     });
-     it('should call _navigateNodesWithArrows for ArrowRight', () => {
+    it('should call _navigateNodesWithArrows for ArrowRight', () => {
         const spy = vi.spyOn(keyboardInputHandler, '_navigateNodesWithArrows');
         const mockEvent = { key: 'ArrowRight', preventDefault: vi.fn() };
         keyboardInputHandler.handleKeyDown(mockEvent);
         expect(spy).toHaveBeenCalledWith('ArrowRight');
         expect(mockEvent.preventDefault).toHaveBeenCalled();
     });
-
 });
 
 describe('_navigateNodesWithArrows', () => {
@@ -350,7 +357,7 @@ describe('_navigateNodesWithArrows', () => {
     it('should select the first node (sorted by ID) if none is selected and nodes exist', () => {
         mockSpaceGraphInstance.selectedNode = null;
         // Create a temporary sorted list to find the expected first node
-        const sortedNodes = [...mockSpaceGraphInstance.nodes.values()].sort((a,b) => a.id.localeCompare(b.id));
+        const sortedNodes = [...mockSpaceGraphInstance.nodes.values()].sort((a, b) => a.id.localeCompare(b.id));
         const firstNode = sortedNodes[0];
 
         keyboardInputHandler._navigateNodesWithArrows('ArrowRight');

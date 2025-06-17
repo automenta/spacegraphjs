@@ -41,7 +41,7 @@ export class LinkingManager {
             this._linkSourcePortInfo = {
                 name: sourcePortElement.dataset.portName,
                 type: sourcePortElement.dataset.portType,
-                element: sourcePortElement
+                element: sourcePortElement,
             };
             // Optional: Add class to source port for visual feedback
             // sourcePortElement.classList.add('linking-source-port-active');
@@ -68,7 +68,7 @@ export class LinkingManager {
             gapSize: 4,
             transparent: true,
             opacity: 0.9,
-            depthTest: false
+            depthTest: false,
         });
         const points = [startPos.clone(), startPos.clone()];
         const geometry = new THREE.BufferGeometry().setFromPoints(points);
@@ -123,9 +123,14 @@ export class LinkingManager {
                 this._linkingTargetPortElement = targetPortElement; // Store for cleanup
                 if (targetNode.htmlElement) targetNode.htmlElement.classList.add('linking-target');
             }
-        } else if (targetNode && targetNode !== this._linkSourceNode && targetNode.htmlElement && !this._linkSourcePortInfo) {
+        } else if (
+            targetNode &&
+            targetNode !== this._linkSourceNode &&
+            targetNode.htmlElement &&
+            !this._linkSourcePortInfo
+        ) {
             // Highlight node if it's a valid target for node-to-node linking (no source port)
-             targetNode.htmlElement.classList.add('linking-target');
+            targetNode.htmlElement.classList.add('linking-target');
         }
     }
 
@@ -135,9 +140,10 @@ export class LinkingManager {
             this._linkingTargetPortElement = null;
         }
         // Use querySelectorAll from spaceGraph's utils or a local helper if needed
-        this.spaceGraph.container.querySelectorAll('.node-html.linking-target').forEach(el => el.classList.remove('linking-target'));
+        this.spaceGraph.container
+            .querySelectorAll('.node-html.linking-target')
+            .forEach((el) => el.classList.remove('linking-target'));
     }
-
 
     completeLinking(event) {
         // Logic from UIManager._completeLinking
@@ -161,12 +167,18 @@ export class LinkingManager {
                     };
                     this.spaceGraph.addEdge(sourceNode, targetNode, edgeData);
                 } else {
-                    console.warn("Link rejected: Cannot connect port of type", sourcePortInfo.type, "to port of type", targetPortType);
+                    console.warn(
+                        'Link rejected: Cannot connect port of type',
+                        sourcePortInfo.type,
+                        'to port of type',
+                        targetPortType
+                    );
                 }
-            } else if (!sourcePortInfo && !targetPortElement) { // Node-to-node
+            } else if (!sourcePortInfo && !targetPortElement) {
+                // Node-to-node
                 this.spaceGraph.addEdge(sourceNode, targetNode, {});
             } else {
-                console.warn("Link rejected: Mixed port/node connection not directly handled by default.");
+                console.warn('Link rejected: Mixed port/node connection not directly handled by default.');
             }
         }
         this.cancelLinking();

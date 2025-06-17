@@ -10,54 +10,61 @@ The core philosophy of SpaceGraph is to provide a robust foundation that is both
 
 Understanding these core classes is key to working with SpaceGraph:
 
-*   **`SpaceGraph`**:
-    *   The central orchestrator of the entire visualization.
-    *   Manages collections of nodes (`SpaceGraph.nodes`) and edges (`SpaceGraph.edges`).
-    *   Owns the THREE.js scenes (WebGL and CSS3D), the camera, and the renderers.
-    *   Manages the active layout engine (e.g., `ForceLayout`).
-    *   Provides the `registerNodeType()` method for defining custom node types.
-    *   Manages global configuration defaults for various aspects of the graph.
-    *   Features a graph-wide event emitter (`on`, `_emit`) for key lifecycle and interaction events.
-    *   Handles global events and overall graph state.
+- **`SpaceGraph`**:
 
-*   **`BaseNode`**:
-    *   The fundamental abstract class from which all graph elements (nodes) inherit.
-    *   Key properties:
-        *   `id`: A unique identifier for the node.
-        *   `position`: A `THREE.Vector3` representing the node's current position in 3D space.
-        *   `data`: An object to store arbitrary user-defined data associated with the node.
-        *   `mass`: Influences behavior in the physics-based layout.
-    *   Defines a common interface for lifecycle methods (`update`, `dispose`), drag handling, and selection styling.
+    - The central orchestrator of the entire visualization.
+    - Manages collections of nodes (`SpaceGraph.nodes`) and edges (`SpaceGraph.edges`).
+    - Owns the THREE.js scenes (WebGL and CSS3D), the camera, and the renderers.
+    - Manages the active layout engine (e.g., `ForceLayout`).
+    - Provides the `registerNodeType()` method for defining custom node types.
+    - Manages global configuration defaults for various aspects of the graph.
+    - Features a graph-wide event emitter (`on`, `_emit`) for key lifecycle and interaction events.
+    - Handles global events and overall graph state.
 
-*   **`RegisteredNode`**:
-    *   A wrapper class that SpaceGraph uses internally when you create a node of a custom registered type.
-    *   Developers typically do **not** interact with `RegisteredNode` instances directly. Instead, they define a `TypeDefinition` object which dictates the behavior and appearance of their custom node. `RegisteredNode` then uses this definition to manage the node's lifecycle and visuals.
+- **`BaseNode`**:
 
-*   **Legacy Node Types (`HtmlNodeElement`, `NoteNode`, `ShapeNode`)**:
-    *   These are built-in node types provided by SpaceGraph.
-    *   `HtmlNodeElement`: A versatile node that renders arbitrary HTML content in the 3D space using CSS3D.
-    *   `NoteNode`: A specialized version of `HtmlNodeElement`, pre-configured for editable text notes.
-    *   `ShapeNode`: Renders 3D shapes (like boxes or spheres) using WebGL.
-    *   While useful as examples or for simple cases, new complex or highly custom node types should preferably be implemented using the node registration system (`SpaceGraph.registerNodeType()`) for better encapsulation and flexibility.
+    - The fundamental abstract class from which all graph elements (nodes) inherit.
+    - Key properties:
+        - `id`: A unique identifier for the node.
+        - `position`: A `THREE.Vector3` representing the node's current position in 3D space.
+        - `data`: An object to store arbitrary user-defined data associated with the node.
+        - `mass`: Influences behavior in the physics-based layout.
+    - Defines a common interface for lifecycle methods (`update`, `dispose`), drag handling, and selection styling.
 
-*   **`Edge`**:
-    *   Represents a visual connection (link) between two nodes (a `source` and a `target`).
-    *   Can be styled with properties like `color`, `thickness`.
-    *   If an edge is created by linking specific ports on nodes (see "Node Ports" and "Inter-Node Messaging System" below), its `edge.data` object will contain `sourcePort` and `targetPort` properties, storing the names of the connected ports.
+- **`RegisteredNode`**:
 
-*   **`UIManager`**:
-    *   Handles all user interactions with the graph.
-    *   Manages mouse events (click, drag, wheel), keyboard input, and touch events.
-    *   Responsible for node selection, drag-and-drop operations (for creating and moving nodes), displaying context menus, and initiating node/port linking.
+    - A wrapper class that SpaceGraph uses internally when you create a node of a custom registered type.
+    - Developers typically do **not** interact with `RegisteredNode` instances directly. Instead, they define a `TypeDefinition` object which dictates the behavior and appearance of their custom node. `RegisteredNode` then uses this definition to manage the node's lifecycle and visuals.
 
-*   **`CameraController`**:
-    *   Manages the `THREE.PerspectiveCamera`.
-    *   Controls camera positioning, zoom levels, panning, and animated focusing on specific nodes or points in the space.
-    *   Maintains a view history for "back" functionality.
+- **Legacy Node Types (`HtmlNodeElement`, `NoteNode`, `ShapeNode`)**:
 
-*   **`ForceLayout`**:
-    *   The default physics-based layout engine.
-    *   Arranges nodes in the 2D/3D space by applying forces: repulsion between nodes, attraction along edges, and a centering force.
+    - These are built-in node types provided by SpaceGraph.
+    - `HtmlNodeElement`: A versatile node that renders arbitrary HTML content in the 3D space using CSS3D.
+    - `NoteNode`: A specialized version of `HtmlNodeElement`, pre-configured for editable text notes.
+    - `ShapeNode`: Renders 3D shapes (like boxes or spheres) using WebGL.
+    - While useful as examples or for simple cases, new complex or highly custom node types should preferably be implemented using the node registration system (`SpaceGraph.registerNodeType()`) for better encapsulation and flexibility.
+
+- **`Edge`**:
+
+    - Represents a visual connection (link) between two nodes (a `source` and a `target`).
+    - Can be styled with properties like `color`, `thickness`.
+    - If an edge is created by linking specific ports on nodes (see "Node Ports" and "Inter-Node Messaging System" below), its `edge.data` object will contain `sourcePort` and `targetPort` properties, storing the names of the connected ports.
+
+- **`UIManager`**:
+
+    - Handles all user interactions with the graph.
+    - Manages mouse events (click, drag, wheel), keyboard input, and touch events.
+    - Responsible for node selection, drag-and-drop operations (for creating and moving nodes), displaying context menus, and initiating node/port linking.
+
+- **`CameraController`**:
+
+    - Manages the `THREE.PerspectiveCamera`.
+    - Controls camera positioning, zoom levels, panning, and animated focusing on specific nodes or points in the space.
+    - Maintains a view history for "back" functionality.
+
+- **`ForceLayout`**:
+    - The default physics-based layout engine.
+    - Arranges nodes in the 2D/3D space by applying forces: repulsion between nodes, attraction along edges, and a centering force.
 
 ## 3. Creating Custom Nodes (The New System)
 
@@ -65,60 +72,69 @@ SpaceGraph allows developers to define their own node types with custom visuals 
 
 ### `SpaceGraph.registerNodeType(typeName, typeDefinition)`
 
-*   `typeName` (string): A unique name for your custom node type (e.g., `'my-user-card'`, `'molecule-node'`).
-*   `typeDefinition` (object): An object containing methods and properties that define how nodes of this type behave and render.
+- `typeName` (string): A unique name for your custom node type (e.g., `'my-user-card'`, `'molecule-node'`).
+- `typeDefinition` (object): An object containing methods and properties that define how nodes of this type behave and render.
 
 ### The `TypeDefinition` Object Structure
 
 This object tells SpaceGraph how to handle your custom nodes. Key methods include:
 
-*   **`getDefaults(initialData)`**:
-    *   Optional. Called when a new node of this type is being created.
-    *   Receives `initialData` passed to `spaceGraph.addNode()`.
-    *   Should return an object containing default properties for your node's `data` if not provided in `initialData`.
-    *   Example: `getDefaults: (data) => ({ label: 'Untitled', color: '#FFFFFF', ...data })`
+- **`getDefaults(initialData)`**:
 
-*   **`onCreate(nodeInstance, spaceGraph)`**:
-    *   Required. Called when a new node of this type is instantiated.
-    *   `nodeInstance`: The `RegisteredNode` instance being created. You can access its `id`, `position`, and merged `data` (initialData + defaults).
-    *   `spaceGraph`: The main `SpaceGraph` instance.
-    *   **Must return an object** specifying the visual components for this node. These can be:
-        *   `mesh`: A `THREE.Mesh` object for WebGL rendering.
-        *   `htmlElement`: An `HTMLElement` for CSS3D rendering. SpaceGraph will wrap this in a `CSS3DObject`.
-        *   `cssObject`: Alternatively, a pre-constructed `CSS3DObject`.
-        *   `labelObject`: A `CSS3DObject` typically used for labels.
-    *   These returned objects will be added to the appropriate scenes by SpaceGraph.
-    *   It's a common pattern to store references to frequently accessed internal DOM elements or THREE.js objects (like materials) on `nodeInst.customElements = { ... }`. This makes them easily accessible in other lifecycle methods like `onDataUpdate` or `onDispose`.
+    - Optional. Called when a new node of this type is being created.
+    - Receives `initialData` passed to `spaceGraph.addNode()`.
+    - Should return an object containing default properties for your node's `data` if not provided in `initialData`.
+    - Example: `getDefaults: (data) => ({ label: 'Untitled', color: '#FFFFFF', ...data })`
 
-*   **`onUpdate(nodeInstance, spaceGraph)`**:
-    *   Optional. Called on every frame of the animation loop. Useful for animations or dynamic updates.
+- **`onCreate(nodeInstance, spaceGraph)`**:
 
-*   **`onDispose(nodeInstance)`**:
-    *   Optional. Called when the node is removed. Should clean up custom resources.
+    - Required. Called when a new node of this type is instantiated.
+    - `nodeInstance`: The `RegisteredNode` instance being created. You can access its `id`, `position`, and merged `data` (initialData + defaults).
+    - `spaceGraph`: The main `SpaceGraph` instance.
+    - **Must return an object** specifying the visual components for this node. These can be:
+        - `mesh`: A `THREE.Mesh` object for WebGL rendering.
+        - `htmlElement`: An `HTMLElement` for CSS3D rendering. SpaceGraph will wrap this in a `CSS3DObject`.
+        - `cssObject`: Alternatively, a pre-constructed `CSS3DObject`.
+        - `labelObject`: A `CSS3DObject` typically used for labels.
+    - These returned objects will be added to the appropriate scenes by SpaceGraph.
+    - It's a common pattern to store references to frequently accessed internal DOM elements or THREE.js objects (like materials) on `nodeInst.customElements = { ... }`. This makes them easily accessible in other lifecycle methods like `onDataUpdate` or `onDispose`.
 
-*   **`onSetPosition(nodeInstance, x, y, z)`**:
-    *   Optional. Called when the node's position is updated. `RegisteredNode` provides default handling.
+- **`onUpdate(nodeInstance, spaceGraph)`**:
 
-*   **`onSetSelectedStyle(nodeInstance, isSelected)`**:
-    *   Optional. Called on selection state change for custom visual feedback.
+    - Optional. Called on every frame of the animation loop. Useful for animations or dynamic updates.
 
-*   **`onSetHoverStyle(nodeInstance, isHovered)`**:
-    *   Optional. Called on hover state change.
+- **`onDispose(nodeInstance)`**:
 
-*   **`getBoundingSphereRadius(nodeInstance)`**:
-    *   Optional, but **highly recommended** for layout and camera focusing. Returns the node's encompassing radius.
+    - Optional. Called when the node is removed. Should clean up custom resources.
 
-*   **Drag Handlers (`onStartDrag`, `onDrag`, `onEndDrag`)**:
-    *   Optional. Override default drag behavior.
+- **`onSetPosition(nodeInstance, x, y, z)`**:
 
-*   **`onDataUpdate(nodeInstance, updatedData)`**:
-    *   Optional. Called when `spaceGraph.updateNodeData(nodeId, newData)` is used. Allows the node to react to specific data changes.
-    *   This method is key for making nodes dynamic. When `spaceGraph.updateNodeData(nodeId, newData)` is called, `onDataUpdate` receives the `newData` object. If `newData` contains keys corresponding to the node's defined input ports (e.g., `updatedData.my_input_port`), this method should handle that incoming data, update the node's internal state (`nodeInst.data`), and refresh its visual representation if necessary. Remember to update `nodeInst.data.propertyName = updatedData.propertyName` if the change should persist.
+    - Optional. Called when the node's position is updated. `RegisteredNode` provides default handling.
+
+- **`onSetSelectedStyle(nodeInstance, isSelected)`**:
+
+    - Optional. Called on selection state change for custom visual feedback.
+
+- **`onSetHoverStyle(nodeInstance, isHovered)`**:
+
+    - Optional. Called on hover state change.
+
+- **`getBoundingSphereRadius(nodeInstance)`**:
+
+    - Optional, but **highly recommended** for layout and camera focusing. Returns the node's encompassing radius.
+
+- **Drag Handlers (`onStartDrag`, `onDrag`, `onEndDrag`)**:
+
+    - Optional. Override default drag behavior.
+
+- **`onDataUpdate(nodeInstance, updatedData)`**:
+    - Optional. Called when `spaceGraph.updateNodeData(nodeId, newData)` is used. Allows the node to react to specific data changes.
+    - This method is key for making nodes dynamic. When `spaceGraph.updateNodeData(nodeId, newData)` is called, `onDataUpdate` receives the `newData` object. If `newData` contains keys corresponding to the node's defined input ports (e.g., `updatedData.my_input_port`), this method should handle that incoming data, update the node's internal state (`nodeInst.data`), and refresh its visual representation if necessary. Remember to update `nodeInst.data.propertyName = updatedData.propertyName` if the change should persist.
 
 ### Node Ports (for HTML-based RegisteredNodes)
 
-*   A `TypeDefinition` can optionally include a `ports` property in its `getDefaults` method or as part of the initial data when adding a node. This defines connection points on the node.
-*   **Structure**:
+- A `TypeDefinition` can optionally include a `ports` property in its `getDefaults` method or as part of the initial data when adding a node. This defines connection points on the node.
+- **Structure**:
     ```javascript
     ports: {
       inputs: {
@@ -131,11 +147,11 @@ This object tells SpaceGraph how to handle your custom nodes. Key methods includ
       }
     }
     ```
-    *   `portName`: A programmatic identifier for the port (e.g., `data_in`, `trigger_out`).
-    *   `label`: A user-friendly string for tooltips or UI display.
-    *   `type`: A user-defined string indicating the expected data type (e.g., `'string'`, `'number'`, `'signal'`, `'any'`). This is for user/developer reference and can be used for validation during linking.
-*   **Rendering**: For `RegisteredNode`s that create an `htmlElement` in their `onCreate` method, these defined ports will be automatically rendered as small `div` elements (styled with CSS classes `.node-port`, `.port-input`, `.port-output`) on the periphery of the `htmlElement`. For `RegisteredNode`s that define a `mesh` (WebGL) instead of an `htmlElement` in `onCreate`, these port definitions are primarily for data modeling and semantic purposes. Visual rendering of ports on WebGL nodes would require custom logic within `onCreate` (e.g., creating small indicator meshes at port locations) and is not automatic.
-*   **Interaction**: These visual ports can be clicked to initiate edge linking (see "Inter-Node Messaging System / Edge Linking" below).
+    - `portName`: A programmatic identifier for the port (e.g., `data_in`, `trigger_out`).
+    - `label`: A user-friendly string for tooltips or UI display.
+    - `type`: A user-defined string indicating the expected data type (e.g., `'string'`, `'number'`, `'signal'`, `'any'`). This is for user/developer reference and can be used for validation during linking.
+- **Rendering**: For `RegisteredNode`s that create an `htmlElement` in their `onCreate` method, these defined ports will be automatically rendered as small `div` elements (styled with CSS classes `.node-port`, `.port-input`, `.port-output`) on the periphery of the `htmlElement`. For `RegisteredNode`s that define a `mesh` (WebGL) instead of an `htmlElement` in `onCreate`, these port definitions are primarily for data modeling and semantic purposes. Visual rendering of ports on WebGL nodes would require custom logic within `onCreate` (e.g., creating small indicator meshes at port locations) and is not automatic.
+- **Interaction**: These visual ports can be clicked to initiate edge linking (see "Inter-Node Messaging System / Edge Linking" below).
 
 ### Instantiating a Custom Node
 
@@ -143,13 +159,15 @@ Once registered, create an instance using `SpaceGraph.addNode()`:
 
 ```javascript
 const myNode = spaceGraph.addNode({
-  type: 'my-custom-type',
-  id: 'custom-node-1',
-  x: 100, y: 50, z: 0,
-  label: 'My Custom Node',
-  // Custom data, including optional ports definition:
-  ports: { inputs: { myInput: { label: 'My Data In', type: 'data'} } },
-  customProperty: 'someValue'
+    type: 'my-custom-type',
+    id: 'custom-node-1',
+    x: 100,
+    y: 50,
+    z: 0,
+    label: 'My Custom Node',
+    // Custom data, including optional ports definition:
+    ports: { inputs: { myInput: { label: 'My Data In', type: 'data' } } },
+    customProperty: 'someValue',
 });
 ```
 
@@ -157,21 +175,21 @@ const myNode = spaceGraph.addNode({
 
 ```javascript
 const myBoxNodeType = {
-  getDefaults: (initialData) => ({
-    label: initialData.label || 'Unnamed Box',
-    color: initialData.color || 0xff0000,
-    size: initialData.size || 50,
-    ports: { inputs: { color_in: {label: 'Color', type: 'hex'} } } // Example port
-  }),
-  onCreate: (node, sg) => {
-    const three = sg.constructor.THREE;
-    const geometry = new three.BoxGeometry(node.data.size, node.data.size, node.data.size);
-    const material = new three.MeshStandardMaterial({ color: node.data.color });
-    const mesh = new three.Mesh(geometry, material);
-    // ... (labelObject creation if needed) ...
-    return { mesh /*, labelObject */ };
-  },
-  // ... other lifecycle methods ...
+    getDefaults: (initialData) => ({
+        label: initialData.label || 'Unnamed Box',
+        color: initialData.color || 0xff0000,
+        size: initialData.size || 50,
+        ports: { inputs: { color_in: { label: 'Color', type: 'hex' } } }, // Example port
+    }),
+    onCreate: (node, sg) => {
+        const three = sg.constructor.THREE;
+        const geometry = new three.BoxGeometry(node.data.size, node.data.size, node.data.size);
+        const material = new three.MeshStandardMaterial({ color: node.data.color });
+        const mesh = new three.Mesh(geometry, material);
+        // ... (labelObject creation if needed) ...
+        return { mesh /*, labelObject */ };
+    },
+    // ... other lifecycle methods ...
 };
 // spaceGraph.registerNodeType('simple-box', myBoxNodeType);
 ```
@@ -186,61 +204,64 @@ The `UIManager` class captures raw browser events and translates them into graph
 
 Nodes can communicate directly using a publish/subscribe system. This is also tied to how edges can represent data flow if ports are used.
 
-*   **`node.emit(eventName, payload)`**:
-    *   A node can emit a named event. `eventName` often corresponds to an output port name.
-    *   Example: `currentNode.emit('data_out', { value: 42 });`
+- **`node.emit(eventName, payload)`**:
 
-*   **`node.listenTo(targetNodeOrId, eventName, callback)`**:
-    *   A node can listen to events from another node. `eventName` often corresponds to an input port name on the listening node, but it's listening for an event (often an output port name) from the `targetNodeOrId`.
-    *   Callback signature: `(payload, senderNodeInstance)`.
-    *   Example: `listenerNode.listenTo(emitterNode, 'data_out', (data, sender) => { ... });`
+    - A node can emit a named event. `eventName` often corresponds to an output port name.
+    - Example: `currentNode.emit('data_out', { value: 42 });`
 
-*   **`node.stopListening(...)`**: Removes a listener.
-*   **Automatic Cleanup**: `node.dispose()` automatically cleans up listeners created *by that node* using `listenTo()`.
+- **`node.listenTo(targetNodeOrId, eventName, callback)`**:
 
-*   **Edge Linking with Ports**:
-    *   The `UIManager` allows users to create edges by clicking on a source port and dragging to a target port.
-    *   If a link is successfully created between an output port of one node and an input port of another:
-        *   The resulting `Edge` object will have `edge.data.sourcePort` (name of the output port on the source node) and `edge.data.targetPort` (name of the input port on the target node).
-        *   Example: `edge.data = { sourcePort: 'html_out', targetPort: 'md_in' }`.
-    *   This allows application logic to understand the specific connection points of an edge, enabling more complex data flow or state propagation logic beyond simple node-to-node adjacency.
-    *   Node-to-node links (without specific ports) are also possible and will result in an empty `edge.data` object by default.
-    *   It's important to distinguish this direct eventing from data flow implied by visual port connections on `RegisteredNode`s. While `emit/listenTo` works for any node communication, data arriving at a `RegisteredNode`'s defined 'input port' (e.g., `my_input_port`) is typically handled via its `onDataUpdate` method. This method is invoked when `spaceGraph.updateNodeData(receiverNode.id, { my_input_port: someValue })` is called by external logic. An edge drawn between an output port and an input port visually represents this intended data path, but the library itself does not automatically pipe data through these edges for `RegisteredNode`s using `onDataUpdate`. Application-specific logic or a dedicated data flow manager would be responsible for observing an output event (or data change) and then triggering `updateNodeData` on the connected node(s). The `example-inter-node-communication.html` provides scenarios for both direct `listenTo` and `onDataUpdate`-based communication.
+    - A node can listen to events from another node. `eventName` often corresponds to an input port name on the listening node, but it's listening for an event (often an output port name) from the `targetNodeOrId`.
+    - Callback signature: `(payload, senderNodeInstance)`.
+    - Example: `listenerNode.listenTo(emitterNode, 'data_out', (data, sender) => { ... });`
 
-*   **Global Graph Events**:
-    *   `spaceGraph.on(eventName, callback)`: Allows subscription to graph-wide events.
-    *   `spaceGraph._emit(eventName, payload)`: Used internally to emit these events.
-    *   Key built-in events include:
-        *   `nodeAdded`: When a node is added. Data: `{ node: BaseNode }`.
-        *   `nodeRemoved`: When a node is removed. Data: `{ nodeId: string, node: BaseNode }`.
-        *   `edgeAdded`: When an edge is added. Data: `{ edge: Edge }`.
-        *   `edgeRemoved`: When an edge is removed. Data: `{ edgeId: string, edge: Edge }`.
-        *   `nodeSelected`: When node selection changes. Data: `{ selectedNode: BaseNode | null, previouslySelectedNode: BaseNode | null }`.
-        *   `edgeSelected`: When edge selection changes. Data: `{ selectedEdge: Edge | null, previouslySelectedEdge: Edge | null }`.
-    *   These provide hooks into the graph's lifecycle and user interactions, complementing the direct node-to-node eventing.
+- **`node.stopListening(...)`**: Removes a listener.
+- **Automatic Cleanup**: `node.dispose()` automatically cleans up listeners created _by that node_ using `listenTo()`.
+
+- **Edge Linking with Ports**:
+
+    - The `UIManager` allows users to create edges by clicking on a source port and dragging to a target port.
+    - If a link is successfully created between an output port of one node and an input port of another:
+        - The resulting `Edge` object will have `edge.data.sourcePort` (name of the output port on the source node) and `edge.data.targetPort` (name of the input port on the target node).
+        - Example: `edge.data = { sourcePort: 'html_out', targetPort: 'md_in' }`.
+    - This allows application logic to understand the specific connection points of an edge, enabling more complex data flow or state propagation logic beyond simple node-to-node adjacency.
+    - Node-to-node links (without specific ports) are also possible and will result in an empty `edge.data` object by default.
+    - It's important to distinguish this direct eventing from data flow implied by visual port connections on `RegisteredNode`s. While `emit/listenTo` works for any node communication, data arriving at a `RegisteredNode`'s defined 'input port' (e.g., `my_input_port`) is typically handled via its `onDataUpdate` method. This method is invoked when `spaceGraph.updateNodeData(receiverNode.id, { my_input_port: someValue })` is called by external logic. An edge drawn between an output port and an input port visually represents this intended data path, but the library itself does not automatically pipe data through these edges for `RegisteredNode`s using `onDataUpdate`. Application-specific logic or a dedicated data flow manager would be responsible for observing an output event (or data change) and then triggering `updateNodeData` on the connected node(s). The `example-inter-node-communication.html` provides scenarios for both direct `listenTo` and `onDataUpdate`-based communication.
+
+- **Global Graph Events**:
+    - `spaceGraph.on(eventName, callback)`: Allows subscription to graph-wide events.
+    - `spaceGraph._emit(eventName, payload)`: Used internally to emit these events.
+    - Key built-in events include:
+        - `nodeAdded`: When a node is added. Data: `{ node: BaseNode }`.
+        - `nodeRemoved`: When a node is removed. Data: `{ nodeId: string, node: BaseNode }`.
+        - `edgeAdded`: When an edge is added. Data: `{ edge: Edge }`.
+        - `edgeRemoved`: When an edge is removed. Data: `{ edgeId: string, edge: Edge }`.
+        - `nodeSelected`: When node selection changes. Data: `{ selectedNode: BaseNode | null, previouslySelectedNode: BaseNode | null }`.
+        - `edgeSelected`: When edge selection changes. Data: `{ selectedEdge: Edge | null, previouslySelectedEdge: Edge | null }`.
+    - These provide hooks into the graph's lifecycle and user interactions, complementing the direct node-to-node eventing.
 
 ## 5. Customizing Defaults via Configuration
 
 SpaceGraph allows for global customization of many default behaviors and visual properties through a configuration object passed to its constructor. This makes it easier to theme a graph or set project-wide standards without altering individual node/edge creation calls.
 
-*   **Passing Configuration**:
+- **Passing Configuration**:
     ```javascript
     const myConfig = {
-      rendering: { defaultBackgroundColor: 0x112233 },
-      defaults: { node: { shape: { color: 0xff00ff } } }
+        rendering: { defaultBackgroundColor: 0x112233 },
+        defaults: { node: { shape: { color: 0xff00ff } } },
     };
     const graph = new SpaceGraph(container, myConfig, {}); // config is the second argument
     ```
-*   **Scope**: The configuration can affect:
-    *   **Rendering**: Background color, alpha, line intersection thresholds.
-    *   **Camera**: Initial position, FOV, zoom/pan speeds, damping.
-    *   **Node Defaults**: Default properties for `html` nodes (width, height, background) and `shape` nodes (shape type, size, color).
-    *   **Edge Defaults**: Default color, thickness, opacity for edges.
-*   **Precedence**:
+- **Scope**: The configuration can affect:
+    - **Rendering**: Background color, alpha, line intersection thresholds.
+    - **Camera**: Initial position, FOV, zoom/pan speeds, damping.
+    - **Node Defaults**: Default properties for `html` nodes (width, height, background) and `shape` nodes (shape type, size, color).
+    - **Edge Defaults**: Default color, thickness, opacity for edges.
+- **Precedence**:
     1.  Data provided directly when adding a node or edge (e.g., `graph.addNode({ type: 'shape', color: 0x00ff00 })`).
     2.  Global defaults set via the `SpaceGraph` configuration object.
     3.  Internal hardcoded defaults within node/edge classes (these are minimal now).
-*   **Structure**: For the detailed structure of the configuration object (`SpaceGraphConfig`), refer to the JSDoc in `spacegraph.js` or the main `README.md`.
+- **Structure**: For the detailed structure of the configuration object (`SpaceGraphConfig`), refer to the JSDoc in `spacegraph.js` or the main `README.md`.
 
 ## 6. Creating Complex Nodes (App Nodes)
 
@@ -248,83 +269,89 @@ The custom node registration system, combined with the ability to embed rich HTM
 
 ### Key Principles for App Nodes
 
-*   **Internal HTML Structure (`onCreate`)**:
-    *   The `typeDefinition.onCreate` method is where you define the internal DOM structure of your app node. This typically involves creating a main `div` for `nodeInst.htmlElement` and then populating it with various HTML elements like input fields, buttons, display areas, etc.
-    *   This structure is then rendered in the 3D space using `CSS3DObject`.
+- **Internal HTML Structure (`onCreate`)**:
 
-*   **Data Management (`nodeInst.data` & `onDataUpdate`)**:
-    *   The primary state of your app node should be stored within `nodeInst.data`. This object is initially populated by `getDefaults` and any data passed during `spaceGraph.addNode()`.
-    *   Internal UI interactions (e.g., typing in a textarea, clicking a button) should update properties within `nodeInst.data`.
-    *   The `typeDefinition.onDataUpdate(nodeInst, updatedData)` method can be implemented to react if the node's data is changed externally (e.g., via `spaceGraph.updateNodeData(nodeId, newData)` or through an input port mechanism). This method can then update the node's internal UI to reflect the new data.
+    - The `typeDefinition.onCreate` method is where you define the internal DOM structure of your app node. This typically involves creating a main `div` for `nodeInst.htmlElement` and then populating it with various HTML elements like input fields, buttons, display areas, etc.
+    - This structure is then rendered in the 3D space using `CSS3DObject`.
 
-*   **Internal Event Handling**:
-    *   Standard JavaScript event listeners (`addEventListener`) should be attached to the HTML elements created in `onCreate`.
-    *   Callbacks for these listeners will contain the core logic of your app node. For example, a button click might modify `nodeInst.data.someProperty`, then trigger a re-render of a part of the node's UI, and potentially emit an event through an output port.
+- **Data Management (`nodeInst.data` & `onDataUpdate`)**:
 
-*   **Emitting Data via Output Ports**:
-    *   After processing an internal event or a data update, if the node needs to send data to other nodes, it uses `nodeInst.emit(outputPortName, payload)`.
-    *   The `outputPortName` should match one of the keys defined in `nodeInst.data.ports.outputs`.
+    - The primary state of your app node should be stored within `nodeInst.data`. This object is initially populated by `getDefaults` and any data passed during `spaceGraph.addNode()`.
+    - Internal UI interactions (e.g., typing in a textarea, clicking a button) should update properties within `nodeInst.data`.
+    - The `typeDefinition.onDataUpdate(nodeInst, updatedData)` method can be implemented to react if the node's data is changed externally (e.g., via `spaceGraph.updateNodeData(nodeId, newData)` or through an input port mechanism). This method can then update the node's internal UI to reflect the new data.
 
-*   **Receiving Data via Input Ports (Conceptual)**:
-    *   **Method 1 (Direct Event Listening - Less Common for "Input Port" Semantics):** While a node can technically `listenTo` any event from another node, for true "input port" behavior, it's often about reacting to data *sent to it*. This method is viable but less direct for port semantics compared to `onDataUpdate`.
-    *   **Method 2 (`onDataUpdate`):** This is the most common and recommended pattern for `RegisteredNode` types to handle data arriving at their conceptual input ports. If your `TypeDefinition` defines an input port (e.g., in `getDefaults` or initial data as `ports: { inputs: { config_in: ... } }`), external logic (another node's action, or application code) would typically call `spaceGraph.updateNodeData(appNodeId, { config_in: newConfigData })`. The `onDataUpdate(nodeInst, updatedData)` method within your `TypeDefinition` for the `appNodeId` node is then responsible for checking if `updatedData.config_in` exists and processing this `newConfigData`. This usually involves updating `nodeInst.data.config_in` and then refreshing the node's internal HTML or WebGL visuals to reflect the new configuration.
-    *   **Method 3 (Dedicated Listener in `onCreate` - Advanced):** An App Node could, in its `onCreate`, set up listeners for specific events targeted at itself, perhaps using a global event bus or directly if another node `emit`s an event *with the App Node's ID as part of the event name or payload*. This is more complex and less conventional than using `onDataUpdate` for port-like inputs.
+- **Internal Event Handling**:
+
+    - Standard JavaScript event listeners (`addEventListener`) should be attached to the HTML elements created in `onCreate`.
+    - Callbacks for these listeners will contain the core logic of your app node. For example, a button click might modify `nodeInst.data.someProperty`, then trigger a re-render of a part of the node's UI, and potentially emit an event through an output port.
+
+- **Emitting Data via Output Ports**:
+
+    - After processing an internal event or a data update, if the node needs to send data to other nodes, it uses `nodeInst.emit(outputPortName, payload)`.
+    - The `outputPortName` should match one of the keys defined in `nodeInst.data.ports.outputs`.
+
+- **Receiving Data via Input Ports (Conceptual)**:
+    - **Method 1 (Direct Event Listening - Less Common for "Input Port" Semantics):** While a node can technically `listenTo` any event from another node, for true "input port" behavior, it's often about reacting to data _sent to it_. This method is viable but less direct for port semantics compared to `onDataUpdate`.
+    - **Method 2 (`onDataUpdate`):** This is the most common and recommended pattern for `RegisteredNode` types to handle data arriving at their conceptual input ports. If your `TypeDefinition` defines an input port (e.g., in `getDefaults` or initial data as `ports: { inputs: { config_in: ... } }`), external logic (another node's action, or application code) would typically call `spaceGraph.updateNodeData(appNodeId, { config_in: newConfigData })`. The `onDataUpdate(nodeInst, updatedData)` method within your `TypeDefinition` for the `appNodeId` node is then responsible for checking if `updatedData.config_in` exists and processing this `newConfigData`. This usually involves updating `nodeInst.data.config_in` and then refreshing the node's internal HTML or WebGL visuals to reflect the new configuration.
+    - **Method 3 (Dedicated Listener in `onCreate` - Advanced):** An App Node could, in its `onCreate`, set up listeners for specific events targeted at itself, perhaps using a global event bus or directly if another node `emit`s an event _with the App Node's ID as part of the event name or payload_. This is more complex and less conventional than using `onDataUpdate` for port-like inputs.
 
 ### Example App Node Walkthroughs
 
-*   **Markdown Editor Node (`markdown-editor`)**:
-    *   **Structure**: Consists of a `<textarea>` for raw Markdown input and a `<div>` for the rendered HTML preview.
-    *   **External Library**: Uses `Marked.js` (loaded via CDN) to convert Markdown to HTML.
-    *   **Logic**:
-        *   Text input in the `textarea` updates `nodeInst.data.markdownContent`.
-        *   This triggers an internal `renderPreview()` function.
-        *   `renderPreview()` uses `marked.parse()` to generate HTML and updates the preview `div`.
-        *   It then emits the generated HTML string through its `html_out` output port: `nodeInst.emit('html_out', previewDiv.innerHTML);`.
-    *   An input port `md_in` is defined, allowing external updates to its Markdown content via `onDataUpdate`.
+- **Markdown Editor Node (`markdown-editor`)**:
 
-*   **Task List Node (`task-list`)**:
-    *   **Structure**: An `<h3>` for the title, an `<input type="text">` and "Add" button for new tasks, and a `<ul>` to display the list of tasks.
-    *   **Data Management**: Manages an array of task objects (e.g., `{id, text, completed}`) in `nodeInst.data.tasks`.
-    *   **Logic**:
-        *   Internal UI events (adding a new task, checking/unchecking a task's checkbox, deleting a task) directly modify the `nodeInst.data.tasks` array.
-        *   After any modification, an internal `renderTasks()` function is called to update the `<ul>` by regenerating the `<li>` elements.
-        *   It emits events like `task_completed` (with the specific task object) or `tasks_updated` (with the full tasks array) via its output ports.
-    *   An input port `add_task` allows new tasks to be added externally by updating `nodeInst.data.add_task`, which is then processed in `onDataUpdate`.
+    - **Structure**: Consists of a `<textarea>` for raw Markdown input and a `<div>` for the rendered HTML preview.
+    - **External Library**: Uses `Marked.js` (loaded via CDN) to convert Markdown to HTML.
+    - **Logic**:
+        - Text input in the `textarea` updates `nodeInst.data.markdownContent`.
+        - This triggers an internal `renderPreview()` function.
+        - `renderPreview()` uses `marked.parse()` to generate HTML and updates the preview `div`.
+        - It then emits the generated HTML string through its `html_out` output port: `nodeInst.emit('html_out', previewDiv.innerHTML);`.
+    - An input port `md_in` is defined, allowing external updates to its Markdown content via `onDataUpdate`.
+
+- **Task List Node (`task-list`)**:
+    - **Structure**: An `<h3>` for the title, an `<input type="text">` and "Add" button for new tasks, and a `<ul>` to display the list of tasks.
+    - **Data Management**: Manages an array of task objects (e.g., `{id, text, completed}`) in `nodeInst.data.tasks`.
+    - **Logic**:
+        - Internal UI events (adding a new task, checking/unchecking a task's checkbox, deleting a task) directly modify the `nodeInst.data.tasks` array.
+        - After any modification, an internal `renderTasks()` function is called to update the `<ul>` by regenerating the `<li>` elements.
+        - It emits events like `task_completed` (with the specific task object) or `tasks_updated` (with the full tasks array) via its output ports.
+    - An input port `add_task` allows new tasks to be added externally by updating `nodeInst.data.add_task`, which is then processed in `onDataUpdate`.
 
 ### Styling App Nodes
 
-*   Complex nodes often require their own specific CSS rules for their internal HTML structure.
-*   These styles can be included within a `<style>` tag in the example HTML file (as seen in `example-app-nodes.html`) or linked from an external CSS file.
-*   It's good practice to scope these styles using a class specific to the node type (e.g., `.markdown-editor-node .editor-area {}`) to avoid conflicts with global styles or other node types.
+- Complex nodes often require their own specific CSS rules for their internal HTML structure.
+- These styles can be included within a `<style>` tag in the example HTML file (as seen in `example-app-nodes.html`) or linked from an external CSS file.
+- It's good practice to scope these styles using a class specific to the node type (e.g., `.markdown-editor-node .editor-area {}`) to avoid conflicts with global styles or other node types.
 
 ### Event Propagation
 
-*   When creating interactive HTML elements (buttons, inputs, etc.) inside an App Node's `htmlElement`, remember that these elements are part of the larger SpaceGraph DOM structure.
-*   Pointer events (like `pointerdown`, `click`) or `wheel` events on these internal elements might propagate up to the `UIManager` and interfere with graph interactions (like node dragging or camera zooming).
-*   To prevent this, call `event.stopPropagation()` within the event listeners for your internal interactive elements.
-    *   Example: `myButton.addEventListener('pointerdown', (e) => e.stopPropagation());`
+- When creating interactive HTML elements (buttons, inputs, etc.) inside an App Node's `htmlElement`, remember that these elements are part of the larger SpaceGraph DOM structure.
+- Pointer events (like `pointerdown`, `click`) or `wheel` events on these internal elements might propagate up to the `UIManager` and interfere with graph interactions (like node dragging or camera zooming).
+- To prevent this, call `event.stopPropagation()` within the event listeners for your internal interactive elements.
+    - Example: `myButton.addEventListener('pointerdown', (e) => e.stopPropagation());`
 
 ## 6. Rendering Concepts
 
 SpaceGraph uses a hybrid rendering approach:
 
-*   **WebGL Scene (`SpaceGraph.scene`)**: For `ShapeNode` meshes, `Edge` lines. Benefits from GPU acceleration.
-*   **CSS3D Scene (`SpaceGraph.cssScene`)**: For HTML elements (`HtmlNodeElement`, `RegisteredNode`s with `htmlElement`), rendered as `CSS3DObject`s. Allows rich text, standard CSS, and DOM interaction.
-*   **`CSS3DObject`**: Wraps an `HTMLElement`, allowing it to be part of the 3D scene.
-*   **Billboard Effect**: HTML nodes and labels often billboard (face the camera) for readability.
+- **WebGL Scene (`SpaceGraph.scene`)**: For `ShapeNode` meshes, `Edge` lines. Benefits from GPU acceleration.
+- **CSS3D Scene (`SpaceGraph.cssScene`)**: For HTML elements (`HtmlNodeElement`, `RegisteredNode`s with `htmlElement`), rendered as `CSS3DObject`s. Allows rich text, standard CSS, and DOM interaction.
+- **`CSS3DObject`**: Wraps an `HTMLElement`, allowing it to be part of the 3D scene.
+- **Billboard Effect**: HTML nodes and labels often billboard (face the camera) for readability.
 
 ## 7. Styling and Appearance
 
-*   **HTML-based Nodes**: Styled with standard CSS.
-*   **Shape-based Nodes**: Appearance via THREE.js `Material` properties.
-*   **Custom Registered Types**: `onCreate` has full control.
-*   **Edges**: Styled via `data` object properties (e.g., `color`, `thickness`).
+- **HTML-based Nodes**: Styled with standard CSS.
+- **Shape-based Nodes**: Appearance via THREE.js `Material` properties.
+- **Custom Registered Types**: `onCreate` has full control.
+- **Edges**: Styled via `data` object properties (e.g., `color`, `thickness`).
 
 ## 8. Layout
 
-*   **`ForceLayout`**: Default physics-based engine.
-*   Nodes have `mass`; edges have `stiffness`, `idealLength`.
-*   `node.getBoundingSphereRadius()` is important for overlap prevention.
+- **`ForceLayout`**: Default physics-based engine.
+- Nodes have `mass`; edges have `stiffness`, `idealLength`.
+- `node.getBoundingSphereRadius()` is important for overlap prevention.
 
 ## 9. Testing
+
 The library includes a testing setup using Vitest. Tests can be run with `npm test`. This helps ensure stability and correctness of core functionalities.

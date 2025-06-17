@@ -20,7 +20,8 @@ export class KeyboardInputHandler {
     handleKeyDown(event) {
         // Logic from UIManager._onKeyDown
         const activeEl = document.activeElement;
-        const isEditing = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable);
+        const isEditing =
+            activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable);
         if (isEditing && event.key !== 'Escape') return;
 
         const { selectedNode, selectedEdge } = this.spaceGraph;
@@ -30,21 +31,27 @@ export class KeyboardInputHandler {
             case 'Delete':
             case 'Backspace':
                 if (selectedNode) {
-                    this.uiManager.showConfirmDialog(`Delete node "${selectedNode.id.substring(0,10)}..."?`, () => this.spaceGraph.removeNode(selectedNode.id));
+                    this.uiManager.showConfirmDialog(`Delete node "${selectedNode.id.substring(0, 10)}..."?`, () =>
+                        this.spaceGraph.removeNode(selectedNode.id)
+                    );
                     handled = true;
                 } else if (selectedEdge) {
-                    this.uiManager.showConfirmDialog(`Delete edge "${selectedEdge.id.substring(0,10)}..."?`, () => this.spaceGraph.removeEdge(selectedEdge.id));
+                    this.uiManager.showConfirmDialog(`Delete edge "${selectedEdge.id.substring(0, 10)}..."?`, () =>
+                        this.spaceGraph.removeEdge(selectedEdge.id)
+                    );
                     handled = true;
                 }
                 break;
             case 'Escape':
                 // Escape logic will be coordinated by UIManager facade, checking various states
-                if (this.uiManager.handleEscape()) { // Delegate to a method on UIManager facade
+                if (this.uiManager.handleEscape()) {
+                    // Delegate to a method on UIManager facade
                     handled = true;
                 }
                 break;
             case 'Enter':
-                if (selectedNode instanceof NoteNode) { // NoteNode specific
+                if (selectedNode instanceof NoteNode) {
+                    // NoteNode specific
                     selectedNode.htmlElement?.querySelector('.node-content')?.focus();
                     handled = true;
                 }
@@ -52,41 +59,69 @@ export class KeyboardInputHandler {
             case '+':
             case '=':
                 if (selectedNode instanceof HtmlNodeElement) {
-                    event.ctrlKey || event.metaKey ? selectedNode.adjustNodeSize(1.2) : selectedNode.adjustContentScale(1.15);
+                    event.ctrlKey || event.metaKey
+                        ? selectedNode.adjustNodeSize(1.2)
+                        : selectedNode.adjustContentScale(1.15);
                     handled = true;
                 }
                 break;
             case '-':
             case '_':
                 if (selectedNode instanceof HtmlNodeElement) {
-                     event.ctrlKey || event.metaKey ? selectedNode.adjustNodeSize(0.8) : selectedNode.adjustContentScale(1/1.15);
-                     handled = true;
+                    event.ctrlKey || event.metaKey
+                        ? selectedNode.adjustNodeSize(0.8)
+                        : selectedNode.adjustContentScale(1 / 1.15);
+                    handled = true;
                 }
                 break;
             case ' ': // Space bar
-                if (selectedNode) { this.spaceGraph.focusOnNode(selectedNode, 0.5, true); handled = true; }
-                else if (selectedEdge) {
-                    const midPoint = new THREE.Vector3().lerpVectors(selectedEdge.source.position, selectedEdge.target.position, 0.5);
+                if (selectedNode) {
+                    this.spaceGraph.focusOnNode(selectedNode, 0.5, true);
+                    handled = true;
+                } else if (selectedEdge) {
+                    const midPoint = new THREE.Vector3().lerpVectors(
+                        selectedEdge.source.position,
+                        selectedEdge.target.position,
+                        0.5
+                    );
                     const dist = selectedEdge.source.position.distanceTo(selectedEdge.target.position);
                     this.spaceGraph.cameraController?.pushState();
-                    this.spaceGraph.cameraController?.moveTo(midPoint.x, midPoint.y, midPoint.z + dist * 0.6 + 100, 0.5, midPoint);
+                    this.spaceGraph.cameraController?.moveTo(
+                        midPoint.x,
+                        midPoint.y,
+                        midPoint.z + dist * 0.6 + 100,
+                        0.5,
+                        midPoint
+                    );
                     handled = true;
-                } else { this.spaceGraph.centerView(); handled = true; }
+                } else {
+                    this.spaceGraph.centerView();
+                    handled = true;
+                }
                 break;
-            case 'Tab':
+            case 'Tab': {
                 event.preventDefault();
                 const nodes = Array.from(this.spaceGraph.nodes.values()).sort((a, b) => a.id.localeCompare(b.id));
                 if (nodes.length === 0) break;
-                let currentIndex = selectedNode ? nodes.findIndex(n => n === selectedNode) : -1;
-                let nextIndex = event.shiftKey ? (currentIndex > 0 ? currentIndex - 1 : nodes.length - 1)
-                                               : (currentIndex < nodes.length - 1 ? currentIndex + 1 : 0);
+                let currentIndex = selectedNode ? nodes.findIndex((n) => n === selectedNode) : -1;
+                let nextIndex = event.shiftKey
+                    ? currentIndex > 0
+                        ? currentIndex - 1
+                        : nodes.length - 1
+                    : currentIndex < nodes.length - 1
+                      ? currentIndex + 1
+                      : 0;
                 if (nodes[nextIndex]) {
                     this.spaceGraph.setSelectedNode(nodes[nextIndex]);
                     this.spaceGraph.focusOnNode(nodes[nextIndex], 0.3, true);
                 }
                 handled = true;
                 break;
-            case 'ArrowUp': case 'ArrowDown': case 'ArrowLeft': case 'ArrowRight':
+            }
+            case 'ArrowUp':
+            case 'ArrowDown':
+            case 'ArrowLeft':
+            case 'ArrowRight':
                 event.preventDefault();
                 this._navigateNodesWithArrows(event.key);
                 handled = true;
@@ -132,7 +167,8 @@ export class KeyboardInputHandler {
             const normalizedVectorToOther = vectorToOther.clone().normalize();
             const dotProduct = normalizedVectorToOther.dot(directionVector);
 
-            if (dotProduct > 0.3) { // Prefer nodes generally in the arrow key's direction
+            if (dotProduct > 0.3) {
+                // Prefer nodes generally in the arrow key's direction
                 const score = distance * (1.5 - dotProduct); // Prioritize alignment and proximity
                 if (score < minScore) {
                     minScore = score;

@@ -46,12 +46,14 @@ export class WheelInputHandler {
 
         event.preventDefault(); // Prevent default browser scroll/zoom for the container
 
-        if (event.ctrlKey || event.metaKey) { // Ctrl/Meta + Wheel for content scaling
+        if (event.ctrlKey || event.metaKey) {
+            // Ctrl/Meta + Wheel for content scaling
             if (targetInfo.node instanceof HtmlNodeElement) {
                 event.stopPropagation(); // Stop propagation to prevent graph zoom as well
-                targetInfo.node.adjustContentScale(event.deltaY < 0 ? 1.1 : (1 / 1.1));
+                targetInfo.node.adjustContentScale(event.deltaY < 0 ? 1.1 : 1 / 1.1);
             }
-        } else { // Default wheel action: graph zoom
+        } else {
+            // Default wheel action: graph zoom
             this.spaceGraph.cameraController?.zoom(event);
         }
     }

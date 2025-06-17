@@ -1,73 +1,73 @@
 {
-  "name": "spacegraph-zui",
-  "version": "0.1.0",
-  "description": "A general-purpose, extensible JavaScript library for creating Zooming User Interfaces (ZUI) with 2D and 3D visualizations.",
-  "main": "dist/spacegraph.umd.js",
-  "module": "dist/spacegraph.esm.js",
-  "files": [
-    "dist/spacegraph.umd.js",
-    "dist/spacegraph.umd.js.map",
-    "dist/spacegraph.esm.js",
-    "dist/spacegraph.esm.js.map",
-    "dist/spacegraph.umd.min.js",
-    "dist/spacegraph.umd.min.js.map",
-    "dist/spacegraph.esm.min.js",
-    "dist/spacegraph.esm.min.js.map",
-    "README.md",
-    "CORE_CONCEPTS.md",
-    "index.css"
-  ],
-  "scripts": {
-    "build": "npx rollup -c",
-    "test": "vitest",
-    "docs:build": "jsdoc -c jsdoc.conf.json",
-    "docs:view": "echo \"Open ./docs/api/index.html in your browser to view the documentation.\"",
-    "lint": "eslint . --ext .js",
-    "lint:fix": "eslint . --ext .js --fix",
-    "format": "prettier --write \"**/*.{js,json,md,html,css}\""
-  },
-  "author": "SpaceGraph Contributors",
-  "license": "MIT",
-  "type": "module",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/automenta/spacegraphjs.git"
-  },
-  "keywords": [
-    "zui",
-    "zoomable interface",
-    "graph",
-    "graph visualization",
-    "data visualization",
-    "2d",
-    "3d",
-    "webgl",
-    "threejs",
-    "gsap",
-    "javascript",
-    "library"
-  ],
-  "bugs": {
-    "url": "https://github.com/automenta/spacegraphjs/issues"
-  },
-  "homepage": "https://github.com/automenta/spacegraphjs#readme",
-  "peerDependencies": {
-    "gsap": "^3.13.0",
-    "three": "^0.177.0"
-  },
-  "devDependencies": {
-    "@rollup/plugin-commonjs": "^28.0.5",
-    "@rollup/plugin-node-resolve": "^16.0.1",
-    "@rollup/plugin-terser": "^0.4.4",
-    "eslint": "^8.57.0",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-prettier": "^5.2.1",
-    "jsdoc": "^4.0.4",
-    "jsdom": "^24.0.0",
-    "prettier": "^3.3.3",
-    "rollup": "^4.43.0",
-    "vitest": "^1.6.1",
-    "gsap": "^3.13.0",
-    "three": "^0.177.0"
-  }
+    "name": "spacegraph-zui",
+    "version": "0.1.0",
+    "description": "A general-purpose, extensible JavaScript library for creating Zooming User Interfaces (ZUI) with 2D and 3D visualizations.",
+    "main": "dist/spacegraph.umd.js",
+    "module": "dist/spacegraph.esm.js",
+    "files": [
+        "dist/spacegraph.umd.js",
+        "dist/spacegraph.umd.js.map",
+        "dist/spacegraph.esm.js",
+        "dist/spacegraph.esm.js.map",
+        "dist/spacegraph.umd.min.js",
+        "dist/spacegraph.umd.min.js.map",
+        "dist/spacegraph.esm.min.js",
+        "dist/spacegraph.esm.min.js.map",
+        "README.md",
+        "CORE_CONCEPTS.md",
+        "index.css"
+    ],
+    "scripts": {
+        "build": "npx rollup -c",
+        "test": "vitest",
+        "docs:build": "jsdoc -c jsdoc.conf.json",
+        "docs:view": "echo \"Open ./docs/api/index.html in your browser to view the documentation.\"",
+        "lint": "eslint . --ext .js",
+        "lint:fix": "eslint . --ext .js --fix",
+        "format": "prettier --write \"**/*.{js,json,md,html,css}\""
+    },
+    "author": "SpaceGraph Contributors",
+    "license": "MIT",
+    "type": "module",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/automenta/spacegraphjs.git"
+    },
+    "keywords": [
+        "zui",
+        "zoomable interface",
+        "graph",
+        "graph visualization",
+        "data visualization",
+        "2d",
+        "3d",
+        "webgl",
+        "threejs",
+        "gsap",
+        "javascript",
+        "library"
+    ],
+    "bugs": {
+        "url": "https://github.com/automenta/spacegraphjs/issues"
+    },
+    "homepage": "https://github.com/automenta/spacegraphjs#readme",
+    "peerDependencies": {
+        "gsap": "^3.13.0",
+        "three": "^0.177.0"
+    },
+    "devDependencies": {
+        "@rollup/plugin-commonjs": "^28.0.5",
+        "@rollup/plugin-node-resolve": "^16.0.1",
+        "@rollup/plugin-terser": "^0.4.4",
+        "eslint": "^8.57.0",
+        "eslint-config-prettier": "^9.1.0",
+        "eslint-plugin-prettier": "^5.2.1",
+        "jsdoc": "^4.0.4",
+        "jsdom": "^24.0.0",
+        "prettier": "^3.3.3",
+        "rollup": "^4.43.0",
+        "vitest": "^1.6.1",
+        "gsap": "^3.13.0",
+        "three": "^0.177.0"
+    }
 }
