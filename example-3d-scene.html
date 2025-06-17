@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpaceGraph.js - 3D Scene with Custom WebGL Nodes</title>
+    <link href="./index.css" rel="stylesheet" />
+    <style>
+        body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; background-color: #111; }
+        #graph-container { width: 100vw; height: 100vh; }
+
+        /* Styling for planet labels */
+        .planet-label {
+            color: #fff;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 12px;
+            pointer-events: none; /* Labels don't block interaction with planets */
+        }
+        .planet-label.selected {
+            background-color: rgba(255, 255, 0, 0.7); /* Yellowish when selected */
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div id="graph-container"></div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
+                "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import { SpaceGraph } from './spacegraph.js';
+        // We need THREE and CSS3DObject from the 'three' module via importmap
+        import * as THREE from 'three';
+        // CSS3DObject is an addon, so its path needs to be correctly mapped if not part of main three.module.js
+        // For this example, we assume spacegraph.js exports CSS3DObject or it's globally available via addons.
+        // If spacegraph.js doesn't export it, we might need:
+        // import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
+        // For simplicity, let's assume SpaceGraph.THREE.CSS3DObject can be used or it's available.
+        // The SpaceGraph class itself imports CSS3DObject, so we can access it via graph.constructor.CSS3DObject if needed.
+
+
+        // --- PlanetNode TypeDefinition ---
+        const planetNodeTypeDefinition = {
+            // typeName is 'planet-node', used during registration
+
+            getDefaults: (node, graph) => ({
+                label: node.data.label || 'Planet',
+                size: node.data.size || 50, // Diameter
+                color: node.data.color || 0xffffff,
+                rotationSpeed: node.data.rotationSpeed || 0.005,
+                orbitalSpeed: node.data.orbitalSpeed || 0, // Radians per frame
+                orbitalRadius: node.data.orbitalRadius || 0,
+                orbitalCenter: node.data.orbitalCenter ? new THREE.Vector3().copy(node.data.orbitalCenter) : new THREE.Vector3(0,0,0),
+                orbitalAngle: Math.random() * Math.PI * 2 // Initial random angle for orbit
+            }),
+
+            onCreate: (node, graph) => {
+                const data = node.data;
+                const geometry = new THREE.SphereGeometry(data.size / 2, 32, 16);
+                const material = new THREE.MeshStandardMaterial({
+                    color: data.color,
+                    roughness: 0.7,
+                    metalness: 0.3
+                });
+                node.mesh = new THREE.Mesh(geometry, material);
+
+                // Create HTML label
+                const labelDiv = document.createElement('div');
+                labelDiv.className = 'planet-label';
+                labelDiv.textContent = data.label;
+                // Access CSS3DObject via graph's constructor as it's imported there.
+                node.labelObject = new graph.constructor.CSS3DObject(labelDiv);
+
+                // Initial position for the label (will be updated in onUpdate)
+                node.labelObject.position.copy(node.position);
+                node.labelObject.position.y += (data.size / 2) + 15; // Position above the sphere
+
+                return { mesh: node.mesh, labelObject: node.labelObject };
+            },
+
+            onUpdate: (node, graph) => {
+                const data = node.data;
+                // Self-rotation
+                if (node.mesh) {
+                    node.mesh.rotation.y += data.rotationSpeed;
+                }
+
+                // Orbital movement (if applicable)
+                if (data.orbitalSpeed > 0 && data.orbitalRadius > 0) {
+                    data.orbitalAngle += data.orbitalSpeed;
+                    node.position.x = data.orbitalCenter.x + Math.cos(data.orbitalAngle) * data.orbitalRadius;
+                    node.position.z = data.orbitalCenter.z + Math.sin(data.orbitalAngle) * data.orbitalRadius;
+                    // Y position could also be part of orbit if desired (e.g. inclined orbits)
+                    // node.position.y = data.orbitalCenter.y + Math.sin(data.orbitalAngle) * data.orbitalRadius * Math.sin(inclination);
+
+                    // Update mesh position (as BaseNode.position is the source of truth for layout, but here we drive it)
+                    if (node.mesh) node.mesh.position.copy(node.position);
+                }
+
+
+                // Label billboarding and positioning
+                if (node.labelObject && graph._camera) {
+                    node.labelObject.position.copy(node.position);
+                    node.labelObject.position.y += (data.size / 2) + 15; // Keep label above the sphere
+                    node.labelObject.quaternion.copy(graph._camera.quaternion);
+                }
+            },
+
+            onSetSelectedStyle: (node, isSelected, graph) => {
+                if (node.mesh && node.mesh.material) {
+                    node.mesh.material.emissive.setHex(isSelected ? 0xffff00 : 0x000000);
+                }
+                if (node.labelObject && node.labelObject.element) {
+                    node.labelObject.element.classList.toggle('selected', isSelected);
+                }
+            },
+
+            getBoundingSphereRadius: (node, graph) => {
+                return node.data.size / 2;
+            }
+        };
+
+        // --- SpaceGraph Setup ---
+        const container = document.getElementById('graph-container');
+        const graph = new SpaceGraph(container, {
+            camera: {
+                initialPositionZ: 800, // Start further back for a 3D scene
+                fov: 60
+            },
+            rendering: { defaultBackgroundColor: 0x0A0A1A, defaultBackgroundAlpha: 1.0 }
+        });
+
+        // Adjust lighting for better 3D appearance
+        graph.scene.remove(graph.scene.children.find(c => c.type === "AmbientLight"));
+        graph.scene.remove(graph.scene.children.find(c => c.type === "DirectionalLight"));
+
+        const ambientLight = new THREE.AmbientLight(0x404040, 1.5); // Softer ambient
+        graph.scene.add(ambientLight);
+        const sunLight = new THREE.DirectionalLight(0xffffff, 2.5);
+        sunLight.position.set(100, 200, 300); // Position the sun-like light
+        graph.scene.add(sunLight);
+
+
+        // Register the planet node type
+        graph.registerNodeType('planet-node', planetNodeTypeDefinition);
+
+        // Stop the force layout engine as we are manually positioning planets
+        if (graph.layoutEngine) {
+            graph.layoutEngine.stop();
+        }
+
+        // Add planets (a mini solar system)
+        graph.addNode({
+            type: 'planet-node', id: 'sun', label: 'Sol',
+            x: 0, y: 0, z: 0,
+            size: 200, color: 0xffdd88, rotationSpeed: 0.001
+        });
+
+        graph.addNode({
+            type: 'planet-node', id: 'mercury', label: 'Mercury',
+            x: 0, y: 0, z: 0, // Position will be set by orbit
+            size: 30, color: 0xaaaaaa, rotationSpeed: 0.008,
+            orbitalCenter: {x:0,y:0,z:0}, orbitalRadius: 180, orbitalSpeed: 0.008
+        });
+
+        graph.addNode({
+            type: 'planet-node', id: 'venus', label: 'Venus',
+            x: 0, y: 0, z: 0,
+            size: 50, color: 0xffeebb, rotationSpeed: 0.003,
+            orbitalCenter: {x:0,y:0,z:0}, orbitalRadius: 250, orbitalSpeed: 0.005
+        });
+
+        graph.addNode({
+            type: 'planet-node', id: 'earth', label: 'Earth',
+            x: 0, y: 0, z: 0,
+            size: 60, color: 0x6699ff, rotationSpeed: 0.01,
+            orbitalCenter: {x:0,y:0,z:0}, orbitalRadius: 350, orbitalSpeed: 0.003
+        });
+
+        const earthNode = graph.getNodeById('earth');
+        if (earthNode) {
+            graph.addNode({
+                type: 'planet-node', id: 'moon', label: 'Luna',
+                x: 0, y: 0, z: 0,
+                size: 15, color: 0xdddddd, rotationSpeed: 0.005,
+                orbitalCenter: earthNode.position, // Orbit around Earth's current position (will track if Earth moves)
+                orbitalRadius: 60, orbitalSpeed: 0.02
+            });
+        }
+
+
+        graph.addNode({
+            type: 'planet-node', id: 'mars', label: 'Mars',
+            x: 0, y: 0, z: 0,
+            size: 40, color: 0xff7733, rotationSpeed: 0.009,
+            orbitalCenter: {x:0,y:0,z:0}, orbitalRadius: 480, orbitalSpeed: 0.002
+        });
+
+        // Set initial camera view
+        graph.cameraController.moveTo(0, 300, 700, 0, new THREE.Vector3(0,0,0)); // Look at the sun
+
+        // For debugging
+        window.graph = graph;
+        window.THREE = THREE;
+
+    </script>
+</body>
+</html>
