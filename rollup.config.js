@@ -6,14 +6,15 @@ const basePlugins = [resolve(), commonjs()];
 
 export default {
     input: 'spacegraph.js',
-    external: ['three', 'gsap'], // three and gsap will now be external
+    external: [], // three and gsap will now be bundled
+    plugins: basePlugins, // Apply base plugins at the top level
     output: [
         // Non-minified outputs
         {
             file: 'dist/spacegraph.esm.js',
             format: 'esm',
             sourcemap: true,
-            plugins: basePlugins, // Apply base plugins
+            // plugins array removed, basePlugins are top-level
         },
         {
             file: 'dist/spacegraph.umd.js',
@@ -22,17 +23,17 @@ export default {
             sourcemap: true,
             // globals are mainly for external UMD dependencies
             globals: {
-                three: 'THREE',
-                gsap: 'gsap',
+                // three: 'THREE', // No longer external
+                // gsap: 'gsap',   // No longer external
             },
-            plugins: basePlugins, // Apply base plugins
+            // plugins array removed, basePlugins are top-level
         },
         // Minified outputs
         {
             file: 'dist/spacegraph.esm.min.js',
             format: 'esm',
             sourcemap: true,
-            plugins: [...basePlugins, terser()], // Add terser for this output
+            plugins: [terser()], // Only terser here, basePlugins are top-level
         },
         {
             file: 'dist/spacegraph.umd.min.js',
@@ -40,10 +41,10 @@ export default {
             name: 'SpaceGraphZUI',
             sourcemap: true,
             globals: {
-                three: 'THREE',
-                gsap: 'gsap',
+                // three: 'THREE', // No longer external
+                // gsap: 'gsap',   // No longer external
             },
-            plugins: [...basePlugins, terser()], // Add terser for this output
+            plugins: [terser()], // Only terser here, basePlugins are top-level
         },
     ],
     // Top-level plugins are not needed if specified per output,

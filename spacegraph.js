@@ -1351,7 +1351,7 @@ export class SpaceGraph {
     }
 }
 
-export { HtmlAppNode };
+export { HtmlAppNode, THREE };
 
 /**
  * @class BaseNode

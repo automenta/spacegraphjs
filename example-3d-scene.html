@@ -27,16 +27,6 @@
 <body>
     <div id="graph-container"></div>
 
-    <script type="importmap">
-    {
-            "imports": {
-            "three": "./node_modules/three/build/three.module.js",
-            "three/addons/": "./node_modules/three/examples/jsm/",
-            "gsap": "./node_modules/gsap/index.js"
-            }
-    }
-    </script>
-
     <script type="module">
         import { SpaceGraph, THREE } from './dist/spacegraph.esm.min.js';
         // CSS3DObject will be accessed via the imported THREE object e.g. new THREE.CSS3DObject(element)
