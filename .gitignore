@@ -3,3 +3,4 @@ dist/
 docs/
 package-lock.json
 .idea
+.aider*
