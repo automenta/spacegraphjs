@@ -61,19 +61,19 @@
         </div>
 
         <script type="importmap">
-            {
+    {
                 "imports": {
-                    "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
-                    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
-                    "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
+            "three": "./node_modules/three/build/three.module.js",
+            "three/addons/": "./node_modules/three/examples/jsm/",
+            "gsap": "./node_modules/gsap/index.js"
                 }
-            }
+    }
         </script>
         <script type="module">
             // This example demonstrates the event emitter capabilities of SpaceGraph.
             // It shows how to subscribe to various graph events (like node/edge addition,
             // removal, selection) and log them to an on-screen display.
-            import { SpaceGraph } from './spacegraph.js';
+            import { SpaceGraph } from './dist/spacegraph.esm.min.js';
 
             const container = document.getElementById('graph-container');
             const eventLog = document.getElementById('event-log');

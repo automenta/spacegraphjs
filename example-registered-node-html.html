@@ -61,30 +61,30 @@
         </div>
 
         <script type="importmap">
-            {
+    {
                 "imports": {
-                    "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
-                    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
-                    "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
+            "three": "./node_modules/three/build/three.module.js",
+            "three/addons/": "./node_modules/three/examples/jsm/",
+            "gsap": "./node_modules/gsap/index.js"
                 }
-            }
+    }
         </script>
         <script type="module">
             // This example demonstrates how to create and use a custom HTML-based node
             // by defining a `TypeDefinition` object and registering it with SpaceGraph
             // using `space.registerNodeType()`.
             // The custom node represents a "User Profile" card with an avatar, name, title, and status.
-            import * as S from './spacegraph.js';
+            import { SpaceGraph, RegisteredNode, NoteNode, $ } from './dist/spacegraph.esm.min.js';
 
             function init() {
-                const container = S.$('#space');
+                const container = $('#space');
                 if (!container) {
                     console.error('Initialization Failed: Missing required #space container element.');
                     return;
                 }
 
                 try {
-                    const space = new S.SpaceGraph(container, {});
+                    const space = new SpaceGraph(container, {});
                     window.space = space; // For debugging convenience
 
                     // 1. Define the TypeDefinition for our HTML-based "User Profile" custom node.
@@ -121,9 +121,9 @@
                         /**
                          * Creates the HTML element that visually represents the 'user-profile' node.
                          * This function is called by `RegisteredNode` when a node of this type is instantiated.
-                         * @param {S.RegisteredNode} nodeInst - The instance of the `RegisteredNode` being created.
+                         * @param {RegisteredNode} nodeInst - The instance of the `RegisteredNode` being created.
                          *                                    `nodeInst.data` will contain the merged default and initial data.
-                         * @param {S.SpaceGraph} spaceGraph - The SpaceGraph instance.
+                         * @param {SpaceGraph} spaceGraph - The SpaceGraph instance.
                          * @returns {object} An object that must include `htmlElement` (the main DOM element for this node).
                          *                   Optionally, it can include `cssObject` if creating a CSS3DObject manually.
                          */
@@ -183,7 +183,7 @@
                          * Handles updates to the node's data, typically triggered by `space.updateNodeData()`
                          * or by data arriving at an input port that is configured to update `nodeInst.data`.
                          * This method is responsible for updating the node's visual appearance based on new data.
-                         * @param {S.RegisteredNode} nodeInst - The node instance.
+                         * @param {RegisteredNode} nodeInst - The node instance.
                          * @param {object} updatedData - An object containing the properties that were updated.
                          */
                         onDataUpdate: (nodeInst, updatedData) => {
@@ -248,7 +248,7 @@
                         /**
                          * Calculates the bounding sphere radius for this node type.
                          * This is important for camera focusing (e.g., `space.focusOnNode()`) and layout calculations.
-                         * @param {S.RegisteredNode} nodeInst - The node instance.
+                         * @param {RegisteredNode} nodeInst - The node instance.
                          * @returns {number} The radius of the node's bounding sphere.
                          */
                         getBoundingSphereRadius: (nodeInst) => {
@@ -261,7 +261,7 @@
                          * For this HTML-based node, most cleanup (DOM element removal, detachment of its listeners)
                          * is handled by the base `RegisteredNode.dispose()` method.
                          * This is a place for any additional cleanup specific to this node type.
-                         * @param {S.RegisteredNode} nodeInst - The node instance.
+                         * @param {RegisteredNode} nodeInst - The node instance.
                          */
                         onDispose: (nodeInst) => {
                             // Clear references to custom elements to help with garbage collection.
@@ -325,7 +325,7 @@
 
                     // Add a regular NoteNode to show interaction or receive data
                     const displayNode = space.addNode({
-                        type: 'note',
+                        type: 'note', // Using the built-in NoteNode type
                         id: 'display-note',
                         x: 0,
                         y: 200,
@@ -367,7 +367,7 @@
                     space.layoutEngine.runOnce(150);
                     space.centerView();
 
-                    const statusEl = S.$('#status-indicator');
+                    const statusEl = $('#status-indicator');
                     if (statusEl) {
                         statusEl.textContent = 'RegisteredNode (HTML) Example Initialized.';
                         setTimeout(() => statusEl.classList.add('hidden'), 2000);

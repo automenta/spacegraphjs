@@ -52,18 +52,17 @@
     <div id="graph-container"></div>
 
     <script type="importmap">
-        {
+    {
             "imports": {
-                "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
-                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
-                "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
+            "three": "./node_modules/three/build/three.module.js",
+            "three/addons/": "./node_modules/three/examples/jsm/",
+            "gsap": "./node_modules/gsap/index.js"
             }
-        }
+    }
     </script>
 
     <script type="module">
-        import { SpaceGraph } from './spacegraph.js';
-        import { HtmlAppNode } from './js/HtmlAppNode.js';
+        import { SpaceGraph, HtmlAppNode } from './dist/spacegraph.esm.min.js';
 
         // --- IdeaNode Implementation ---
         class IdeaNode extends HtmlAppNode {

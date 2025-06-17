@@ -11,6 +11,7 @@ import { gsap } from 'gsap';
 
 // UI Manager Imports
 import { PointerInputHandler } from './js/ui/PointerInputHandler.js';
+import { HtmlAppNode } from './js/HtmlAppNode.js';
 import { KeyboardInputHandler } from './js/ui/KeyboardInputHandler.js';
 import { WheelInputHandler } from './js/ui/WheelInputHandler.js';
 import { DragAndDropHandler } from './js/ui/DragAndDropHandler.js';
@@ -1349,6 +1350,8 @@ export class SpaceGraph {
         }
     }
 }
+
+export { HtmlAppNode };
 
 /**
  * @class BaseNode

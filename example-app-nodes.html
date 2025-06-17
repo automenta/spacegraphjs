@@ -133,13 +133,13 @@
         </div>
 
         <script type="importmap">
-            {
+    {
                 "imports": {
-                    "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
-                    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
-                    "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
+            "three": "./node_modules/three/build/three.module.js",
+            "three/addons/": "./node_modules/three/examples/jsm/",
+            "gsap": "./node_modules/gsap/index.js"
                 }
-            }
+    }
         </script>
         <script type="module">
             // This example demonstrates the creation and usage of complex, custom "App Nodes"
@@ -149,8 +149,7 @@
             //    It also shows how to define input/output ports for inter-node communication.
             // 2. Task List: A node that manages a list of tasks with add, complete, and delete functionalities.
             //    It demonstrates dynamic HTML generation within a node and emitting events for task updates.
-            import * as S from './spacegraph.js'; // Assuming spacegraph.js is in the same directory
-            import { HtmlAppNode } from './js/HtmlAppNode.js'; // Import the new base class
+            import { SpaceGraph, HtmlAppNode, $ } from './dist/spacegraph.esm.min.js';
 
             // --- Markdown Editor Node (Refactored to use HtmlAppNode) ---
             class MarkdownEditorNode extends HtmlAppNode {
@@ -436,14 +435,14 @@
             // Sets up the SpaceGraph instance, registers custom node types,
             // adds initial nodes, and sets up inter-node communication examples.
             function init() {
-                const container = S.$('#space');
+                const container = $('#space');
                 if (!container) {
                     console.error('Initialization Failed: Missing required #space container element.');
                     return;
                 }
 
                 try {
-                    const space = new S.SpaceGraph(container);
+                    const space = new SpaceGraph(container);
                     window.space = space; // Make it globally accessible for easy debugging from the console
 
                     // Register the custom node type definitions with SpaceGraph.
@@ -585,7 +584,7 @@
 
                     // --- Palette Setup for Drag-and-Drop Node Creation ---
                     // Get the button for creating Markdown editors
-                    const mdPaletteBtn = S.$('#btn-create-md-editor');
+                    const mdPaletteBtn = $('#btn-create-md-editor');
                     if (mdPaletteBtn) {
                         // Add event listener for when dragging starts from this button
                         mdPaletteBtn.addEventListener('dragstart', (event) => {
@@ -603,7 +602,7 @@
                     }
 
                     // Get the button for creating Task Lists
-                    const taskPaletteBtn = S.$('#btn-create-task-list');
+                    const taskPaletteBtn = $('#btn-create-task-list');
                     if (taskPaletteBtn) {
                         // Add event listener for when dragging starts
                         taskPaletteBtn.addEventListener('dragstart', (event) => {
@@ -623,7 +622,7 @@
 
                     // Display a status message
                     const statusEl =
-                        S.$('#status-indicator') || document.body.appendChild(document.createElement('div'));
+                        $('#status-indicator') || document.body.appendChild(document.createElement('div'));
                     statusEl.id = 'status-indicator'; // Ensure it has an ID if newly created
                     statusEl.textContent =
                         'App Node Example Initialized. Custom nodes (Markdown Editor, Task List) are registered and added.';

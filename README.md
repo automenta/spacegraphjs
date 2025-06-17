@@ -421,6 +421,8 @@ If you prefer to read the JSDoc comments directly in the source code, open the `
 
 ## Running Examples
 
+For a convenient overview and access to all live examples, open the **[Demos Page](demos.html)** in your browser.
+
 The repository includes several HTML files in the root directory (e.g., `example-app-nodes.html`, `example-event-emitter.html`, `example-centralized-config.html`) that demonstrate various features and usage patterns.
 
 To run these examples:

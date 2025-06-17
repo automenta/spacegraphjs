@@ -10,71 +10,108 @@
         />
         <link href="index.css" rel="stylesheet" />
         <style>
-            body {
-                font-family: var(--font-family);
-            }
-            #graph-container {
-                position: fixed;
-                inset: 0;
-            }
+        body { /* Keep existing body rule for font-family from example */
+            font-family: var(--font-family);
+        }
+        #graph-container { /* Keep existing graph-container rule */
+            position: fixed;
+            inset: 0;
+        }
 
-            /* Data Source Widget Styles */
-            .html-app-node.data-source-widget-node {
-                padding: 15px;
-                border-radius: 8px;
-                text-align: center;
-            }
-            .data-source-widget-node button {
-                padding: 10px 15px;
-                margin-top: 10px;
-                cursor: pointer;
-                border: none;
-                border-radius: 5px;
-                background-color: var(--accent-color);
-                color: white;
-                font-weight: bold;
-            }
-            .data-source-widget-node button:hover {
-                background-color: var(--accent-color-darker);
-            }
+        /* General enhancements for dashboard widgets */
+        .html-app-node.data-source-widget-node,
+        .html-app-node.display-widget-node {
+            transition: all var(--transition-med); /* Smooth transitions for any property changes */
+        }
 
-            /* Display Widget Styles */
-            .html-app-node.display-widget-node {
-                padding: 15px;
-                border-radius: 8px;
-                text-align: center;
-            }
-            .display-widget-node .widget-content {
-                margin-top: 10px;
-                padding: 10px;
-                background-color: rgba(0,0,0,0.1);
-                border-radius: 5px;
-                min-height: 50px;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                font-family: var(--font-mono);
-                font-size: 0.9em;
-            }
+        /* Widget Headers */
+        .data-source-widget-node h4,
+        .display-widget-node h4 {
+            margin: -15px -15px 10px -15px;
+            padding: 10px 15px;
+            background-color: rgba(0,0,0,0.05); /* Subtle header background */
+            border-bottom: 1px solid var(--node-border, #ddd);
+            font-size: 1.1em;
+            font-weight: 600;
+            color: var(--primary-color, #333);
+            border-top-left-radius: 8px; /* Match node's border-radius */
+            border-top-right-radius: 8px;
+        }
+
+        /* Data Source Widget Specifics */
+        .data-source-widget-node button {
+            background-color: var(--accent-color);
+            color: var(--bg-color, #fff); /* Ensure contrast if accent is light */
+            font-weight: bold;
+            padding: 10px 15px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            transition: background-color var(--transition-fast), transform var(--transition-fast);
+            display: inline-block;
+            margin-top: 10px;
+        }
+        .data-source-widget-node button:hover {
+            background-color: var(--accent-color-darker);
+            transform: translateY(-1px); /* Subtle lift */
+        }
+
+        /* Display Widget Specifics */
+        .display-widget-node .widget-content {
+            margin-top: 10px;
+            padding: 15px; /* Increased padding */
+            background-color: rgba(0,0,0,0.08); /* Slightly darker than header */
+            border-radius: 6px; /* Slightly smaller radius */
+            min-height: 60px;
+            display: flex;
+            flex-direction: column; /* Stack items vertically */
+            justify-content: center;
+            align-items: center;
+            font-family: var(--font-mono);
+            font-size: 0.95em; /* Slightly larger */
+            line-height: 1.6; /* Better spacing for multiline */
+            transition: background-color var(--transition-fast); /* For highlight effect */
+        }
+
+        .display-widget-node .widget-content strong {
+            color: var(--accent-color); /* Highlight the value */
+            font-size: 1.2em; /* Make value stand out */
+        }
+
+        .display-widget-node .widget-content.data-updated {
+            animation: highlight-update 0.7s ease-out;
+        }
+
+        @keyframes highlight-update {
+            0% { background-color: var(--accent-color-darker); }
+            70% { background-color: var(--accent-color-darker); } /* Hold highlight */
+            100% { background-color: rgba(0,0,0,0.08); } /* Fade back to original */
+        }
+
+        /* Ensure body of example page has a decent background if not covered by index.css */
+        body.example-page-body {
+            background-color: var(--bg-color, #282c34); /* Default if --bg-color not defined */
+            color: var(--primary-color, #f0f0f0);
+            padding: 20px; /* Add some padding to the body itself */
+        }
         </style>
     </head>
-    <body>
+    <body class="example-page-body">
         <div id="graph-container">
             <!-- SpaceGraph canvas and CSS3D container will be injected here by spacegraph.js -->
         </div>
 
         <script type="importmap">
-            {
+    {
                 "imports": {
-                    "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
-                    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
-                    "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
+            "three": "./node_modules/three/build/three.module.js",
+            "three/addons/": "./node_modules/three/examples/jsm/",
+            "gsap": "./node_modules/gsap/index.js"
                 }
-            }
+    }
         </script>
         <script type="module">
-            import { SpaceGraph } from './spacegraph.js';
-            import { HtmlAppNode } from './js/HtmlAppNode.js';
+            import { SpaceGraph, HtmlAppNode } from './dist/spacegraph.esm.min.js';
 
             // --- Data Source Node ---
             class DataSourceNode extends HtmlAppNode {
@@ -134,6 +171,11 @@
                                 Value: <strong>${data.value}</strong><br>
                                 Time: ${data.timestamp}
                             `;
+                            if (this.contentDiv) { // Ensure contentDiv exists
+                                this.contentDiv.classList.remove('data-updated');
+                                void this.contentDiv.offsetWidth; // Force reflow
+                                this.contentDiv.classList.add('data-updated');
+                            }
                             console.log(`${this.id} received data for 'data_in':`, data);
                         }
                     }

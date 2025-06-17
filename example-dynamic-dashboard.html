@@ -54,19 +54,18 @@
     <div id="graph-container"></div>
 
     <script type="importmap">
-        {
+    {
             "imports": {
-                "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
-                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
-                "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js",
-                "chart.js": "https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.js"
+            "three": "./node_modules/three/build/three.module.js",
+            "three/addons/": "./node_modules/three/examples/jsm/",
+            "gsap": "./node_modules/gsap/index.js",
+            "chart.js": "./node_modules/chart.js/dist/chart.js"
             }
-        }
+    }
     </script>
 
     <script type="module">
-        import { SpaceGraph } from './spacegraph.js';
-        import { HtmlAppNode } from './js/HtmlAppNode.js'; // Assuming HtmlAppNode is here
+        import { SpaceGraph, HtmlAppNode } from './dist/spacegraph.esm.min.js';
         import Chart from 'chart.js';
 
         // --- DataSourceNode Implementation ---

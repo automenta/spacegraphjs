@@ -28,24 +28,19 @@
     <div id="graph-container"></div>
 
     <script type="importmap">
-        {
+    {
             "imports": {
-                "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
-                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
-                "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
+            "three": "./node_modules/three/build/three.module.js",
+            "three/addons/": "./node_modules/three/examples/jsm/",
+            "gsap": "./node_modules/gsap/index.js"
             }
-        }
+    }
     </script>
 
     <script type="module">
-        import { SpaceGraph } from './spacegraph.js';
-        // We need THREE and CSS3DObject from the 'three' module via importmap
-        import * as THREE from 'three';
-        // CSS3DObject is an addon, so its path needs to be correctly mapped if not part of main three.module.js
-        // For this example, we assume spacegraph.js exports CSS3DObject or it's globally available via addons.
-        // If spacegraph.js doesn't export it, we might need:
-        // import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
-        // For simplicity, let's assume SpaceGraph.THREE.CSS3DObject can be used or it's available.
+        import { SpaceGraph, THREE } from './dist/spacegraph.esm.min.js';
+        // CSS3DObject will be accessed via the imported THREE object e.g. new THREE.CSS3DObject(element)
+        // or if SpaceGraph makes it available directly.
         // The SpaceGraph class itself imports CSS3DObject, so we can access it via graph.constructor.CSS3DObject if needed.
 
 
@@ -78,8 +73,8 @@
                 const labelDiv = document.createElement('div');
                 labelDiv.className = 'planet-label';
                 labelDiv.textContent = data.label;
-                // Access CSS3DObject via graph's constructor as it's imported there.
-                node.labelObject = new graph.constructor.CSS3DObject(labelDiv);
+                // Access CSS3DObject via the imported THREE namespace
+                node.labelObject = new THREE.CSS3DObject(labelDiv);
 
                 // Initial position for the label (will be updated in onUpdate)
                 node.labelObject.position.copy(node.position);

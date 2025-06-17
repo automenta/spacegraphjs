@@ -25,7 +25,8 @@
         "lint": "eslint . --ext .js",
         "lint:fix": "eslint . --ext .js --fix",
         "format": "prettier --write \"**/*.{js,json,md,html,css}\"",
-        "start": "npx vite dev"
+        "start": "npx vite dev",
+        "demos": "npx vite dev --open /demos.html"
     },
     "author": "SpaceGraph Contributors",
     "license": "MIT",
@@ -60,6 +61,7 @@
         "@rollup/plugin-commonjs": "^28.0.5",
         "@rollup/plugin-node-resolve": "^16.0.1",
         "@rollup/plugin-terser": "^0.4.4",
+        "chart.js": "^4.5.0",
         "eslint": "^8.57.0",
         "eslint-config-prettier": "^9.1.0",
         "eslint-plugin-prettier": "^5.2.1",

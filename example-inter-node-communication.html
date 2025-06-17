@@ -56,13 +56,13 @@
         </div>
 
         <script type="importmap">
-            {
+    {
                 "imports": {
-                    "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
-                    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
-                    "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
+            "three": "./node_modules/three/build/three.module.js",
+            "three/addons/": "./node_modules/three/examples/jsm/",
+            "gsap": "./node_modules/gsap/index.js"
                 }
-            }
+    }
         </script>
         <script type="module">
             // This example demonstrates various methods for inter-node communication within SpaceGraph.
@@ -75,17 +75,17 @@
             //    `space.updateNodeData()`) is processed by the node's `onDataUpdate` lifecycle method.
             //    This pattern is useful for more structured data flow, especially when edges visually
             //    represent these connections.
-            import * as S from './spacegraph.js';
+            import { SpaceGraph, RegisteredNode, $ } from './dist/spacegraph.esm.min.js';
 
             function init() {
-                const container = S.$('#space');
+                const container = $('#space');
                 if (!container) {
                     console.error('Initialization Failed: Missing #space container.');
                     return;
                 }
 
                 try {
-                    const space = new S.SpaceGraph(container, {});
+                    const space = new SpaceGraph(container, {});
                     window.space = space; // Make accessible for debugging
 
                     // --- Node Type Definition: Data Source ---
@@ -164,7 +164,7 @@
                          * Handles incoming data when `space.updateNodeData(nodeId, { ... })` is called
                          * with a key matching one of its input ports (e.g., 'data_in').
                          * This is the standard way RegisteredNodes react to data arriving at defined input ports.
-                         * @param {S.RegisteredNode} nodeInst - The instance of this node.
+                         * @param {RegisteredNode} nodeInst - The instance of this node.
                          * @param {object} updatedData - The data object that was passed to updateNodeData.
                          */
                         onDataUpdate: (nodeInst, updatedData) => {
@@ -253,7 +253,7 @@
                     space.layoutEngine.runOnce(100); // Perform initial layout
                     space.centerView();
 
-                    const statusEl = S.$('#status-indicator');
+                    const statusEl = $('#status-indicator');
                     if (statusEl) {
                         statusEl.textContent = 'Inter-Node Communication Example Initialized.';
                         setTimeout(() => statusEl.classList.add('hidden'), 2000);

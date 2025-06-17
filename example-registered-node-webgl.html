@@ -39,31 +39,30 @@
         </div>
 
         <script type="importmap">
-            {
+    {
                 "imports": {
-                    "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
-                    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
-                    "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
+            "three": "./node_modules/three/build/three.module.js",
+            "three/addons/": "./node_modules/three/examples/jsm/",
+            "gsap": "./node_modules/gsap/index.js"
                 }
-            }
+    }
         </script>
         <script type="module">
             // This example demonstrates how to create a custom WebGL-based node (a "Crystal")
             // by defining a `TypeDefinition` and registering it with SpaceGraph.
             // It covers creating custom Three.js geometry and materials, handling data updates
             // to modify appearance (color, wireframe), and providing a custom bounding sphere.
-            import * as S from './spacegraph.js';
-            import * as THREE from 'three'; // Import THREE directly for geometry/material access
+            import { SpaceGraph, RegisteredNode, $, THREE } from './dist/spacegraph.esm.min.js';
 
             function init() {
-                const container = S.$('#space');
+                const container = $('#space');
                 if (!container) {
                     console.error('Initialization Failed: Missing required #space container element.');
                     return;
                 }
 
                 try {
-                    const space = new S.SpaceGraph(container, {});
+                    const space = new SpaceGraph(container, {});
                     window.space = space; // For debugging convenience
 
                     // 1. Define the TypeDefinition for our WebGL-based "Crystal" custom node.
@@ -85,8 +84,8 @@
                         /**
                          * Creates the WebGL visual representation (a Three.js Mesh) for the 'crystal-node'.
                          * Also creates an optional 3D label.
-                         * @param {S.RegisteredNode} nodeInst - The instance of the RegisteredNode being created.
-                         * @param {S.SpaceGraph} spaceGraph - The SpaceGraph instance.
+                         * @param {RegisteredNode} nodeInst - The instance of the RegisteredNode being created.
+                         * @param {SpaceGraph} spaceGraph - The SpaceGraph instance.
                          * @returns {object} An object containing `mesh` (the Three.js Mesh) and optionally `labelObject`.
                          */
                         onCreate: (nodeInst, spaceGraph) => {
@@ -111,8 +110,7 @@
                             const labelDiv = document.createElement('div');
                             labelDiv.className = 'node-label-3d'; // Apply default 3D label styling
                             labelDiv.textContent = nodeInst.data.label;
-                            // Use spaceGraph.constructor.THREE.CSS3DObject to ensure the correct THREE version is used.
-                            const labelObject = new spaceGraph.constructor.THREE.CSS3DObject(labelDiv);
+                            const labelObject = new THREE.CSS3DObject(labelDiv);
                             // Position of the label is usually handled in the node's `update` method or by `ShapeNode` logic if extending it.
                             // For RegisteredNode, if not overriding `update`, label positioning relative to the mesh might need manual handling
                             // or rely on `RegisteredNode`'s default label positioning if `labelObject` is returned.
@@ -128,7 +126,7 @@
                         /**
                          * Handles updates to the node's data (e.g., from `space.updateNodeData()`).
                          * This method should update the visual appearance of the node based on the new data.
-                         * @param {S.RegisteredNode} nodeInst - The node instance.
+                         * @param {RegisteredNode} nodeInst - The node instance.
                          * @param {object} updatedData - An object containing the properties that were updated.
                          */
                         onDataUpdate: (nodeInst, updatedData) => {
@@ -172,7 +170,7 @@
 
                         /**
                          * Calculates the bounding sphere radius, used for camera focusing and layout.
-                         * @param {S.RegisteredNode} nodeInst - The node instance.
+                         * @param {RegisteredNode} nodeInst - The node instance.
                          * @returns {number} The radius.
                          */
                         getBoundingSphereRadius: (nodeInst) => {
@@ -183,7 +181,7 @@
 
                         /**
                          * Defines custom behavior when the node is selected or deselected.
-                         * @param {S.RegisteredNode} nodeInst - The node instance.
+                         * @param {RegisteredNode} nodeInst - The node instance.
                          * @param {boolean} isSelected - True if the node is being selected, false if deselected.
                          */
                         onSetSelectedStyle: (nodeInst, isSelected) => {
@@ -203,7 +201,7 @@
                          * The mesh's geometry and material are typically handled by `RegisteredNode`'s base dispose method
                          * if they are assigned to `nodeInst.mesh`.
                          * This is for any additional custom cleanup.
-                         * @param {S.RegisteredNode} nodeInst - The node instance.
+                         * @param {RegisteredNode} nodeInst - The node instance.
                          */
                         onDispose: (nodeInst) => {
                             // If `onCreate` created any Three.js objects (geometries, materials, textures)
@@ -269,7 +267,7 @@
                     // Setup UI controls for dynamic updates
                     const colors = [0xffaa00, 0x00aaff, 0xaa00ff, 0x00ffaa];
                     let colorIndex = 0;
-                    S.$('#btn-change-color').addEventListener('click', () => {
+                    $('#btn-change-color').addEventListener('click', () => {
                         const newColor = colors[colorIndex % colors.length];
                         colorIndex++;
                         // Update all crystal nodes
@@ -280,7 +278,7 @@
                         });
                     });
 
-                    S.$('#btn-toggle-wireframe').addEventListener('click', () => {
+                    $('#btn-toggle-wireframe').addEventListener('click', () => {
                         // Toggle wireframe for crystal2
                         const c2 = space.getNodeById('crystal2');
                         if (c2) {
@@ -291,7 +289,7 @@
                     space.layoutEngine.runOnce(150);
                     space.centerView();
 
-                    const statusEl = S.$('#status-indicator');
+                    const statusEl = $('#status-indicator');
                     if (statusEl) {
                         statusEl.textContent = 'RegisteredNode (WebGL) Example Initialized.';
                         setTimeout(() => statusEl.classList.add('hidden'), 2000);

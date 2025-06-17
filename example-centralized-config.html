@@ -28,24 +28,24 @@
         <div id="graph-container"></div>
 
         <script type="importmap">
-            {
+    {
                 "imports": {
-                    "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
-                    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
-                    "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
+            "three": "./node_modules/three/build/three.module.js",
+            "three/addons/": "./node_modules/three/examples/jsm/",
+            "gsap": "./node_modules/gsap/index.js"
                 }
-            }
+    }
         </script>
         <script type="module">
             // This example demonstrates how to use the `SpaceGraphConfig` object to customize
             // default appearances and behaviors for nodes, edges, camera, and rendering
             // when initializing a SpaceGraph instance.
-            import { SpaceGraph } from './spacegraph.js';
+            import { SpaceGraph } from './dist/spacegraph.esm.min.js';
 
             const container = document.getElementById('graph-container');
 
             /**
-             * @type {import('./spacegraph.js').SpaceGraphConfig}
+             * @type {import('./dist/spacegraph.esm.min.js').SpaceGraphConfig}
              */
             const customConfig = {
                 // --- RENDERING SETTINGS ---
