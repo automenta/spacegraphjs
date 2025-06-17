@@ -36,6 +36,14 @@ export const DEG2RAD = Math.PI / 180;
  * It also features an event emitter system that allows other parts of an application to subscribe to
  * significant events occurring within the graph.
  *
+ * @typedef {object} UIElements
+ * @description An optional object that can be passed to the {@link SpaceGraph} constructor (and subsequently to {@link UIManager})
+ * to provide pre-existing DOM elements for UI components like context menus or dialogs.
+ * If elements are not provided, UIManager may create default ones.
+ * @property {HTMLElement} [contextMenuEl] - A pre-existing DOM element to be used for context menus.
+ * @property {HTMLElement} [confirmDialogEl] - A pre-existing DOM element for confirmation dialogs.
+ * @property {HTMLElement} [statusIndicatorEl] - A pre-existing DOM element for displaying status messages.
+ *
  * @fires SpaceGraph#nodeAdded
  * @fires SpaceGraph#nodeRemoved
  * @fires SpaceGraph#edgeAdded
@@ -109,6 +117,8 @@ export class SpaceGraph {
     /**
      * @typedef {object} SpaceGraphConfig
      * @description Configuration object for initializing the SpaceGraph instance.
+     * Defines settings for rendering, camera behavior, and default properties for nodes and edges,
+     * allowing customization of the graph's appearance and interaction dynamics.
      * @property {object} [rendering] - Settings related to visual rendering.
      * @property {number} [rendering.defaultBackgroundColor=0x000000] - Default background color for the WebGL canvas (hexadecimal).
      * @property {number} [rendering.defaultBackgroundAlpha=0.0] - Default background alpha (opacity) for the WebGL canvas (0.0 to 1.0).
@@ -145,8 +155,8 @@ export class SpaceGraph {
      * @param {HTMLElement} containerElement - The DOM element that will host the SpaceGraph visualization.
      *                                       This element should have defined dimensions (width and height).
      * @param {Partial<SpaceGraphConfig>} [config={}] - Optional configuration object to override default settings. See {@link SpaceGraphConfig}.
-     * @param {import('./spacegraph.js').UIElements} [uiElements={}] - Optional pre-existing UI DOM elements to be used by the {@link UIManager}.
-     *                                   Can include `contextMenuEl`, `confirmDialogEl`, `statusIndicatorEl`.
+     * @param {UIElements} [uiElements={}] - Optional pre-existing UI DOM elements to be used by the {@link UIManager}.
+     *                                   Can include `contextMenuEl`, `confirmDialogEl`, `statusIndicatorEl`. See {@link UIElements}.
      * @throws {Error} If `containerElement` is not provided or is not a valid {@link HTMLElement}.
      * @example
      * const graphContainer = document.getElementById('myGraphContainer');
@@ -290,16 +300,20 @@ export class SpaceGraph {
 
     /**
      * @typedef {object} VisualOutputs
-     * @property {(THREE.Mesh|undefined)} mesh - Optional Three.js {@link THREE.Mesh} for the node's WebGL representation.
-     * @property {(HTMLElement|undefined)} htmlElement - Optional {@link HTMLElement} for the node's HTML/CSS representation.
-     * @property {(CSS3DObject|undefined)} cssObject - Optional Three.js {@link CSS3DObject} that wraps the `htmlElement` for rendering in the CSS3D scene.
-     * @property {(CSS3DObject|undefined)} labelObject - Optional {@link CSS3DObject} for rendering a text label associated with the node, typically used by {@link ShapeNode} or custom types.
+     * @description An object returned by a {@link TypeDefinition}'s `onCreate` method, specifying the visual components of a custom node.
+     * It can include Three.js objects for WebGL rendering and/or HTML elements for CSS3D rendering.
+     * @property {(THREE.Mesh|undefined)} mesh - Optional Three.js {@link THREE.Mesh} for the node's WebGL representation (e.g., for shapes).
+     * @property {(HTMLElement|undefined)} htmlElement - Optional {@link HTMLElement} for the node's HTML/CSS representation. This element will be wrapped in a {@link CSS3DObject}.
+     * @property {(CSS3DObject|undefined)} cssObject - Optional, pre-created Three.js {@link CSS3DObject} that wraps the `htmlElement`. If not provided but `htmlElement` is, SpaceGraph creates it.
+     * @property {(CSS3DObject|undefined)} labelObject - Optional {@link CSS3DObject} for rendering a text label, often used by {@link ShapeNode} or custom types needing a separate 3D label.
      */
 
     /**
      * @typedef {object} TypeDefinition
-     * @description Defines the behavior and appearance of a custom node type, registered using {@link SpaceGraph#registerNodeType}.
-     * All methods receive the {@link RegisteredNode} instance as their first parameter and the {@link SpaceGraph} instance as the second (where applicable).
+     * @description Defines the structure, appearance, and lifecycle behavior for a custom node type.
+     * This definition is registered with {@link SpaceGraph#registerNodeType} and used to instantiate nodes of that custom type.
+     * Methods within the definition allow for fine-grained control over node creation, updates, disposal, and interaction responses.
+     * All callback methods receive the {@link RegisteredNode} instance as their first parameter and the {@link SpaceGraph} instance as the second (where applicable).
      * @property {function(RegisteredNode, SpaceGraph): VisualOutputs} onCreate - **Required.** Function to create the visual representation (mesh, HTML element) of the node.
      *                                                                         Must return a {@link VisualOutputs} object.
      * @property {function(RegisteredNode, SpaceGraph): object} [getDefaults] - Function that returns an object containing default data properties for this node type.
@@ -317,10 +331,11 @@ export class SpaceGraph {
      * @property {function(RegisteredNode, THREE.Vector3, SpaceGraph)} [onDrag] - Custom logic executed during a drag operation, providing the new target position.
      * @property {function(RegisteredNode, SpaceGraph)} [onEndDrag] - Custom logic executed when a drag operation ends on this node.
  * @property {function(RegisteredNode, object, SpaceGraph)} [onDataUpdate] - Called when `spaceGraph.updateNodeData(nodeId, newData)` is used, or when data is automatically propagated to an input port via `RegisteredNode.emit()`.
- *                                                                           Allows the node to react to specific data changes. `newData` contains only the changed properties (the keys that were updated). `nodeInst.data` will have already been updated with these changes.
- * @property {Class<RegisteredNode>} [nodeClass] - Optional. A reference to a class that extends {@link RegisteredNode} (e.g., a class derived from {@link HtmlAppNode}).
- *                                                 If provided, SpaceGraph will instantiate this class instead of the generic `RegisteredNode` when creating nodes of this type.
- *                                                 This enables object-oriented patterns for custom node logic, allowing lifecycle methods like `onInit`, `onDataUpdate`, etc., to be defined as class methods.
+ *                                                                           Allows the node to react to specific data changes. `newData` contains only the changed properties (the keys that were updated). The node's `data` property (`nodeInst.data`) will have already been updated with these changes before this callback is invoked.
+ * @property {Class<RegisteredNode|HtmlAppNode>} [nodeClass] - Optional. A reference to a class that extends {@link RegisteredNode} or {@link HtmlAppNode}.
+ *                                                 If provided, SpaceGraph will instantiate this class for nodes of this type, instead of the generic `RegisteredNode`.
+ *                                                 This allows for more complex, encapsulated node behaviors by defining lifecycle methods (e.g., `onInit`, `onDataUpdate`, `render`) as methods of the provided class.
+ *                                                 For HTML-based interactive nodes, extending {@link HtmlAppNode} is recommended.
      */
 
     /**
@@ -409,8 +424,13 @@ export class SpaceGraph {
 
     /**
      * @typedef {object} NodeDataObject
-     * @property {string} type - The type of the node (e.g., 'note', 'html', 'shape', or a registered custom type).
-     * @property {string} [id] - Optional unique ID for the node. If not provided, one will be generated automatically (e.g., `node-1678886400000-randomstr`).
+     * @description A plain JavaScript object used to define the properties of a node when adding it to the graph
+     * via {@link SpaceGraph#addNode}. It specifies the node's type, initial position, appearance, and any custom data.
+     * @property {string} type - The type of the node (e.g., 'note', 'html', 'shape', or a custom type name
+     *                           registered with {@link SpaceGraph#registerNodeType}). This determines which node class or
+     *                           {@link TypeDefinition} will be used to instantiate the node.
+     * @property {string} [id] - Optional unique ID for the node. If not provided, one will be generated automatically
+     *                           (e.g., `node-1678886400000-randomstr`).
      * @property {number} [x=0] - Initial x-coordinate in world space.
      * @property {number} [y=0] - Initial y-coordinate in world space.
      * @property {number} [z=0] - Initial z-coordinate in world space.
@@ -473,10 +493,11 @@ export class SpaceGraph {
      * // Assuming 'custom-widget' type is registered:
      * // const customNode = spaceGraph.addNode({ type: 'custom-widget', id: 'cw1', customProp: 'value' });
      *
-     * // Adding a pre-instantiated node (less common for typical usage)
+     * // Adding a pre-instantiated node (less common for typical usage).
+     * // MyCustomNode must be a class that extends BaseNode or one of its derivatives (e.g., ShapeNode, HtmlAppNode).
      * // import { MyCustomNode } from './my-custom-node.js'; // Assuming MyCustomNode extends BaseNode
-     * // const preInstantiatedNode = new MyCustomNode('custom-id', {x:0,y:0,z:0}, {someData: 'abc'});
-     * // spaceGraph.addNode(preInstantiatedNode);
+     * // const preInstantiatedNode = new MyCustomNode('custom-id', {x:0,y:0,z:0}, { someData: 'abc', type: 'my-type' });
+     * // spaceGraph.addNode(preInstantiatedNode); // The node should be fully initialized.
      */
     addNode(dataOrInstance) {
         let nodeInstance;
@@ -592,9 +613,11 @@ export class SpaceGraph {
 
     /**
      * @typedef {object} EdgeDataObject
+     * @description A plain JavaScript object defining the properties of an edge when adding it to the graph
+     * via {@link SpaceGraph#addEdge}. It specifies the edge's appearance, physics behavior, and optional port connections.
      * @property {string} [id] - Optional unique ID for the edge. If not provided, one will be generated automatically.
      * @property {number} [color=0x00d0ff] - Hexadecimal color of the edge line (e.g., `0xff0000` for red).
-     * @property {number} [thickness=1.5] - Thickness of the edge line in world units. Note: WebGL line width support can vary.
+     * @property {number} [thickness=1.5] - Thickness of the edge line in world units. Note: WebGL line width rendering capabilities for thicknesses > 1 can vary by platform.
      * @property {number} [opacity=0.6] - Opacity of the edge line (0.0 to 1.0).
      * @property {string} [style='solid'] - Style of the edge. Currently primarily 'solid'. Future support may include 'dashed'.
      * @property {string} [constraintType='elastic'] - Type of physics constraint for the {@link ForceLayout} engine.
@@ -2369,14 +2392,25 @@ export class RegisteredNode extends BaseNode {
 
     /**
      * Emits an event from this node.
-     * If the eventName matches a defined output port, it automatically propagates the payload
-     * to any connected input ports on target nodes via `spaceGraph.updateNodeData()`.
-     * It also calls any listeners registered via `listenTo` on this node for this event.
+     * If the `eventName` matches a defined output port of this node (from `this.data.ports.outputs`),
+     * and `propagateViaPorts` is true, the `payload` is automatically sent to any input ports
+     * on other nodes that are connected to this output port by an edge. This is achieved by calling
+     * `spaceGraph.updateNodeData()` on the target node, with the target port's name as the key and `payload` as the value.
      *
-     * @param {string} eventName - The name of the event or output port.
-     * @param {*} payload - The data to send with the event.
-     * @param {boolean} [propagateViaPorts=true] - Optional. If true (default) and eventName is an output port,
-     *                                            data is sent to connected input ports.
+     * Additionally, this method invokes any callback functions that were directly registered on this node
+     * for the given `eventName` using `someOtherNode.listenTo(thisNode, eventName, callback)`.
+     *
+     * @param {string} eventName - The name of the event to emit. If this matches an output port name defined in `this.data.ports.outputs`,
+     *                             and `propagateViaPorts` is true, the data will be propagated through connected edges.
+     * @param {*} payload - The data to send with the event. This will be passed to connected input ports and direct listeners.
+     * @param {boolean} [propagateViaPorts=true] - If `true` (default) and `eventName` is a defined output port,
+     *                                            the data is propagated to connected input ports on other nodes.
+     *                                            Set to `false` to only trigger direct listeners registered via `listenTo` for this `eventName`,
+     *                                            without port-based propagation.
+     * @example
+     * // In a node's method (e.g., part of an HtmlAppNode subclass or a TypeDefinition method for a RegisteredNode):
+     * // this.emit('dataProcessed', { result: 42 }); // Assuming 'dataProcessed' is an output port
+     * // this.emit('stateChanged', { newState: 'active' }, false); // Only for direct listeners
      */
     emit(eventName, payload, propagateViaPorts = true) {
         // 1. Automatic Port-Based Data Propagation
@@ -2413,28 +2447,34 @@ export class RegisteredNode extends BaseNode {
 
     /**
      * Registers a listener on an `emitterNode` for a specific event.
-     * When `emitterNode` emits an event with `eventName`, the provided `callback` will be executed.
-     * This node (the one calling `listenTo`) keeps track of this subscription for cleanup on dispose.
+     * When `emitterNode` calls its `emit(eventName, payload)` method, the provided `callback`
+     * function will be executed if the `eventName` matches.
+     * This node (the instance on which `listenTo` is called) keeps track of this subscription internally
+     * so that the listener can be automatically removed when this listening node is disposed via {@link RegisteredNode#dispose},
+     * preventing memory leaks or errors from stale callbacks.
      *
-     * @param {RegisteredNode} emitterNode - The node instance to listen to. Must be a `RegisteredNode` (or subclass).
+     * @param {RegisteredNode} emitterNode - The node instance to listen to. This node must be an instance of
+     *                                     `RegisteredNode` or its subclasses (like {@link HtmlAppNode}) as they possess the `emit` mechanism.
      * @param {string} eventName - The name of the event to listen for on the `emitterNode`.
      * @param {function(any, RegisteredNode): void} callback - The function to execute when the event is emitted.
-     *                                                        It receives two arguments:
-     *                                                        1. `payload`: The data payload of the event.
-     *                                                        2. `senderNodeInstance`: The `emitterNode` instance that emitted the event.
+     *                                                        The callback receives two arguments:
+     *                                                        1. `payload`: The data payload of the event, as passed to `emitterNode.emit()`.
+     *                                                        2. `senderNodeInstance`: The `emitterNode` instance that emitted the event (i.e., `emitterNode` itself).
      * @example
-     * const nodeA = space.getNodeById('nodeA'); // Potential emitter
-     * const nodeB = space.getNodeById('nodeB'); // Listener
+     * // In an HtmlAppNode subclass (this is nodeB, the listener):
+     * // onInit() { // Or any other appropriate place
+     * //   const nodeA = this.spaceGraph.getNodeById('nodeA'); // Assume nodeA is a RegisteredNode
+     * //   if (nodeA instanceof RegisteredNode) { // Type check for safety
+     * //     this.listenTo(nodeA, 'dataReady', (data, sender) => {
+     * //       console.log(`Node ${this.id} received data from ${sender.id}:`, data);
+     * //       this.processIncomingData(data); // Example method in nodeB's class
+     * //     });
+     * //   }
+     * // }
      *
-     * if (nodeA && nodeB) {
-     *   nodeB.listenTo(nodeA, 'customEvent', (data, sender) => {
-     *     console.log(`NodeB received '${data}' from ${sender.id}`);
-     *     // nodeB.data.lastMessage = data; // Update internal data
-     *     // nodeB.customElements.display.textContent = data; // Update UI
-     *   });
-     * }
-     * // Later, if nodeA emits: nodeA.emit('customEvent', 'Hello from A!');
-     * // NodeB's callback will be triggered.
+     * // Elsewhere, nodeA (an instance of RegisteredNode or HtmlAppNode) might do:
+     * // nodeA.emit('dataReady', { value: 123 });
+     * // This would trigger the callback registered by nodeB.
      */
     listenTo(emitterNode, eventName, callback) {
         if (!(emitterNode instanceof RegisteredNode)) {
@@ -3706,9 +3746,9 @@ export class CameraController {
  * @property {object} settings - Configuration settings for the force layout algorithm.
  * @property {number} settings.repulsion - Strength of the repulsive force between nodes (Coulomb's law analogy). Higher values push nodes further apart. Default: `3000`.
  * @property {number} settings.attraction - Base attraction strength (spring stiffness) for 'elastic' edges. Default: `0.001`.
- *                                          Also influences `settings.defaultElasticStiffness`.
- * @property {number} settings.idealEdgeLength - Ideal resting length for 'elastic' edges. Default: `200`.
- *                                                Also influences `settings.defaultElasticIdealLength`.
+ *                                          This value is used to initialize `settings.defaultElasticStiffness`. Its effect is combined with edge-specific stiffness.
+ * @property {number} settings.idealEdgeLength - Default ideal resting length for 'elastic' edges, used if not specified on the edge itself. Default: `200`.
+ *                                                This is a target length that elastic edges will try to achieve. This value is used to initialize `settings.defaultElasticIdealLength`.
  * @property {number} settings.centerStrength - Strength of the force pulling all nodes towards `settings.gravityCenter`. Default: `0.0005`.
  * @property {number} settings.damping - Damping factor applied to node velocities each step, reducing oscillations and helping the system stabilize.
  *                                     Value typically between 0 (no movement) and 1 (no damping). Default: `0.92`.
@@ -3780,9 +3820,14 @@ export class ForceLayout {
         this.spaceGraph = spaceGraphInstance;
         // Merge provided config with default settings
         this.settings = { ...this.settings, ...config };
-        // Ensure default elastic parameters are consistent with general attraction/idealEdgeLength settings
-        this.settings.defaultElasticStiffness = this.settings.attraction;
-        this.settings.defaultElasticIdealLength = this.settings.idealEdgeLength;
+        // Ensure default elastic parameters are initialized or updated if general attraction/idealEdgeLength were part of 'config'.
+        // If 'config.attraction' is provided, it updates 'defaultElasticStiffness'.
+        // If 'config.idealEdgeLength' is provided, it updates 'defaultElasticIdealLength'.
+        // These defaults are used for edges of type 'elastic' if they don't specify their own stiffness/idealLength.
+        this.settings.defaultElasticStiffness = this.settings.attraction ?? this.settings.defaultElasticStiffness;
+        this.settings.defaultElasticIdealLength = this.settings.idealEdgeLength ?? this.settings.defaultElasticIdealLength;
+        // Default stiffness for rigid and weld constraints are typically independent of the general 'attraction' or 'idealEdgeLength'
+        // for elastic springs, so they retain their specific defaults unless overridden in 'config'.
     }
 
     /**
@@ -4012,9 +4057,15 @@ export class ForceLayout {
      */
     setSettings(newSettings) {
         this.settings = { ...this.settings, ...newSettings };
-        // Propagate relevant general settings to specific defaults
-        this.settings.defaultElasticStiffness = this.settings.attraction;
-        this.settings.defaultElasticIdealLength = this.settings.idealEdgeLength;
+        // Propagate relevant general settings to specific defaults if they were updated
+        if (newSettings.attraction !== undefined) {
+            this.settings.defaultElasticStiffness = newSettings.attraction;
+        }
+        if (newSettings.idealEdgeLength !== undefined) {
+            this.settings.defaultElasticIdealLength = newSettings.idealEdgeLength;
+        }
+        // Other settings like defaultRigidStiffness and defaultWeldStiffness are updated if directly provided in newSettings.
+        // These are typically distinct from the elastic spring parameters.
         console.log('ForceLayout settings updated:', this.settings);
         this.kick(); // Re-energize simulation with new settings
     }

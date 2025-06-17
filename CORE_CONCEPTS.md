@@ -33,8 +33,14 @@ Understanding these core classes is key to working with SpaceGraph:
 
 - **`RegisteredNode`**:
 
-    - A wrapper class that SpaceGraph uses internally when you create a node of a custom registered type.
-    - Developers typically do **not** interact with `RegisteredNode` instances directly. Instead, they define a `TypeDefinition` object which dictates the behavior and appearance of their custom node. `RegisteredNode` then uses this definition to manage the node's lifecycle and visuals.
+    - A base class used by SpaceGraph when you create a node of a custom registered type using a `TypeDefinition` object.
+    - If the `TypeDefinition` does not specify a `nodeClass`, an instance of `RegisteredNode` is created, and its behavior is dictated by the functions provided in the `TypeDefinition` (e.g., `onCreate`, `onUpdate`).
+    - If the `TypeDefinition` *does* specify a `nodeClass` (e.g., a class extending {@link HtmlAppNode}), then an instance of that class is created instead.
+
+- **`HtmlAppNode`**:
+    - A specialized extension of `RegisteredNode` designed to simplify the development of rich, interactive HTML-based nodes.
+    - It automates common setup for HTML nodes and provides convenient helper methods.
+    - When using `HtmlAppNode` or a class derived from it, you specify this class in your `TypeDefinition`'s `nodeClass` property. Lifecycle logic (like `onInit`, `onDataUpdate`) is then implemented as methods within your `HtmlAppNode` subclass.
 
 - **Legacy Node Types (`HtmlNodeElement`, `NoteNode`, `ShapeNode`)**:
 
@@ -77,61 +83,60 @@ SpaceGraph allows developers to define their own node types with custom visuals 
 
 ### The `TypeDefinition` Object Structure
 
-This object tells SpaceGraph how to handle your custom nodes. Key methods include:
+This object tells SpaceGraph how to handle your custom nodes.
 
-- **`getDefaults(initialData)`**:
+- **`typeName` (string, required in practice though part of TypeDefinition object key)**: The unique name for your custom node type (e.g., `'my-user-card'`, `'molecule-node'`). This is the key used when calling `spaceGraph.registerNodeType(typeName, typeDefinition)`.
+- **`nodeClass` (class, optional)**:
+    - If you are creating a node with complex internal logic and HTML structure, this property should point to your custom class that extends {@link HtmlAppNode} (or {@link RegisteredNode} for non-HTML focused custom nodes).
+    - When `nodeClass` is provided, SpaceGraph will instantiate your class. Lifecycle logic (like creating visuals, handling updates) is then primarily managed by methods within your class (e.g., `onInit`, `onDataUpdate` in an `HtmlAppNode` subclass).
+    - If `nodeClass` is *not* provided, SpaceGraph instantiates a generic `RegisteredNode`, and its behavior is driven by the functional callbacks (like `onCreate`, `onUpdate`, etc.) defined directly in this `TypeDefinition` object.
+- **`getDefaults(nodeInstance, graphInstance)` (function, optional)**:
+    - Called when a new node of this type is being created.
+    - `nodeInstance`: The node instance being created. Its `data` property will contain any initial data passed to `addNode`.
+    - `graphInstance`: The SpaceGraph instance.
+    - Should return an object containing default properties for the node's `data` object. These defaults are merged with (and can be overridden by) data provided in `spaceGraph.addNode()`.
+    - Example: `getDefaults: (node) => ({ label: node.data.id || 'Untitled', color: '#FFFFFF', customSetting: true })`
+- **`onCreate(nodeInstance, graphInstance)` (function, required if `nodeClass` is not used or doesn't handle its own creation)**:
+    - If `nodeClass` is not specified, this function is **required**. It's called when a new node is instantiated.
+    - `nodeInstance`: The `RegisteredNode` instance. You can access its `id`, `position`, and merged `data`.
+    - `graphInstance`: The main `SpaceGraph` instance.
+    - **Must return a {@link VisualOutputs} object** specifying the visual components (e.g., `htmlElement`, `mesh`).
+    - If `nodeClass` (e.g., an `HtmlAppNode` subclass) is used, that class's constructor and `onInit` method typically handle the creation of visuals, and this `onCreate` in the `TypeDefinition` might not be needed or used.
+- **Lifecycle Callbacks (optional if using `nodeClass` and implementing methods there)**:
+    - `onUpdate(nodeInstance, graphInstance)`: Called every frame.
+    - `onDispose(nodeInstance, graphInstance)`: Called when the node is removed.
+    - `onSetPosition(nodeInstance, x, y, z, graphInstance)`: Custom position handling.
+    - `onSetSelectedStyle(nodeInstance, isSelected, graphInstance)`: Custom selection visuals.
+    - `onSetHoverStyle(nodeInstance, isHovered, graphInstance)`: Custom hover visuals.
+    - `getBoundingSphereRadius(nodeInstance, graphInstance)`: **Recommended.** For layout and camera.
+    - Drag Handlers (`onStartDrag`, `onDrag`, `onEndDrag`): Override default drag.
+    - `onDataUpdate(nodeInstance, updatedData, graphInstance)`: React to `spaceGraph.updateNodeData()`. `updatedData` contains only the changed properties. `nodeInstance.data` is already updated.
+        - This is key for dynamic nodes and handling data from input ports.
 
-    - Optional. Called when a new node of this type is being created.
-    - Receives `initialData` passed to `spaceGraph.addNode()`.
-    - Should return an object containing default properties for your node's `data` if not provided in `initialData`.
-    - Example: `getDefaults: (data) => ({ label: 'Untitled', color: '#FFFFFF', ...data })`
+**Using `HtmlAppNode` (Recommended for HTML-based nodes):**
 
-- **`onCreate(nodeInstance, spaceGraph)`**:
+When creating interactive HTML-based nodes, it's highly recommended to extend {@link HtmlAppNode}.
+1.  Define your custom class: `class MyCustomHTMLNode extends HtmlAppNode { ... }`
+2.  Implement lifecycle methods like `onInit()` (for DOM setup), `onDataUpdate(updatedData)` (to react to data changes), and `onDispose()` (for cleanup) as methods within your class.
+3.  Your `TypeDefinition` then primarily specifies the `typeName`, `nodeClass`, and `getDefaults`:
 
-    - Required. Called when a new node of this type is instantiated.
-    - `nodeInstance`: The `RegisteredNode` instance being created. You can access its `id`, `position`, and merged `data` (initialData + defaults).
-    - `spaceGraph`: The main `SpaceGraph` instance.
-    - **Must return an object** specifying the visual components for this node. These can be:
-        - `mesh`: A `THREE.Mesh` object for WebGL rendering.
-        - `htmlElement`: An `HTMLElement` for CSS3D rendering. SpaceGraph will wrap this in a `CSS3DObject`.
-        - `cssObject`: Alternatively, a pre-constructed `CSS3DObject`.
-        - `labelObject`: A `CSS3DObject` typically used for labels.
-    - These returned objects will be added to the appropriate scenes by SpaceGraph.
-    - It's a common pattern to store references to frequently accessed internal DOM elements or THREE.js objects (like materials) on `nodeInst.customElements = { ... }`. This makes them easily accessible in other lifecycle methods like `onDataUpdate` or `onDispose`.
+    ```javascript
+    // typeDefinition when using an HtmlAppNode subclass
+    const myAppNodeDefinition = {
+      // typeName is the key for registration: spaceGraph.registerNodeType('my-app-node', myAppNodeDefinition)
+      nodeClass: MyCustomHTMLNode, // Your class extending HtmlAppNode
+      getDefaults: (node) => ({    // node is your MyCustomHTMLNode instance
+        label: node.data.id || 'My App Node',
+        width: 250, // Default width for the node's htmlElement
+        height: 150, // Default height
+        // ... other custom default data for your node
+      })
+      // onCreate, onUpdate, etc., are typically NOT needed here,
+      // as their logic is handled by MyCustomHTMLNode's class methods.
+    };
+    ```
 
-- **`onUpdate(nodeInstance, spaceGraph)`**:
-
-    - Optional. Called on every frame of the animation loop. Useful for animations or dynamic updates.
-
-- **`onDispose(nodeInstance)`**:
-
-    - Optional. Called when the node is removed. Should clean up custom resources.
-
-- **`onSetPosition(nodeInstance, x, y, z)`**:
-
-    - Optional. Called when the node's position is updated. `RegisteredNode` provides default handling.
-
-- **`onSetSelectedStyle(nodeInstance, isSelected)`**:
-
-    - Optional. Called on selection state change for custom visual feedback.
-
-- **`onSetHoverStyle(nodeInstance, isHovered)`**:
-
-    - Optional. Called on hover state change.
-
-- **`getBoundingSphereRadius(nodeInstance)`**:
-
-    - Optional, but **highly recommended** for layout and camera focusing. Returns the node's encompassing radius.
-
-- **Drag Handlers (`onStartDrag`, `onDrag`, `onEndDrag`)**:
-
-    - Optional. Override default drag behavior.
-
-- **`onDataUpdate(nodeInstance, updatedData)`**:
-    - Optional. Called when `spaceGraph.updateNodeData(nodeId, newData)` is used. Allows the node to react to specific data changes.
-    - This method is key for making nodes dynamic. When `spaceGraph.updateNodeData(nodeId, newData)` is called, `onDataUpdate` receives the `newData` object. If `newData` contains keys corresponding to the node's defined input ports (e.g., `updatedData.my_input_port`), this method should handle that incoming data, update the node's internal state (`nodeInst.data`), and refresh its visual representation if necessary. Remember to update `nodeInst.data.propertyName = updatedData.propertyName` if the change should persist.
-
-### Node Ports (for HTML-based RegisteredNodes)
+### Node Ports (for HTML-based Nodes like `HtmlAppNode` or `RegisteredNode` with HTML)
 
 - A `TypeDefinition` can optionally include a `ports` property in its `getDefaults` method or as part of the initial data when adding a node. This defines connection points on the node.
 - **Structure**:
@@ -171,27 +176,44 @@ const myNode = spaceGraph.addNode({
 });
 ```
 
-### Conceptual `typeDefinition` Example (Mesh-based)
+### Conceptual `typeDefinition` Example (Functional, for a simple mesh-based node)
+
+This example shows a `TypeDefinition` where lifecycle logic is defined by functions directly within the definition object, suitable if not using a custom `nodeClass`.
 
 ```javascript
-const myBoxNodeType = {
-    getDefaults: (initialData) => ({
-        label: initialData.label || 'Unnamed Box',
-        color: initialData.color || 0xff0000,
-        size: initialData.size || 50,
-        ports: { inputs: { color_in: { label: 'Color', type: 'hex' } } }, // Example port
-    }),
-    onCreate: (node, sg) => {
-        const three = sg.constructor.THREE;
-        const geometry = new three.BoxGeometry(node.data.size, node.data.size, node.data.size);
-        const material = new three.MeshStandardMaterial({ color: node.data.color });
-        const mesh = new three.Mesh(geometry, material);
-        // ... (labelObject creation if needed) ...
-        return { mesh /*, labelObject */ };
-    },
-    // ... other lifecycle methods ...
+const simpleBoxType = {
+  // getDefaults is called with the node instance, allowing access to initial data if needed.
+  getDefaults: (node) => ({
+    label: node.data.label || 'Unnamed Box', // Use initial label or default
+    color: node.data.color || 0xff0000,     // Use initial color or default
+    size: node.data.size || 50,
+    ports: { inputs: { color_in: { label: 'Color', type: 'hex' } } },
+  }),
+  onCreate: (node, sg) => { // node is a RegisteredNode instance
+    const three = sg.constructor.THREE; // Access THREE from SpaceGraph constructor
+    const geometry = new three.BoxGeometry(node.data.size, node.data.size, node.data.size);
+    const material = new three.MeshStandardMaterial({ color: node.data.color });
+    const mesh = new three.Mesh(geometry, material);
+    // Optionally, create a label object if needed
+    // const labelDiv = document.createElement('div'); ... labelDiv.textContent = node.data.label;
+    // const labelObject = new sg.constructor.CSS3DObject(labelDiv);
+    return { mesh /*, labelObject */ }; // Return the visual components
+  },
+  onDataUpdate: (node, updatedData, sg) => {
+    if (updatedData.hasOwnProperty('color_in')) { // Check if 'color_in' port received data
+      if (node.mesh && node.mesh.material) {
+        node.mesh.material.color.setHex(updatedData.color_in);
+        node.data.color = updatedData.color_in; // Update persistent data
+      }
+    }
+    if (updatedData.hasOwnProperty('size')) {
+      // More complex: would need to dispose old geometry and create new one
+      // For simplicity, often handled by removing and re-adding the node with new config.
+    }
+  },
+  // ... other lifecycle methods like onDispose, getBoundingSphereRadius ...
 };
-// spaceGraph.registerNodeType('simple-box', myBoxNodeType);
+// spaceGraph.registerNodeType('simple-box', simpleBoxType);
 ```
 
 ## 4. Event Systems and Edge Linking
@@ -275,72 +297,150 @@ SpaceGraph allows for global customization of many default behaviors and visual 
     3.  Internal hardcoded defaults within node/edge classes (these are minimal now).
 - **Structure**: For the detailed structure of the configuration object (`SpaceGraphConfig`), refer to the JSDoc in `spacegraph.js` or the main `README.md`.
 
-## 6. Creating Complex Nodes (App Nodes)
+## 5. Creating Complex Nodes (App Nodes) using `HtmlAppNode`
 
-The custom node registration system, combined with the ability to embed rich HTML and JavaScript logic, allows for the creation of "App Nodes"—nodes that function as mini-applications or complex, interactive widgets within the SpaceGraph environment.
+For nodes that require rich HTML-based UIs, custom logic, and interactivity, extending the {@link HtmlAppNode} class is the recommended approach. `HtmlAppNode` is a specialized {@link RegisteredNode} that simplifies the creation of such "App Nodes."
 
-### Key Principles for App Nodes
+### Key Principles for `HtmlAppNode` Subclasses
 
-- **Internal HTML Structure (`onCreate`)**:
+- **Extend `HtmlAppNode`**:
+    ```javascript
+    import { HtmlAppNode } from './js/HtmlAppNode.js'; // Adjust path as needed
 
-    - The `typeDefinition.onCreate` method is where you define the internal DOM structure of your app node. This typically involves creating a main `div` for `nodeInst.htmlElement` and then populating it with various HTML elements like input fields, buttons, display areas, etc.
-    - This structure is then rendered in the 3D space using `CSS3DObject`.
+    class MyCustomAppNode extends HtmlAppNode {
+        // ... your class methods ...
+    }
+    ```
 
-- **Data Management (`nodeInst.data` & `onDataUpdate`)**:
+- **`TypeDefinition`**: You still need a `TypeDefinition` to register your node, but it primarily points to your class:
+    ```javascript
+    const myAppNodeDefinition = {
+      // typeName is the key for registration: spaceGraph.registerNodeType('my-app', myAppNodeDefinition)
+      nodeClass: MyCustomAppNode, // Crucial: links to your class
+      getDefaults: (node) => ({   // node is your MyCustomAppNode instance
+        label: node.data.id || 'My App',
+        width: 300, height: 200, // Default dimensions for this.htmlElement
+        // ... other custom default data ...
+      })
+    };
+    ```
 
-    - The primary state of your app node should be stored within `nodeInst.data`. This object is initially populated by `getDefaults` and any data passed during `spaceGraph.addNode()`.
-    - Internal UI interactions (e.g., typing in a textarea, clicking a button) should update properties within `nodeInst.data`.
-    - The `typeDefinition.onDataUpdate(nodeInst, updatedData)` method can be implemented to react if the node's data is changed externally (e.g., via `spaceGraph.updateNodeData(nodeId, newData)` or through an input port mechanism). This method can then update the node's internal UI to reflect the new data.
+- **`onInit()` (Class Method)**:
+    - This is where you build the internal DOM structure of your node within `this.htmlElement`.
+    - `this.htmlElement` is the main container div provided by `HtmlAppNode`.
+    - Use `this.getChild(selector)` and `this.getChildren(selector)` to get references to internal DOM elements.
+    - Attach event listeners to your internal elements. Crucially, use `this.stopEventPropagation(element, eventTypes)` for interactive elements (inputs, buttons, scrollable areas) to prevent them from interfering with graph navigation (drag, pan, zoom).
 
-- **Internal Event Handling**:
+- **`this.data` for State Management**:
+    - Store the node's primary state and properties in `this.data`. This object is initialized by `getDefaults` and data passed to `addNode`.
+    - UI interactions within your node should update `this.data`.
 
-    - Standard JavaScript event listeners (`addEventListener`) should be attached to the HTML elements created in `onCreate`.
-    - Callbacks for these listeners will contain the core logic of your app node. For example, a button click might modify `nodeInst.data.someProperty`, then trigger a re-render of a part of the node's UI, and potentially emit an event through an output port.
+- **`onDataUpdate(updatedData)` (Class Method)**:
+    - Implement this method to react when `this.data` is changed externally (via `spaceGraph.updateNodeData()` or through a connected input port).
+    - `updatedData` contains only the properties that changed. `this.data` already reflects the new values.
+    - Use this to update your node's DOM to reflect the new data.
 
-- **Emitting Data via Output Ports**:
+- **`onDispose()` (Class Method)**:
+    - Implement for any custom cleanup beyond what `HtmlAppNode` and `RegisteredNode` handle (e.g., removing global event listeners your node might have set).
 
-    - After processing an internal event or a data update, if the node needs to send data to other nodes, it uses `nodeInst.emit(outputPortName, payload)`.
-    - The `outputPortName` should match one of the keys defined in `nodeInst.data.ports.outputs`.
+- **Emitting Data and Inter-Node Communication**:
+    - Use `this.emit(outputPortName, payload)` to send data from output ports (defined in `this.data.ports.outputs`).
+    - Use `this.listenTo(otherNode, eventName, callback)` for direct event-based communication.
 
-- **Receiving Data via Input Ports (Conceptual)**:
-    - **Method 1 (Direct Event Listening - Less Common for "Input Port" Semantics):** While a node can technically `listenTo` any event from another node, for true "input port" behavior, it's often about reacting to data _sent to it_. This method is viable but less direct for port semantics compared to `onDataUpdate`.
-    - **Method 2 (`onDataUpdate`):** This is the most common and recommended pattern for `RegisteredNode` types to handle data arriving at their conceptual input ports. If your `TypeDefinition` defines an input port (e.g., in `getDefaults` or initial data as `ports: { inputs: { config_in: ... } }`), external logic (another node's action, or application code) would typically call `spaceGraph.updateNodeData(appNodeId, { config_in: newConfigData })`. The `onDataUpdate(nodeInst, updatedData)` method within your `TypeDefinition` for the `appNodeId` node is then responsible for checking if `updatedData.config_in` exists and processing this `newConfigData`. This usually involves updating `nodeInst.data.config_in` and then refreshing the node's internal HTML or WebGL visuals to reflect the new configuration.
-    - **Method 3 (Dedicated Listener in `onCreate` - Advanced):** An App Node could, in its `onCreate`, set up listeners for specific events targeted at itself, perhaps using a global event bus or directly if another node `emit`s an event _with the App Node's ID as part of the event name or payload_. This is more complex and less conventional than using `onDataUpdate` for port-like inputs.
+### Example `HtmlAppNode` Walkthrough (Conceptual Markdown Editor)
 
-### Example App Node Walkthroughs
+Let's refine the Markdown Editor concept using the `HtmlAppNode` pattern.
 
-- **Markdown Editor Node (`markdown-editor`)**:
+**1. `MyMarkdownEditorNode.js` (Class Definition)**
+```javascript
+import { HtmlAppNode } from './js/HtmlAppNode.js'; // Adjust path
+// Assume Marked.js library is available globally or imported
+// import { marked } from 'marked'; // If using as a module
 
-    - **Structure**: Consists of a `<textarea>` for raw Markdown input and a `<div>` for the rendered HTML preview.
-    - **External Library**: Uses `Marked.js` (loaded via CDN) to convert Markdown to HTML.
-    - **Logic**:
-        - Text input in the `textarea` updates `nodeInst.data.markdownContent`.
-        - This triggers an internal `renderPreview()` function.
-        - `renderPreview()` uses `marked.parse()` to generate HTML and updates the preview `div`.
-        - It then emits the generated HTML string through its `html_out` output port: `nodeInst.emit('html_out', previewDiv.innerHTML);`.
-    - An input port `md_in` is defined, allowing external updates to its Markdown content via `onDataUpdate`.
+class MyMarkdownEditorNode extends HtmlAppNode {
+    onInit() {
+        this.htmlElement.style.display = 'flex';
+        this.htmlElement.style.flexDirection = 'column';
+        this.htmlElement.innerHTML = `
+            <textarea class="markdown-input" style="flex: 1; resize: none;"></textarea>
+            <div class="markdown-preview" style="flex: 1; overflow-y: auto; border-top: 1px solid #ccc; padding: 5px;"></div>
+        `;
 
-- **Task List Node (`task-list`)**:
-    - **Structure**: An `<h3>` for the title, an `<input type="text">` and "Add" button for new tasks, and a `<ul>` to display the list of tasks.
-    - **Data Management**: Manages an array of task objects (e.g., `{id, text, completed}`) in `nodeInst.data.tasks`.
-    - **Logic**:
-        - Internal UI events (adding a new task, checking/unchecking a task's checkbox, deleting a task) directly modify the `nodeInst.data.tasks` array.
-        - After any modification, an internal `renderTasks()` function is called to update the `<ul>` by regenerating the `<li>` elements.
-        - It emits events like `task_completed` (with the specific task object) or `tasks_updated` (with the full tasks array) via its output ports.
-    - An input port `add_task` allows new tasks to be added externally by updating `nodeInst.data.add_task`, which is then processed in `onDataUpdate`.
+        this.textarea = this.getChild('.markdown-input');
+        this.preview = this.getChild('.markdown-preview');
+
+        // Load initial content
+        if (this.data.markdownContent) {
+            this.textarea.value = this.data.markdownContent;
+            this.renderPreview();
+        }
+
+        this.textarea.addEventListener('input', () => {
+            this.data.markdownContent = this.textarea.value;
+            this.renderPreview();
+            this.emit('html_out', this.preview.innerHTML); // Emit HTML from 'html_out' port
+        });
+
+        // Stop propagation for text area to allow typing and scrolling
+        this.stopEventPropagation(this.textarea, ['pointerdown', 'wheel', 'input', 'keydown']);
+        this.stopEventPropagation(this.preview, 'wheel'); // Allow scrolling preview
+    }
+
+    renderPreview() {
+        if (typeof marked === 'function') { // Check if Marked.js is available
+            this.preview.innerHTML = marked.parse(this.data.markdownContent || '');
+        } else {
+            this.preview.textContent = 'Marked.js library not found.';
+        }
+    }
+
+    onDataUpdate(updatedData) {
+        // super.onDataUpdate(updatedData); // For base class handling of width/height etc.
+        if (updatedData.hasOwnProperty('md_in')) { // Check if 'md_in' port/data changed
+            this.data.markdownContent = this.data.md_in; // this.data already updated
+            this.textarea.value = this.data.markdownContent;
+            this.renderPreview();
+            this.emit('html_out', this.preview.innerHTML);
+        }
+    }
+
+    onDispose() {
+        console.log(`Markdown editor ${this.id} disposed.`);
+    }
+}
+```
+
+**2. Registration (in your main script)**
+```javascript
+const markdownEditorType = {
+  nodeClass: MyMarkdownEditorNode,
+  getDefaults: (node) => ({
+    label: node.data.id || 'Markdown Editor',
+    width: 400,
+    height: 300,
+    markdownContent: '# Hello\n\nStart typing...',
+    ports: {
+      inputs: { md_in: { label: 'Markdown In', type: 'string' } },
+      outputs: { html_out: { label: 'HTML Out', type: 'string' } }
+    }
+  })
+};
+spaceGraph.registerNodeType('markdown-editor', markdownEditorType);
+
+// Add an instance:
+// spaceGraph.addNode({ type: 'markdown-editor', id: 'md1', markdownContent: '*Initial content*' });
+```
+
+This `HtmlAppNode` approach encapsulates the node's logic within its class, making it more organized and reusable.
 
 ### Styling App Nodes
 
-- Complex nodes often require their own specific CSS rules for their internal HTML structure.
-- These styles can be included within a `<style>` tag in the example HTML file (as seen in `example-app-nodes.html`) or linked from an external CSS file.
-- It's good practice to scope these styles using a class specific to the node type (e.g., `.markdown-editor-node .editor-area {}`) to avoid conflicts with global styles or other node types.
+- App Nodes, being HTML-based, are styled using CSS.
+- It's good practice to use a specific class on the root `htmlElement` (e.g., `html-app-node` and `your-type-name-node` are added by `HtmlAppNode` itself) to scope your CSS rules and avoid conflicts.
+- Example: `.markdown-editor-node .markdown-input { border: 1px solid grey; }`
 
 ### Event Propagation
-
-- When creating interactive HTML elements (buttons, inputs, etc.) inside an App Node's `htmlElement`, remember that these elements are part of the larger SpaceGraph DOM structure.
-- Pointer events (like `pointerdown`, `click`) or `wheel` events on these internal elements might propagate up to the `UIManager` and interfere with graph interactions (like node dragging or camera zooming).
-- To prevent this, call `event.stopPropagation()` within the event listeners for your internal interactive elements.
-    - Example: `myButton.addEventListener('pointerdown', (e) => e.stopPropagation());`
+- As shown in the example, use `this.stopEventPropagation(element, eventTypes)` for any interactive elements within your `HtmlAppNode` to ensure they function correctly without triggering unintended graph interactions (like dragging the node when trying to select text).
 
 ## 6. Rendering Concepts
 

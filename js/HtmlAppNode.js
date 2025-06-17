@@ -11,32 +11,87 @@ import { $ } from '../spacegraph.js'; // Import utility
  * To create a new HTML-based node type, you extend this class and then register it
  * with SpaceGraph using a `TypeDefinition` that specifies your new class via the `nodeClass` property.
  *
+ * **Declarative Event and Data Binding:**
+ * `HtmlAppNode` supports declarative bindings directly in the HTML template defined in `onInit()`:
+ *
+ * - **Event Binding:** `data-event-<eventName>="methodName[:stop]"`
+ *   - Attaches an event listener for `<eventName>` (e.g., 'click', 'input') to the element.
+ *   - Calls `this.methodName(event)` on the `HtmlAppNode` instance when the event fires.
+ *   - If `:stop` is appended (e.g., `data-event-click="myClickHandler:stop"`), `event.stopPropagation()` is automatically called.
+ *   - Example: `<button data-event-click="handleButtonClick:stop">Click Me</button>`
+ *
+ * - **One-Way Data Binding to Element Properties:** `data-bind-prop="dataKey:elementProperty"`
+ *   - Binds `this.data[dataKey]` to the specified `elementProperty` of the HTML element.
+ *   - Updates whenever `this.data[dataKey]` changes via `this.onDataUpdate()`.
+ *   - Supported `elementProperty` values:
+ *     - `textContent`: Updates `element.textContent`.
+ *     - `innerHTML`: Updates `element.innerHTML`.
+ *     - `value`: Updates `element.value` (for inputs, textareas, selects).
+ *     - `checked`: Updates `element.checked` (for checkboxes, radio buttons), expects boolean `this.data[dataKey]`.
+ *   - Example: `<span data-bind-prop="userName:textContent"></span>` (updates text with `this.data.userName`)
+ *   - Example: `<input type="checkbox" data-bind-prop="isActive:checked">`
+ *
+ * - **One-Way Data Binding to HTML Attributes:** `data-bind-attr="dataKey:attributeName"`
+ *   - Binds `this.data[dataKey]` to the specified HTML `attributeName`.
+ *   - Updates the attribute when `this.data[dataKey]` changes. If the value is `null` or `undefined`, the attribute is removed.
+ *   - Example: `<img data-bind-attr="imageUrl:src" alt="User Image">` (sets `src` attribute from `this.data.imageUrl`)
+ *
+ * - **One-Way Data Binding to CSS Styles:** `data-bind-style="dataKey:styleProperty"`
+ *   - Binds `this.data[dataKey]` to the specified CSS `styleProperty` (camelCased, e.g., `backgroundColor`).
+ *   - Updates `element.style[styleProperty]` when `this.data[dataKey]` changes.
+ *   - Example: `<div data-bind-style="highlightColor:backgroundColor"></div>` (sets style.backgroundColor from `this.data.highlightColor`)
+ *
+ * - **One-Way CSS Class Toggling:** `data-bind-class="dataKey:className"`
+ *   - Toggles `className` on the element based on the truthiness of `this.data[dataKey]`.
+ *   - If `this.data[dataKey]` is truthy, the class is added; otherwise, it's removed.
+ *   - Example: `<div data-bind-class="isActive:highlight"></div>` (adds 'highlight' class if `this.data.isActive` is true)
+ *
  * @extends RegisteredNode
  *
  * @example
  * ```javascript
- * // 1. Define Your Custom Node Class
+ * // 1. Define Your Custom Node Class (MyWidgetNode.js)
  * class MyWidgetNode extends HtmlAppNode {
  *   onInit() {
- *     this.htmlElement.innerHTML = `<h3>${this.data.label}</h3><p>Content goes here.</p>`;
- *     // Use this.getChild, this.stopEventPropagation, etc.
+ *     // Initial data can be accessed via this.data
+ *     this.htmlElement.innerHTML = `
+ *       <h3 data-bind-prop="label:textContent"></h3>
+ *       <p>Current value: <span data-bind-prop="currentValue:textContent"></span></p>
+ *       <input type="text" data-event-input="handleInputChange" data-bind-prop="currentValue:value">
+ *       <button data-event-click="incrementValue">Increment</button>
+ *       <div data-bind-class="isImportant:important-style">This is a message.</div>
+ *       <img data-bind-attr="imageUrl:src" style="width:50px; height:50px;">
+ *     `;
+ *     // Automatically stop propagation for common interactive elements
+ *     this.autoStopPropagation();
  *   }
+ *
+ *   handleInputChange(event) {
+ *     const newValue = event.target.value;
+ *     // Update data, which will trigger onDataUpdate and re-bind to UI
+ *     this.spaceGraph.updateNodeData(this.id, { currentValue: newValue });
+ *   }
+ *
+ *   incrementValue() {
+ *     let val = parseFloat(this.data.currentValue) || 0;
+ *     this.spaceGraph.updateNodeData(this.id, { currentValue: val + 1 });
+ *   }
+ *
  *   onDataUpdate(updatedData) {
- *     if (updatedData.label) {
- *       const h3 = this.getChild('h3');
- *       if (h3) h3.textContent = this.data.label;
+ *     super.onDataUpdate(updatedData); // Handles declarative bindings
+ *     if (updatedData.hasOwnProperty('isImportant')) {
+ *       console.log('Importance changed to:', this.data.isImportant);
  *     }
  *   }
  * }
  *
- * // 2. Define its TypeDefinition
+ * // 2. Define its TypeDefinition (in your main graph setup script)
  * const myWidgetNodeDefinition = {
- *   typeName: 'my-widget',
- *   nodeClass: MyWidgetNode, // Link to your class
- *   getDefaults: (nodeInst) => ({
- *     width: 200,
- *     height: 100,
+ *   nodeClass: MyWidgetNode,
+ *   getDefaults: (node) => ({
  *     label: 'My Widget',
+ *     width: 220, height: 200, currentValue: '0',
+ *     isImportant: false, imageUrl: 'path/to/default/image.png',
  *     backgroundColor: 'lightsteelblue'
  *   })
  * };
@@ -45,7 +100,8 @@ import { $ } from '../spacegraph.js'; // Import utility
  * // spaceGraph.registerNodeType('my-widget', myWidgetNodeDefinition);
  *
  * // 4. Add instances
- * // spaceGraph.addNode({ type: 'my-widget', id: 'widget1' });
+ * // const widget1 = spaceGraph.addNode({ type: 'my-widget', id: 'widget1', label: 'Interactive Widget' });
+ * // spaceGraph.updateNodeData('widget1', { currentValue: 10, isImportant: true, imageUrl: 'path/to/new/image.jpg' });
  * ```
  */
 export class HtmlAppNode extends RegisteredNode {
@@ -61,6 +117,7 @@ export class HtmlAppNode extends RegisteredNode {
      * - Adding CSS classes `html-app-node` and a type-specific class (e.g., `my-type-node`) to `this.htmlElement`.
      * - Creating the `this.cssObject` to render the `this.htmlElement` in 3D space.
      * - Invoking the `this.onInit()` lifecycle method for derived classes to perform their specific setup.
+     * - Initializing declarative event and data bindings.
      *
      * @param {string} id - Unique ID for the node. See {@link RegisteredNode#constructor}.
      * @param {import('../spacegraph.js').NodeDataObject} initialUserData - Initial data object for the node, including `type`, position (`x`,`y`,`z`), and any custom data. See {@link RegisteredNode#constructor}.
@@ -68,78 +125,55 @@ export class HtmlAppNode extends RegisteredNode {
      * @param {import('../spacegraph.js').SpaceGraph} spaceGraphRef - Reference to the parent SpaceGraph instance.
      */
     constructor(id, initialUserData, typeDefinition, spaceGraphRef) {
-        // Ensure 'type' is part of initialUserData for super constructor if needed,
-        // though typeName from typeDefinition is preferred for class-based nodes.
         if (!initialUserData.type && typeDefinition.typeName) {
             initialUserData.type = typeDefinition.typeName;
         }
-
         super(id, initialUserData, typeDefinition, spaceGraphRef);
-
-        // Note: `this.data` is now populated by the `RegisteredNode` constructor,
-        // which calls `this.getDefaults()` (which should be defined in the derived class's typeDefinition).
-
         this._initializeHtmlElement();
 
-        // Call the user-defined initialization hook
         if (typeof this.onInit === 'function') {
             this.onInit();
         }
-        // Ensure initial update of position and other visual aspects
+        this._initializeDeclarativeBindings(); // Setup declarative event listeners
+        this._applyInitialDataBindings(); // Apply initial data bindings
+
         this.update();
     }
 
     /**
      * @override
      * Provides default data by calling the `getDefaults` method from the typeDefinition.
-     * This is crucial for initializing `this.data` correctly before _initializeHtmlElement is called.
      */
     getDefaultData() {
         if (this.typeDefinition?.getDefaults) {
-            // Pass `this.data` (which contains initialUserData) to getDefaults for context
             return this.typeDefinition.getDefaults(this, this.spaceGraph);
         }
-        return super.getDefaultData(); // Fallback to RegisteredNode's (or BaseNode's) default
+        return super.getDefaultData();
     }
 
-
-    /**
-     * Initializes the main HTML element for the node (`this.htmlElement`).
-     * Applies default styling based on `this.data` (width, height, backgroundColor).
-     * Adds a common CSS class `html-app-node` and a type-specific class.
-     * @private
-     */
+    /** @private */
     _initializeHtmlElement() {
-        if (!this.htmlElement) { // It might have been partially set by RegisteredNode's constructor if typeDef.onCreate was used
+        if (!this.htmlElement) {
             this.htmlElement = document.createElement('div');
         }
-
-        // Add common and type-specific CSS classes
         this.htmlElement.classList.add('html-app-node');
         if (this.data.type) {
-            // Sanitize type name to be a valid CSS class
             const typeClassName = this.data.type.toLowerCase().replace(/[^a-z0-9-_]+/g, '-');
             this.htmlElement.classList.add(`${typeClassName}-node`);
         }
-
-        // Apply basic styles from data (defaults should be handled by getDefaults)
         this.htmlElement.style.width = `${this.data.width || 200}px`;
         this.htmlElement.style.height = `${this.data.height || 150}px`;
         this.htmlElement.style.backgroundColor = this.data.backgroundColor || 'var(--node-bg-default, #333)';
         this.htmlElement.style.border = this.data.border || '1px solid var(--accent-color-darker, #555)';
-        this.htmlElement.style.overflow = 'hidden'; // Default, can be overridden by user CSS
-        this.htmlElement.style.display = 'flex'; // Default, makes it easier for internal layout
-        this.htmlElement.style.flexDirection = 'column'; // Default
+        this.htmlElement.style.overflow = 'hidden';
+        this.htmlElement.style.display = 'flex';
+        this.htmlElement.style.flexDirection = 'column';
 
-        // Ensure RegisteredNode's cssObject is created/updated if it wasn't already
         if (!this.cssObject && this.htmlElement && window.CSS3DObject) {
              this.cssObject = new window.CSS3DObject(this.htmlElement);
         } else if (this.cssObject && this.cssObject.element !== this.htmlElement) {
-            // If RegisteredNode somehow created a cssObject with a different element,
-            // we need to replace it or ensure our htmlElement is used.
-            // This path should ideally not be hit if constructor logic is right.
-            this.cssObject.element.remove(); // Remove the old element
-            this.cssObject.element = this.htmlElement; // Assign the new one
+            this.cssObject.element.remove();
+            this.cssObject.element = this.htmlElement;
         }
          if (this.cssObject) {
             this.cssObject.userData = { nodeId: this.id, type: this.data.type };
@@ -149,186 +183,236 @@ export class HtmlAppNode extends RegisteredNode {
         }
     }
 
-    // --- Standard Lifecycle Methods (to be implemented or overridden by derived classes) ---
+    /** @private */
+    _initializeDeclarativeBindings() {
+        if (!this.htmlElement) return;
+
+        this.htmlElement.querySelectorAll('*').forEach(element => {
+            Array.from(element.attributes).forEach(attr => {
+                if (attr.name.startsWith('data-event-')) {
+                    const eventType = attr.name.substring('data-event-'.length);
+                    let [methodName, ...modifiers] = attr.value.split(':');
+                    const stopPropagation = modifiers.includes('stop');
+
+                    if (typeof this[methodName] === 'function') {
+                        element.addEventListener(eventType, (event) => {
+                            if (stopPropagation) {
+                                event.stopPropagation();
+                            }
+                            this[methodName](event);
+                        });
+                    } else {
+                        console.warn(`HtmlAppNode[${this.id}]: Method "${methodName}" not found for event binding on element:`, element);
+                    }
+                }
+            });
+        });
+    }
+
+    /** @private */
+    _applyInitialDataBindings() {
+        if (!this.htmlElement) return;
+        // Create an object with all keys from this.data to trigger all bindings
+        const allDataKeys = {};
+        for (const key in this.data) {
+            allDataKeys[key] = this.data[key];
+        }
+        this.onDataUpdate(allDataKeys);
+    }
+
 
     /**
-     * `onInit()`: Called after the base HTML element (`this.htmlElement`) is created and styled.
-     * Derived classes should implement this method to:
-     *  - Populate `this.htmlElement` with their specific internal DOM structure.
-     *  - Attach event listeners to their internal elements.
-     *  - Perform any other one-time setup.
+     * `onInit()`: Called once after the `HtmlAppNode`'s base HTML element (`this.htmlElement`) is created,
+     * styled by the constructor, and ready for custom content.
      *
-     * Example:
+     * **Derived classes MUST implement this method** to:
+     *  1. Populate `this.htmlElement` with their specific internal DOM structure (e.g., using `innerHTML` or DOM manipulation).
+     *  2. Find and store references to key internal elements using `this.getChild()` or `this.getChildren()`.
+     *  3. Attach any necessary event listeners to these internal elements, often using `this.stopEventPropagation()`
+     *     or the declarative `autoStopPropagation()` method for interactive elements like inputs or buttons
+     *     to prevent them from triggering graph interactions (drag, pan, zoom).
+     *     Alternatively, use declarative `data-event-*` attributes in the HTML template.
+     *  4. Perform any other one-time setup specific to the node type.
+     *
+     * The base `HtmlAppNode.onInit()` method, if not overridden by a subclass, will log a warning to the console
+     * indicating that the subclass should provide an implementation.
+     *
+     * @example
      * ```javascript
-     * onInit() {
-     *   this.htmlElement.innerHTML = '<input type="text" class="my-input"><div class="display"></div>';
-     *   this.inputElement = this.getChild('.my-input');
-     *   this.displayElement = this.getChild('.display');
-     *   this.inputElement.addEventListener('input', () => {
-     *     this.data.text = this.inputElement.value;
-     *     this.displayElement.textContent = this.data.text;
-     *   });
-     *   this.stopEventPropagation(this.inputElement); // Allow text input without graph interaction
+     * class MyCustomAppNode extends HtmlAppNode {
+     *   onInit() {
+     *     // Populate the main HTML element
+     *     this.htmlElement.innerHTML = `
+     *       <h3 data-bind-prop="label:textContent">${this.data.label || 'My Node'}</h3>
+     *       <input type="text" class="my-input" data-event-input="onMyInputChange" value="${this.data.initialText || ''}">
+     *       <button data-event-click="onButtonClick">Click Me</button>
+     *     `;
+     *     // Automatically stop propagation for default interactive elements
+     *     this.autoStopPropagation();
+     *     // Or, for specific elements: this.stopEventPropagation(this.getChild('.my-input'));
+     *   }
+     *   onMyInputChange(event) {
+     *     this.spaceGraph.updateNodeData(this.id, { initialText: event.target.value });
+     *   }
+     *   onButtonClick() { this.emit('buttonClicked', { nodeId: this.id }); }
      * }
      * ```
      */
     onInit() {
-        // To be implemented by derived node classes
-        console.warn(`HtmlAppNode type "${this.data.type}" has not implemented onInit().`);
+        if (this.constructor === HtmlAppNode) {
+             console.warn(`HtmlAppNode type "${this.data.type}" has not implemented a custom onInit() method. Please override onInit in your subclass: ${this.constructor.name}`);
+        }
     }
 
     /**
      * @override
-     * `onDataUpdate(updatedData)`: Handles updates to the node's data.
-     * Called when `spaceGraph.updateNodeData()` is used or data arrives via an input port.
-     * Derived classes should implement this to react to changes in `this.data`
-     * and update their internal state or DOM accordingly.
+     * `onDataUpdate(updatedData)`: Handles updates to the node's data when `spaceGraph.updateNodeData()` is called
+     * for this node, or when data is propagated to one of its input ports from another node's output port.
      *
-     * The base `HtmlAppNode` implementation also handles common style updates if `width`, `height`,
-     * or `backgroundColor` are present in `updatedData`. Derived classes can call `super.onDataUpdate(updatedData)`
-     * to leverage this base behavior or handle these properties themselves.
+     * **Key Behavior:**
+     * - `this.data`: This object already reflects the new, merged data state *before* `onDataUpdate` is called.
+     *                You should typically read the new values from `this.data`.
+     * - `updatedData`: This parameter is an object containing only the properties that were actually
+     *                  changed in the `updateNodeData` call or port propagation. This allows you to specifically
+     *                  check *what* changed, which is useful for targeted DOM updates.
      *
-     * @param {object} updatedData - An object containing only the data properties that were actually updated.
-     *                               Note: `this.data` will have already been updated with these changes
-     *                               by the time this method is called by the SpaceGraph system.
+     * This base implementation handles:
+     * 1. Updates to common style-related properties (`width`, `height`, `backgroundColor`).
+     * 2. One-way declarative data bindings for elements with `data-bind-prop`, `data-bind-attr`,
+     *    `data-bind-style`, and `data-bind-class` attributes.
+     *
+     * Derived classes can override this method for custom logic. If overriding, it's recommended to call
+     * `super.onDataUpdate(updatedData)` to ensure base functionality (including declarative bindings) is executed.
+     *
+     * @param {object} updatedData - An object containing only the data properties that were part of the current update.
      * @example
      * ```javascript
-     * onDataUpdate(updatedData) {
-     *   // super.onDataUpdate(updatedData); // Call if you want base class to handle width/height/bgColor changes
-     *   if (updatedData.title !== undefined) { // Check if 'title' was part of the update
-     *     const titleEl = this.getChild('.my-node-title');
-     *     if (titleEl) titleEl.textContent = this.data.title; // Use this.data for the new value
-     *   }
-     *   if (updatedData.value_in !== undefined) { // Assuming 'value_in' is a defined input port
-     *     // Process this.data.value_in (which is the same as updatedData.value_in)
-     *     this.updateDisplay(this.data.value_in);
-     *   }
-     * }
+     * // (See class JSDoc example for MyDataDrivenNode which uses onDataUpdate)
      * ```
      */
     onDataUpdate(updatedData) {
-        // For compatibility with typeDefinition-based onDataUpdate (less common for class-based nodes)
-        // This allows a TypeDefinition's onDataUpdate to be used if the class itself doesn't override this method.
-        if (this.typeDefinition?.onDataUpdate && typeof this.typeDefinition.onDataUpdate === 'function') {
-            // Check if this method in the class is the same as the one in the prototype (i.e., not overridden)
-            const isBaseMethod = this.onDataUpdate === HtmlAppNode.prototype.onDataUpdate;
-            if (isBaseMethod) { // Only call typeDef if class method is not an override
-                this.typeDefinition.onDataUpdate(this, updatedData, this.spaceGraph);
-                // If typeDef handled it, maybe return early or merge logic carefully
-            }
-        }
-        // else {
-        //    // Default behavior if no override and no typeDefinition.onDataUpdate
-        //    console.log(`HtmlAppNode ${this.id} received data update:`, updatedData, 'Current data:', this.data);
-        // }
-
-        // HtmlAppNode itself can handle common style-related data updates.
-        if (updatedData.width !== undefined && this.htmlElement) {
+        // Handle base style properties if they are part of the update
+        if (updatedData.hasOwnProperty('width') && this.data.width !== undefined && this.htmlElement) {
             this.htmlElement.style.width = `${this.data.width}px`;
         }
-        if (updatedData.height !== undefined && this.htmlElement) {
+        if (updatedData.hasOwnProperty('height') && this.data.height !== undefined && this.htmlElement) {
             this.htmlElement.style.height = `${this.data.height}px`;
         }
-        if (updatedData.backgroundColor !== undefined && this.htmlElement) {
+        if (updatedData.hasOwnProperty('backgroundColor') && this.data.backgroundColor !== undefined && this.htmlElement) {
             this.htmlElement.style.backgroundColor = this.data.backgroundColor;
         }
-    }
 
+        // Declarative One-Way Data Binding
+        if (!this.htmlElement) return;
+
+        Object.keys(updatedData).forEach(dataKey => {
+            const newValue = this.data[dataKey];
+
+            // data-bind-prop="dataKey:elementProperty"
+            this.htmlElement.querySelectorAll(`[data-bind-prop^="${dataKey}:"]`).forEach(el => {
+                const binding = el.getAttribute('data-bind-prop').split(':');
+                if (binding.length === 2 && binding[0] === dataKey) {
+                    const elementProperty = binding[1];
+                    switch (elementProperty) {
+                        case 'textContent': el.textContent = newValue; break;
+                        case 'innerHTML': el.innerHTML = newValue; break;
+                        case 'value': el.value = newValue; break;
+                        case 'checked': el.checked = Boolean(newValue); break;
+                        default: console.warn(`HtmlAppNode[${this.id}]: Unknown data-bind-prop target "${elementProperty}" for dataKey "${dataKey}"`);
+                    }
+                }
+            });
+
+            // data-bind-attr="dataKey:attributeName"
+            this.htmlElement.querySelectorAll(`[data-bind-attr^="${dataKey}:"]`).forEach(el => {
+                const binding = el.getAttribute('data-bind-attr').split(':');
+                if (binding.length === 2 && binding[0] === dataKey) {
+                    const attributeName = binding[1];
+                    if (newValue === null || newValue === undefined) {
+                        el.removeAttribute(attributeName);
+                    } else {
+                        el.setAttribute(attributeName, newValue);
+                    }
+                }
+            });
+
+            // data-bind-style="dataKey:styleProperty" (camelCased)
+            this.htmlElement.querySelectorAll(`[data-bind-style^="${dataKey}:"]`).forEach(el => {
+                const binding = el.getAttribute('data-bind-style').split(':');
+                if (binding.length === 2 && binding[0] === dataKey) {
+                    const styleProperty = binding[1];
+                    el.style[styleProperty] = newValue;
+                }
+            });
+
+            // data-bind-class="dataKey:className"
+            this.htmlElement.querySelectorAll(`[data-bind-class^="${dataKey}:"]`).forEach(el => {
+                const binding = el.getAttribute('data-bind-class').split(':');
+                if (binding.length === 2 && binding[0] === dataKey) {
+                    const className = binding[1];
+                    el.classList.toggle(className, Boolean(newValue));
+                }
+            });
+        });
+
+        // Compatibility with TypeDefinition's onDataUpdate (if not overridden by subclass)
+        if (this.typeDefinition?.onDataUpdate && typeof this.typeDefinition.onDataUpdate === 'function') {
+            const isBaseMethod = this.onDataUpdate === HtmlAppNode.prototype.onDataUpdate;
+            if (isBaseMethod) {
+                this.typeDefinition.onDataUpdate(this, updatedData, this.spaceGraph);
+            }
+        }
+    }
 
     /**
      * @override
      * `onDispose()`: Called when the node is being removed from the graph.
      * Derived classes should implement this method to perform any specific cleanup beyond
-     * what `RegisteredNode.dispose()` handles (which includes removing `this.htmlElement`,
-     * cleaning up Three.js objects like `this.cssObject`, and managing event listeners
-     * registered via `this.listenTo()` or on `this`).
-     *
-     * Typically, this is used for:
-     *  - Removing event listeners attached to global objects (e.g., `window`, `document`).
-     *  - Disposing of other complex non-DOM resources the node might have created (e.g., Web Workers, AudioContexts).
-     *
-     * **Note:** Listeners attached to children of `this.htmlElement` are usually cleaned up
-     * automatically when `this.htmlElement` is removed from the DOM by `RegisteredNode.dispose()`.
-     *
-     * @example
-     * ```javascript
-     * onDispose() {
-     *   // if (this.myCustomGlobalListener) {
-     *   //   window.removeEventListener('resize', this.myCustomGlobalListener);
-     *   //   this.myCustomGlobalListener = null;
-     *   // }
-     *   console.log(`Custom HTML node ${this.id} specific cleanup done.`);
-     *   // It's good practice to call super.onDispose() if extending a class that might also have onDispose logic.
-     *   // However, HtmlAppNode's own onDispose currently only calls the typeDefinition's onDispose.
-     *   // super.onDispose(); // Call if RegisteredNode or another base might have its own onDispose.
-     * }
-     * ```
+     * what `RegisteredNode.dispose()` handles.
      */
     onDispose() {
-        // For compatibility with typeDefinition-based onDispose
-        // This allows a TypeDefinition's onDispose to be used if the class itself doesn't override this method.
         if (this.typeDefinition?.onDispose && typeof this.typeDefinition.onDispose === 'function') {
             const isBaseMethod = this.onDispose === HtmlAppNode.prototype.onDispose;
-            if (isBaseMethod) { // Only call typeDef if class method is not an override
+            if (isBaseMethod) {
                 this.typeDefinition.onDispose(this, this.spaceGraph);
             }
         }
-        // Derived classes can add further cleanup here.
     }
 
     // --- Helper Methods ---
-
     /**
-     * Queries for the first child element within this node's `this.htmlElement` that matches the CSS selector.
-     *
-     * @param {string} selector - A CSS selector string.
-     * @returns {HTMLElement | null} The first matching HTMLElement, or `null` if not found or `this.htmlElement` is not set.
-     * @example `this.inputElement = this.getChild('.my-custom-input');`
+     * Queries for the first child element within `this.htmlElement`.
+     * @param {string} selector - A CSS selector.
+     * @returns {HTMLElement | null}
      */
     getChild(selector) {
         return this.htmlElement ? $(selector, this.htmlElement) : null;
     }
 
     /**
-     * Queries for all child elements within this node's `this.htmlElement` that match the CSS selector.
-     *
-     * @param {string} selector - A CSS selector string.
-     * @returns {HTMLElement[]} An array of matching HTMLElements. Returns an empty array if none found or `this.htmlElement` is not set.
-     * @example `const buttons = this.getChildren('.control-button');`
+     * Queries for all child elements within `this.htmlElement`.
+     * @param {string} selector - A CSS selector.
+     * @returns {HTMLElement[]}
      */
     getChildren(selector) {
         return this.htmlElement ? Array.from(this.htmlElement.querySelectorAll(selector)) : [];
     }
 
     /**
-     * Helper method to stop event propagation for specified event types on an element.
-     * This is crucial for UI elements within a node (like inputs, buttons, scrollable areas)
-     * to prevent them from triggering graph-level interactions (node dragging, graph panning/zooming).
-     *
-     * @param {HTMLElement | string} elementOrSelector - The HTML element or a CSS selector string
-     *                                                   to find the element within this node's `htmlElement`.
-     * @param {string | string[]} [eventTypes=['pointerdown', 'wheel']] - A string or array of event types
-     *                                                                    for which to stop propagation.
-     *
-     * Example:
-     * ```javascript
-     * const myInput = this.getChild('.my-input');
-     * this.stopEventPropagation(myInput, ['pointerdown', 'click', 'wheel']);
-     * // or directly with a selector:
-     * this.stopEventPropagation('.my-scrollable-area', 'wheel');
-     * ```
+     * Stops event propagation for specified event types on an element.
+     * Crucial for interactive elements within the node to prevent graph interactions.
+     * @param {HTMLElement | string} elementOrSelector - The element or a CSS selector for it.
+     * @param {string | string[]} [eventTypes=['pointerdown', 'wheel']] - Events to stop.
      */
     stopEventPropagation(elementOrSelector, eventTypes = ['pointerdown', 'wheel']) {
         let element = elementOrSelector;
         if (typeof elementOrSelector === 'string') {
             element = this.getChild(elementOrSelector);
         }
-
         if (!element) {
-            console.warn(`stopEventPropagation: Element not found for selector "${elementOrSelector}" in node ${this.id}`);
+            console.warn(`HtmlAppNode[${this.id}]: stopEventPropagation - Element not found for selector/object "${elementOrSelector}"`);
             return;
         }
-
         const events = Array.isArray(eventTypes) ? eventTypes : [eventTypes];
         events.forEach(eventType => {
             element.addEventListener(eventType, (e) => e.stopPropagation());
@@ -336,38 +420,59 @@ export class HtmlAppNode extends RegisteredNode {
     }
 
     /**
-     * @override
-     * Default update logic for HtmlAppNode. Ensures position and billboarding (if enabled).
-     * Calls the `onUpdate` from the `typeDefinition` if it exists.
-     * Derived classes can override this for custom per-frame updates, but should typically call `super.update(spaceGraphInstance)`.
+     * Automatically stops event propagation for common interactive elements within this node.
+     * This is a convenience method typically called in `onInit()` to prevent inputs, buttons, etc.,
+     * from interfering with graph-level interactions like panning or zooming.
+     *
+     * @param {string[]} [selectors=['input', 'button', 'textarea', 'select', '[contenteditable="true"]']]
+     *        An array of CSS selectors for elements that should have event propagation stopped.
+     * @param {string[]} [eventTypes=['pointerdown', 'wheel']]
+     *        An array of event types (e.g., 'pointerdown', 'wheel', 'click', 'input', 'keydown')
+     *        for which propagation should be stopped on the selected elements.
+     *
+     * @example
+     * class MyInteractiveNode extends HtmlAppNode {
+     *   onInit() {
+     *     this.htmlElement.innerHTML = `
+     *       <input type="text" placeholder="Type here...">
+     *       <button>Submit</button>
+     *       <div contenteditable="true">Edit me</div>
+     *     `;
+     *     this.autoStopPropagation(); // Stops 'pointerdown' and 'wheel' for the input, button, and contenteditable div.
+     *
+     *     // To stop 'keydown' as well for inputs to allow typing without triggering graph shortcuts:
+     *     // this.autoStopPropagation(['input', 'textarea'], ['pointerdown', 'wheel', 'keydown']);
+     *   }
+     * }
      */
-    update(spaceGraphInstance) {
-        // Use the graph instance passed during update, or the one stored on the node
-        const graph = spaceGraphInstance || this.spaceGraph;
+    autoStopPropagation(
+        selectors = ['input', 'button', 'textarea', 'select', '[contenteditable="true"]'],
+        eventTypes = ['pointerdown', 'wheel']
+    ) {
+        if (!this.htmlElement) return;
+        selectors.forEach(selector => {
+            const elements = this.getChildren(selector);
+            elements.forEach(element => {
+                this.stopEventPropagation(element, eventTypes);
+            });
+        });
+    }
 
+    /** @override */
+    update(spaceGraphInstance) {
+        const graph = spaceGraphInstance || this.spaceGraph;
         if (this.cssObject) {
             this.cssObject.position.copy(this.position);
-            // Handle billboarding (node faces camera)
-            if (this.data.billboard !== false && graph?._camera) { // Default to true if undefined
+            if (this.data.billboard !== false && graph?._camera) {
                 this.cssObject.quaternion.copy(graph._camera.quaternion);
             }
         }
-
-        // For compatibility, call typeDefinition's onUpdate
         if (this.typeDefinition?.onUpdate) {
             this.typeDefinition.onUpdate(this, graph);
         }
-        // Derived classes can add specific update logic here if needed,
-        // or preferably override the onUpdate method in their class.
     }
 
-    /**
-     * @override
-     * Calculates the bounding sphere radius.
-     * Uses `this.data.width` and `this.data.height`.
-     * Can be overridden by `getBoundingSphereRadius` in `typeDefinition` for compatibility,
-     * or by derived classes.
-     */
+    /** @override */
     getBoundingSphereRadius() {
         if (this.typeDefinition?.getBoundingSphereRadius) {
             return this.typeDefinition.getBoundingSphereRadius(this, this.spaceGraph);
@@ -377,13 +482,9 @@ export class HtmlAppNode extends RegisteredNode {
         return Math.sqrt(width ** 2 + height ** 2) / 2;
     }
 
-    /**
-     * @override
-     * Applies selection styling. Calls `onSetSelectedStyle` from `typeDefinition` or adds/removes 'selected' class.
-     */
+    /** @override */
     setSelectedStyle(selected) {
-        super.setSelectedStyle(selected); // Handles ports if any from RegisteredNode
-
+        super.setSelectedStyle(selected);
         if (this.typeDefinition?.onSetSelectedStyle) {
             this.typeDefinition.onSetSelectedStyle(this, selected, this.spaceGraph);
         } else {
@@ -392,47 +493,78 @@ export class HtmlAppNode extends RegisteredNode {
     }
 }
 
-// To make this class usable, it needs to be registered with SpaceGraph
-// typically by modifying the `SpaceGraph.addNode` logic or by creating
-// a new registration mechanism for classes extending RegisteredNode.
-// For now, we will assume that when a type is registered, if its definition
-// points to a class (like HtmlAppNode or its derivatives), SpaceGraph will
-// instantiate that class instead of the generic RegisteredNode.
-// This might require a change in `SpaceGraph.addNode` or `SpaceGraph.registerNodeType`.
-
-// Example of how a derived node's typeDefinition might look:
+//
+// **Relationship between HtmlAppNode class methods and TypeDefinition:**
+// When you use a class that extends `HtmlAppNode` (e.g., `class MyNode extends HtmlAppNode`)
+// and register it with SpaceGraph using a `TypeDefinition`'s `nodeClass` property:
+// - The lifecycle methods like `onInit`, `onDataUpdate`, `onDispose` should ideally be
+//   implemented as methods directly within your `MyNode` class.
+// - The `TypeDefinition` object passed during registration still needs to provide `typeName`
+//   (used as the key for registration) and `nodeClass` (pointing to `MyNode`).
+// - The `getDefaults` method should also be part of the `TypeDefinition` as it's used early
+//   in the node instantiation process.
+// - Other `TypeDefinition` methods (like `onCreate`, `onUpdate` from the TypeDefinition object itself)
+//   are generally *not* needed or used if `nodeClass` is specified and the class implements
+//   the corresponding lifecycle methods. `HtmlAppNode` provides its own internal `onCreate` equivalent
+//   (which calls `onInit` and sets up declarative bindings) and `onUpdate` (which handles declarative data binding).
+//   It's cleaner to put all custom logic in the class methods of your `HtmlAppNode` subclass.
+//
 /*
-const MySpecificAppNodeDefinition = {
-    typeName: 'my-specific-app', // Used for CSS class and registration
-    nodeClass: MySpecificAppNode, // The class itself
-    getDefaults: (nodeInst, graphInst) => ({ // `this` context here is tricky, nodeInst is better
-        ...HtmlAppNode.prototype.getDefaultData.call(nodeInst), // Or some base defaults
-        width: 250,
-        height: 120,
-        customData: 'initial value',
-        label: 'My Specific Node',
-        // backgroundColor: 'lightcoral', // Optional: override default bg
-    }),
-    // onCreate, onUpdate, onDispose etc. might not be needed if handled by the class methods
+// Example:
+// In your main graph setup script:
+const myFancyNodeType = {
+  // typeName is the key for registration: spaceGraph.registerNodeType('my-fancy-node', myFancyNodeType);
+  nodeClass: MyFancyNode, // Your class extending HtmlAppNode
+  getDefaults: (node) => ({ // node is the instance being created
+    width: 300,
+    height: 200,
+    label: node.data.id || 'Fancy Node', // Access initial data if needed
+    initialCounter: 5,
+    backgroundColor: 'cornflowerblue' // This will be handled by HtmlAppNode's onDataUpdate
+  })
 };
+// spaceGraph.registerNodeType('my-fancy-node', myFancyNodeType);
 
-// Then, a class MySpecificAppNode extends HtmlAppNode:
-class MySpecificAppNode extends HtmlAppNode {
-    onInit() {
-        super.onInit(); // Good practice if base onInit does something
-        this.htmlElement.innerHTML = `<h2>${this.data.label}</h2><p>${this.data.customData}</p>`;
-        const p = this.getChild('p');
-        this.stopEventPropagation(p, 'wheel'); // Example
-    }
+// In MyFancyNode.js (or same file, after HtmlAppNode definition):
+class MyFancyNode extends HtmlAppNode {
+  onInit() {
+    // this.data is populated with defaults and initialUserData by now
+    this.counter = this.data.initialCounter; // Local state, if needed beyond this.data
 
-    onDataUpdate(updatedData) {
-        super.onDataUpdate(updatedData); // Good practice
-        if (updatedData.customData !== undefined || updatedData.label !== undefined) {
-            const h2 = this.getChild('h2');
-            const p = this.getChild('p');
-            if (h2) h2.textContent = this.data.label;
-            if (p) p.textContent = this.data.customData;
-        }
+    this.htmlElement.innerHTML = `
+      <h3 data-bind-prop="label:textContent"></h3>
+      <p>Counter: <span class="count" data-bind-prop="initialCounter:textContent"></span></p>
+      <button data-event-click="incrementCounter:stop">Increment</button>
+      <div data-bind-class="isImportant:important-status-style">Status Message</div>
+    `;
+    // Note: data-bind-prop for label and initialCounter will make them display initial values.
+    //       No need to manually set them here if they are in this.data.
+    this.autoStopPropagation(); // Setup default event stopping for button, etc.
+  }
+
+  incrementCounter() {
+    this.counter++;
+    // To make the counter display update via data-binding, update this.data:
+    this.spaceGraph.updateNodeData(this.id, { initialCounter: this.counter });
+    // This will trigger onDataUpdate, which handles the data-bind-prop.
+    this.emit('counterChanged', { count: this.counter });
+  }
+
+  onDataUpdate(updatedData) {
+    super.onDataUpdate(updatedData); // IMPORTANT: This handles all declarative bindings
+
+    // Custom logic if needed, for changes not covered by declarative bindings
+    if (updatedData.hasOwnProperty('isImportant')) {
+        console.log('isImportant flag changed to:', this.data.isImportant);
     }
+    // If initialCounter was updated, this.counter (local state) might need sync if used elsewhere.
+    if (updatedData.hasOwnProperty('initialCounter')) {
+        this.counter = this.data.initialCounter;
+    }
+  }
+
+  onDispose() {
+    console.log(`MyFancyNode ${this.id} disposed.`);
+  }
 }
 */

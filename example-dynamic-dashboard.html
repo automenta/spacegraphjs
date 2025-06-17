@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpaceGraph.js - Dynamic Dashboard Example</title>
+    <link href="./index.css" rel="stylesheet" />
+    <style>
+        body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; background-color: #f0f0f0; }
+        #graph-container { width: 100vw; height: 100vh; }
+
+        /* Basic styling for dashboard nodes */
+        .dashboard-widget-node .node-html { /* Applied by HtmlAppNode if type is 'dashboard-widget' */
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Important for canvas/chart fitting */
+        }
+        .dashboard-widget-node .widget-header {
+            background-color: #007bff;
+            color: white;
+            padding: 8px 12px;
+            font-size: 1em;
+            text-align: center;
+        }
+        .dashboard-widget-node .widget-content {
+            padding: 10px;
+            flex-grow: 1;
+            display: flex; /* For canvas child to fill space */
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        .dashboard-widget-node canvas {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .data-source-node .node-html {
+            background-color: #e9ecef;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            padding: 15px;
+            text-align: center;
+        }
+        .data-source-node p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="graph-container"></div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
+                "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js",
+                "chart.js": "https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import { SpaceGraph } from './spacegraph.js';
+        import { HtmlAppNode } from './js/HtmlAppNode.js'; // Assuming HtmlAppNode is here
+        import Chart from 'chart.js';
+
+        // --- DataSourceNode Implementation ---
+        class DataSourceNode extends HtmlAppNode {
+            onInit() {
+                this.htmlElement.innerHTML = `
+                    <div style="padding:10px;">
+                        <h4>${this.data.label || 'Data Source'}</h4>
+                        <p>Emitting: <strong data-bind-prop="currentValueText:textContent">${this.data.currentValueText || "N/A"}</strong></p>
+                        <small>ID: ${this.id}</small>
+                    </div>
+                `;
+                this.autoStopPropagation(); // For potential future interactive elements
+
+                this.data.currentValueText = "Starting...";
+
+                // Periodically emit data
+                this.emitInterval = setInterval(() => {
+                    const newValue = Math.random() * 100;
+                    const newData = {
+                        value: newValue,
+                        timestamp: Date.now()
+                    };
+                    this.spaceGraph.updateNodeData(this.id, { currentValueText: newValue.toFixed(2) })
+                    this.emit('dataOutput', newData);
+                }, this.data.updateInterval || 2000);
+            }
+
+            onDispose() {
+                if (this.emitInterval) {
+                    clearInterval(this.emitInterval);
+                }
+                console.log(`DataSourceNode ${this.id} disposed.`);
+            }
+        }
+
+        // --- LineChartNode Implementation ---
+        class LineChartNode extends HtmlAppNode {
+            onInit() {
+                this.htmlElement.innerHTML = `
+                    <div class="widget-header" data-bind-prop="label:textContent">${this.data.label || 'Chart'}</div>
+                    <div class="widget-content">
+                        <canvas style="width:100%; height:100%;"></canvas>
+                    </div>
+                `;
+                this.canvas = this.getChild('canvas');
+                this.chartInstance = null;
+                this.chartData = {
+                    labels: [],
+                    datasets: [{
+                        label: this.data.datasetLabel || 'Value',
+                        data: [],
+                        borderColor: this.data.lineColor || 'rgb(75, 192, 192)',
+                        tension: 0.1,
+                        fill: false
+                    }]
+                };
+                this.maxDataPoints = this.data.maxDataPoints || 20;
+
+                this.initializeChart();
+                this.autoStopPropagation(); // Stop propagation on canvas if chart interactions are enabled
+            }
+
+            initializeChart() {
+                if (!this.canvas) return;
+                const ctx = this.canvas.getContext('2d');
+                this.chartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: this.chartData,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: { duration: 200 },
+                        scales: {
+                            x: {
+                                type: 'category', // Using category for simple timestamp labels
+                                ticks: { display: false } // Hide x-axis labels for simplicity
+                            },
+                            y: {
+                                beginAtZero: true,
+                                suggestedMax: 100 // Adjust as needed
+                            }
+                        },
+                        plugins: {
+                            legend: { display: this.data.showLegend || false }
+                        }
+                    }
+                });
+            }
+
+            onDataUpdate(updatedData) {
+                super.onDataUpdate(updatedData); // Handle declarative bindings from base class
+
+                if (updatedData.hasOwnProperty('dataIn')) {
+                    const newDataPoint = this.data.dataIn; // this.data already has the new value
+                    if (newDataPoint && typeof newDataPoint.value === 'number') {
+                        if (this.chartData.labels.length >= this.maxDataPoints) {
+                            this.chartData.labels.shift();
+                            this.chartData.datasets[0].data.shift();
+                        }
+                        // Using a simple counter or timestamp for labels
+                        this.chartData.labels.push(new Date(newDataPoint.timestamp).toLocaleTimeString().split(" ")[0]);
+                        this.chartData.datasets[0].data.push(newDataPoint.value);
+
+                        if (this.chartInstance) {
+                            this.chartInstance.update();
+                        }
+                    }
+                }
+                if (updatedData.hasOwnProperty('label') && this.chartInstance) {
+                     // Already handled by data-bind-prop if widget-header uses it
+                }
+            }
+
+            onDispose() {
+                if (this.chartInstance) {
+                    this.chartInstance.destroy();
+                }
+                console.log(`LineChartNode ${this.id} disposed.`);
+            }
+        }
+
+        // --- SpaceGraph Setup ---
+        const container = document.getElementById('graph-container');
+        const graph = new SpaceGraph(container, {
+            defaults: {
+                node: {
+                    html: { billboard: true } // Make HTML nodes face camera by default
+                }
+            }
+        });
+
+        // Register node types
+        graph.registerNodeType('data-source', {
+            nodeClass: DataSourceNode,
+            getDefaults: (node) => ({
+                label: 'Live Data Source',
+                width: 200, height: 100,
+                updateInterval: 1500, // ms
+                ports: { outputs: { dataOutput: { label: 'Data Stream', type: 'object' } } }
+            })
+        });
+
+        graph.registerNodeType('line-chart-widget', {
+            nodeClass: LineChartNode,
+            getDefaults: (node) => ({
+                label: 'Real-time Line Chart',
+                width: 350, height: 250, // Adjusted size for chart
+                datasetLabel: 'Sensor Value',
+                lineColor: 'rgb(255, 99, 132)',
+                maxDataPoints: 30,
+                ports: { inputs: { dataIn: { label: 'Data Input', type: 'object' } } }
+            })
+        });
+
+        // Add nodes
+        const source1 = graph.addNode({ type: 'data-source', id: 'source1', x: -300, y: 0, label: 'Sensor Alpha', updateInterval: 1000 });
+        const source2 = graph.addNode({ type: 'data-source', id: 'source2', x: -300, y: 150, label: 'Sensor Beta', updateInterval: 2500 });
+
+        const chart1 = graph.addNode({ type: 'line-chart-widget', id: 'chart1', x: 100, y: -50, label: 'Alpha Readings' });
+        const chart2 = graph.addNode({ type: 'line-chart-widget', id: 'chart2', x: 100, y: 200, label: 'Beta Readings', lineColor: 'rgb(54, 162, 235)' });
+        const chart3 = graph.addNode({ type: 'line-chart-widget', id: 'chart3', x: 500, y: 75, label: 'Alpha (Aggregated View)', datasetLabel: "Alpha Agg.", lineColor: 'rgb(75, 192, 192)'});
+
+
+        // Connect nodes
+        if (source1 && chart1) {
+            graph.addEdge(source1, chart1, { sourcePort: 'dataOutput', targetPort: 'dataIn', label: 'To Alpha Chart' });
+        }
+        if (source2 && chart2) {
+            graph.addEdge(source2, chart2, { sourcePort: 'dataOutput', targetPort: 'dataIn', label: 'To Beta Chart' });
+        }
+         if (source1 && chart3) { // Another chart listening to source1
+            graph.addEdge(source1, chart3, { sourcePort: 'dataOutput', targetPort: 'dataIn', label: 'To Agg. Alpha Chart' });
+        }
+
+        graph.centerView();
+        graph.cameraController.zoom({ deltaY: -150 }); // Zoom out a bit more
+
+        // For debugging in browser console
+        window.graph = graph;
+        window.Chart = Chart;
+
+    </script>
+</body>
+</html>
