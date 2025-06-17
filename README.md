@@ -151,128 +151,76 @@ if (htmlNode && shapeNode) {
 graph.centerView(); // Or graph.centerView([htmlNode, shapeNode])
 ```
 
-### 6. Creating a Custom HTML Node (`HtmlAppNode`)
+### 6. Creating Custom Interactive HTML Nodes (`HtmlAppNode`)
 
-You can define your own interactive HTML nodes by extending `HtmlAppNode`. `HtmlAppNode` provides the base functionality for HTML-based nodes that can have their own application logic.
+For creating interactive HTML nodes, SpaceGraph offers `HtmlAppNode` as a convenient base class. This allows you to define nodes with their own HTML structure, CSS styling, and JavaScript behavior.
 
-**a. Simple Example Class (Counter Node):**
+You would typically define a class that extends `HtmlAppNode`, implement its `onInit` method to set up its HTML and event listeners, and then define a `typeDefinition` object that SpaceGraph uses to instantiate your custom node.
 
-Let's create a node with a button that increments a counter.
-
-```javascript
-// Place this class definition within your <script type="module">,
-// or in a separate JS file and import it.
-// Ensure HtmlAppNode is imported as shown in step 2.
-
-class CounterNode extends HtmlAppNode {
-    constructor(id, sg, config) {
-        super(id, sg, config); // Pass all args to super constructor
-        // initialUserData (config) is available in this.data after super() call if getDefaults is set up correctly
-        this.count = this.data.initialCount || 0;
-    }
-
-    // onInit() is called by HtmlAppNode's constructor after the main element is ready
-    onInit() {
-        // this.htmlElement is the main DOM element for this node, created by HtmlAppNode.
-        // this.contentElement is often the same as this.htmlElement unless customized further.
-        // For simplicity, we'll populate this.htmlElement directly.
-        this.htmlElement.innerHTML = `
-            <div style="padding: 10px; text-align: center; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center;">
-                <h4>Counter</h4>
-                <p>Count: <span class="count-display">${this.count}</span></p>
-                <button class="increment-button" style="padding: 5px 10px;">Increment</button>
-            </div>
-        `;
-
-        // Query for elements within this.htmlElement
-        const incrementButton = this.htmlElement.querySelector('.increment-button');
-        const countDisplay = this.htmlElement.querySelector('.count-display');
-
-        // Add event listener to the button
-        if (incrementButton && countDisplay) {
-            incrementButton.addEventListener('click', () => {
-                this.count++;
-                countDisplay.textContent = this.count;
-                // If the node's size needs to change dynamically based on content,
-                // you might call this.updateSize() if available and needed,
-                // or manage size via CSS and ensure graph updates if bounds change.
-                // For this simple counter, size is static.
-            });
-            // Important: Stop pointer events on interactive elements to prevent graph dragging/panning
-            this.stopEventPropagation(incrementButton);
-        }
-    }
-
-    // Optional: onDataUpdate can be used to react to external data changes
-    // onDataUpdate(updatedData) {
-    //   if (updatedData.hasOwnProperty('initialCount')) {
-    //     this.count = this.data.initialCount; // this.data already has the new value
-    //     const countDisplay = this.htmlElement.querySelector('.count-display');
-    //     if (countDisplay) countDisplay.textContent = this.count;
-    //   }
-    // }
-}
-```
-
-**b. Corresponding `typeDefinition`:**
-
-This tells SpaceGraph how to handle your custom node type. It includes the class itself and default properties.
+Here's a conceptual example of how you might register and add such a node:
 
 ```javascript
-// Inside the else block in your main script, before adding the custom node instance:
-const counterNodeTypeDefinition = {
-    name: 'counter', // The 'type' string you'll use when adding nodes
-    appNodeClass: CounterNode, // The class for this node type
-    defaultWidth: 180,         // Optional: default width in pixels
-    defaultHeight: 120,        // Optional: default height in pixels
-    // You can add other default properties specific to 'counter' nodes here
-    // e.g., defaultColor: 0xffcc00,
+// --- Somewhere in your script, define your custom node class ---
+// class MyCustomAppNode extends HtmlAppNode {
+//   onInit() {
+//     this.htmlElement.innerHTML = '<div>My Custom App Content</div>';
+//     // ... more setup ...
+//   }
+//   // ... other methods like onDataUpdate, onDispose ...
+// }
+
+// --- In your main graph setup script ---
+
+// Define the type definition for your custom app node
+const myCustomAppNodeTypeDefinition = {
+    typeName: 'my-custom-app-node', // Used for CSS class generation like 'my-custom-app-node-node'
+    nodeClass: MyCustomAppNode,     // Reference to your custom class
+    getDefaults: (nodeInst) => ({   // Provides default data for instances
+        width: 200,
+        height: 100,
+        label: nodeInst?.id || 'My App Node',
+        backgroundColor: 'lightcoral',
+        // ... any other custom default properties your node needs
+    }),
 };
-```
 
-**c. Registering the Custom Node Type:**
+// Register the new node type with SpaceGraph
+graph.registerNodeType('my-custom-app-node', myCustomAppNodeTypeDefinition);
 
-Make SpaceGraph aware of your new node type.
-
-```javascript
-// Inside the else block:
-graph.getNodeTypeRegistry().registerNodeType(counterNodeTypeDefinition);
-```
-
-**d. Adding an Instance of the Custom Node:**
-
-Now you can add nodes of type `'counter'`. You can also pass initial configuration to your custom node.
-
-```javascript
-// Inside the else block:
-const customCounterNode = graph.addNode({
-    id: 'my-counter-node',
-    type: 'counter', // Matches 'name' in typeDefinition
+// Add an instance of your custom app node
+const myAppNodeInstance = graph.addNode({
+    type: 'my-custom-app-node',
+    id: 'app-node-1',
     x: 0,
     y: 200,
-    initialCount: 5 // Custom property passed to CounterNode constructor via config
+    data: { label: 'Specific Instance Label' } // Override defaults
 });
 
-// Connect it to another node if you like
-if (shapeNode && customCounterNode) {
-    graph.addEdge(shapeNode, customCounterNode, { label: 'Triggers' });
+// Connect it if needed
+if (htmlNode && myAppNodeInstance) {
+    graph.addEdge(htmlNode, myAppNodeInstance, { label: 'Links To' });
 }
 
-graph.centerView(); // Recenter to see all nodes
+graph.centerView(); // Recenter
 ```
+
+For a detailed walkthrough of creating a 'Counter Node' example using `HtmlAppNode`, including the full class definition, event handling, and styling, please see the **[HtmlAppNode Tutorial](TUTORIAL_HTML_APP_NODE.md)**.
 
 ### 7. Next Steps
 
-You've now seen the basics of SpaceGraph.js! From here, you can explore:
+You've now seen the basics of setting up SpaceGraph.js, adding built-in nodes, and have an idea of how to approach custom HTML nodes!
 
--   **More Node Types**: Experiment with different shapes, styles, and more complex HTML content.
--   **Force-Directed Layouts**: Let SpaceGraph automatically arrange your nodes.
--   **Event System**: React to user interactions and graph changes.
--   **Configuration**: Customize default behaviors for camera, nodes, and edges.
--   **Advanced Custom Nodes**: Create sophisticated nodes with unique behaviors and appearances by extending `HtmlAppNode` or even `BaseNode` for fully custom WebGL rendering.
--   **Cookbook for Advanced Styling and More**: Check out the [SpaceGraph.js Cookbook](COOKBOOK.md) for practical recipes on advanced styling, custom interactions, and other common tasks.
+From here, you can explore:
 
-Refer to the "Key Features", "Configuration", "Event System", and "API Documentation" sections in this README for more details.
+-   **[HtmlAppNode Tutorial](TUTORIAL_HTML_APP_NODE.md)**: Dive deep into creating interactive HTML nodes.
+-   **More Node Types**: Experiment with different shapes, styles (`type: 'note'`, `type: 'shape'`).
+-   **Force-Directed Layouts**: Let SpaceGraph automatically arrange your nodes (see `CORE_CONCEPTS.md`).
+-   **Event System**: React to user interactions and graph changes (details below and in `CORE_CONCEPTS.md`).
+-   **Configuration**: Customize default behaviors for camera, nodes, and edges (details below and in `CORE_CONCEPTS.md`).
+-   **[SpaceGraph.js Cookbook](COOKBOOK.md)**: Find practical recipes for advanced styling, custom interactions, and other common tasks.
+-   **[Core Concepts Document](CORE_CONCEPTS.md)**: Understand the underlying architecture, event system, node lifecycle, and more.
+
+Refer to the "Key Features", "Configuration", "Event System", and "API Documentation" sections below for more summarized details.
 
 ---
 
@@ -350,7 +298,7 @@ const myConfig = {
 const graph = new SpaceGraph(container, myConfig, {}); // Pass config as second arg
 ```
 
-Refer to the API documentation (JSDoc for `SpaceGraphConfig` in `spacegraph.js`) for the full structure and all available options.
+Refer to the API documentation (JSDoc for `SpaceGraphConfig` in `spacegraph.js`) for the full structure and all available options. For a conceptual overview, see [Configuration in Core Concepts](CORE_CONCEPTS.md#configuration-1).
 
 ---
 
@@ -389,7 +337,7 @@ graph.on('nodeAdded', (eventData) => {
 - `nodeSelected`: When a node is selected or deselected. (Data: `{ selectedNode: BaseNode | null, previouslySelectedNode: BaseNode | null }`)
 - `edgeSelected`: When an edge is selected or deselected. (Data: `{ selectedEdge: Edge | null, previouslySelectedEdge: Edge | null }`)
 
-See the API documentation (JSDoc in `spacegraph.js`) for more details on events and their data.
+See the API documentation (JSDoc in `spacegraph.js`) for more details on events and their data. For a more detailed explanation of the event system and its role in edge linking and inter-node communication, see the [Event System in Core Concepts](CORE_CONCEPTS.md#event-systems-and-edge-linking).
 
 ---
 
@@ -438,7 +386,9 @@ These examples are a great way to see SpaceGraph.js in action and to get started
 
 For more in-depth guides and practical examples, refer to:
 
+-   **[Core Concepts Document](CORE_CONCEPTS.md)**: Delves into the architecture, node lifecycle, rendering pipeline, and advanced topics.
 -   **[SpaceGraph.js Cookbook](COOKBOOK.md)**: Contains recipes for advanced styling, custom interactions, performance tips, and more.
+-   **[HtmlAppNode Tutorial](TUTORIAL_HTML_APP_NODE.md)**: A detailed guide to creating custom interactive HTML nodes.
 -   The example HTML files in the root directory also showcase various features.
 
 ---

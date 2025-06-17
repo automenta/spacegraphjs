@@ -10,7 +10,7 @@
         #graph-container { width: 100vw; height: 100vh; }
 
         /* Styling for IdeaNode */
-        .idea-node .node-html { /* Applied by HtmlAppNode for type 'idea' */
+        .html-app-node.idea-node { /* Applied by HtmlAppNode for type 'idea' */
             background-color: #fff;
             border: 1px solid #ccc;
             border-radius: 8px;
@@ -22,7 +22,7 @@
             min-width: 100px; /* Minimum width */
             min-height: 50px; /* Minimum height */
         }
-        .idea-node .idea-text {
+        .html-app-node.idea-node .idea-text {
             padding: 10px 15px;
             cursor: text;
             text-align: center;
@@ -30,20 +30,22 @@
             min-height: 30px; /* Ensure it's clickable */
             box-sizing: border-box; /* Include padding in width/height */
         }
-        .idea-node .idea-text:focus {
+        .html-app-node.idea-node .idea-text:focus {
             outline: 2px solid #007bff;
             background-color: #f8f9fa;
         }
         /* Hide node-controls by default for a cleaner look */
-        .idea-node .node-controls {
+        /* Note: .node-controls are not currently part of IdeaNode's default HTML template in this example,
+           but if they were, this is how they'd be styled. */
+        .html-app-node.idea-node .node-controls {
             display: none;
             position: absolute;
             bottom: -25px; /* Position below the node */
             left: 50%;
             transform: translateX(-50%);
         }
-        .idea-node:hover .node-controls,
-        .idea-node.selected .node-controls { /* Show on hover or selection */
+        .html-app-node.idea-node:hover .node-controls,
+        .html-app-node.idea-node.selected .node-controls { /* Show on hover or selection */
             display: flex;
         }
     </style>

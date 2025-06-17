@@ -12,7 +12,7 @@
         <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
         <style>
             /* Styles for Markdown Editor Node (can be moved to index.css later) */
-            .node-html.markdown-editor-node .editor-area {
+            .html-app-node.markdown-editor-node .editor-area {
                 /* Target textarea within the specific node type */
                 background-color: #2d2d2d; /* Darker background for text area */
                 color: #f0f0f0; /* Light text */
@@ -22,7 +22,7 @@
                 margin: 0; /* Remove default textarea margin */
                 box-sizing: border-box;
             }
-            .node-html.markdown-editor-node .preview-area {
+            .html-app-node.markdown-editor-node .preview-area {
                 /* Target preview div */
                 background-color: #fff; /* White background for preview */
                 color: #333; /* Dark text for preview */
@@ -30,10 +30,7 @@
                 overflow-y: auto;
                 box-sizing: border-box;
             }
-            /* Ensure node-html itself doesn't add extra padding if children handle it */
-            .node-html.markdown-editor-node .node-inner-wrapper {
-                padding: 0;
-            }
+            /* .node-inner-wrapper rule removed as it's no longer applicable to MarkdownEditorNode's structure */
 
             /* Task List Node Specific Styles */
             /* Select using the classes added by HtmlAppNode: .html-app-node and .task-list-node (from typeName) */

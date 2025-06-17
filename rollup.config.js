@@ -6,7 +6,7 @@ const basePlugins = [resolve(), commonjs()];
 
 export default {
     input: 'spacegraph.js',
-    external: [], // three and gsap will now be bundled
+    external: ['three', 'gsap'],
     plugins: basePlugins, // Apply base plugins at the top level
     output: [
         // Non-minified outputs
@@ -23,8 +23,8 @@ export default {
             sourcemap: true,
             // globals are mainly for external UMD dependencies
             globals: {
-                // three: 'THREE', // No longer external
-                // gsap: 'gsap',   // No longer external
+                three: 'THREE',
+                gsap: 'gsap',
             },
             // plugins array removed, basePlugins are top-level
         },
@@ -41,8 +41,8 @@ export default {
             name: 'SpaceGraphZUI',
             sourcemap: true,
             globals: {
-                // three: 'THREE', // No longer external
-                // gsap: 'gsap',   // No longer external
+                three: 'THREE',
+                gsap: 'gsap',
             },
             plugins: [terser()], // Only terser here, basePlugins are top-level
         },

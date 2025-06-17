@@ -53,11 +53,14 @@
         "url": "https://github.com/automenta/spacegraphjs/issues"
     },
     "homepage": "https://github.com/automenta/spacegraphjs#readme",
-    "dependencies": {
+    "dependencies": {},
+    "peerDependencies": {
         "gsap": "^3.13.0",
         "three": "^0.177.0"
     },
     "devDependencies": {
+        "gsap": "^3.13.0",
+        "three": "^0.177.0",
         "@rollup/plugin-commonjs": "^28.0.5",
         "@rollup/plugin-node-resolve": "^16.0.1",
         "@rollup/plugin-terser": "^0.4.4",

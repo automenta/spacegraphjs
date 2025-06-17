@@ -347,91 +347,7 @@ For nodes that require rich HTML-based UIs, custom logic, and interactivity, ext
     - Use `this.emit(outputPortName, payload)` to send data from output ports (defined in `this.data.ports.outputs`).
     - Use `this.listenTo(otherNode, eventName, callback)` for direct event-based communication.
 
-### Example `HtmlAppNode` Walkthrough (Conceptual Markdown Editor)
-
-Let's refine the Markdown Editor concept using the `HtmlAppNode` pattern.
-
-**1. `MyMarkdownEditorNode.js` (Class Definition)**
-```javascript
-import { HtmlAppNode } from './js/HtmlAppNode.js'; // Adjust path
-// Assume Marked.js library is available globally or imported
-// import { marked } from 'marked'; // If using as a module
-
-class MyMarkdownEditorNode extends HtmlAppNode {
-    onInit() {
-        this.htmlElement.style.display = 'flex';
-        this.htmlElement.style.flexDirection = 'column';
-        this.htmlElement.innerHTML = `
-            <textarea class="markdown-input" style="flex: 1; resize: none;"></textarea>
-            <div class="markdown-preview" style="flex: 1; overflow-y: auto; border-top: 1px solid #ccc; padding: 5px;"></div>
-        `;
-
-        this.textarea = this.getChild('.markdown-input');
-        this.preview = this.getChild('.markdown-preview');
-
-        // Load initial content
-        if (this.data.markdownContent) {
-            this.textarea.value = this.data.markdownContent;
-            this.renderPreview();
-        }
-
-        this.textarea.addEventListener('input', () => {
-            this.data.markdownContent = this.textarea.value;
-            this.renderPreview();
-            this.emit('html_out', this.preview.innerHTML); // Emit HTML from 'html_out' port
-        });
-
-        // Stop propagation for text area to allow typing and scrolling
-        this.stopEventPropagation(this.textarea, ['pointerdown', 'wheel', 'input', 'keydown']);
-        this.stopEventPropagation(this.preview, 'wheel'); // Allow scrolling preview
-    }
-
-    renderPreview() {
-        if (typeof marked === 'function') { // Check if Marked.js is available
-            this.preview.innerHTML = marked.parse(this.data.markdownContent || '');
-        } else {
-            this.preview.textContent = 'Marked.js library not found.';
-        }
-    }
-
-    onDataUpdate(updatedData) {
-        // super.onDataUpdate(updatedData); // For base class handling of width/height etc.
-        if (updatedData.hasOwnProperty('md_in')) { // Check if 'md_in' port/data changed
-            this.data.markdownContent = this.data.md_in; // this.data already updated
-            this.textarea.value = this.data.markdownContent;
-            this.renderPreview();
-            this.emit('html_out', this.preview.innerHTML);
-        }
-    }
-
-    onDispose() {
-        console.log(`Markdown editor ${this.id} disposed.`);
-    }
-}
-```
-
-**2. Registration (in your main script)**
-```javascript
-const markdownEditorType = {
-  nodeClass: MyMarkdownEditorNode,
-  getDefaults: (node) => ({
-    label: node.data.id || 'Markdown Editor',
-    width: 400,
-    height: 300,
-    markdownContent: '# Hello\n\nStart typing...',
-    ports: {
-      inputs: { md_in: { label: 'Markdown In', type: 'string' } },
-      outputs: { html_out: { label: 'HTML Out', type: 'string' } }
-    }
-  })
-};
-spaceGraph.registerNodeType('markdown-editor', markdownEditorType);
-
-// Add an instance:
-// spaceGraph.addNode({ type: 'markdown-editor', id: 'md1', markdownContent: '*Initial content*' });
-```
-
-This `HtmlAppNode` approach encapsulates the node's logic within its class, making it more organized and reusable.
+The `HtmlAppNode` class provides a structured and convenient way to build sophisticated HTML-based nodes. For a detailed step-by-step guide to creating your first `HtmlAppNode`, please see the [HtmlAppNode Tutorial](TUTORIAL_HTML_APP_NODE.md). For more complex, runnable examples, such as a Markdown Editor or a Task List, refer to the [Application Nodes Demo](example-app-nodes.html).
 
 ### Styling App Nodes
 
@@ -440,7 +356,7 @@ This `HtmlAppNode` approach encapsulates the node's logic within its class, maki
 - Example: `.markdown-editor-node .markdown-input { border: 1px solid grey; }`
 
 ### Event Propagation
-- As shown in the example, use `this.stopEventPropagation(element, eventTypes)` for any interactive elements within your `HtmlAppNode` to ensure they function correctly without triggering unintended graph interactions (like dragging the node when trying to select text).
+- As shown in examples in the tutorial and demos, use `this.stopEventPropagation(element, eventTypes)` for any interactive elements within your `HtmlAppNode` to ensure they function correctly without triggering unintended graph interactions (like dragging the node when trying to select text).
 
 ## 6. Rendering Concepts
 

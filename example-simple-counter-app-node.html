@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SpaceGraph - Simple Counter App Node</title>
+    <link href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔢</text></svg>" rel="icon">
+    <link href="index.css" rel="stylesheet">
+    <style>
+        body { margin: 0; overflow: hidden; font-family: var(--font-family); background-color: var(--bg-color-dark); color: var(--text-color-light); }
+        #graph-container { width: 100vw; height: 100vh; }
+
+        /* Styling for Simple Counter Node */
+        .html-app-node.simple-counter-node {
+            border: 1px solid var(--border-color-medium);
+            border-radius: var(--border-radius-medium);
+            box-shadow: var(--shadow-medium);
+            padding: 15px; /* Add padding to the node itself */
+            box-sizing: border-box; /* Ensure padding is included in width/height */
+        }
+
+        .simple-counter-node h4 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            text-align: center;
+            color: var(--text-color-emphasis);
+            font-size: 1em;
+        }
+
+        .simple-counter-node .count-display {
+            font-size: 24px;
+            margin: 15px 0;
+            text-align: center;
+            font-weight: bold;
+            color: var(--text-color-highlight);
+        }
+
+        .simple-counter-node .buttons-container {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .simple-counter-node button {
+            background-color: var(--button-bg-color);
+            color: var(--button-text-color);
+            border: 1px solid var(--button-border-color);
+            border-radius: var(--border-radius-small);
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background-color 0.2s ease;
+        }
+
+        .simple-counter-node button:hover {
+            background-color: var(--button-hover-bg-color);
+            border-color: var(--button-hover-border-color);
+        }
+
+        .simple-counter-node button:active {
+            background-color: var(--button-active-bg-color);
+        }
+    </style>
+</head>
+<body>
+    <div id="graph-container"></div>
+
+    <script type="module">
+        import { SpaceGraph, HtmlAppNode } from './dist/spacegraph.esm.min.js';
+
+        // --- CounterNode Implementation ---
+        class CounterNode extends HtmlAppNode {
+            countDisplay = null;
+            titleElement = null;
+
+            onInit() {
+                // Ensure initialCount is set in data, defaulting to 0 if not provided
+                this.data.count = this.data.initialCount === undefined ? 0 : this.data.initialCount;
+
+                // Using template literals for cleaner HTML structure
+                this.htmlElement.innerHTML = `
+                    <h4 class="counter-title">${this.data.label}</h4>
+                    <div class="count-display">${this.data.count}</div>
+                    <div class="buttons-container">
+                        <button class="increment-btn">Increment</button>
+                        <button class="decrement-btn">Decrement</button>
+                    </div>
+                `;
+
+                this.titleElement = this.getChild('.counter-title');
+                this.countDisplay = this.getChild('.count-display');
+                const incrementBtn = this.getChild('.increment-btn');
+                const decrementBtn = this.getChild('.decrement-btn');
+
+                incrementBtn.addEventListener('click', () => {
+                    this.data.count++;
+                    this.updateDisplay();
+                    this.emit('countChanged', { nodeId: this.id, newCount: this.data.count });
+                });
+
+                decrementBtn.addEventListener('click', () => {
+                    this.data.count--;
+                    this.updateDisplay();
+                    this.emit('countChanged', { nodeId: this.id, newCount: this.data.count });
+                });
+
+                // Stop event propagation for buttons to prevent graph interaction
+                this.stopEventPropagation(incrementBtn);
+                this.stopEventPropagation(decrementBtn);
+            }
+
+            updateDisplay() {
+                if (this.countDisplay) {
+                    this.countDisplay.textContent = this.data.count;
+                }
+            }
+
+            onDataUpdate(updatedData) {
+                // super.onDataUpdate(updatedData); // Call if HtmlAppNode base class has relevant updates (e.g. width/height)
+
+                if (updatedData.count !== undefined) {
+                    // this.data.count is already updated by SpaceGraph core before this call
+                    this.updateDisplay();
+                }
+                if (updatedData.label !== undefined && this.titleElement) {
+                    // this.data.label is already updated
+                    this.titleElement.textContent = this.data.label;
+                }
+                if (updatedData.backgroundColor !== undefined) { // Example of reacting to other data changes
+                    this.htmlElement.style.backgroundColor = this.data.backgroundColor;
+                }
+            }
+        }
+
+        // --- CounterNode Definition ---
+        const counterNodeDefinition = {
+            typeName: 'simple-counter', // Will result in 'simple-counter-node' CSS class
+            nodeClass: CounterNode,
+            getDefaults: (nodeInst) => ({
+                width: 220,
+                height: 180,
+                label: nodeInst?.id ? `Counter ${nodeInst.id}` : 'Counter',
+                initialCount: 0,
+                backgroundColor: 'var(--node-bg-color-light)', // Using a CSS variable from index.css
+                ports: { // Optional: define ports if this counter needs to interact via standard graph connections
+                    outputs: {
+                        countChanged: { label: 'Count Changed', type: 'object' }
+                    }
+                }
+            }),
+        };
+
+        // --- SpaceGraph Initialization ---
+        function init() {
+            const container = document.getElementById('graph-container');
+            if (!container) {
+                console.error('Initialization Failed: Missing #graph-container element.');
+                return;
+            }
+
+            try {
+                const space = new SpaceGraph(container);
+                window.space = space; // For debugging
+
+                // Register the custom node type
+                space.registerNodeType('simple-counter', counterNodeDefinition);
+
+                // Add an instance of the counter node
+                const counter1 = space.addNode({
+                    type: 'simple-counter',
+                    id: 'counter1',
+                    x: 0, y: 0, z: 0,
+                    data: { // Override defaults or add specific data
+                        label: 'My Simple Counter',
+                        initialCount: 5,
+                        // backgroundColor: '#3a3f4b' // Example of overriding backgroundColor
+                    }
+                });
+
+                // Add another instance with different initial values
+                const counter2 = space.addNode({
+                    type: 'simple-counter',
+                    id: 'counter2',
+                    x: 250, y: 50, z: 0,
+                    data: {
+                        label: 'Another Counter',
+                        initialCount: -5,
+                        backgroundColor: 'var(--node-bg-alt)'
+                    }
+                });
+
+                space.centerView();
+            } catch (error) {
+                console.error('SpaceGraph Initialization Failed:', error);
+                container.innerHTML = `<div style="color: red; padding: 20px;">Error initializing SpaceGraph: ${error.message}<br><pre>${error.stack}</pre></div>`;
+            }
+        }
+
+        // Run initialization when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    </script>
+</body>
+</html>

@@ -63,19 +63,28 @@ You can apply inline styles directly by manipulating `this.element.style` or `th
 *In your `HtmlAppNode` subclass:*
 ```javascript
 class MyStyledAppNode extends HtmlAppNode {
-    render() {
-        super.render(); // Sets up this.element and this.contentElement
-        this.contentElement.innerHTML = 'Dynamic inline styles.';
-        // Style the content container
-        this.contentElement.style.backgroundColor = 'rgba(200, 255, 200, 0.9)';
-        this.contentElement.style.border = '1px dashed green';
-        this.contentElement.style.padding = '10px';
-        // Or style the main wrapper element if needed
-        // this.element.style.borderColor = 'purple';
-        this.updateSize(); // If padding/border changes overall dimensions
+    // onInit() is called by HtmlAppNode's constructor after this.htmlElement is created
+    // and basic styles (width, height, backgroundColor from this.data) are applied.
+    onInit() {
+        // this.htmlElement is the main DOM element for this node.
+        this.htmlElement.innerHTML = 'Dynamic inline styles.';
+
+        // Style the main HTML element
+        this.htmlElement.style.backgroundColor = 'rgba(200, 255, 200, 0.9)';
+        this.htmlElement.style.border = '1px dashed green';
+        this.htmlElement.style.padding = '10px'; // Note: padding affects content area size.
+                                               // Ensure width/height in getDefaults account for this,
+                                               // or set box-sizing: border-box in CSS for this node type.
+
+        // If padding/border dynamically changes the required overall size,
+        // and the node's width/height data should reflect that, you might need
+        // to adjust this.data.width/height and call this.spaceGraph.nodeNeedsUpdate(this).
+        // However, fixed-size nodes with internal padding are common.
+        // this.updateSize() was a method on older base classes, not standard in HtmlAppNode.
+        // HtmlAppNode's size is driven by this.data.width/height.
     }
 }
-// Register and use this node type
+// Register and use this node type (ensure getDefaults provides width/height)
 ```
 
 **c. Dynamically Changing HTML Node Styles:**
@@ -95,28 +104,73 @@ if (myNode && myNode.htmlNode && myNode.htmlNode.element) {
 *In your `HtmlAppNode` subclass (for internal state changes):*
 ```javascript
 class DataDrivenNode extends HtmlAppNode {
-    constructor(id, sg, config) {
-        super(id, sg, config);
-        this.dataValue = 0;
+    // dataValue is part of this.data, initialized by getDefaults or addNode data.
+    // constructor(id, sg, config) { // Not typically needed if just using super
+    //     super(id, sg, config);
+    // }
+
+    // onInit() is called by HtmlAppNode's constructor.
+    // Used here to set up the initial HTML structure of the node.
+    onInit() {
+        // this.data.value should be initialized in getDefaults or when adding the node.
+        // Example: this.data.value = this.data.initialValue || 0;
+        this.htmlElement.innerHTML = `Value: <span class="data-value">${this.data.value || 0}</span>`;
+        this.updateVisualsBasedOnData(); // Apply initial style based on current data
     }
-    render(){
-        super.render();
-        this.contentElement.innerHTML = `Value: <span class="data-value">${this.dataValue}</span>`;
-    }
-    updateVisuals(newValue) {
-        this.dataValue = newValue;
-        this.contentElement.querySelector('.data-value').textContent = this.dataValue;
-        if (this.dataValue > 10) {
-            this.contentElement.style.borderColor = 'red'; // Or manage via classes
-            this.contentElement.classList.add('error-state');
-        } else {
-            this.contentElement.style.borderColor = 'green';
-            this.contentElement.classList.remove('error-state');
+
+    // updateVisualsBasedOnData is a helper method to apply styles based on current this.data.value.
+    // It would typically be called from onDataUpdate when this.data.value changes,
+    // or internally after some user interaction within the node modifies this.data.value.
+    updateVisualsBasedOnData() {
+        const valueDisplay = this.htmlElement.querySelector('.data-value');
+        if (valueDisplay) {
+            valueDisplay.textContent = this.data.value;
         }
-        this.updateSize(); // If content change affects size
+
+        if (this.data.value > 10) {
+            this.htmlElement.style.borderColor = 'red'; // Or manage via CSS classes
+            this.htmlElement.classList.add('error-state');
+            this.htmlElement.classList.remove('ok-state');
+        } else {
+            this.htmlElement.style.borderColor = 'green';
+            this.htmlElement.classList.remove('error-state');
+            this.htmlElement.classList.add('ok-state');
+        }
+        // this.updateSize() is not a standard HtmlAppNode method.
+        // If content changes affect required size, and that size is dynamic,
+        // the node might need to emit an event or the graph might need to poll.
+        // Typically, HtmlAppNode instances have fixed width/height from this.data.
+    }
+
+    // onDataUpdate is called when graph.updateNodeData() changes this.data
+    onDataUpdate(updatedData) {
+        // super.onDataUpdate(updatedData); // For HtmlAppNode's base handling (e.g. width, height, backgroundColor)
+
+        if (updatedData.hasOwnProperty('value')) {
+            // this.data.value is already updated by the SpaceGraph core.
+            this.updateVisualsBasedOnData();
+        }
+        // Add reactions to other data changes as needed
+        // if (updatedData.hasOwnProperty('label')) { ... }
     }
 }
-// ...
+// Example usage:
+// graph.registerNodeType('data-driven', {
+//   nodeClass: DataDrivenNode,
+//   getDefaults: (node) => ({
+//     width: 150, height: 80, label: 'Data Node', value: 0,
+//     backgroundColor: 'var(--node-bg-alt)'
+//   })
+// });
+// const myDataNode = graph.addNode({ type: 'data-driven', id: 'dd1', data: { value: 5 }});
+// graph.updateNodeData('dd1', { value: 15 }); // This will trigger onDataUpdate
+//
+// Alternative to direct call from outside:
+// const nodeInstance = graph.getNode('myDataNode'); // Get BaseNode
+// if (nodeInstance && nodeInstance.appNode instanceof DataDrivenNode) { // appNode is your custom class instance
+//    // To trigger update, modify data through graph method:
+//    graph.updateNodeData(nodeInstance.id, { value: 15 });
+// }
 // To call it from outside:
 const nodeInstance = graph.getNode('myDataNode'); // Get BaseNode
 if (nodeInstance && nodeInstance.appNode instanceof DataDrivenNode) { // appNode is your custom class instance
