@@ -204,19 +204,27 @@ The `UIManager` class captures raw browser events and translates them into graph
 
 Nodes can communicate directly using a publish/subscribe system. This is also tied to how edges can represent data flow if ports are used.
 
-- **`node.emit(eventName, payload)`**:
+- **`node.emit(eventName, payload, propagateViaPorts = true)`**:
 
-    - A node can emit a named event. `eventName` often corresponds to an output port name.
-    - Example: `currentNode.emit('data_out', { value: 42 });`
+    - A `RegisteredNode` can emit a named event.
+    - **Automatic Port-Based Data Propagation**: If `eventName` matches a defined output port in the node's `data.ports.outputs` and `propagateViaPorts` is `true` (the default):
+        - The `emit` method will iterate through all graph edges.
+        - For each edge originating from this node's `eventName` output port and connected to an input port of another `RegisteredNode`, it automatically calls `spaceGraph.updateNodeData(targetNode.id, { [targetPortName]: payload })`.
+        - This seamlessly triggers the `onDataUpdate` method on the target node(s) with the `payload` assigned to the corresponding input port key.
+    - **Direct Listeners**: The `emit` method will also invoke any callbacks registered directly on this emitting node for the given `eventName` via `listenTo()`.
+    - Example: `sourceNode.emit('data_out', { value: 42 });` // This will propagate to connected ports and call direct listeners.
+    - Example (no port propagation): `sourceNode.emit('internal_update', { status: 'complete' }, false);`
 
-- **`node.listenTo(targetNodeOrId, eventName, callback)`**:
+- **`node.listenTo(emitterNode, eventName, callback)`**:
 
-    - A node can listen to events from another node. `eventName` often corresponds to an input port name on the listening node, but it's listening for an event (often an output port name) from the `targetNodeOrId`.
+    - A node can register a callback to listen for a specific named event emitted by another `emitterNode`.
+    - This is for direct, targeted event handling between specific node instances and is independent of the port-based automatic data propagation.
+    - It's useful when a node needs to react to another node's specific event without necessarily having a formal port connection, or when the event isn't primarily about data flow into an input port.
     - Callback signature: `(payload, senderNodeInstance)`.
-    - Example: `listenerNode.listenTo(emitterNode, 'data_out', (data, sender) => { ... });`
+    - Example: `dashboardNode.listenTo(sensorNode, 'threshold_exceeded', (eventData, sensor) => { dashboardNode.displayAlert(sensor.id, eventData); });`
 
-- **`node.stopListening(...)`**: Removes a listener.
-- **Automatic Cleanup**: `node.dispose()` automatically cleans up listeners created _by that node_ using `listenTo()`.
+- **`node.stopListening(emitterNode, eventName, callback)`**: Removes a specific listener.
+- **Automatic Cleanup**: `RegisteredNode.dispose()` automatically cleans up listeners this node registered on other nodes, and listeners other nodes registered on it.
 
 - **Edge Linking with Ports**:
 
@@ -224,9 +232,13 @@ Nodes can communicate directly using a publish/subscribe system. This is also ti
     - If a link is successfully created between an output port of one node and an input port of another:
         - The resulting `Edge` object will have `edge.data.sourcePort` (name of the output port on the source node) and `edge.data.targetPort` (name of the input port on the target node).
         - Example: `edge.data = { sourcePort: 'html_out', targetPort: 'md_in' }`.
-    - This allows application logic to understand the specific connection points of an edge, enabling more complex data flow or state propagation logic beyond simple node-to-node adjacency.
-    - Node-to-node links (without specific ports) are also possible and will result in an empty `edge.data` object by default.
-    - It's important to distinguish this direct eventing from data flow implied by visual port connections on `RegisteredNode`s. While `emit/listenTo` works for any node communication, data arriving at a `RegisteredNode`'s defined 'input port' (e.g., `my_input_port`) is typically handled via its `onDataUpdate` method. This method is invoked when `spaceGraph.updateNodeData(receiverNode.id, { my_input_port: someValue })` is called by external logic. An edge drawn between an output port and an input port visually represents this intended data path, but the library itself does not automatically pipe data through these edges for `RegisteredNode`s using `onDataUpdate`. Application-specific logic or a dedicated data flow manager would be responsible for observing an output event (or data change) and then triggering `updateNodeData` on the connected node(s). The `example-inter-node-communication.html` provides scenarios for both direct `listenTo` and `onDataUpdate`-based communication.
+    - **Automatic Data Flow**: With the enhanced `emit` method, drawing an edge between a compatible output port and an input port makes the connection "live". When the source node emits an event on that output port, the data is automatically sent to the target node's input port, triggering its `onDataUpdate` method.
+    - This simplifies creating reactive data flows within the graph: define ports, connect them with edges, and `emit` data from output ports.
+
+- **`onDataUpdate(nodeInstance, updatedData)` in `TypeDefinition` / Class Methods**:
+    - This method remains the key way for a `RegisteredNode` (or `HtmlAppNode` derivative) to process data arriving at its defined input ports.
+    - It's now automatically triggered by the enhanced `emit` system when data is propagated through a connected port.
+    - Inside `onDataUpdate`, check for `updatedData[portName]` to access the payload.
 
 - **Global Graph Events**:
     - `spaceGraph.on(eventName, callback)`: Allows subscription to graph-wide events.

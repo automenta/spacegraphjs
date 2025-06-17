@@ -217,40 +217,23 @@
                         console.log(`${receiver1.id} is now listening to 'data_out' events on ${source1.id}`);
                     }
 
-                    // --- Scenario 2: Port-Based Communication via `onDataUpdate` (Simulated) ---
+                    // --- Scenario 2: Port-Based Communication via `onDataUpdate` (Automatic) ---
                     // An edge is drawn between `source1`'s 'data_out' port and `receiver2`'s 'data_in' port.
-                    // Visually, this suggests a data flow path.
-                    // However, for `onDataUpdate` on `receiver2` to be triggered with data from `source1`
-                    // based on this edge, some mechanism needs to:
-                    //   1. Detect that `source1` emitted 'data_out'.
-                    //   2. Identify that `receiver2` is connected to this port via an edge.
-                    //   3. Call `space.updateNodeData(receiver2.id, { data_in: <payload_from_source1> })`.
-                    // SpaceGraph itself does not automatically do this data propagation based on edges alone.
-                    // This example simulates step 3 using a timeout.
+                    // With the enhanced `RegisteredNode.emit()`, when `source1` emits on 'data_out',
+                    // the data will automatically be propagated to `receiver2`'s 'data_in' port,
+                    // triggering its `onDataUpdate` method.
                     if (source1 && receiver2) {
                         space.addEdge(source1, receiver2, {
-                            sourcePort: 'data_out', // Specifies the name of the output port on source1
-                            targetPort: 'data_in', // Specifies the name of the input port on receiver2
+                            sourcePort: 'data_out', // Name of the output port on source1
+                            targetPort: 'data_in',   // Name of the input port on receiver2
                         });
-                        // Note: The edge above is primarily for visual representation and semantic connection.
-                        // To make this edge "functional" for onDataUpdate in receiver2 when source1's button is clicked,
-                        // source1's button handler would need to:
-                        //   a) Know about its outgoing connections (e.g., by inspecting graph.edges).
-                        //   b) For each connected receiver listening on the 'data_in' port, call:
-                        //      `space.updateNodeData(connectedReceiver.id, { data_in: message })`.
-                        // This example simplifies by manually triggering the update below.
+                        console.log(
+                            `Edge created from source1:data_out to receiver2:data_in. Automatic propagation is now expected.`
+                        );
                     }
 
-                    // Manually trigger `onDataUpdate` for `receiver2` to simulate data arriving at its 'data_in' port.
-                    // This is how data would be "sent" to an input port to be handled by `onDataUpdate`.
-                    setTimeout(() => {
-                        console.log(
-                            "Manually pushing data to receiver2's 'data_in' port via space.updateNodeData()..."
-                        );
-                        space.updateNodeData(receiver2.id, {
-                            data_in: "Simulated message for receiver2's 'data_in' port.",
-                        });
-                    }, 7000);
+                    // The manual setTimeout for receiver2 is no longer needed.
+                    // Clicking the button on source1 will now automatically trigger receiver2's onDataUpdate.
 
                     // Add a general NoteNode to explain the setup and interactions.
                     space.addNode({
@@ -263,7 +246,7 @@
                         content: `<h3>Inter-Node Communication</h3>
                           <p><b>Source Nodes</b> have a button. Clicking it emits a 'data_out' event.</p>
                           <p><b>Receiver1</b> (top-right) uses <code>node.listenTo()</code> to directly catch 'data_out' from Source1.</p>
-                          <p><b>Receiver2</b> (bottom-right) has a 'data_in' port. Its <code>onDataUpdate</code> method processes data sent to this key. An edge is drawn, but for <code>onDataUpdate</code> to trigger via this edge, external logic would typically call <code>space.updateNodeData(receiver2.id, { data_in: ... })</code>. A timeout simulates this.</p>
+                          <p><b>Receiver2</b> (bottom-right) has a 'data_in' port connected to Source1's 'data_out' port via an edge. Data is now <b>automatically propagated</b> to Receiver2's input port when Source1 emits, triggering its <code>onDataUpdate</code>.</p>
                           <p>Check console for logs.</p>`,
                     });
 

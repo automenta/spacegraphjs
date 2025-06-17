@@ -36,32 +36,33 @@
             }
 
             /* Task List Node Specific Styles */
-            .task-list-node-content {
+            /* Select using the classes added by HtmlAppNode: .html-app-node and .task-list-node (from typeName) */
+            .html-app-node.task-list-node {
                 padding: 10px;
-                background-color: #f0f8ff; /* AliceBlue */
+                /* background-color: #f0f8ff; /* AliceBlue */ /* This is now set by HtmlAppNode via this.data.backgroundColor from getDefaults */
                 color: #333;
-                border-radius: 8px; /* Match node-html */
+                /* border-radius: 8px; /* HtmlAppNode's base style for htmlElement likely sets this, check index.css for .node-html */
                 font-family: var(--font-family); /* Ensure consistent font */
             }
-            .task-list-node-content h3 {
+            .html-app-node.task-list-node h3 {
                 margin-top: 0;
                 margin-bottom: 8px;
                 text-align: center;
                 color: #007bff;
             }
-            .task-list-node-content .input-container {
+            .html-app-node.task-list-node .input-container {
                 /* Container for input + button */
                 display: flex;
                 margin-bottom: 8px;
             }
-            .task-list-node-content .new-task-input {
+            .html-app-node.task-list-node .new-task-input {
                 flex-grow: 1;
                 margin-right: 5px;
                 padding: 5px;
                 border: 1px solid #ccc;
                 border-radius: 3px;
             }
-            .task-list-node-content .add-task-button {
+            .html-app-node.task-list-node .add-task-button {
                 padding: 5px 10px;
                 background-color: #28a745;
                 color: white;
@@ -69,10 +70,10 @@
                 border-radius: 3px;
                 cursor: pointer;
             }
-            .task-list-node-content .add-task-button:hover {
+            .html-app-node.task-list-node .add-task-button:hover {
                 background-color: #218838;
             }
-            .task-list-node-content .task-list-ul {
+            .html-app-node.task-list-node .task-list-ul {
                 list-style-type: none;
                 padding: 0;
                 margin-top: 0; /* No extra space above list */
@@ -80,31 +81,31 @@
                 overflow-y: auto;
                 min-height: 50px; /* Ensure it's visible even when empty */
             }
-            .task-list-node-content .task-list-ul li {
+            .html-app-node.task-list-node .task-list-ul li {
                 display: flex;
                 align-items: center;
                 padding: 6px 2px;
                 border-bottom: 1px solid #eee;
             }
-            .task-list-node-content .task-list-ul li:last-child {
+            .html-app-node.task-list-node .task-list-ul li:last-child {
                 border-bottom: none;
             }
-            .task-list-node-content .task-list-ul li input[type='checkbox'] {
+            .html-app-node.task-list-node .task-list-ul li input[type='checkbox'] {
                 margin-right: 10px;
                 cursor: pointer;
                 width: 16px; /* Larger checkboxes */
                 height: 16px;
             }
-            .task-list-node-content .task-list-ul li span {
+            .html-app-node.task-list-node .task-list-ul li span {
                 /* Task text span */
                 flex-grow: 1;
                 word-break: break-word;
             }
-            .task-list-node-content .task-list-ul li span.completed {
+            .html-app-node.task-list-node .task-list-ul li span.completed {
                 text-decoration: line-through;
                 color: #999;
             }
-            .task-list-node-content .task-list-ul li .delete-task-button {
+            .html-app-node.task-list-node .task-list-ul li .delete-task-button {
                 margin-left: 8px; /* Space between text and button */
                 background: #dc3545;
                 color: white;
@@ -115,7 +116,7 @@
                 font-size: 10px;
                 line-height: 1;
             }
-            .task-list-node-content .task-list-ul li .delete-task-button:hover {
+            .html-app-node.task-list-node .task-list-ul li .delete-task-button:hover {
                 background: #c82333;
             }
         </style>
@@ -149,368 +150,286 @@
             // 2. Task List: A node that manages a list of tasks with add, complete, and delete functionalities.
             //    It demonstrates dynamic HTML generation within a node and emitting events for task updates.
             import * as S from './spacegraph.js'; // Assuming spacegraph.js is in the same directory
+            import { HtmlAppNode } from './js/HtmlAppNode.js'; // Import the new base class
 
-            // --- Markdown Editor Node Definition ---
-            // This object defines the behavior and appearance of our custom Markdown editor node.
-            const markdownEditorNodeDefinition = {
-                /**
-                 * Provides default data for a new Markdown editor node.
-                 * This is called when a node of this type is created.
-                 * @param {object} initialData - Any data passed during node creation (e.g., from addNode or palette).
-                 * @returns {object} The default data object for this node type.
-                 */
-                getDefaults: (initialData) => ({
-                    markdownContent: initialData?.markdownContent || '# Hello\n\nStart typing Markdown here...',
-                    width: initialData?.width || 350, // Default width of the node
-                    height: initialData?.height || 400, // Default height of the node
-                    label: initialData?.label || initialData?.id || 'Markdown Editor', // Default label
-                    ports: initialData?.ports || {
-                        // Define input/output ports for communication
-                        inputs: { md_in: { label: 'Markdown In', type: 'string' } }, // Input port for Markdown text
-                        outputs: { html_out: { label: 'HTML Out', type: 'string' } }, // Output port for rendered HTML
-                    },
-                }),
-                /**
-                 * Creates the visual representation (HTML element) of the Markdown editor node.
-                 * This function is called by SpaceGraph when a node of this type is added.
-                 * @param {S.RegisteredNode} nodeInst - The instance of the RegisteredNode being created.
-                 * @param {S.SpaceGraph} spaceGraph - The SpaceGraph instance.
-                 * @returns {object} An object containing the `htmlElement` for this node.
-                 */
-                onCreate: (nodeInst, spaceGraph) => {
-                    // Access THREE and CSS3DObject, required if creating CSS3DObjects directly (though not strictly needed here as we return htmlElement)
-                    const three = spaceGraph.constructor.THREE;
-                    const CSS3DObject = three.CSS3DObject || window.CSS3DObject;
+            // --- Markdown Editor Node (Refactored to use HtmlAppNode) ---
+            class MarkdownEditorNode extends HtmlAppNode {
+                // Define editor and preview elements as class properties
+                editor = null;
+                preview = null;
 
-                    // Create the main container div for the node's HTML content
-                    nodeInst.htmlElement = document.createElement('div');
-                    nodeInst.htmlElement.classList.add('markdown-editor-node'); // Add class for specific CSS styling
-                    nodeInst.htmlElement.style.width = `${nodeInst.data.width}px`;
-                    nodeInst.htmlElement.style.height = `${nodeInst.data.height}px`;
-                    nodeInst.htmlElement.style.backgroundColor = 'var(--node-bg-alt, #282c34)'; // Use CSS variables for theming
-                    nodeInst.htmlElement.style.border = '1px solid var(--accent-color-darker, #444)';
-                    nodeInst.htmlElement.style.display = 'flex';
-                    nodeInst.htmlElement.style.flexDirection = 'column'; // Stack editor and preview vertically
-                    nodeInst.htmlElement.style.overflow = 'hidden'; // Prevent content from spilling out
+                onInit() {
+                    // super.onInit(); // Call if base onInit does something, currently it logs a warning.
+                    // HtmlAppNode's constructor already created this.htmlElement and applied basic styles.
+                    // It also added 'html-app-node' and 'markdown-editor-node' (derived from typeName) classes.
+
+                    this.htmlElement.style.backgroundColor = this.data.backgroundColor || 'var(--node-bg-alt, #282c34)';
+                    // The base class sets display:flex and flex-direction:column by default.
 
                     // Create the textarea for Markdown input
-                    const editor = document.createElement('textarea');
-                    editor.className = 'editor-area'; // For specific styling (see <style> block in HTML head)
-                    editor.style.flex = '1'; // Allow editor to take up half the space
-                    editor.style.resize = 'none'; // Disable manual resize of textarea
-                    editor.value = nodeInst.data.markdownContent; // Set initial content from node data
-                    editor.spellcheck = false;
+                    this.editor = document.createElement('textarea');
+                    this.editor.className = 'editor-area'; // For specific styling
+                    this.editor.style.flex = '1'; // Allow editor to take up half the space
+                    this.editor.style.resize = 'none'; // Disable manual resize of textarea
+                    this.editor.value = this.data.markdownContent;
+                    this.editor.spellcheck = false;
 
                     // Create the div for HTML preview
-                    const preview = document.createElement('div');
-                    preview.className = 'preview-area'; // For specific styling
-                    preview.style.flex = '1'; // Allow preview to take up the other half
-                    preview.style.borderTop = '1px solid #444'; // Separator line
+                    this.preview = document.createElement('div');
+                    this.preview.className = 'preview-area'; // For specific styling
+                    this.preview.style.flex = '1'; // Allow preview to take up the other half
+                    this.preview.style.borderTop = '1px solid #444'; // Separator line
 
-                    // Append editor and preview areas to the node's main HTML element
-                    nodeInst.htmlElement.appendChild(editor);
-                    nodeInst.htmlElement.appendChild(preview);
+                    this.htmlElement.appendChild(this.editor);
+                    this.htmlElement.appendChild(this.preview);
 
-                    /**
-                     * Renders the Markdown content from `nodeInst.data.markdownContent` into the preview div.
-                     * Uses the `marked.js` library (expected to be globally available).
-                     * Emits the rendered HTML to the 'html_out' output port.
-                     */
-                    const renderPreview = () => {
-                        if (window.marked && typeof window.marked.parse === 'function') {
-                            preview.innerHTML = window.marked.parse(nodeInst.data.markdownContent);
-                        } else {
-                            preview.textContent = 'Marked.js not loaded or .parse not a function.';
-                            console.warn('Marked.js not loaded or marked.parse is not a function.');
-                        }
-                        // Emit the HTML content to the output port if defined
-                        if (nodeInst.data.ports?.outputs?.html_out) {
-                            // `nodeInst.emit(portName, payload)` sends data from this node's output port.
-                            nodeInst.emit('html_out', preview.innerHTML);
-                        }
-                    };
+                    // Stop event propagation on editor and preview areas
+                    this.stopEventPropagation(this.editor, ['pointerdown', 'wheel']);
+                    this.stopEventPropagation(this.preview, ['pointerdown', 'wheel']);
 
-                    // IMPORTANT: Stop pointer events (like drag, click) on the editor and preview areas
-                    // from propagating to the SpaceGraph's UIManager. This allows normal text interaction
-                    // (selection, scrolling) without accidentally dragging the node or triggering graph-level events.
-                    editor.addEventListener('pointerdown', (e) => e.stopPropagation());
-                    preview.addEventListener('pointerdown', (e) => e.stopPropagation());
-                    // Also stop wheel events inside these areas from affecting camera zoom.
-                    editor.addEventListener('wheel', (e) => e.stopPropagation());
-                    preview.addEventListener('wheel', (e) => e.stopPropagation());
-
-                    // Listen for input in the editor textarea to update Markdown content and re-render preview
-                    editor.addEventListener('input', () => {
-                        nodeInst.data.markdownContent = editor.value; // Update node's internal data
-                        renderPreview(); // Re-render the preview and emit HTML
+                    // Listen for input in the editor textarea
+                    this.editor.addEventListener('input', () => {
+                        this.data.markdownContent = this.editor.value;
+                        this.renderPreview();
                     });
 
-                    renderPreview(); // Initial render of the Markdown content when the node is created
+                    this.renderPreview(); // Initial render
+                }
 
-                    // Store references to key internal elements on `nodeInst.customElements`.
-                    // This allows `onDataUpdate` or other methods to access and manipulate them later.
-                    nodeInst.customElements = { editor, preview, renderPreview };
+                renderPreview() {
+                    if (window.marked && typeof window.marked.parse === 'function') {
+                        this.preview.innerHTML = window.marked.parse(this.data.markdownContent);
+                    } else {
+                        this.preview.textContent = 'Marked.js not loaded or .parse not a function.';
+                        console.warn('Marked.js not loaded or marked.parse is not a function.');
+                    }
+                    // Emit the HTML content to the output port if defined
+                    if (this.data.ports?.outputs?.html_out) {
+                        this.emit('html_out', this.preview.innerHTML);
+                    }
+                }
 
-                    // Return the main htmlElement. SpaceGraph's RegisteredNode class will automatically
-                    // wrap this in a CSS3DObject for rendering in the 3D scene.
-                    return { htmlElement: nodeInst.htmlElement };
-                },
-                /**
-                 * Calculates the bounding sphere radius for this node type.
-                 * Used for camera focusing and layout calculations.
-                 * @param {S.RegisteredNode} nodeInst - The node instance.
-                 * @returns {number} The bounding sphere radius.
-                 */
-                getBoundingSphereRadius: (nodeInst) => {
-                    // Approximate based on the diagonal of the node's dimensions
-                    return Math.sqrt(nodeInst.data.width ** 2 + nodeInst.data.height ** 2) / 2;
-                },
-                /**
-                 * Cleans up resources when the node is disposed.
-                 * For this node, there are no specific Three.js objects created directly by `onCreate`
-                 * that need manual disposal (like geometries or materials).
-                 * Event listeners on `editor` and `preview` are on children of `nodeInst.htmlElement`,
-                 * and will be removed from the DOM when `nodeInst.htmlElement` is removed by the base `RegisteredNode.dispose()`.
-                 * @param {S.RegisteredNode} nodeInst - The node instance.
-                 */
-                onDispose: (nodeInst) => {
-                    nodeInst.customElements = null; // Clear references to custom elements
-                },
-                /**
-                 * Handles external updates to the node's data.
-                 * This method is called if `space.updateNodeData(nodeId, { ... })` is used,
-                 * or if data arrives through an input port that is configured to update `nodeInst.data`.
-                 * @param {S.RegisteredNode} nodeInst - The node instance.
-                 * @param {object} updatedData - The new data that was received.
-                 */
-                onDataUpdate: (nodeInst, updatedData) => {
-                    // Check if 'markdownContent' was part of the updated data
-                    if (updatedData.markdownContent !== undefined && nodeInst.customElements?.editor) {
-                        // Only update if the content has actually changed to avoid unnecessary re-renders or cursor jumps
-                        if (nodeInst.customElements.editor.value !== updatedData.markdownContent) {
-                            nodeInst.customElements.editor.value = updatedData.markdownContent; // Update the textarea
-                            nodeInst.customElements.renderPreview(); // Re-render the preview
+                onDataUpdate(updatedData) {
+                    // super.onDataUpdate(updatedData); // HtmlAppNode base onDataUpdate handles width/height/backgroundColor
+
+                    if (updatedData.markdownContent !== undefined && this.editor) {
+                        if (this.editor.value !== updatedData.markdownContent) {
+                            this.editor.value = updatedData.markdownContent;
+                            this.renderPreview();
                         }
                     }
+                }
+
+                // onDispose is not strictly needed here if all custom elements (editor, preview)
+                // are children of this.htmlElement, as their event listeners will be removed
+                // when this.htmlElement is removed by RegisteredNode.dispose().
+                // If there were external resources or listeners, this would be the place.
+            }
+
+            // --- Markdown Editor Node Definition (Refactored) ---
+            const markdownEditorNodeDefinition = {
+                typeName: 'markdown-editor', // Type name for registration and CSS class generation
+                nodeClass: MarkdownEditorNode, // Specify the class to be instantiated
+
+                getDefaults: (nodeInst, graphInst) => { // nodeInst is 'this' from HtmlAppNode constructor
+                    // It's good practice to call the base getDefaults if extending classes that might have their own.
+                    // However, HtmlAppNode's getDefaults calls its typeDefinition.getDefaults, so be careful not to recurse.
+                    // For now, let's assume HtmlAppNode itself doesn't have critical defaults beyond what BaseNode provides.
+                    const baseDefaults = {}; // RegisteredNode.prototype.getDefaultData.call(nodeInst) might be safer if needed
+                    return {
+                        ...baseDefaults,
+                        markdownContent: '# Hello\n\nStart typing Markdown here...',
+                        width: 350,
+                        height: 400,
+                        label: nodeInst?.id || 'Markdown Editor', // Use nodeInst.id if available
+                        backgroundColor: 'var(--node-bg-alt, #282c34)', // Specific background for this node type
+                        ports: {
+                            inputs: { md_in: { label: 'Markdown In', type: 'string' } },
+                            outputs: { html_out: { label: 'HTML Out', type: 'string' } },
+                        },
+                    };
                 },
+                // onCreate is now handled by HtmlAppNode constructor and MarkdownEditorNode.onInit()
+                // onDispose is handled by HtmlAppNode/RegisteredNode and MarkdownEditorNode.onDispose() if needed
+                // onDataUpdate is handled by MarkdownEditorNode.onDataUpdate()
+                // getBoundingSphereRadius is handled by HtmlAppNode (uses width/height from data)
             };
 
-            // --- Task List Node Definition ---
-            // Defines a custom node for managing a to-do list.
-            const taskListNodetypeDefinition = {
-                /**
-                 * Provides default data for a new Task List node.
-                 * @param {object} initialData - Data passed during node creation.
-                 * @returns {object} Default data object.
-                 */
-                getDefaults: (initialData) => ({
-                    tasks: initialData?.tasks || [{ id: 'task-init-1', text: 'First task', completed: false }], // Default tasks
-                    width: initialData?.width || 300,
-                    height: initialData?.height || 280,
-                    title: initialData?.title || 'My To-Do List', // Default title for the list
-                    label: initialData?.label || initialData?.id || 'Task List',
-                    ports: initialData?.ports || {
-                        // Define input/output ports
-                        inputs: { add_task: { label: 'Add Task (text)', type: 'string' } }, // Input port to add a new task
-                        outputs: {
-                            task_completed: { label: 'Task Completed (taskObj)', type: 'object' }, // Output port for completed tasks
-                            tasks_updated: { label: 'Tasks Updated (allTasks)', type: 'array' }, // Output port when the list changes
-                        },
-                    },
-                }),
-                /**
-                 * Creates the HTML structure for the Task List node.
-                 * @param {S.RegisteredNode} nodeInst - The node instance.
-                 * @param {S.SpaceGraph} spaceGraph - The SpaceGraph instance.
-                 * @returns {object} An object containing the `htmlElement`.
-                 */
-                onCreate: (nodeInst, spaceGraph) => {
-                    const three = spaceGraph.constructor.THREE;
-                    const CSS3DObject = three.CSS3DObject || window.CSS3DObject;
+            // --- Task List Node (Refactored to use HtmlAppNode) ---
+            class TaskListNode extends HtmlAppNode {
+                titleEl = null;
+                taskListUl = null;
+                newTaskInput = null;
 
-                    // Main container for the task list UI
-                    nodeInst.htmlElement = document.createElement('div');
-                    nodeInst.htmlElement.classList.add('task-list-node-content'); // For specific CSS styling
-                    nodeInst.htmlElement.style.width = `${nodeInst.data.width}px`;
-                    nodeInst.htmlElement.style.height = `${nodeInst.data.height}px`;
-                    nodeInst.htmlElement.style.display = 'flex';
-                    nodeInst.htmlElement.style.flexDirection = 'column';
-                    nodeInst.htmlElement.style.overflow = 'hidden'; // Important for managing internal scrolling
+                onInit() {
+                    // HtmlAppNode's constructor creates this.htmlElement and applies basic styles
+                    // (width, height, default border, display:flex, flex-direction:column, overflow:hidden).
+                    // It also adds 'html-app-node' and a type-specific class e.g. 'task-list-node'.
+                    // The getDefaults for TaskListNode sets the specific backgroundColor which HtmlAppNode applies.
+                    // So, this.htmlElement already has the correct base styles and classes.
+                    // The class 'task-list-node-content' was originally on the main element.
+                    // We'll update CSS to use '.html-app-node.task-list-node' (or just '.task-list-node').
+                    // No need to add 'task-list-node-content' class here anymore.
 
-                    // Title element for the task list
-                    const titleEl = document.createElement('h3');
-                    titleEl.textContent = nodeInst.data.title;
+                    // Title element
+                    this.titleEl = document.createElement('h3');
+                    this.titleEl.textContent = this.data.title;
 
-                    // Container for the new task input field and add button
+                    // Input container
                     const inputContainer = document.createElement('div');
                     inputContainer.className = 'input-container';
 
-                    const newTaskInput = document.createElement('input');
-                    newTaskInput.type = 'text';
-                    newTaskInput.placeholder = 'New task...';
-                    newTaskInput.className = 'new-task-input';
+                    this.newTaskInput = document.createElement('input');
+                    this.newTaskInput.type = 'text';
+                    this.newTaskInput.placeholder = 'New task...';
+                    this.newTaskInput.className = 'new-task-input';
 
                     const addTaskButton = document.createElement('button');
                     addTaskButton.textContent = 'Add';
                     addTaskButton.className = 'add-task-button';
 
-                    inputContainer.appendChild(newTaskInput);
+                    inputContainer.appendChild(this.newTaskInput);
                     inputContainer.appendChild(addTaskButton);
 
-                    // Unordered list (<ul>) to display the tasks
-                    const taskListUl = document.createElement('ul');
-                    taskListUl.className = 'task-list-ul';
+                    // Task list
+                    this.taskListUl = document.createElement('ul');
+                    this.taskListUl.className = 'task-list-ul';
 
-                    // Assemble the HTML structure
-                    nodeInst.htmlElement.appendChild(titleEl);
-                    nodeInst.htmlElement.appendChild(inputContainer);
-                    nodeInst.htmlElement.appendChild(taskListUl);
+                    // Assemble
+                    this.htmlElement.appendChild(this.titleEl);
+                    this.htmlElement.appendChild(inputContainer);
+                    this.htmlElement.appendChild(this.taskListUl);
 
-                    // IMPORTANT: Stop pointer events on interactive elements within the node
-                    // to prevent interference with SpaceGraph's UIManager (e.g., node dragging).
-                    [titleEl, newTaskInput, addTaskButton, taskListUl].forEach((el) => {
-                        el.addEventListener('pointerdown', (e) => e.stopPropagation());
-                        el.addEventListener('wheel', (e) => e.stopPropagation()); // Also prevents graph zoom while scrolling list
+                    // Stop event propagation using the helper from HtmlAppNode
+                    this.stopEventPropagation(this.titleEl);
+                    this.stopEventPropagation(this.newTaskInput, ['pointerdown', 'wheel', 'keypress']);
+                    this.stopEventPropagation(addTaskButton); // Covers pointerdown and wheel by default
+                    this.stopEventPropagation(this.taskListUl);
+
+
+                    // Event listeners
+                    addTaskButton.addEventListener('click', () => this.handleAddTask());
+                    this.newTaskInput.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter') {
+                            this.handleAddTask();
+                            e.preventDefault();
+                        }
                     });
 
-                    /**
-                     * Renders the list of tasks in the `taskListUl` element.
-                     * Clears existing tasks and rebuilds the list based on `nodeInst.data.tasks`.
-                     * Attaches event listeners for checkbox changes (task completion) and task deletion.
-                     * Emits `tasks_updated` event after rendering.
-                     */
-                    const renderTasks = () => {
-                        taskListUl.innerHTML = ''; // Clear current task list items
-                        if (!Array.isArray(nodeInst.data.tasks)) nodeInst.data.tasks = []; // Ensure tasks is an array
+                    this.renderTasks(); // Initial render
+                }
 
-                        nodeInst.data.tasks.forEach((task) => {
-                            const li = document.createElement('li');
+                handleAddTask() {
+                    const text = this.newTaskInput.value.trim();
+                    if (text) {
+                        if (!Array.isArray(this.data.tasks)) this.data.tasks = [];
+                        this.data.tasks.push({ id: 'task-' + Date.now(), text: text, completed: false });
+                        this.newTaskInput.value = '';
+                        this.renderTasks();
+                    }
+                }
 
-                            // Checkbox for task completion
-                            const checkbox = document.createElement('input');
-                            checkbox.type = 'checkbox';
-                            checkbox.checked = task.completed;
-                            checkbox.addEventListener('change', () => {
-                                task.completed = checkbox.checked; // Update task state in node's data
-                                // If a task is completed and the output port is defined, emit an event
-                                if (task.completed && nodeInst.data.ports?.outputs?.task_completed) {
-                                    nodeInst.emit('task_completed', { ...task }); // Emit a copy of the task object
-                                }
-                                renderTasks(); // Re-render the list to reflect changes (e.g., strikethrough)
-                            });
+                renderTasks() {
+                    this.taskListUl.innerHTML = ''; // Clear current task items
+                    if (!Array.isArray(this.data.tasks)) this.data.tasks = [];
 
-                            // Span for task text
-                            const span = document.createElement('span');
-                            span.textContent = task.text;
-                            if (task.completed) {
-                                span.classList.add('completed'); // Apply 'completed' style (strikethrough)
+                    this.data.tasks.forEach((task) => {
+                        const li = document.createElement('li');
+
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.checked = task.completed;
+                        this.stopEventPropagation(checkbox, ['pointerdown', 'change', 'wheel']); // Ensure checkbox interactions are smooth
+                        checkbox.addEventListener('change', () => {
+                            task.completed = checkbox.checked;
+                            if (task.completed && this.data.ports?.outputs?.task_completed) {
+                                this.emit('task_completed', { ...task });
                             }
-
-                            // Delete button for each task
-                            const deleteButton = document.createElement('button');
-                            deleteButton.textContent = 'X'; // Simple delete button
-                            deleteButton.className = 'delete-task-button';
-                            deleteButton.addEventListener('click', () => {
-                                nodeInst.data.tasks = nodeInst.data.tasks.filter((t) => t.id !== task.id); // Remove task from data
-                                renderTasks(); // Re-render the list
-                            });
-
-                            li.appendChild(checkbox);
-                            li.appendChild(span);
-                            li.appendChild(deleteButton);
-                            taskListUl.appendChild(li);
+                            this.renderTasks();
                         });
 
-                        // Emit an event indicating the tasks list has been updated, if the port is defined
-                        if (nodeInst.data.ports?.outputs?.tasks_updated) {
-                            nodeInst.emit('tasks_updated', [...nodeInst.data.tasks]); // Emit a copy of the tasks array
+                        const span = document.createElement('span');
+                        span.textContent = task.text;
+                        if (task.completed) {
+                            span.classList.add('completed');
                         }
-                    };
 
-                    // Event listener for the "Add Task" button
-                    addTaskButton.addEventListener('click', () => {
-                        const text = newTaskInput.value.trim();
-                        if (text) {
-                            // Only add task if text is not empty
-                            if (!Array.isArray(nodeInst.data.tasks)) nodeInst.data.tasks = [];
-                            nodeInst.data.tasks.push({ id: 'task-' + Date.now(), text: text, completed: false });
-                            newTaskInput.value = ''; // Clear the input field
-                            renderTasks(); // Re-render the list
-                        }
+                        const deleteButton = document.createElement('button');
+                        deleteButton.textContent = 'X';
+                        deleteButton.className = 'delete-task-button';
+                        this.stopEventPropagation(deleteButton); // Covers pointerdown and wheel
+                        deleteButton.addEventListener('click', () => {
+                            this.data.tasks = this.data.tasks.filter((t) => t.id !== task.id);
+                            this.renderTasks();
+                        });
+
+                        li.appendChild(checkbox);
+                        li.appendChild(span);
+                        li.appendChild(deleteButton);
+                        this.taskListUl.appendChild(li);
                     });
 
-                    // Allow adding tasks by pressing Enter in the input field
-                    newTaskInput.addEventListener('keypress', (e) => {
-                        if (e.key === 'Enter') {
-                            addTaskButton.click(); // Simulate button click
-                            e.preventDefault(); // Prevent default form submission behavior if applicable
-                        }
-                    });
+                    if (this.data.ports?.outputs?.tasks_updated) {
+                        this.emit('tasks_updated', [...this.data.tasks]);
+                    }
+                }
 
-                    renderTasks(); // Initial rendering of tasks
-                    // Store key elements for potential future access (e.g., in onDataUpdate)
-                    nodeInst.customElements = { titleEl, taskListUl, renderTasks, newTaskInput };
-                    return { htmlElement: nodeInst.htmlElement }; // Return the main HTML element
-                },
-                /**
-                 * Handles external updates to the node's data, such as receiving new tasks
-                 * or a new title, or a direct command to add a task via the 'add_task' input port.
-                 * @param {S.RegisteredNode} nodeInst - The node instance.
-                 * @param {object} updatedData - The new data.
-                 */
-                onDataUpdate: (nodeInst, updatedData) => {
+                onDataUpdate(updatedData) {
+                    // super.onDataUpdate(updatedData); // Call if HtmlAppNode's onDataUpdate has relevant logic for all app nodes
+
                     let needsRender = false;
-                    // If 'tasks' array is provided in updatedData, replace the current tasks
                     if (updatedData.tasks !== undefined) {
-                        // Basic check to see if tasks actually changed to avoid unnecessary re-renders
-                        if (JSON.stringify(nodeInst.data.tasks) !== JSON.stringify(updatedData.tasks)) {
-                            nodeInst.data.tasks = Array.isArray(updatedData.tasks) ? [...updatedData.tasks] : [];
-                            needsRender = true;
+                        // Ensure this.data.tasks is updated by RegisteredNode before comparison
+                         if (JSON.stringify(this.data.tasks) !== JSON.stringify(updatedData.tasks)) {
+                             // This comparison might be redundant if this.data.tasks is already updated by RegisteredNode
+                             // For safety, or if we want to be explicit:
+                             this.data.tasks = Array.isArray(updatedData.tasks) ? [...updatedData.tasks] : (Array.isArray(this.data.tasks) ? this.data.tasks : []);
+                             needsRender = true;
+                         }
+                    }
+                    if (updatedData.title !== undefined && this.titleEl) {
+                        if (this.titleEl.textContent !== this.data.title) { // Compare with this.data.title which is the source of truth
+                            this.titleEl.textContent = this.data.title;
                         }
                     }
-                    // If 'title' is provided, update the title element
-                    if (updatedData.title !== undefined && nodeInst.customElements?.titleEl) {
-                        if (nodeInst.customElements.titleEl.textContent !== updatedData.title) {
-                            nodeInst.customElements.titleEl.textContent = updatedData.title;
-                            nodeInst.data.title = updatedData.title; // Also update the internal data representation
-                        }
-                    }
-                    // If 'add_task' (our defined input port name) is a string in updatedData, add it as a new task
                     if (typeof updatedData.add_task === 'string') {
                         const text = updatedData.add_task.trim();
                         if (text) {
-                            // Ensure the task text is not empty
-                            if (!Array.isArray(nodeInst.data.tasks)) nodeInst.data.tasks = [];
-                            nodeInst.data.tasks.push({ id: 'task-' + Date.now(), text: text, completed: false });
+                            if (!Array.isArray(this.data.tasks)) this.data.tasks = [];
+                            this.data.tasks.push({ id: 'task-' + Date.now(), text: text, completed: false });
                             needsRender = true;
                         }
-                        // It's good practice to "consume" data received via input ports if it represents a one-time action.
-                        // If updatedData could be a direct reference to nodeInst.data, you might do:
-                        // delete nodeInst.data.add_task;
-                        // However, SpaceGraph's default port-to-data mapping creates a new updatedData object,
-                        // so this specific deletion isn't strictly necessary here as the value won't persist in nodeInst.data unless explicitly set.
+                         // Consumed by direct modification of this.data.tasks
                     }
 
-                    // If any changes occurred that require re-rendering the task list
-                    if (needsRender && nodeInst.customElements?.renderTasks) {
-                        nodeInst.customElements.renderTasks();
+                    if (needsRender) {
+                        this.renderTasks();
                     }
-                },
-                /**
-                 * Calculates the bounding sphere radius for layout and focusing.
-                 * @param {S.RegisteredNode} nodeInst - The node instance.
-                 * @returns {number} The bounding sphere radius.
-                 */
-                getBoundingSphereRadius: (nodeInst) => {
-                    return Math.sqrt(nodeInst.data.width ** 2 + nodeInst.data.height ** 2) / 2;
-                },
-                /**
-                 * Cleans up when the node is disposed.
-                 * @param {S.RegisteredNode} nodeInst - The node instance.
-                 */
-                onDispose: (nodeInst) => {
-                    nodeInst.customElements = null; // Clear references
-                },
+                }
+            }
+
+            // --- Task List Node Definition (Refactored) ---
+            const taskListNodetypeDefinition = {
+                typeName: 'task-list',
+                nodeClass: TaskListNode,
+
+                getDefaults: (nodeInst) => ({
+                    tasks: [{ id: 'task-init-1', text: 'First task', completed: false }],
+                    width: 300,
+                    height: 280,
+                    title: 'My To-Do List',
+                    label: nodeInst?.id || 'Task List',
+                    backgroundColor: '#f0f8ff', // AliceBlue, specific to this node type
+                    ports: {
+                        inputs: { add_task: { label: 'Add Task (text)', type: 'string' } },
+                        outputs: {
+                            task_completed: { label: 'Task Completed (taskObj)', type: 'object' },
+                            tasks_updated: { label: 'Tasks Updated (allTasks)', type: 'array' },
+                        },
+                    },
+                }),
+                // onCreate, onDataUpdate, onDispose, getBoundingSphereRadius are now handled by
+                // HtmlAppNode and the TaskListNode class.
             };
 
             // --- Initialization Function ---

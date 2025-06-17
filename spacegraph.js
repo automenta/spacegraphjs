@@ -316,6 +316,11 @@ export class SpaceGraph {
      * @property {function(RegisteredNode, SpaceGraph)} [onStartDrag] - Custom logic executed when a drag operation starts on this node.
      * @property {function(RegisteredNode, THREE.Vector3, SpaceGraph)} [onDrag] - Custom logic executed during a drag operation, providing the new target position.
      * @property {function(RegisteredNode, SpaceGraph)} [onEndDrag] - Custom logic executed when a drag operation ends on this node.
+ * @property {function(RegisteredNode, object, SpaceGraph)} [onDataUpdate] - Called when `spaceGraph.updateNodeData(nodeId, newData)` is used, or when data is automatically propagated to an input port via `RegisteredNode.emit()`.
+ *                                                                           Allows the node to react to specific data changes. `newData` contains only the changed properties (the keys that were updated). `nodeInst.data` will have already been updated with these changes.
+ * @property {Class<RegisteredNode>} [nodeClass] - Optional. A reference to a class that extends {@link RegisteredNode} (e.g., a class derived from {@link HtmlAppNode}).
+ *                                                 If provided, SpaceGraph will instantiate this class instead of the generic `RegisteredNode` when creating nodes of this type.
+ *                                                 This enables object-oriented patterns for custom node logic, allowing lifecycle methods like `onInit`, `onDataUpdate`, etc., to be defined as class methods.
      */
 
     /**
@@ -505,7 +510,12 @@ export class SpaceGraph {
             // Check registered custom types first
             if (this.nodeTypes.has(data.type)) {
                 const typeDefinition = this.nodeTypes.get(data.type);
-                nodeInstance = new RegisteredNode(data.id, data, typeDefinition, this);
+                // Check if the typeDefinition specifies a custom node class
+                if (typeDefinition.nodeClass) {
+                    nodeInstance = new typeDefinition.nodeClass(data.id, data, typeDefinition, this);
+                } else {
+                    nodeInstance = new RegisteredNode(data.id, data, typeDefinition, this);
+                }
             }
             // Then check built-in types
             else if (data.type === 'note') {
@@ -593,8 +603,10 @@ export class SpaceGraph {
      * @property {number} [constraintParams.stiffness] - For 'elastic' or 'rigid' constraints, determines how strongly the constraint is enforced.
      * @property {number} [constraintParams.idealLength] - For 'elastic' constraints, the desired resting length of the edge.
      * @property {number} [constraintParams.distance] - For 'rigid' or 'weld' constraints, the fixed distance to maintain.
-     * @property {string} [sourcePort] - If the `sourceNode` is a {@link RegisteredNode} with ports, this specifies the name of the output port to connect from.
-     * @property {string} [targetPort] - If the `targetNode` is a {@link RegisteredNode} with ports, this specifies the name of the input port to connect to.
+ * @property {string} [sourcePort] - If the `sourceNode` is a {@link RegisteredNode} with defined output ports, this string specifies the name of the output port from which this edge originates.
+ *                                   Used by {@link RegisteredNode#emit} for automatic data propagation.
+ * @property {string} [targetPort] - If the `targetNode` is a {@link RegisteredNode` with defined input ports, this string specifies the name of the input port to which this edge connects.
+ *                                   Used by {@link RegisteredNode#emit} to determine the key for `updateNodeData` on the target node.
      */
 
     /**
@@ -713,6 +725,52 @@ export class SpaceGraph {
      * @returns {Edge | undefined} The edge instance, or undefined if not found.
      */
     getEdgeById = (id) => this.edges.get(id);
+
+    /**
+     * Updates specific data properties of a node and invokes its `onDataUpdate` lifecycle method.
+     * This is the primary way to send data to a node's input ports or trigger reactive updates.
+     * If a node's `emit` method (with `propagateViaPorts=true`) is called for an output port,
+     * and that port is connected by an edge to an input port of another node, this `updateNodeData`
+     * method is called implicitly on the target node by the SpaceGraph system.
+     *
+     * @param {string} nodeId - The ID of the node to update.
+     * @param {object} newData - An object containing the data properties to update. For example,
+     *                           if updating an input port named `data_in`, `newData` would be `{ data_in: 'new value' }`.
+     * @returns {BaseNode | null} The updated node instance, or `null` if the node is not found.
+     * @see RegisteredNode#onDataUpdate
+     * @see RegisteredNode#emit
+     * @example
+     * // Assuming 'nodeX' has an input port 'config' defined in its TypeDefinition or class.
+     * spaceGraph.updateNodeData('nodeX', { config: { color: 'red', size: 20 } });
+     * // This will trigger nodeX.onDataUpdate(nodeXInstance, { config: { color: 'red', size: 20 } });
+     * // (after nodeXInstance.data.config is updated).
+     */
+    updateNodeData(nodeId, newData) {
+        const nodeToUpdate = this.getNodeById(nodeId);
+        if (!nodeToUpdate) {
+            console.warn(`updateNodeData: Node with ID "${nodeId}" not found.`);
+            return null;
+        }
+
+        // Merge new data into the node's existing data
+        // Note: This performs a shallow merge. For deep merge, a utility would be needed.
+        Object.assign(nodeToUpdate.data, newData);
+
+        // Trigger the node's onDataUpdate lifecycle method, if it exists
+        // This can be defined in its TypeDefinition or as a class method (e.g., for HtmlAppNode derivatives)
+        if (nodeToUpdate.typeDefinition?.onDataUpdate) {
+            nodeToUpdate.typeDefinition.onDataUpdate(nodeToUpdate, newData, this);
+        } else if (typeof nodeToUpdate.onDataUpdate === 'function') {
+            // This covers classes extending RegisteredNode/HtmlAppNode that define onDataUpdate as a method
+            nodeToUpdate.onDataUpdate(newData); // Pass only newData as per typical class method signature
+        }
+
+        // If the node has a specific update method related to data (e.g. a render method)
+        // it might need to be called here, or onDataUpdate should handle it.
+        // For general visual updates, SpaceGraph's main animation loop calls node.update().
+
+        return nodeToUpdate;
+    }
 
     /**
      * @private
@@ -1949,29 +2007,62 @@ export class RegisteredNode extends BaseNode {
     typeDefinition = null;
     /** @type {HTMLElement[]} */
     portElements = [];
+    /**
+     * @private
+     * @type {Map<string, Set<Function>> | undefined}
+     * @description Stores listeners registered directly on this node instance when this node *is the emitter*.
+     *              Map structure: `Map<eventName, Set<callbackFunction>>`.
+     *              Callbacks are invoked by `this.emit()`.
+     */
+    _listeners; // Initialized in constructor
+    /**
+     * @private
+     * @type {Map<string, Map<string, Set<Function>>> | undefined}
+     * @description Tracks listeners that *this node* has registered on *other* nodes.
+     *              Used for cleanup in `dispose()` to remove this node's listeners from the emitters it was listening to.
+     *              Map structure: `Map<emitterNodeId, Map<eventName, Set<callbackFunction>>>`.
+     */
+    _listeningTo; // Initialized in constructor
+
 
     /**
      * Creates an instance of RegisteredNode.
      * This constructor is typically called internally by {@link SpaceGraph#addNode} when a node of a registered custom type is being added.
+     * It sets up the node based on its `typeDefinition`, creates its visual elements via `typeDefinition.onCreate`,
+     * and initializes internal structures for event handling.
      *
      * @constructor
      * @param {string} id - Unique ID for the node.
-     * @param {NodeDataObject} initialUserData - The initial data object for the node, which must include a `type` property matching
-     *                                         a registered type name. It can also include `x,y,z` coordinates and other custom data.
-     * @param {TypeDefinition} typeDefinition - The {@link TypeDefinition} object retrieved from {@link SpaceGraph#nodeTypes}
-     *                                        that corresponds to `initialUserData.type`.
-     * @param {SpaceGraph} spaceGraphRef - Reference to the parent {@link SpaceGraph} instance, needed for context in `TypeDefinition` callbacks.
+     * @param {NodeDataObject} initialUserData - The initial data object for the node.
+     * @param {TypeDefinition} typeDefinition - The {@link TypeDefinition} object for this node type.
+     * @param {SpaceGraph} spaceGraphRef - Reference to the parent {@link SpaceGraph} instance.
      */
     constructor(id, initialUserData, typeDefinition, spaceGraphRef) {
         super(
             id,
             { x: initialUserData.x ?? 0, y: initialUserData.y ?? 0, z: initialUserData.z ?? 0 },
             initialUserData, // Pass all initialUserData to BaseNode, it will merge with defaults
-            initialUserData.mass ?? typeDefinition.getDefaults?.(initialUserData)?.mass ?? 1.0
+            initialUserData.mass ?? typeDefinition.getDefaults?.(this, spaceGraphRef)?.mass ?? 1.0 // Pass nodeInst and graphInst to getDefaults
         );
 
         this.typeDefinition = typeDefinition;
         this.spaceGraph = spaceGraphRef; // Crucial for callbacks in typeDefinition
+
+        // Initialize listener maps
+        /**
+         * @private
+         * Stores listeners registered *on this node* (i.e., when this node is the Emitter).
+         * Key: eventName (string), Value: Set of callback functions.
+         */
+        this._listeners = new Map();
+
+        /**
+         * @private
+         * Stores listeners that *this node* has registered *on other nodes*.
+         * Key: emitterNodeId (string), Value: Map<eventName, Set<callbackFunctions>>.
+         * Used to clean up these listeners when this node is disposed.
+         */
+        this._listeningTo = new Map();
 
         // onCreate is mandatory and should return visual elements
         const visualOutputs = this.typeDefinition.onCreate(this, this.spaceGraph);
@@ -2006,11 +2097,18 @@ export class RegisteredNode extends BaseNode {
         // `this.data` is already partially populated by BaseNode's constructor using `initialUserData`.
         // The `typeDefinition.getDefaults` method is called here to fetch type-specific defaults.
         // These are then merged by the BaseNode constructor logic.
+
+        // In RegisteredNode (and its derivatives like HtmlAppNode), `this.typeDefinition` is set
+        // and `this.spaceGraph` is set before `super()` calls this method.
+        // `initialUserData` is available as `this.data` at this point due to BaseNode's constructor.
         if (this.typeDefinition?.getDefaults) {
-            // Pass `this.data` (which contains initialUserData) to getDefaults for context if needed by the definition
+            // Pass `this` (the node instance, which has `this.data` populated with initialUserData)
+            // and `this.spaceGraph` to getDefaults.
             return this.typeDefinition.getDefaults(this, this.spaceGraph);
         }
-        return {}; // Return empty object if no getDefaults is defined in TypeDefinition
+        // Fallback to BaseNode's default data if no getDefaults in typeDefinition.
+        // This ensures 'label' is still defaulted from id if nothing else is provided.
+        return super.getDefaultData();
     }
 
     /**
@@ -2121,6 +2219,34 @@ export class RegisteredNode extends BaseNode {
         super.dispose();
 
         this.typeDefinition = null; // Release reference
+
+        // Clean up listeners this node has registered on other nodes.
+        // Iterate over a copy of keys if modification during iteration is an issue, though Set.delete should be fine.
+        this._listeningTo.forEach((eventMap, emitterId) => {
+            const emitterNode = this.spaceGraph?.getNodeById(emitterId);
+            if (emitterNode && emitterNode instanceof RegisteredNode && emitterNode._listeners) {
+                eventMap.forEach((callbacks, eventName) => {
+                    callbacks.forEach(cb => {
+                        emitterNode._listeners.get(eventName)?.delete(cb);
+                        if (emitterNode._listeners.get(eventName)?.size === 0) {
+                            emitterNode._listeners.delete(eventName);
+                        }
+                    });
+                });
+            }
+        });
+        this._listeningTo.clear();
+
+        // Clean up listeners registered on this node by other nodes.
+        // This tells any nodes that were listening to this node, that this node is gone.
+        // (This part is more complex as it requires listeners to also de-register from their side,
+        // or for this._listeners to store listenerNode references, which it does not in current design for emit.)
+        // The current _listeners map (Map<eventName, Set<callback>>) does not know which node owns the callback.
+        // The cleanup in _listeningTo handles the primary responsibility of a node cleaning up *its own* outgoing listeners.
+        // For incoming listeners (this._listeners), clearing them here prevents further emits but doesn't inform the listening nodes.
+        // A more robust system might involve a central event manager or more complex tracking.
+        // For now, clearing this node's ability to emit to stale listeners is the main action.
+        this._listeners.clear();
     }
 
     /**
@@ -2239,6 +2365,130 @@ export class RegisteredNode extends BaseNode {
     endDrag() {
         if (this.typeDefinition?.onEndDrag) this.typeDefinition.onEndDrag(this, this.spaceGraph);
         else super.endDrag();
+    }
+
+    /**
+     * Emits an event from this node.
+     * If the eventName matches a defined output port, it automatically propagates the payload
+     * to any connected input ports on target nodes via `spaceGraph.updateNodeData()`.
+     * It also calls any listeners registered via `listenTo` on this node for this event.
+     *
+     * @param {string} eventName - The name of the event or output port.
+     * @param {*} payload - The data to send with the event.
+     * @param {boolean} [propagateViaPorts=true] - Optional. If true (default) and eventName is an output port,
+     *                                            data is sent to connected input ports.
+     */
+    emit(eventName, payload, propagateViaPorts = true) {
+        // 1. Automatic Port-Based Data Propagation
+        if (propagateViaPorts && this.data.ports?.outputs?.[eventName] && this.spaceGraph) {
+            this.spaceGraph.edges.forEach(edge => {
+                if (edge.source === this && edge.data.sourcePort === eventName) {
+                    const targetNode = edge.target;
+                    const targetPortName = edge.data.targetPort;
+                    if (targetNode && targetPortName && targetNode instanceof RegisteredNode) {
+                        if (targetNode.data.ports?.inputs?.[targetPortName]) {
+                            // console.log(`Propagating data from ${this.id}:${eventName} to ${targetNode.id}:${targetPortName}`, payload);
+                            this.spaceGraph.updateNodeData(targetNode.id, { [targetPortName]: payload });
+                        } else {
+                            console.warn(`Output port ${this.id}:${eventName} connected to undefined input port ${targetNode.id}:${targetPortName}`);
+                        }
+                    }
+                }
+            });
+        }
+
+        // 2. Direct `listenTo` Listeners
+        // Callbacks stored in `this._listeners` (Map<eventName, Set<callback>>) are executed.
+        if (this._listeners.has(eventName)) {
+            // Iterate over a copy in case a callback modifies the listeners Set (e.g., calls stopListening)
+            [...this._listeners.get(eventName)].forEach(callback => {
+                try {
+                    callback(payload, this); // Pass payload and this node as the sender
+                } catch (error) {
+                    console.error(`Error in direct listener for event "${eventName}" on node ${this.id}:`, error);
+                }
+            });
+        }
+    }
+
+    /**
+     * Registers a listener on an `emitterNode` for a specific event.
+     * When `emitterNode` emits an event with `eventName`, the provided `callback` will be executed.
+     * This node (the one calling `listenTo`) keeps track of this subscription for cleanup on dispose.
+     *
+     * @param {RegisteredNode} emitterNode - The node instance to listen to. Must be a `RegisteredNode` (or subclass).
+     * @param {string} eventName - The name of the event to listen for on the `emitterNode`.
+     * @param {function(any, RegisteredNode): void} callback - The function to execute when the event is emitted.
+     *                                                        It receives two arguments:
+     *                                                        1. `payload`: The data payload of the event.
+     *                                                        2. `senderNodeInstance`: The `emitterNode` instance that emitted the event.
+     * @example
+     * const nodeA = space.getNodeById('nodeA'); // Potential emitter
+     * const nodeB = space.getNodeById('nodeB'); // Listener
+     *
+     * if (nodeA && nodeB) {
+     *   nodeB.listenTo(nodeA, 'customEvent', (data, sender) => {
+     *     console.log(`NodeB received '${data}' from ${sender.id}`);
+     *     // nodeB.data.lastMessage = data; // Update internal data
+     *     // nodeB.customElements.display.textContent = data; // Update UI
+     *   });
+     * }
+     * // Later, if nodeA emits: nodeA.emit('customEvent', 'Hello from A!');
+     * // NodeB's callback will be triggered.
+     */
+    listenTo(emitterNode, eventName, callback) {
+        if (!(emitterNode instanceof RegisteredNode)) {
+            console.error(`Cannot listenTo: emitterNode with id '${emitterNode?.id}' is not a RegisteredNode.`);
+            return;
+        }
+        if (typeof callback !== 'function') {
+            console.error('Cannot listenTo: provided callback is not a function.');
+            return;
+        }
+
+        // Register the callback on the emitterNode's internal _listeners map.
+        if (!emitterNode._listeners.has(eventName)) {
+            emitterNode._listeners.set(eventName, new Set());
+        }
+        emitterNode._listeners.get(eventName).add(callback);
+
+        // This listening node (this) also needs to track this subscription for its own disposal.
+        if (!this._listeningTo.has(emitterNode.id)) {
+            this._listeningTo.set(emitterNode.id, new Map());
+        }
+        const eventMapForEmitter = this._listeningTo.get(emitterNode.id);
+        if (!eventMapForEmitter.has(eventName)) {
+            eventMapForEmitter.set(eventName, new Set());
+        }
+        eventMapForEmitter.get(eventName).add(callback);
+    }
+
+    /**
+     * Removes a listener that this node previously registered on an `emitterNode` for a specific event and callback.
+     *
+     * @param {RegisteredNode} emitterNode - The node instance from which to stop listening.
+     * @param {string} eventName - The name of the event.
+     * @param {Function} callback - The specific callback function instance that was originally registered.
+     *                              This must be the same function reference.
+     */
+    stopListening(emitterNode, eventName, callback) {
+        if (!(emitterNode instanceof RegisteredNode) || !emitterNode._listeners?.has(eventName) || typeof callback !== 'function') {
+            return;
+        }
+        emitterNode._listeners.get(eventName).delete(callback);
+        if (emitterNode._listeners.get(eventName).size === 0) {
+            emitterNode._listeners.delete(eventName);
+        }
+
+        if (this._listeningTo.has(emitterNode.id) && this._listeningTo.get(emitterNode.id).has(eventName)) {
+            this._listeningTo.get(emitterNode.id).get(eventName).delete(callback);
+            if (this._listeningTo.get(emitterNode.id).get(eventName).size === 0) {
+                this._listeningTo.get(emitterNode.id).delete(eventName);
+            }
+            if (this._listeningTo.get(emitterNode.id).size === 0) {
+                this._listeningTo.delete(emitterNode.id);
+            }
+        }
     }
 }
 
