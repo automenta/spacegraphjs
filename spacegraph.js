@@ -2712,12 +2712,8 @@ export class ShapeNode extends BaseNode {
         // Explicitly nullifying them here after super.dispose() is redundant if BaseNode.dispose() correctly clears them.
         // However, if BaseNode.dispose() were not guaranteed to clear them, or if these were custom properties
         // not known to BaseNode, then direct cleanup here would be essential.
-        // For safety and clarity, ensuring they are handled:
-        // this.mesh is handled by super.dispose()
-        // this.labelObject is handled by super.dispose()
-        super.dispose(); // BaseNode.dispose handles mesh, labelObject, and their elements.
-        // Nullify references that were specific to ShapeNode and might have been missed if BaseNode didn't know about them.
         // (In this case, 'shape', 'size', 'color' are primitive/data, not disposable objects themselves)
+        super.dispose(); // BaseNode.dispose handles mesh, labelObject, and their elements.
     }
 
     /**
@@ -2765,6 +2761,16 @@ export class ShapeNode extends BaseNode {
  * Its visual representation is a {@link THREE.Line} object.
  */
 export class Edge {
+    // Define default data as a static property
+    static DEFAULT_EDGE_DATA = {
+        color: 0x00d0ff,
+        thickness: 1.5,
+        opacity: 0.6,
+        style: 'solid',
+        constraintType: 'elastic',
+        constraintParams: { stiffness: 0.001, idealLength: 200 },
+    };
+
     /**
      * Unique identifier for the edge.
      * @type {string}
@@ -2821,14 +2827,7 @@ export class Edge {
      * @property {string} [sourcePort] - If `source` node is a {@link RegisteredNode} with ports, the name of the output port.
      * @property {string} [targetPort] - If `target` node is a {@link RegisteredNode} with ports, the name of the input port.
      */
-    data = {
-        color: 0x00d0ff,
-        thickness: 1.5,
-        opacity: 0.6, // Default opacity added here for clarity
-        style: 'solid',
-        constraintType: 'elastic',
-        constraintParams: { stiffness: 0.001, idealLength: 200 }, // Default for elastic
-    };
+    data = {}; // This will be populated in the constructor by merging defaults
 
     /**
      * Creates an instance of Edge.
@@ -2864,7 +2863,7 @@ export class Edge {
         this.spaceGraph = sourceNode.spaceGraph; // Inherit spaceGraph reference from a node
 
         const globalEdgeDefaults = this.spaceGraph?.config?.defaults?.edge || {};
-        const classLevelDefaults = this.constructor.prototype.data; // Accessing the `data` property as defined on the class itself for its defaults
+        const classLevelDefaults = Edge.DEFAULT_EDGE_DATA; // Accessing the static default data
 
         // Determine smart default constraint parameters based on type
         const currentConstraintType = data.constraintType || classLevelDefaults.constraintType;
@@ -2882,7 +2881,7 @@ export class Edge {
             constraintParams: {
                 // Deep merge for constraintParams separately
                 ...classLevelDefaults.constraintParams, // Base for constraint params
-                ...globalEdgeDefaults.constraintParams, // Global defaults for constraint params
+                ...(globalEdgeDefaults.constraintParams || {}), // Global defaults for constraint params (ensure it's an object)
                 ...smartConstraintParams, // Type-specific smart defaults (calculated)
                 ...(data.constraintParams || {}), // Instance-specific constraint params
             },
