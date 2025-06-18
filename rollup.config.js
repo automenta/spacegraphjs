@@ -1,39 +1,54 @@
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
-import terser from '@rollup/plugin-terser'; // Updated import
+import terser from '@rollup/plugin-terser';
+import babel from '@rollup/plugin-babel';
 
-const basePlugins = [resolve(), commonjs()];
+// Define specific plugins
+const babelPlugin = babel({
+    babelHelpers: 'bundled',
+    exclude: 'node_modules/**',
+    extensions: ['.js', '.mjs'], // Explicitly include .js and .mjs
+    presets: ['@babel/preset-env'] // Simplest preset-env config
+});
+
+const resolvePlugin = resolve();
+const commonjsPlugin = commonjs({
+    include: /node_modules/, // Only process files in node_modules
+    transformMixedEsModules: true // Handle mixed ES/CommonJS modules in dependencies
+});
+// terser will be used as terser() directly in the output config
+
+const basePlugins = [resolvePlugin, commonjsPlugin];
 
 export default {
     input: 'spacegraph.js',
     external: ['three', 'gsap'],
-    plugins: basePlugins, // Apply base plugins at the top level
+    // No top-level plugins array, plugins are defined per output
     output: [
         // Non-minified outputs
         {
             file: 'dist/spacegraph.esm.js',
             format: 'esm',
             sourcemap: true,
-            // plugins array removed, basePlugins are top-level
+            plugins: [babelPlugin, ...basePlugins],
         },
         {
             file: 'dist/spacegraph.umd.js',
             format: 'umd',
             name: 'SpaceGraphZUI',
             sourcemap: true,
-            // globals are mainly for external UMD dependencies
             globals: {
                 three: 'THREE',
                 gsap: 'gsap',
             },
-            // plugins array removed, basePlugins are top-level
+            plugins: [babelPlugin, ...basePlugins],
         },
         // Minified outputs
         {
             file: 'dist/spacegraph.esm.min.js',
             format: 'esm',
             sourcemap: true,
-            plugins: [terser()], // Only terser here, basePlugins are top-level
+            plugins: [babelPlugin, ...basePlugins, terser()],
         },
         {
             file: 'dist/spacegraph.umd.min.js',
@@ -44,11 +59,7 @@ export default {
                 three: 'THREE',
                 gsap: 'gsap',
             },
-            plugins: [terser()], // Only terser here, basePlugins are top-level
+            plugins: [babelPlugin, ...basePlugins, terser()],
         },
     ],
-    // Top-level plugins are not needed if specified per output,
-    // or if all outputs share the exact same plugins.
-    // For clarity, moving them into each output or a base array is better
-    // when some outputs have different plugins (like terser).
 };

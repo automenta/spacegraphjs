@@ -3,22 +3,18 @@
     "version": "0.1.0",
     "description": "A general-purpose, extensible JavaScript library for creating Zooming User Interfaces (ZUI) with 2D and 3D visualizations.",
     "main": "dist/spacegraph.umd.js",
-    "module": "dist/spacegraph.esm.js",
+    "module": "dist/spacegraph.es.js",
     "files": [
-        "dist/spacegraph.umd.js",
-        "dist/spacegraph.umd.js.map",
-        "dist/spacegraph.esm.js",
-        "dist/spacegraph.esm.js.map",
-        "dist/spacegraph.umd.min.js",
-        "dist/spacegraph.umd.min.js.map",
-        "dist/spacegraph.esm.min.js",
-        "dist/spacegraph.esm.min.js.map",
-        "README.md",
-        "CORE_CONCEPTS.md",
-        "index.css"
+      "dist/spacegraph.umd.js",
+      "dist/spacegraph.umd.js.map",
+      "dist/spacegraph.es.js",
+      "dist/spacegraph.es.js.map",
+      "README.md",
+      "CORE_CONCEPTS.md",
+      "index.css"
     ],
     "scripts": {
-        "build": "npx rollup -c",
+        "build": "vite build",
         "test": "vitest",
         "docs:build": "jsdoc -c jsdoc.conf.json",
         "docs:view": "serve ./docs/api -l 8080",
@@ -59,6 +55,9 @@
         "three": "^0.177.0"
     },
     "devDependencies": {
+        "@babel/core": "^7.27.4",
+        "@babel/preset-env": "^7.27.2",
+        "@rollup/plugin-babel": "^6.0.4",
         "@rollup/plugin-commonjs": "^28.0.5",
         "@rollup/plugin-node-resolve": "^16.0.1",
         "@rollup/plugin-terser": "^0.4.4",
