@@ -586,3 +586,156 @@ body {
     border: 2px solid #00cc00 !important;
     transform: scale(1.3) !important; /* Slightly larger scale for target port */
 }
+
+/* Styles for Markdown Editor Node (from example-app-nodes.html) */
+.html-app-node.markdown-editor-node .editor-area {
+    /* Target textarea within the specific node type */
+    background-color: #2d2d2d; /* Darker background for text area */
+    color: #f0f0f0; /* Light text */
+    font-family: monospace;
+    border: none;
+    padding: 8px;
+    margin: 0; /* Remove default textarea margin */
+    box-sizing: border-box;
+}
+.html-app-node.markdown-editor-node .preview-area {
+    /* Target preview div */
+    background-color: #fff; /* White background for preview */
+    color: #333; /* Dark text for preview */
+    padding: 8px;
+    overflow-y: auto;
+    box-sizing: border-box;
+}
+
+/* Task List Node Specific Styles (from example-app-nodes.html) */
+.html-app-node.task-list-node {
+    padding: 10px;
+    color: #333;
+    font-family: var(--font-family); /* Ensure consistent font */
+}
+.html-app-node.task-list-node h3 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    text-align: center;
+    color: #007bff;
+}
+.html-app-node.task-list-node .input-container {
+    /* Container for input + button */
+    display: flex;
+    margin-bottom: 8px;
+}
+.html-app-node.task-list-node .new-task-input {
+    flex-grow: 1;
+    margin-right: 5px;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+.html-app-node.task-list-node .add-task-button {
+    padding: 5px 10px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+.html-app-node.task-list-node .add-task-button:hover {
+    background-color: #218838;
+}
+.html-app-node.task-list-node .task-list-ul {
+    list-style-type: none;
+    padding: 0;
+    margin-top: 0; /* No extra space above list */
+    flex-grow: 1; /* Allow list to take available space */
+    overflow-y: auto;
+    min-height: 50px; /* Ensure it's visible even when empty */
+}
+.html-app-node.task-list-node .task-list-ul li {
+    display: flex;
+    align-items: center;
+    padding: 6px 2px;
+    border-bottom: 1px solid #eee;
+}
+.html-app-node.task-list-node .task-list-ul li:last-child {
+    border-bottom: none;
+}
+.html-app-node.task-list-node .task-list-ul li input[type='checkbox'] {
+    margin-right: 10px;
+    cursor: pointer;
+    width: 16px; /* Larger checkboxes */
+    height: 16px;
+}
+.html-app-node.task-list-node .task-list-ul li span {
+    /* Task text span */
+    flex-grow: 1;
+    word-break: break-word;
+}
+.html-app-node.task-list-node .task-list-ul li span.completed {
+    text-decoration: line-through;
+    color: #999;
+}
+.html-app-node.task-list-node .task-list-ul li .delete-task-button {
+    margin-left: 8px; /* Space between text and button */
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    padding: 3px 6px;
+    font-size: 10px;
+    line-height: 1;
+}
+.html-app-node.task-list-node .task-list-ul li .delete-task-button:hover {
+    background: #c82333;
+}
+
+/* Styling for Simple Counter Node (from example-simple-counter-app-node.html) */
+.html-app-node.simple-counter-node {
+    border: 1px solid var(--border-color-medium);
+    border-radius: var(--border-radius-medium);
+    box-shadow: var(--shadow-medium);
+    padding: 15px; /* Add padding to the node itself */
+    box-sizing: border-box; /* Ensure padding is included in width/height */
+}
+
+.simple-counter-node h4 { /* Note: Original selector was .html-app-node.simple-counter-node h4, simplified for brevity if unique */
+    margin-top: 0;
+    margin-bottom: 10px;
+    text-align: center;
+    color: var(--text-color-emphasis);
+    font-size: 1em;
+}
+
+.simple-counter-node .count-display {
+    font-size: 24px;
+    margin: 15px 0;
+    text-align: center;
+    font-weight: bold;
+    color: var(--text-color-highlight);
+}
+
+.simple-counter-node .buttons-container {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+
+.simple-counter-node button {
+    background-color: var(--button-bg-color);
+    color: var(--button-text-color);
+    border: 1px solid var(--button-border-color);
+    border-radius: var(--border-radius-small);
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.2s ease;
+}
+
+.simple-counter-node button:hover {
+    background-color: var(--button-hover-bg-color);
+    border-color: var(--button-hover-border-color);
+}
+
+.simple-counter-node button:active {
+    background-color: var(--button-active-bg-color);
+}

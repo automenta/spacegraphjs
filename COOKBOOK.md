@@ -400,11 +400,11 @@ This cookbook provides a starting point. The specifics can depend on the exact i
 ---
 ## Creating Complex Layouts
 
-SpaceGraph.js provides a force-directed layout engine by default, which is excellent for many graph visualization tasks. However, you might need more control for specific arrangements or want to implement entirely custom layout algorithms.
+SpaceGraph.js provides a force-directed layout engine by default, which is excellent for many graph visualization tasks. For a conceptual overview of the layout system, see "[Layout](CORE_CONCEPTS.md#6-layout)" in `CORE_CONCEPTS.md`. This section focuses on how to work with and customize layouts.
 
 ### 1. Working with the Force-Directed Layout (FDL)
 
-The built-in FDL simulates physical forces to arrange nodes. You can influence its behavior by adjusting parameters on nodes, edges, or ощуthe layout engine itself.
+The built-in FDL simulates physical forces to arrange nodes. You can influence its behavior by adjusting parameters on nodes, edges, or the layout engine itself.
 
 **a. Adjusting Parameters:**
 
@@ -909,8 +909,8 @@ async function performIncrementalUpdate(graph, newData) {
 }
 ```
 **Note on `updateNodeData` vs `updateNodeConfig`:**
--   `graph.updateNodeData(nodeId, data)`: Primarily for updating `node.appData`. If your `HtmlAppNode`'s `render()` or other methods react to changes in `appData`, this can trigger a visual update for that specific node.
--   `graph.updateNodeConfig(nodeId, config)`: More comprehensive. Use this if visual properties (label, color, size), position, or physics properties change. This method will typically ensure the node is correctly re-rendered with all changes.
+-   `graph.updateNodeData(nodeId, data)`: Primarily for updating custom data within `node.data` (often referred to as `appData` in examples). If your `HtmlAppNode`'s `onDataUpdate` method (see [HtmlAppNode Tutorial](TUTORIAL_HTML_APP_NODE.md)) reacts to these changes, this can trigger a visual update.
+-   `graph.updateNodeConfig(nodeId, config)`: More comprehensive. Use this if core visual properties (label, color, size), position, or physics properties change. This method will typically ensure the node is correctly re-rendered with all changes.
 -   Similar considerations apply to `graph.updateEdgeData()` vs `graph.updateEdgeConfig()`.
 
 ### 4. Basic Error Handling in Fetch
@@ -966,17 +966,17 @@ As your SpaceGraph.js visualizations grow in complexity and scale, performance c
     -   The sheer number of nodes and edges is often the biggest factor. More elements mean more objects to manage, render, and include in layout calculations.
     -   Strive to display only essential information. Consider aggregation or summarization techniques for very large datasets, allowing users to drill down into details on demand.
 -   **Complexity of Node Content:**
-    -   **HTML Nodes (`HtmlNodeElement`, `HtmlAppNode`):** Rich HTML content with many DOM elements, complex CSS, or frequent updates can be costly as they involve browser rendering overhead for each node (CSS calculations, layout, painting).
-    -   **Shape Nodes (`ShapeNode`):** These are generally more performant for large numbers of simple visual markers as they are rendered directly by WebGL using fewer draw calls if instancing or batching is employed by the library.
+    -   **HTML Nodes (`HtmlNodeElement`, `HtmlAppNode`):** Rich HTML content with many DOM elements, complex CSS, or frequent updates can be costly as they involve browser rendering overhead for each node (CSS calculations, layout, painting). For creating custom HTML nodes, refer to the "[Creating Custom Nodes](CORE_CONCEPTS.md#3-creating-custom-nodes-the-new-system)" section in `CORE_CONCEPTS.md` and the detailed [HtmlAppNode Tutorial](TUTORIAL_HTML_APP_NODE.md).
+    -   **Shape Nodes (`ShapeNode`):** These are generally more performant for large numbers of simple visual markers as they are rendered directly by WebGL. `ShapeNode` is one of the [legacy built-in types](CORE_CONCEPTS.md#2-main-classes-and-their-roles).
     -   Choose the node type that balances visual richness with performance needs. For thousands of elements, prefer `ShapeNode`s or very simple HTML nodes.
 
 ### b. Rendering Performance
 
 -   **Choose Efficient Node Types:**
-    -   For simple representations (dots, boxes, spheres with basic labels), `ShapeNode` is usually faster than HTML-based nodes.
-    -   If using HTML nodes, keep their DOM structure as simple as possible. Minimize nested elements and complex CSS selectors. Each HTML node is essentially a separate "web page" managed by the browser, positioned in 3D space.
+    -   For simple representations (dots, boxes, spheres with basic labels), `ShapeNode` (see [Core Concepts](CORE_CONCEPTS.md#2-main-classes-and-their-roles)) is usually faster than HTML-based nodes.
+    -   If using HTML nodes (like custom `HtmlAppNode` subclasses, see [tutorial](TUTORIAL_HTML_APP_NODE.md)), keep their DOM structure as simple as possible. Minimize nested elements and complex CSS selectors. Each HTML node is essentially a separate "web page" managed by the browser, positioned in 3D space.
 -   **Simplify HTML Structure:**
-    -   For `HtmlAppNode` or `NoteNode`, use minimal HTML. Avoid deeply nested structures or overly complex CSS (e.g., multiple layers of transparency, complex box shadows on many nodes).
+    -   For `HtmlAppNode` or the built-in `NoteNode`, use minimal HTML. Avoid deeply nested structures or overly complex CSS (e.g., multiple layers of transparency, complex box shadows on many nodes).
     -   Use efficient CSS properties. `transform` and `opacity` are generally well-optimized by browsers. Heavy CSS like `filter: blur()` can be slow if applied to many nodes.
 -   **Manage Billboarding:**
     -   Billboarding (where nodes always face the camera) is useful for readability of HTML content but adds computational overhead as node orientations must be updated each frame relative to the camera.
@@ -998,6 +998,8 @@ As your SpaceGraph.js visualizations grow in complexity and scale, performance c
     -   Implementing true virtualization for HTML nodes (e.g., detaching their DOM elements when far off-screen and re-attaching when they come into view) is an advanced optimization and not typically a built-in feature of libraries that mix WebGL and HTML like this. It would require custom logic.
 
 ### c. Layout Performance
+
+The principles of the Force-Directed Layout (FDL) are described in `CORE_CONCEPTS.md` under "[Layout](CORE_CONCEPTS.md#6-layout)". Here's how to optimize its performance:
 
 -   **Adjust Force-Directed Layout (FDL) Parameters:**
     -   A "stiffer" graph (higher edge `stiffness`, appropriate `idealLength`) might stabilize faster but can be computationally more intensive per tick and may oscillate more.

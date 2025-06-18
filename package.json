@@ -5,13 +5,17 @@
     "main": "dist/spacegraph.umd.js",
     "module": "dist/spacegraph.es.js",
     "files": [
-      "dist/spacegraph.umd.js",
-      "dist/spacegraph.umd.js.map",
-      "dist/spacegraph.es.js",
-      "dist/spacegraph.es.js.map",
-      "README.md",
-      "CORE_CONCEPTS.md",
-      "index.css"
+        "dist/spacegraph.umd.js",
+        "dist/spacegraph.umd.js.map",
+        "dist/spacegraph.umd.min.js",
+        "dist/spacegraph.umd.min.js.map",
+        "dist/spacegraph.es.js",
+        "dist/spacegraph.es.js.map",
+        "dist/spacegraph.es.min.js",
+        "dist/spacegraph.es.min.js.map",
+        "README.md",
+        "CORE_CONCEPTS.md",
+        "index.css"
     ],
     "scripts": {
         "build": "vite build",
@@ -23,7 +27,7 @@
         "format": "prettier --write \"**/*.{js,json,md,html,css}\"",
         "start": "npx vite dev",
         "demos": "npx vite dev --open /demos.html",
-        "build:watch": "npx rollup -c -w"
+        "build:watch": "vite build --watch"
     },
     "author": "SpaceGraph Contributors",
     "license": "MIT",
@@ -57,9 +61,6 @@
     "devDependencies": {
         "@babel/core": "^7.27.4",
         "@babel/preset-env": "^7.27.2",
-        "@rollup/plugin-babel": "^6.0.4",
-        "@rollup/plugin-commonjs": "^28.0.5",
-        "@rollup/plugin-node-resolve": "^16.0.1",
         "@rollup/plugin-terser": "^0.4.4",
         "chart.js": "^4.5.0",
         "eslint": "^8.57.0",
@@ -69,7 +70,6 @@
         "jsdoc": "^4.0.4",
         "jsdom": "^24.0.0",
         "prettier": "^3.3.3",
-        "rollup": "^4.43.0",
         "serve": "^14.2.4",
         "three": "^0.177.0",
         "vite": "^6.3.5",

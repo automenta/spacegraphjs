@@ -301,47 +301,6 @@ SpaceGraph allows for global customization of many default behaviors and visual 
     3.  Internal hardcoded defaults within node/edge classes (these are minimal now).
 - **Structure**: For the detailed structure of the configuration object (`SpaceGraphConfig`), refer to the JSDoc in `spacegraph.js` or the main `README.md`.
 
-## 5. Creating Complex Nodes (App Nodes) using `HtmlAppNode`
-
-For nodes that require rich HTML-based UIs, custom logic, and interactivity, extending the {@link HtmlAppNode} class is the recommended approach. `HtmlAppNode` is a specialized {@link RegisteredNode} that simplifies the creation of these "App Nodes" by automating common setup tasks and providing useful helper methods.
-
-### Architectural Overview
-
--   **Purpose**: Use `HtmlAppNode` when your node's visual representation is primarily HTML, and you need to manage interactive elements like buttons, inputs, or complex layouts.
--   **Inheritance**: You create a custom class that `extends HtmlAppNode`.
--   **`TypeDefinition`**: When registering your node type, the `typeDefinition` object must specify your custom class in the `nodeClass` property. The `getDefaults` method in the `typeDefinition` is still crucial for providing initial data like `width`, `height`, `label`, and any custom properties your node needs.
-    ```javascript
-    // Example TypeDefinition for an HtmlAppNode subclass
-    const myAppNodeDefinition = {
-      // typeName is the key for registration, e.g., graph.registerNodeType('my-app', myAppNodeDefinition)
-      nodeClass: MyCustomAppNode, // Your class that extends HtmlAppNode
-      getDefaults: (node) => ({
-        label: node.id || 'My App Node',
-        width: 300,         // Used by HtmlAppNode for initial styling
-        height: 200,        // Used by HtmlAppNode for initial styling
-        backgroundColor: 'rgba(255, 255, 255, 0.9)', // Default background
-        // ... other custom default data specific to MyCustomAppNode ...
-      })
-    };
-    ```
--   **Lifecycle Methods**: The core logic of your node (DOM creation, event handling, state updates, cleanup) is implemented as methods within your custom class (e.g., `onInit`, `onDataUpdate`, `onDispose`). `HtmlAppNode` calls these methods at appropriate times.
--   **`this.htmlElement`**: `HtmlAppNode` automatically creates the main `div` container for your node (`this.htmlElement`) and applies basic styling (dimensions, background color). You populate this element in your `onInit` method.
-
-### Implementation Details
-
-The detailed, step-by-step process of implementing an `HtmlAppNode` subclass, including:
-    - How to structure the `onInit` method for DOM creation and event listener setup.
-    - Managing node state with `this.data`.
-    - Responding to data changes in `onDataUpdate`.
-    - Cleaning up resources in `onDispose`.
-    - Using helper methods like `this.getChild()`, `this.stopEventPropagation()`, and `this.emit()`.
-    - Styling your custom HTML node.
-    - A complete practical example.
-
-is covered extensively in the **[TUTORIAL_HTML_APP_NODE.md](TUTORIAL_HTML_APP_NODE.md)**. This tutorial is the primary resource for learning *how to build* nodes with `HtmlAppNode`.
-
-For runnable examples of complex App Nodes, see the [Application Nodes Demo](example-app-nodes.html).
-
 ## 6. Rendering Concepts
 
 SpaceGraph uses a hybrid rendering approach:
@@ -351,19 +310,19 @@ SpaceGraph uses a hybrid rendering approach:
 - **`CSS3DObject`**: Wraps an `HTMLElement`, allowing it to be part of the 3D scene.
 - **Billboard Effect**: HTML nodes and labels often billboard (face the camera) for readability.
 
-## 7. Styling and Appearance
+## 5. Styling and Appearance (Adjusted Heading Number)
 
 - **HTML-based Nodes**: Styled with standard CSS.
 - **Shape-based Nodes**: Appearance via THREE.js `Material` properties.
 - **Custom Registered Types**: `onCreate` has full control.
 - **Edges**: Styled via `data` object properties (e.g., `color`, `thickness`).
 
-## 8. Layout
+## 6. Layout (Adjusted Heading Number)
 
 - **`ForceLayout`**: Default physics-based engine.
 - Nodes have `mass`; edges have `stiffness`, `idealLength`.
 - `node.getBoundingSphereRadius()` is important for overlap prevention.
 
-## 9. Testing
+## 7. Testing (Adjusted Heading Number)
 
 The library includes a testing setup using Vitest. Tests can be run with `npm test`. This helps ensure stability and correctness of core functionalities.

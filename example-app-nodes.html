@@ -10,113 +10,6 @@
         />
         <link href="index.css" rel="stylesheet" />
         <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-        <style>
-            /* Styles for Markdown Editor Node (can be moved to index.css later) */
-            .html-app-node.markdown-editor-node .editor-area {
-                /* Target textarea within the specific node type */
-                background-color: #2d2d2d; /* Darker background for text area */
-                color: #f0f0f0; /* Light text */
-                font-family: monospace;
-                border: none;
-                padding: 8px;
-                margin: 0; /* Remove default textarea margin */
-                box-sizing: border-box;
-            }
-            .html-app-node.markdown-editor-node .preview-area {
-                /* Target preview div */
-                background-color: #fff; /* White background for preview */
-                color: #333; /* Dark text for preview */
-                padding: 8px;
-                overflow-y: auto;
-                box-sizing: border-box;
-            }
-            /* .node-inner-wrapper rule removed as it's no longer applicable to MarkdownEditorNode's structure */
-
-            /* Task List Node Specific Styles */
-            /* Select using the classes added by HtmlAppNode: .html-app-node and .task-list-node (from typeName) */
-            .html-app-node.task-list-node {
-                padding: 10px;
-                /* background-color: #f0f8ff; /* AliceBlue */ /* This is now set by HtmlAppNode via this.data.backgroundColor from getDefaults */
-                color: #333;
-                /* border-radius: 8px; /* HtmlAppNode's base style for htmlElement likely sets this, check index.css for .node-html */
-                font-family: var(--font-family); /* Ensure consistent font */
-            }
-            .html-app-node.task-list-node h3 {
-                margin-top: 0;
-                margin-bottom: 8px;
-                text-align: center;
-                color: #007bff;
-            }
-            .html-app-node.task-list-node .input-container {
-                /* Container for input + button */
-                display: flex;
-                margin-bottom: 8px;
-            }
-            .html-app-node.task-list-node .new-task-input {
-                flex-grow: 1;
-                margin-right: 5px;
-                padding: 5px;
-                border: 1px solid #ccc;
-                border-radius: 3px;
-            }
-            .html-app-node.task-list-node .add-task-button {
-                padding: 5px 10px;
-                background-color: #28a745;
-                color: white;
-                border: none;
-                border-radius: 3px;
-                cursor: pointer;
-            }
-            .html-app-node.task-list-node .add-task-button:hover {
-                background-color: #218838;
-            }
-            .html-app-node.task-list-node .task-list-ul {
-                list-style-type: none;
-                padding: 0;
-                margin-top: 0; /* No extra space above list */
-                flex-grow: 1; /* Allow list to take available space */
-                overflow-y: auto;
-                min-height: 50px; /* Ensure it's visible even when empty */
-            }
-            .html-app-node.task-list-node .task-list-ul li {
-                display: flex;
-                align-items: center;
-                padding: 6px 2px;
-                border-bottom: 1px solid #eee;
-            }
-            .html-app-node.task-list-node .task-list-ul li:last-child {
-                border-bottom: none;
-            }
-            .html-app-node.task-list-node .task-list-ul li input[type='checkbox'] {
-                margin-right: 10px;
-                cursor: pointer;
-                width: 16px; /* Larger checkboxes */
-                height: 16px;
-            }
-            .html-app-node.task-list-node .task-list-ul li span {
-                /* Task text span */
-                flex-grow: 1;
-                word-break: break-word;
-            }
-            .html-app-node.task-list-node .task-list-ul li span.completed {
-                text-decoration: line-through;
-                color: #999;
-            }
-            .html-app-node.task-list-node .task-list-ul li .delete-task-button {
-                margin-left: 8px; /* Space between text and button */
-                background: #dc3545;
-                color: white;
-                border: none;
-                border-radius: 3px;
-                cursor: pointer;
-                padding: 3px 6px;
-                font-size: 10px;
-                line-height: 1;
-            }
-            .html-app-node.task-list-node .task-list-ul li .delete-task-button:hover {
-                background: #c82333;
-            }
-        </style>
     </head>
     <body>
         <div id="space">
@@ -366,13 +259,9 @@
 
                     let needsRender = false;
                     if (updatedData.tasks !== undefined) {
-                        // Ensure this.data.tasks is updated by RegisteredNode before comparison
-                         if (JSON.stringify(this.data.tasks) !== JSON.stringify(updatedData.tasks)) {
-                             // This comparison might be redundant if this.data.tasks is already updated by RegisteredNode
-                             // For safety, or if we want to be explicit:
-                             this.data.tasks = Array.isArray(updatedData.tasks) ? [...updatedData.tasks] : (Array.isArray(this.data.tasks) ? this.data.tasks : []);
-                             needsRender = true;
-                         }
+                        // this.data.tasks is already updated to the new array/value by RegisteredNode.
+                        // We just need to re-render if tasks were part of the update.
+                        needsRender = true;
                     }
                     if (updatedData.title !== undefined && this.titleEl) {
                         if (this.titleEl.textContent !== this.data.title) { // Compare with this.data.title which is the source of truth

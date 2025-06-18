@@ -47,27 +47,29 @@ class MyCustomNode extends HtmlAppNode {
 
 ### `typeDefinition.typeName` and `typeDefinition.nodeClass`
 
-When you register your new node type with SpaceGraph, your `typeDefinition` object needs two key properties related to `HtmlAppNode`:
+When registering your `HtmlAppNode` subclass, the `typeDefinition` object plays a key role. As detailed in `CORE_CONCEPTS.md` under "[Creating Custom Nodes](CORE_CONCEPTS.md#3-creating-custom-nodes-the-new-system)", this definition object tells SpaceGraph how to handle your new node type. For an `HtmlAppNode`:
 
-1.  **`typeName` (string):** A unique string identifier for your node type (e.g., `'my-custom-node'`). `HtmlAppNode` uses this to automatically add a CSS class (`<typeName>-node`, e.g., `my-custom-node-node`) to your node's main HTML element, allowing for type-specific styling.
-2.  **`nodeClass` (class reference):** This must be a reference to your custom class (e.g., `MyCustomNode`). SpaceGraph uses this to instantiate your class when a node of this type is added.
+1.  **`typeName` (string):** This unique identifier (e.g., `'my-custom-node'`) is used by `HtmlAppNode` to auto-generate a CSS class for type-specific styling (e.g., `my-custom-node-node`).
+2.  **`nodeClass` (class reference):** This **must point to your custom class** (e.g., `MyCustomNode`). SpaceGraph uses this to instantiate your class.
 
+Refer to `CORE_CONCEPTS.md` for the general structure and all properties of the `TypeDefinition` object. The example below highlights the parts most relevant to `HtmlAppNode`:
 ```javascript
 const myCustomNodeDefinition = {
-    typeName: 'my-custom-node',
-    nodeClass: MyCustomNode, // Reference to your class
+    typeName: 'my-custom-node', // Becomes key in spaceGraph.registerNodeType()
+    nodeClass: MyCustomNode,    // Your class extending HtmlAppNode
     getDefaults: (nodeInst) => { /* ... see below ... */ },
-    // Other typeDefinition properties (like ports if needed for advanced nodes)
-    // No need for onCreate, onUpdate, onDispose here if handled by your class methods
+    // Other properties like 'ports' can be added if needed.
+    // Functional callbacks like onCreate, onUpdate are usually not needed here,
+    // as their logic is handled by your HtmlAppNode subclass methods.
 };
 
 // In your main script:
-// spaceGraph.registerNodeType('my-custom-node', myCustomNodeDefinition);
+// spaceGraph.registerNodeType(myCustomNodeDefinition.typeName, myCustomNodeDefinition);
 ```
 
 ### `getDefaults` in `typeDefinition`
 
-The `getDefaults` method in your `typeDefinition` is crucial. It provides the initial data for your node instance (`this.data`). `HtmlAppNode` relies on specific properties from `this.data` to set up the node:
+The `getDefaults` method within your `typeDefinition` provides initial values for your node's `this.data` object. `HtmlAppNode` specifically uses the following data properties for its setup:
 
 -   `width` (number): The width of the node in pixels.
 -   `height` (number): The height of the node in pixels.
@@ -89,6 +91,8 @@ const myCustomNodeDefinition = {
         myCustomProperty: 'initialValue',
         // ... other defaults ...
     }),
+    // For more details on how getDefaults works and its parameters,
+    // see the TypeDefinition explanation in CORE_CONCEPTS.md.
 };
 ```
 When a node is created (e.g. `space.addNode({ type: 'my-custom-node', label: 'Specific Label' })`), this data is merged with the defaults, and `HtmlAppNode` uses it.
@@ -244,7 +248,7 @@ Your custom class (e.g., `MyCustomNode`) will primarily implement these lifecycl
     ```
 
 -   **`this.emit(eventName, payload, propagateViaPorts = true)`:**
-    Used to emit events from your node. If `eventName` matches a defined output port in `this.data.ports.outputs` and `propagateViaPorts` is true, data is automatically sent to connected input ports on other nodes (triggering their `onDataUpdate`). It also calls any direct listeners (from `listenTo`). See `CORE_CONCEPTS.md` for details on inter-node communication.
+    Used to emit events from your node. If `eventName` matches a defined output port in `this.data.ports.outputs` and `propagateViaPorts` is true, data is automatically sent to connected input ports on other nodes (triggering their `onDataUpdate`). It also calls any direct listeners (from `listenTo`). For full details on event propagation, ports, and inter-node communication, please refer to the "Event Systems and Edge Linking" section in `CORE_CONCEPTS.md#4-event-systems-and-edge-linking`.
 
 ## 6. Simple Complete Example: Counter Node
 
