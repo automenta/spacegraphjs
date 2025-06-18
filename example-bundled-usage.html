@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SpaceGraph.js - Bundled Usage Example</title>
+    <link href="./index.css" rel="stylesheet" />
+    <style>
+        body { margin: 0; overflow: hidden; font-family: sans-serif; }
+        #graph-container-bundled { width: 100vw; height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="graph-container-bundled"></div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "spacegraph-zui": "./dist/spacegraph.esm.js",
+            "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
+            "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
+        }
+    }
+    </script>
+    <script type="module" src="./js/example-bundled-usage.js"></script>
+</body>
+</html>

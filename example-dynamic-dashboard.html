@@ -63,11 +63,16 @@
 
     <script type="module">
         import { SpaceGraph, HtmlAppNode } from './dist/spacegraph.esm.min.js';
-        import Chart from 'chart.js';
+        import Chart from 'chart.js'; // Chart.js is imported for creating dynamic charts.
 
         // --- DataSourceNode Implementation ---
+        // DataSourceNode simulates a source of continuous data, like a sensor or a live feed.
+        // It extends HtmlAppNode to render custom HTML content within the graph.
+        // See TUTORIAL_HTML_APP_NODE.md for more details on creating custom HTML nodes.
         class DataSourceNode extends HtmlAppNode {
             onInit() {
+                // onInit is called when the node is added to the graph.
+                // It's used here to set up the initial HTML structure and start the data emission.
                 this.htmlElement.innerHTML = `
                     <div style="padding:10px;">
                         <h4>${this.data.label || 'Data Source'}</h4>
@@ -75,109 +80,132 @@
                         <small>ID: ${this.id}</small>
                     </div>
                 `;
-                this.autoStopPropagation(); // For potential future interactive elements
+                this.autoStopPropagation(); // For potential future interactive elements to prevent graph dragging.
 
-                this.data.currentValueText = "Starting...";
+                this.data.currentValueText = "Starting..."; // Initialize a data property for display.
 
-                // Periodically emit data
+                // Periodically emit data using 'dataOutput' port.
+                // This simulates a live data feed.
+                // Other nodes can listen to this event if connected via an edge.
                 this.emitInterval = setInterval(() => {
                     const newValue = Math.random() * 100;
                     const newData = {
                         value: newValue,
-                        timestamp: Date.now()
+                        timestamp: Date.now() // Include a timestamp for the data point.
                     };
-                    this.spaceGraph.updateNodeData(this.id, { currentValueText: newValue.toFixed(2) })
+                    // Update the node's own data for display purposes (e.g., via data-bind-prop).
+                    // This does not trigger 'onDataUpdate' on this node, but updates its reactive HTML.
+                    this.spaceGraph.updateNodeData(this.id, { currentValueText: newValue.toFixed(2) });
+                    // Emit an event from the 'dataOutput' port.
+                    // If an edge is connected from this port to another node's input port (e.g., 'dataIn'),
+                    // SpaceGraph will automatically transfer this `newData` to the target node's `dataIn` data property.
                     this.emit('dataOutput', newData);
                 }, this.data.updateInterval || 2000);
             }
 
             onDispose() {
+                // onDispose is crucial for cleanup, especially for intervals or external libraries.
                 if (this.emitInterval) {
-                    clearInterval(this.emitInterval);
+                    clearInterval(this.emitInterval); // Stop the interval when the node is removed.
                 }
                 console.log(`DataSourceNode ${this.id} disposed.`);
             }
         }
 
         // --- LineChartNode Implementation ---
+        // LineChartNode displays data it receives, typically from a DataSourceNode, using Chart.js.
+        // It also extends HtmlAppNode to render a canvas element for the chart.
+        // See TUTORIAL_HTML_APP_NODE.md for HtmlAppNode basics.
         class LineChartNode extends HtmlAppNode {
             onInit() {
+                // Setup the HTML structure, including a canvas for Chart.js.
                 this.htmlElement.innerHTML = `
                     <div class="widget-header" data-bind-prop="label:textContent">${this.data.label || 'Chart'}</div>
                     <div class="widget-content">
                         <canvas style="width:100%; height:100%;"></canvas>
                     </div>
                 `;
-                this.canvas = this.getChild('canvas');
-                this.chartInstance = null;
+                this.canvas = this.getChild('canvas'); // Get a reference to the canvas element.
+                this.chartInstance = null; // Will hold the Chart.js instance.
+                // Initial data structure for Chart.js.
                 this.chartData = {
                     labels: [],
                     datasets: [{
-                        label: this.data.datasetLabel || 'Value',
+                        label: this.data.datasetLabel || 'Value', // Customizable dataset label.
                         data: [],
-                        borderColor: this.data.lineColor || 'rgb(75, 192, 192)',
+                        borderColor: this.data.lineColor || 'rgb(75, 192, 192)', // Customizable line color.
                         tension: 0.1,
                         fill: false
                     }]
                 };
-                this.maxDataPoints = this.data.maxDataPoints || 20;
+                this.maxDataPoints = this.data.maxDataPoints || 20; // Max data points to show on the chart.
 
-                this.initializeChart();
-                this.autoStopPropagation(); // Stop propagation on canvas if chart interactions are enabled
+                this.initializeChart(); // Create the Chart.js instance.
+                this.autoStopPropagation(); // Stop propagation on canvas to prevent graph interaction if chart has its own interactions.
             }
 
             initializeChart() {
+                // This method sets up the Chart.js instance.
+                // It's called from onInit.
                 if (!this.canvas) return;
                 const ctx = this.canvas.getContext('2d');
-                this.chartInstance = new Chart(ctx, {
-                    type: 'line',
-                    data: this.chartData,
+                this.chartInstance = new Chart(ctx, { // `Chart` is the imported Chart.js constructor.
+                    type: 'line', // Specify the chart type.
+                    data: this.chartData, // Link to our chartData object.
                     options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        animation: { duration: 200 },
+                        responsive: true, // Make the chart responsive to container size.
+                        maintainAspectRatio: false, // Allow aspect ratio to change.
+                        animation: { duration: 200 }, // Short animation for updates.
                         scales: {
                             x: {
-                                type: 'category', // Using category for simple timestamp labels
-                                ticks: { display: false } // Hide x-axis labels for simplicity
+                                type: 'category',
+                                ticks: { display: false } // Hide x-axis labels for simplicity in this demo.
                             },
                             y: {
                                 beginAtZero: true,
-                                suggestedMax: 100 // Adjust as needed
+                                suggestedMax: 100 // Initial y-axis scale.
                             }
                         },
                         plugins: {
-                            legend: { display: this.data.showLegend || false }
+                            legend: { display: this.data.showLegend || false } // Optional legend display.
                         }
                     }
                 });
             }
 
             onDataUpdate(updatedData) {
-                super.onDataUpdate(updatedData); // Handle declarative bindings from base class
+                // onDataUpdate is called when the node's `data` object is changed externally,
+                // for example, when data arrives through a connected edge into an input port.
+                super.onDataUpdate(updatedData); // Handle declarative bindings from base class (e.g. for the header label).
 
+                // Check if the 'dataIn' property was part of the update.
+                // 'dataIn' is the input port defined in this node type's registration.
                 if (updatedData.hasOwnProperty('dataIn')) {
-                    const newDataPoint = this.data.dataIn; // this.data already has the new value
+                    const newDataPoint = this.data.dataIn; // `this.data` is already updated with the new value by SpaceGraph core.
                     if (newDataPoint && typeof newDataPoint.value === 'number') {
+                        // Manage the number of data points displayed on the chart.
                         if (this.chartData.labels.length >= this.maxDataPoints) {
-                            this.chartData.labels.shift();
-                            this.chartData.datasets[0].data.shift();
+                            this.chartData.labels.shift(); // Remove oldest label.
+                            this.chartData.datasets[0].data.shift(); // Remove oldest data point.
                         }
-                        // Using a simple counter or timestamp for labels
+                        // Add new data point.
                         this.chartData.labels.push(new Date(newDataPoint.timestamp).toLocaleTimeString().split(" ")[0]);
                         this.chartData.datasets[0].data.push(newDataPoint.value);
 
                         if (this.chartInstance) {
-                            this.chartInstance.update();
+                            this.chartInstance.update(); // Refresh the Chart.js display.
                         }
                     }
                 }
-                if (updatedData.hasOwnProperty('label') && this.chartInstance) {
-                     // Already handled by data-bind-prop if widget-header uses it
-                }
+                // Example: if the label was updated, it's handled by data-bind-prop on the header.
+                // if (updatedData.hasOwnProperty('label') && this.titleElement) {
+                // this.titleElement.textContent = this.data.label;
+                // }
             }
 
             onDispose() {
+                // Clean up the Chart.js instance when the node is removed.
+                // This is important to prevent memory leaks and errors.
                 if (this.chartInstance) {
                     this.chartInstance.destroy();
                 }
@@ -188,20 +216,26 @@
         // --- SpaceGraph Setup ---
         const container = document.getElementById('graph-container');
         const graph = new SpaceGraph(container, {
+            // Global defaults for nodes can be set here.
             defaults: {
                 node: {
-                    html: { billboard: true } // Make HTML nodes face camera by default
+                    html: { billboard: true } // Make HTML nodes always face the camera by default.
                 }
             }
         });
 
         // Register node types
+        // Registering node types allows defining reusable templates for nodes, including their
+        // appearance, behavior (via nodeClass), and default data (via getDefaults).
+        // See CORE_CONCEPTS.md "Node Types" and "HtmlAppNode" sections for more information.
         graph.registerNodeType('data-source', {
-            nodeClass: DataSourceNode,
-            getDefaults: (node) => ({
+            nodeClass: DataSourceNode, // The custom class that defines this node's behavior.
+            getDefaults: (node) => ({ // Default properties for nodes of this type.
                 label: 'Live Data Source',
                 width: 200, height: 100,
-                updateInterval: 1500, // ms
+                updateInterval: 1500, // Custom data: interval for emitting data.
+                // Define ports for connecting edges.
+                // See CORE_CONCEPTS.md "Edges & Ports".
                 ports: { outputs: { dataOutput: { label: 'Data Stream', type: 'object' } } }
             })
         });
@@ -210,41 +244,50 @@
             nodeClass: LineChartNode,
             getDefaults: (node) => ({
                 label: 'Real-time Line Chart',
-                width: 350, height: 250, // Adjusted size for chart
-                datasetLabel: 'Sensor Value',
+                width: 350, height: 250, // Larger size to accommodate the chart.
+                datasetLabel: 'Sensor Value', // Custom data for Chart.js.
                 lineColor: 'rgb(255, 99, 132)',
                 maxDataPoints: 30,
-                ports: { inputs: { dataIn: { label: 'Data Input', type: 'object' } } }
+                ports: { inputs: { dataIn: { label: 'Data Input', type: 'object' } } } // Input port to receive data.
             })
         });
 
-        // Add nodes
-        const source1 = graph.addNode({ type: 'data-source', id: 'source1', x: -300, y: 0, label: 'Sensor Alpha', updateInterval: 1000 });
-        const source2 = graph.addNode({ type: 'data-source', id: 'source2', x: -300, y: 150, label: 'Sensor Beta', updateInterval: 2500 });
+        // Add nodes to the graph using their registered type names.
+        // The 'data' property here overrides or augments the 'getDefaults' from the node type registration.
+        const source1 = graph.addNode({ type: 'data-source', id: 'source1', x: -300, y: 0, data: { label: 'Sensor Alpha', updateInterval: 1000 }});
+        const source2 = graph.addNode({ type: 'data-source', id: 'source2', x: -300, y: 150, data: { label: 'Sensor Beta', updateInterval: 2500 }});
 
-        const chart1 = graph.addNode({ type: 'line-chart-widget', id: 'chart1', x: 100, y: -50, label: 'Alpha Readings' });
-        const chart2 = graph.addNode({ type: 'line-chart-widget', id: 'chart2', x: 100, y: 200, label: 'Beta Readings', lineColor: 'rgb(54, 162, 235)' });
-        const chart3 = graph.addNode({ type: 'line-chart-widget', id: 'chart3', x: 500, y: 75, label: 'Alpha (Aggregated View)', datasetLabel: "Alpha Agg.", lineColor: 'rgb(75, 192, 192)'});
+        const chart1 = graph.addNode({ type: 'line-chart-widget', id: 'chart1', x: 100, y: -50, data: { label: 'Alpha Readings' }});
+        const chart2 = graph.addNode({ type: 'line-chart-widget', id: 'chart2', x: 100, y: 200, data: { label: 'Beta Readings', lineColor: 'rgb(54, 162, 235)' }});
+        const chart3 = graph.addNode({ type: 'line-chart-widget', id: 'chart3', x: 500, y: 75, data: { label: 'Alpha (Aggregated View)', datasetLabel: "Alpha Agg.", lineColor: 'rgb(75, 192, 192)' }});
 
 
-        // Connect nodes
+        // Connect nodes using edges.
+        // Edges define the data flow: data emitted from an output port (e.g., 'dataOutput' on source1)
+        // travels along the edge to a connected input port on another node (e.g., 'dataIn' on chart1).
+        // SpaceGraph handles this data transfer automatically when `node.emit('portName', data)` is called.
+        // The received data updates the target node's `data.portName` property, triggering its `onDataUpdate`.
+        // See CORE_CONCEPTS.md "Edges & Ports" and "Data Flow" for details.
         if (source1 && chart1) {
-            graph.addEdge(source1, chart1, { sourcePort: 'dataOutput', targetPort: 'dataIn', label: 'To Alpha Chart' });
+            graph.addEdge(source1.id, chart1.id, { sourcePort: 'dataOutput', targetPort: 'dataIn', label: 'To Alpha Chart' });
         }
         if (source2 && chart2) {
-            graph.addEdge(source2, chart2, { sourcePort: 'dataOutput', targetPort: 'dataIn', label: 'To Beta Chart' });
+            graph.addEdge(source2.id, chart2.id, { sourcePort: 'dataOutput', targetPort: 'dataIn', label: 'To Beta Chart' });
         }
-         if (source1 && chart3) { // Another chart listening to source1
-            graph.addEdge(source1, chart3, { sourcePort: 'dataOutput', targetPort: 'dataIn', label: 'To Agg. Alpha Chart' });
+         if (source1 && chart3) { // Demonstrates one source feeding multiple charts.
+            graph.addEdge(source1.id, chart3.id, { sourcePort: 'dataOutput', targetPort: 'dataIn', label: 'To Agg. Alpha Chart' });
         }
 
-        graph.centerView();
-        graph.cameraController.zoom({ deltaY: -150 }); // Zoom out a bit more
+        graph.centerView(); // Adjust camera to see all nodes.
+        graph.cameraController.zoom({ deltaY: -150 }); // Zoom out a bit more for a better overview.
 
-        // For debugging in browser console
+        // Expose instances to the window for easy debugging in the browser console.
         window.graph = graph;
-        window.Chart = Chart;
+        window.Chart = Chart; // Expose Chart.js constructor for inspection if needed.
 
     </script>
 </body>
 </html>
+// Note: For more complex applications, consider breaking down HtmlAppNode classes into separate JS files
+// and importing them. This example keeps them in the HTML for simplicity.
+// Consult COOKBOOK.md for more advanced patterns and examples.

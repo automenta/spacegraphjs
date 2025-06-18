@@ -15,212 +15,108 @@ Spacegraph.js is a general-purpose, extensible JavaScript library for creating i
 
 ---
 
-## Quick Start Tutorial
+## Quick Start
 
-This tutorial will guide you through setting up a basic SpaceGraph application, adding different types of nodes, connecting them, and creating your own custom interactive nodes.
+Get started with SpaceGraph.js by following these simple steps to set up a basic scene.
 
-### 1. Setup
+### 1. HTML Setup
 
-First, you'll need to get the SpaceGraph.js library and include it in your HTML file.
-
-**a. Get the Code:**
-
-You can clone the repository or download the necessary files (primarily `dist/spacegraph.esm.min.js` and `index.css`).
-
-```bash
-git clone https://github.com/automenta/spacegraphjs.git
-cd spacegraphjs
-```
-The library files (builds) are located in the `dist/` folder. You'll also need `index.css` from the root directory.
-
-**b. HTML Structure:**
-
-Create an HTML file. You'll need a container element for the graph and an `importmap` to manage dependencies like `three.js` and `gsap`, which are required by SpaceGraph.js when using its ES Module version.
+Create an `index.html` file with a container for the graph. You'll also need an `importmap` to handle dependencies like `three.js` and `gsap`, which SpaceGraph.js relies on.
 
 ```html
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <title>SpaceGraph Quick Start</title>
-        <link href="./index.css" rel="stylesheet" />
-        <!-- Adjust path to your index.css -->
-        <style>
-            body { margin: 0; overflow: hidden; }
-            #graph-container { width: 100vw; height: 100vh; }
-        </style>
-    </head>
-    <body>
-        <div id="graph-container"></div>
+<head>
+    <meta charset="UTF-8" />
+    <title>SpaceGraph Quick Start</title>
+    <link href="./index.css" rel="stylesheet" /> <!-- Path to your SpaceGraph index.css -->
+    <style>
+        body { margin: 0; overflow: hidden; }
+        #graph-container { width: 100vw; height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="graph-container"></div>
 
-        <script type="importmap">
-            {
-                "imports": {
-                    "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
-                    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
-                    "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
-                }
-            }
-        </script>
-        <script type="module">
-            // Main script will go here
-        </script>
-    </body>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
+            "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
+        }
+    }
+    </script>
+    <script type="module">
+        // Your SpaceGraph code will go here
+    </script>
+</body>
 </html>
 ```
+Make sure `index.css` is accessible (e.g., copy it from the SpaceGraph.js root directory to your project).
 
-**Note on Builds:** The `dist/` folder contains different builds:
-- `dist/spacegraph.esm.js` / `dist/spacegraph.esm.min.js`: ES Module (use with `importmap` or bundlers). `three` and `gsap` are external.
-- `dist/spacegraph.umd.js` / `dist/spacegraph.umd.min.js`: UMD (for direct `<script>` tags without modules). `THREE` and `gsap` are expected to be global if not using a module system.
+### 2. Initialize SpaceGraph
 
-This tutorial uses the ES Module version.
-
-### 2. Initializing SpaceGraph
-
-Inside the `<script type="module">` tag, import `SpaceGraph` and initialize it with your container element:
+In your `<script type="module">`, import `SpaceGraph` and create an instance, linking it to your container div.
 
 ```javascript
-// Continuing in <script type="module">
+// Inside the <script type="module">
 
-// Adjust path if you copied dist files elsewhere.
-import { SpaceGraph, HtmlAppNode } from './dist/spacegraph.esm.min.js';
+// Adjust the path to where you've placed spacegraph.esm.min.js
+import { SpaceGraph } from './dist/spacegraph.esm.min.js';
 
 const container = document.getElementById('graph-container');
 if (!container) {
-    console.error('Graph container not found!');
+    console.error('Graph container #graph-container not found!');
 } else {
     const graph = new SpaceGraph(container);
     console.log('SpaceGraph initialized!');
 
-    // More steps will follow here...
+    // Add some nodes
+    const noteNode = graph.addNode({
+        id: 'note-1',
+        type: 'note', // A built-in type for displaying HTML content
+        content: '<h3>Welcome to SpaceGraph!</h3><p>This is a basic HTML note node.</p>',
+        x: -200,
+        y: 0,
+        data: { backgroundColor: 'lightgoldenrodyellow' }
+    });
+
+    const shapeNode = graph.addNode({
+        id: 'shape-1',
+        type: 'shape',    // A built-in type for WebGL geometric shapes
+        shape: 'sphere',  // Try 'box' too!
+        label: 'My First Shape',
+        color: 0xff6347,  // Tomato color
+        x: 200,
+        y: 0
+    });
+
+    // Connect them with an edge
+    if (noteNode && shapeNode) {
+        graph.addEdge(noteNode, shapeNode, { label: 'connected' });
+    }
+
+    // Center the camera on the nodes
+    graph.centerView();
+
+    // You can now interact with the graph using your mouse:
+    // - Click and drag to pan.
+    // - Scroll to zoom.
+    // - Click on nodes/edges to select them (if selectable).
 }
 ```
 
-### 3. Adding Nodes
+This setup gives you a functioning SpaceGraph instance with two connected nodes. You can pan and zoom to explore the space.
 
-**a. Add an HTML Node:**
+### Dive Deeper
 
-HTML nodes can render arbitrary DOM content.
+You've now created your first SpaceGraph scene! To unlock more powerful features, such as creating your own custom interactive HTML nodes or understanding the library's core mechanics, we recommend the following resources:
 
-```javascript
-// Inside the else block where 'graph' is defined:
-const htmlNode = graph.addNode({
-    id: 'my-html-node',
-    type: 'note', // 'note' is a pre-configured HTML node type
-    content: '<h3>Hello from HTML!</h3><p>This is a note node.</p>',
-    x: -150,
-    y: 50
-});
-```
+-   **[TUTORIAL_HTML_APP_NODE.md](TUTORIAL_HTML_APP_NODE.md)**: A step-by-step guide to building custom, interactive HTML-based nodes using the `HtmlAppNode` class. This is essential for creating rich user interfaces within your graph.
+-   **[CORE_CONCEPTS.md](CORE_CONCEPTS.md)**: For a comprehensive understanding of SpaceGraph's architecture, including the node lifecycle, event system, layout engine, rendering pipeline, and configuration options.
 
-**b. Add a Shape Node:**
-
-Shape nodes are simple geometric primitives rendered with WebGL.
-
-```javascript
-// Inside the else block:
-const shapeNode = graph.addNode({
-    id: 'my-shape-node',
-    type: 'shape',
-    shape: 'sphere', // or 'box'
-    label: 'Sphere Node',
-    color: 0x00ccff, // Light blue
-    x: 150,
-    y: -50
-});
-```
-
-### 4. Connecting Nodes
-
-Use `addEdge()` to create a visual link between nodes.
-
-```javascript
-// Inside the else block, after adding nodes:
-if (htmlNode && shapeNode) {
-    graph.addEdge(htmlNode, shapeNode, { label: 'Connected To' });
-}
-```
-
-### 5. Basic Interaction
-
--   **Camera Controls**: Use your mouse (click-drag to pan, scroll to zoom) or touch gestures to navigate the space.
--   **Centering View**: To programmatically focus on the current nodes:
-
-```javascript
-// Inside the else block:
-graph.centerView(); // Or graph.centerView([htmlNode, shapeNode])
-```
-
-### 6. Creating Custom Interactive HTML Nodes (`HtmlAppNode`)
-
-For creating interactive HTML nodes, SpaceGraph offers `HtmlAppNode` as a convenient base class. This allows you to define nodes with their own HTML structure, CSS styling, and JavaScript behavior.
-
-You would typically define a class that extends `HtmlAppNode`, implement its `onInit` method to set up its HTML and event listeners, and then define a `typeDefinition` object that SpaceGraph uses to instantiate your custom node.
-
-Here's a conceptual example of how you might register and add such a node:
-
-```javascript
-// --- Somewhere in your script, define your custom node class ---
-// class MyCustomAppNode extends HtmlAppNode {
-//   onInit() {
-//     this.htmlElement.innerHTML = '<div>My Custom App Content</div>';
-//     // ... more setup ...
-//   }
-//   // ... other methods like onDataUpdate, onDispose ...
-// }
-
-// --- In your main graph setup script ---
-
-// Define the type definition for your custom app node
-const myCustomAppNodeTypeDefinition = {
-    typeName: 'my-custom-app-node', // Used for CSS class generation like 'my-custom-app-node-node'
-    nodeClass: MyCustomAppNode,     // Reference to your custom class
-    getDefaults: (nodeInst) => ({   // Provides default data for instances
-        width: 200,
-        height: 100,
-        label: nodeInst?.id || 'My App Node',
-        backgroundColor: 'lightcoral',
-        // ... any other custom default properties your node needs
-    }),
-};
-
-// Register the new node type with SpaceGraph
-graph.registerNodeType('my-custom-app-node', myCustomAppNodeTypeDefinition);
-
-// Add an instance of your custom app node
-const myAppNodeInstance = graph.addNode({
-    type: 'my-custom-app-node',
-    id: 'app-node-1',
-    x: 0,
-    y: 200,
-    data: { label: 'Specific Instance Label' } // Override defaults
-});
-
-// Connect it if needed
-if (htmlNode && myAppNodeInstance) {
-    graph.addEdge(htmlNode, myAppNodeInstance, { label: 'Links To' });
-}
-
-graph.centerView(); // Recenter
-```
-
-For a detailed walkthrough of creating a 'Counter Node' example using `HtmlAppNode`, including the full class definition, event handling, and styling, please see the **[HtmlAppNode Tutorial](TUTORIAL_HTML_APP_NODE.md)**.
-
-### 7. Next Steps
-
-You've now seen the basics of setting up SpaceGraph.js, adding built-in nodes, and have an idea of how to approach custom HTML nodes!
-
-From here, you can explore:
-
--   **[HtmlAppNode Tutorial](TUTORIAL_HTML_APP_NODE.md)**: Dive deep into creating interactive HTML nodes.
--   **More Node Types**: Experiment with different shapes, styles (`type: 'note'`, `type: 'shape'`).
--   **Force-Directed Layouts**: Let SpaceGraph automatically arrange your nodes (see `CORE_CONCEPTS.md`).
--   **Event System**: React to user interactions and graph changes (details below and in `CORE_CONCEPTS.md`).
--   **Configuration**: Customize default behaviors for camera, nodes, and edges (details below and in `CORE_CONCEPTS.md`).
--   **[SpaceGraph.js Cookbook](COOKBOOK.md)**: Find practical recipes for advanced styling, custom interactions, and other common tasks.
--   **[Core Concepts Document](CORE_CONCEPTS.md)**: Understand the underlying architecture, event system, node lifecycle, and more.
-
-Refer to the "Key Features", "Configuration", "Event System", and "API Documentation" sections below for more summarized details.
+Exploring these documents will help you leverage the full potential of SpaceGraph.js for your projects. Happy visualizing!
 
 ---
 

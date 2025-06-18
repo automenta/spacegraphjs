@@ -39,8 +39,10 @@ Understanding these core classes is key to working with SpaceGraph:
 
 - **`HtmlAppNode`**:
     - A specialized extension of `RegisteredNode` designed to simplify the development of rich, interactive HTML-based nodes.
-    - It automates common setup for HTML nodes and provides convenient helper methods.
-    - When using `HtmlAppNode` or a class derived from it, you specify this class in your `TypeDefinition`'s `nodeClass` property. Lifecycle logic (like `onInit`, `onDataUpdate`) is then implemented as methods within your `HtmlAppNode` subclass.
+    - It automates common setup (like creating the main HTML container and applying base styles) and provides convenient helper methods for DOM manipulation and event handling.
+    - When to use: Choose `HtmlAppNode` (or a class derived from it) when your custom node requires a significant HTML structure, internal interactivity (buttons, forms, etc.), or complex styling that is best managed with HTML and CSS.
+    - To use it, you specify your custom class (which extends `HtmlAppNode`) in your `TypeDefinition`'s `nodeClass` property. The core lifecycle logic (like `onInit` for DOM setup, `onDataUpdate` for reacting to data changes) is then implemented as methods within your custom class.
+    - For a detailed guide on creating nodes with `HtmlAppNode`, see [TUTORIAL_HTML_APP_NODE.md](TUTORIAL_HTML_APP_NODE.md).
 
 - **Legacy Node Types (`HtmlNodeElement`, `NoteNode`, `ShapeNode`)**:
 
@@ -135,12 +137,14 @@ When creating interactive HTML-based nodes, it's highly recommended to extend {@
       // as their logic is handled by MyCustomHTMLNode's class methods.
     };
     ```
+    For a comprehensive guide on building custom nodes with `HtmlAppNode`, including detailed explanations of `onInit`, `onDataUpdate`, `onDispose`, helper methods, and styling, please refer to **[TUTORIAL_HTML_APP_NODE.md](TUTORIAL_HTML_APP_NODE.md)**. The remainder of this section provides a high-level overview of `TypeDefinition` properties that are also relevant to `HtmlAppNode`.
 
 ### Node Ports (for HTML-based Nodes like `HtmlAppNode` or `RegisteredNode` with HTML)
 
-- A `TypeDefinition` can optionally include a `ports` property in its `getDefaults` method or as part of the initial data when adding a node. This defines connection points on the node.
+- A `TypeDefinition` (typically via its `getDefaults` method) or the initial node data can include a `ports` property. This defines connection points on the node, crucial for the "Inter-Node Messaging System".
 - **Structure**:
     ```javascript
+    // Inside getDefaults or initial node data:
     ports: {
       inputs: {
         portName1: { label: 'User-Friendly Label 1', type: 'dataTypeString1' },
@@ -152,11 +156,11 @@ When creating interactive HTML-based nodes, it's highly recommended to extend {@
       }
     }
     ```
-    - `portName`: A programmatic identifier for the port (e.g., `data_in`, `trigger_out`).
-    - `label`: A user-friendly string for tooltips or UI display.
-    - `type`: A user-defined string indicating the expected data type (e.g., `'string'`, `'number'`, `'signal'`, `'any'`). This is for user/developer reference and can be used for validation during linking.
-- **Rendering**: For `RegisteredNode`s that create an `htmlElement` in their `onCreate` method, these defined ports will be automatically rendered as small `div` elements (styled with CSS classes `.node-port`, `.port-input`, `.port-output`) on the periphery of the `htmlElement`. For `RegisteredNode`s that define a `mesh` (WebGL) instead of an `htmlElement` in `onCreate`, these port definitions are primarily for data modeling and semantic purposes. Visual rendering of ports on WebGL nodes would require custom logic within `onCreate` (e.g., creating small indicator meshes at port locations) and is not automatic.
-- **Interaction**: These visual ports can be clicked to initiate edge linking (see "Inter-Node Messaging System / Edge Linking" below).
+    - `portName`: A programmatic identifier (e.g., `data_in`, `trigger_out`).
+    - `label`: A user-friendly string for UI display.
+    - `type`: A user-defined string for the expected data type (e.g., `'string'`, `'number'`).
+- **Rendering**: For `HtmlAppNode` (and other HTML-based registered nodes), these ports are automatically rendered as small `div` elements on the node's periphery, allowing user interaction.
+- **Interaction**: Clicking these visual ports initiates edge linking. See "Inter-Node Messaging System / Edge Linking".
 
 ### Instantiating a Custom Node
 
@@ -299,64 +303,44 @@ SpaceGraph allows for global customization of many default behaviors and visual 
 
 ## 5. Creating Complex Nodes (App Nodes) using `HtmlAppNode`
 
-For nodes that require rich HTML-based UIs, custom logic, and interactivity, extending the {@link HtmlAppNode} class is the recommended approach. `HtmlAppNode` is a specialized {@link RegisteredNode} that simplifies the creation of such "App Nodes."
+For nodes that require rich HTML-based UIs, custom logic, and interactivity, extending the {@link HtmlAppNode} class is the recommended approach. `HtmlAppNode` is a specialized {@link RegisteredNode} that simplifies the creation of these "App Nodes" by automating common setup tasks and providing useful helper methods.
 
-### Key Principles for `HtmlAppNode` Subclasses
+### Architectural Overview
 
-- **Extend `HtmlAppNode`**:
+-   **Purpose**: Use `HtmlAppNode` when your node's visual representation is primarily HTML, and you need to manage interactive elements like buttons, inputs, or complex layouts.
+-   **Inheritance**: You create a custom class that `extends HtmlAppNode`.
+-   **`TypeDefinition`**: When registering your node type, the `typeDefinition` object must specify your custom class in the `nodeClass` property. The `getDefaults` method in the `typeDefinition` is still crucial for providing initial data like `width`, `height`, `label`, and any custom properties your node needs.
     ```javascript
-    import { HtmlAppNode } from './js/HtmlAppNode.js'; // Adjust path as needed
-
-    class MyCustomAppNode extends HtmlAppNode {
-        // ... your class methods ...
-    }
-    ```
-
-- **`TypeDefinition`**: You still need a `TypeDefinition` to register your node, but it primarily points to your class:
-    ```javascript
+    // Example TypeDefinition for an HtmlAppNode subclass
     const myAppNodeDefinition = {
-      // typeName is the key for registration: spaceGraph.registerNodeType('my-app', myAppNodeDefinition)
-      nodeClass: MyCustomAppNode, // Crucial: links to your class
-      getDefaults: (node) => ({   // node is your MyCustomAppNode instance
-        label: node.data.id || 'My App',
-        width: 300, height: 200, // Default dimensions for this.htmlElement
-        // ... other custom default data ...
+      // typeName is the key for registration, e.g., graph.registerNodeType('my-app', myAppNodeDefinition)
+      nodeClass: MyCustomAppNode, // Your class that extends HtmlAppNode
+      getDefaults: (node) => ({
+        label: node.id || 'My App Node',
+        width: 300,         // Used by HtmlAppNode for initial styling
+        height: 200,        // Used by HtmlAppNode for initial styling
+        backgroundColor: 'rgba(255, 255, 255, 0.9)', // Default background
+        // ... other custom default data specific to MyCustomAppNode ...
       })
     };
     ```
+-   **Lifecycle Methods**: The core logic of your node (DOM creation, event handling, state updates, cleanup) is implemented as methods within your custom class (e.g., `onInit`, `onDataUpdate`, `onDispose`). `HtmlAppNode` calls these methods at appropriate times.
+-   **`this.htmlElement`**: `HtmlAppNode` automatically creates the main `div` container for your node (`this.htmlElement`) and applies basic styling (dimensions, background color). You populate this element in your `onInit` method.
 
-- **`onInit()` (Class Method)**:
-    - This is where you build the internal DOM structure of your node within `this.htmlElement`.
-    - `this.htmlElement` is the main container div provided by `HtmlAppNode`.
-    - Use `this.getChild(selector)` and `this.getChildren(selector)` to get references to internal DOM elements.
-    - Attach event listeners to your internal elements. Crucially, use `this.stopEventPropagation(element, eventTypes)` for interactive elements (inputs, buttons, scrollable areas) to prevent them from interfering with graph navigation (drag, pan, zoom).
+### Implementation Details
 
-- **`this.data` for State Management**:
-    - Store the node's primary state and properties in `this.data`. This object is initialized by `getDefaults` and data passed to `addNode`.
-    - UI interactions within your node should update `this.data`.
+The detailed, step-by-step process of implementing an `HtmlAppNode` subclass, including:
+    - How to structure the `onInit` method for DOM creation and event listener setup.
+    - Managing node state with `this.data`.
+    - Responding to data changes in `onDataUpdate`.
+    - Cleaning up resources in `onDispose`.
+    - Using helper methods like `this.getChild()`, `this.stopEventPropagation()`, and `this.emit()`.
+    - Styling your custom HTML node.
+    - A complete practical example.
 
-- **`onDataUpdate(updatedData)` (Class Method)**:
-    - Implement this method to react when `this.data` is changed externally (via `spaceGraph.updateNodeData()` or through a connected input port).
-    - `updatedData` contains only the properties that changed. `this.data` already reflects the new values.
-    - Use this to update your node's DOM to reflect the new data.
+is covered extensively in the **[TUTORIAL_HTML_APP_NODE.md](TUTORIAL_HTML_APP_NODE.md)**. This tutorial is the primary resource for learning *how to build* nodes with `HtmlAppNode`.
 
-- **`onDispose()` (Class Method)**:
-    - Implement for any custom cleanup beyond what `HtmlAppNode` and `RegisteredNode` handle (e.g., removing global event listeners your node might have set).
-
-- **Emitting Data and Inter-Node Communication**:
-    - Use `this.emit(outputPortName, payload)` to send data from output ports (defined in `this.data.ports.outputs`).
-    - Use `this.listenTo(otherNode, eventName, callback)` for direct event-based communication.
-
-The `HtmlAppNode` class provides a structured and convenient way to build sophisticated HTML-based nodes. For a detailed step-by-step guide to creating your first `HtmlAppNode`, please see the [HtmlAppNode Tutorial](TUTORIAL_HTML_APP_NODE.md). For more complex, runnable examples, such as a Markdown Editor or a Task List, refer to the [Application Nodes Demo](example-app-nodes.html).
-
-### Styling App Nodes
-
-- App Nodes, being HTML-based, are styled using CSS.
-- It's good practice to use a specific class on the root `htmlElement` (e.g., `html-app-node` and `your-type-name-node` are added by `HtmlAppNode` itself) to scope your CSS rules and avoid conflicts.
-- Example: `.markdown-editor-node .markdown-input { border: 1px solid grey; }`
-
-### Event Propagation
-- As shown in examples in the tutorial and demos, use `this.stopEventPropagation(element, eventTypes)` for any interactive elements within your `HtmlAppNode` to ensure they function correctly without triggering unintended graph interactions (like dragging the node when trying to select text).
+For runnable examples of complex App Nodes, see the [Application Nodes Demo](example-app-nodes.html).
 
 ## 6. Rendering Concepts
 
