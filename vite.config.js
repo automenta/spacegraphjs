@@ -17,7 +17,7 @@ export default defineConfig({
       output: [
         {
           format: 'es',
-          entryFileNames: 'spacegraph.es.js',
+          entryFileNames: 'spacegraph.esm.js',
           // sourcemap is inherited from build.sourcemap
           globals: {
             three: 'THREE',
@@ -26,7 +26,7 @@ export default defineConfig({
         },
         {
           format: 'es',
-          entryFileNames: 'spacegraph.es.min.js',
+          entryFileNames: 'spacegraph.esm.min.js',
           // sourcemap is inherited
           plugins: [terser()],
           globals: {

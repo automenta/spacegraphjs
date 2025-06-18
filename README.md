@@ -331,14 +331,45 @@ The inclusion of type declarations aims to make integrating SpaceGraph.js into T
 
 For a convenient overview and access to all live examples, open the **[Demos Page](demos.html)** in your browser.
 
-The repository includes several HTML files in the root directory (e.g., `example-app-nodes.html`, `example-event-emitter.html`, `example-centralized-config.html`) that demonstrate various features and usage patterns.
+While `demos.html` provides a good overview, you can also explore individual examples directly. Here’s a categorized guide to some key examples that showcase different aspects of SpaceGraph.js:
 
-To run these examples:
+*   **Core Concepts & Basic Usage:**
+    *   `index.html`: A minimal starting point.
+    *   `example-3d-scene.html`: Demonstrates basic 3D scene setup.
+    *   `example-shape-nodes.html`: Focuses on using built-in 3D shapes.
+    *   `example-text-nodes.html`: Shows simple text rendering in the graph.
 
-1.  Ensure you have the project files (especially `spacegraph.js` or its builds in `dist/`, and `index.css`).
-2.  Open any of the `example-*.html` files directly in your web browser (e.g., by double-clicking them or using a simple HTTP server like `npx serve .` from the project root).
+*   **Custom HTML Nodes (using `HtmlAppNode`):**
+    *   `TUTORIAL_HTML_APP_NODE.md`: The primary tutorial for `HtmlAppNode`.
+    *   `example-simple-counter-app-node.html`: A beginner-friendly custom HTML node.
+    *   `example-custom-node.html` (uses `js/nodes/MyCustomNode.js`): A straightforward custom `HtmlAppNode` example.
+    *   `example-app-nodes.html`: Features more complex `HtmlAppNode` examples like a Markdown Editor and a Task List.
+    *   `example-dashboard.html`: Illustrates building a dashboard with HTML-based nodes.
 
-These examples are a great way to see SpaceGraph.js in action and to get started with your own projects.
+*   **Custom WebGL Nodes (using `RegisteredNode`):**
+    *   `example-custom-webgl-node.html`: Shows creating a custom WebGL node by extending `RegisteredNode` with a class, including custom geometry and `emit`/`listenTo` usage. (Recommended for class-based approach)
+    *   `example-registered-node-webgl.html`: Demonstrates defining a custom WebGL node using functional callbacks directly within the `TypeDefinition` object. (Alternative approach)
+
+*   **Custom HTML Nodes (using `RegisteredNode` with functional `TypeDefinition`):**
+    *   `example-registered-node-html.html`: Illustrates creating custom HTML nodes via functional callbacks in the `TypeDefinition`, without a dedicated `HtmlAppNode` subclass.
+
+*   **Inter-Node Communication & Events:**
+    *   `example-event-emitter.html`: Focuses on global graph events (e.g., `nodeAdded`, `nodeSelected`).
+    *   `example-inter-node-communication.html`: Details node-to-node communication using `emit`/`listenTo` and data propagation through ports.
+
+*   **Dynamic Graph Operations & Configuration:**
+    *   `example-dynamic-updates.html`: Shows how to add, remove, and update nodes and edges dynamically.
+    *   `example-dynamic-dashboard.html`: Expands on the dashboard concept with dynamic elements.
+    *   `example-centralized-config.html`: Explains how to use the global configuration object to customize SpaceGraph.
+
+*   **Specific Layouts & Use Cases:**
+    *   `example-hierarchical-data.html`: Example of displaying hierarchical structures.
+    *   `example-mindmap.html`: A mind-mapping application example.
+
+*   **Bundled Usage:**
+    *   `example-bundled-usage.html`: Demonstrates how to use the pre-bundled `spacegraph.umd.js` or `spacegraph.esm.js` files.
+
+To run any of these, ensure you have the project files (especially `dist/spacegraph.esm.min.js` or other builds, and `index.css`), and then open the respective `example-*.html` file in your web browser.
 
 ---
 

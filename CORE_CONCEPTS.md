@@ -89,8 +89,8 @@ This object tells SpaceGraph how to handle your custom nodes.
 
 - **`typeName` (string, required in practice though part of TypeDefinition object key)**: The unique name for your custom node type (e.g., `'my-user-card'`, `'molecule-node'`). This is the key used when calling `spaceGraph.registerNodeType(typeName, typeDefinition)`.
 - **`nodeClass` (class, optional)**:
-    - If you are creating a node with complex internal logic and HTML structure, this property should point to your custom class that extends {@link HtmlAppNode} (or {@link RegisteredNode} for non-HTML focused custom nodes).
-    - When `nodeClass` is provided, SpaceGraph will instantiate your class. Lifecycle logic (like creating visuals, handling updates) is then primarily managed by methods within your class (e.g., `onInit`, `onDataUpdate` in an `HtmlAppNode` subclass).
+    - If you are creating a node with complex internal logic, this property should point to your custom class, which typically extends {@link RegisteredNode} (or its specialized derivative {@link HtmlAppNode} for HTML-based nodes).
+    - When `nodeClass` is provided, SpaceGraph will instantiate your class. Lifecycle logic (e.g., creating visuals, handling updates, responding to data changes) should then be primarily managed by methods implemented within your custom class (like `onInit`, `onDataUpdate` for `HtmlAppNode`, or corresponding custom methods in other `RegisteredNode` subclasses). The functional callbacks (e.g., `onCreate`, `onUpdate`) in the `TypeDefinition` object become secondary or unnecessary if their logic is handled by the class itself.
     - If `nodeClass` is *not* provided, SpaceGraph instantiates a generic `RegisteredNode`, and its behavior is driven by the functional callbacks (like `onCreate`, `onUpdate`, etc.) defined directly in this `TypeDefinition` object.
 - **`getDefaults(nodeInstance, graphInstance)` (function, optional)**:
     - Called when a new node of this type is being created.
@@ -138,6 +138,21 @@ When creating interactive HTML-based nodes, it's highly recommended to extend {@
     };
     ```
     For a comprehensive guide on building custom nodes with `HtmlAppNode`, including detailed explanations of `onInit`, `onDataUpdate`, `onDispose`, helper methods, and styling, please refer to **[TUTORIAL_HTML_APP_NODE.md](TUTORIAL_HTML_APP_NODE.md)**. The remainder of this section provides a high-level overview of `TypeDefinition` properties that are also relevant to `HtmlAppNode`.
+
+### Best Practice: `nodeClass` Methods vs. `TypeDefinition` Callbacks
+
+When you define a custom node type using the `nodeClass` property in your `TypeDefinition` (e.g., `class MyCustomNode extends RegisteredNode`), it is **strongly recommended** to implement the core lifecycle logic (creating visuals, updating state, handling data, disposing resources) as methods directly within your `MyCustomNode` class.
+
+- For classes extending `HtmlAppNode`, this means implementing `onInit()`, `onDataUpdate(updatedData)`, `onDispose()`, etc., as shown in the [HtmlAppNode Tutorial](TUTORIAL_HTML_APP_NODE.md).
+- For classes extending `RegisteredNode` directly (for non-HTML heavy nodes, e.g., custom WebGL visuals), you would override `constructor`, potentially `update()`, `dispose()`, `setSelectedStyle()`, `getBoundingSphereRadius()`, and any other `BaseNode` or `RegisteredNode` methods as needed to define your node's behavior. The `RegisteredNode.constructor` itself calls `this.typeDefinition.onCreate(this, this.spaceGraph)` if that `onCreate` exists, so your custom class constructor or a method called from it would be the place to set up visuals.
+
+In such cases, the `TypeDefinition` object then primarily serves to:
+1.  Declare the `typeName`.
+2.  Provide the `nodeClass` reference itself.
+3.  Supply `getDefaults(nodeInstance, graphInstance)` for initial data.
+4.  Optionally define `ports` if not handled by the class's data setup.
+
+Functional callbacks like `onCreate`, `onUpdate`, `onDispose` directly in the `TypeDefinition` object are mainly intended for scenarios where `nodeClass` is *not* provided, and SpaceGraph instantiates a generic `RegisteredNode`. Using class methods promotes better encapsulation and more idiomatic object-oriented design.
 
 ### Node Ports (for HTML-based Nodes like `HtmlAppNode` or `RegisteredNode` with HTML)
 
@@ -248,6 +263,8 @@ Nodes can communicate directly using a publish/subscribe system. This is also ti
     - It's useful when a node needs to react to another node's specific event without necessarily having a formal port connection, or when the event isn't primarily about data flow into an input port.
     - Callback signature: `(payload, senderNodeInstance)`.
     - Example: `dashboardNode.listenTo(sensorNode, 'threshold_exceeded', (eventData, sensor) => { dashboardNode.displayAlert(sensor.id, eventData); });`
+
+Beyond automatic data propagation through connected ports, the `emit`/`listenTo` system serves as a powerful and flexible mechanism for general-purpose inter-node communication. It allows developers to create custom events and handlers that are not strictly tied to data flowing through an edge, facilitating more complex interactions and behaviors between nodes. This promotes decoupling, as nodes can signal state changes or broadcast information without needing direct knowledge of which other nodes are listening, or how they will react. Consider using this system for any scenario where one node's actions or internal state changes should trigger responses or updates in other nodes, independent of, or in addition to, data passed via ports.
 
 - **`node.stopListening(emitterNode, eventName, callback)`**: Removes a specific listener.
 - **Automatic Cleanup**: `RegisteredNode.dispose()` automatically cleans up listeners this node registered on other nodes, and listeners other nodes registered on it.

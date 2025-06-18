@@ -3,7 +3,7 @@
     "version": "0.1.0",
     "description": "A general-purpose, extensible JavaScript library for creating Zooming User Interfaces (ZUI) with 2D and 3D visualizations.",
     "main": "dist/spacegraph.umd.js",
-    "module": "dist/spacegraph.es.js",
+    "module": "dist/spacegraph.esm.js",
     "files": [
         "dist",
         "js",
