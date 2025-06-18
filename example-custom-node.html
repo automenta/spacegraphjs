@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpaceGraph - Custom Node Example</title>
+    <link href="index.css" rel="stylesheet">
+    <style>
+        body { margin: 0; overflow: hidden; font-family: var(--font-family); background-color: var(--bg-color-dark); }
+        #graph-container { width: 100vw; height: 100vh; }
+
+        /* --- Basic Styling for MyCustomNode --- */
+        /* The class name is derived from typeName: 'my-custom-node' -> .my-custom-node-node */
+        .html-app-node.my-custom-node-node {
+            background-color: var(--node-bg-color);
+            border: 1px solid var(--node-border-color);
+            border-radius: 5px;
+            color: var(--node-text-color);
+            padding: 10px;
+            box-sizing: border-box; /* Include padding and border in the element's total width and height */
+        }
+        .my-custom-node-node .my-custom-node-title {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 8px;
+            color: var(--node-title-color);
+            text-align: center;
+        }
+        .my-custom-node-node .my-custom-node-content p {
+            margin: 4px 0;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div id="graph-container"></div>
+
+    <script type="module">
+        import { SpaceGraph } from './dist/spacegraph.esm.min.js';
+        // Import the custom node definition
+        import { myCustomNodeDefinition } from './js/nodes/MyCustomNode.js';
+
+        const container = document.getElementById('graph-container');
+        const space = new SpaceGraph(container);
+        window.space = space; // For debugging
+
+        // Register the custom node type
+        space.registerNodeType(myCustomNodeDefinition.typeName, myCustomNodeDefinition);
+
+        // Add instances of the custom node
+        space.addNode({
+            type: myCustomNodeDefinition.typeName,
+            id: 'custom1',
+            x: -150, y: 0,
+            data: { label: 'First Custom Node' }
+        });
+
+        space.addNode({
+            type: myCustomNodeDefinition.typeName,
+            id: 'custom2',
+            x: 150, y: 50,
+            // data: { label: 'Second Node' } // Will use default label
+        });
+
+        space.centerView();
+    </script>
+</body>
+</html>

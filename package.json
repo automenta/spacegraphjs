@@ -5,20 +5,14 @@
     "main": "dist/spacegraph.umd.js",
     "module": "dist/spacegraph.es.js",
     "files": [
-        "dist/spacegraph.umd.js",
-        "dist/spacegraph.umd.js.map",
-        "dist/spacegraph.umd.min.js",
-        "dist/spacegraph.umd.min.js.map",
-        "dist/spacegraph.es.js",
-        "dist/spacegraph.es.js.map",
-        "dist/spacegraph.es.min.js",
-        "dist/spacegraph.es.min.js.map",
+        "dist",
+        "js",
         "README.md",
         "CORE_CONCEPTS.md",
         "index.css"
     ],
     "scripts": {
-        "build": "vite build",
+        "build": "vite build && tsc",
         "test": "vitest",
         "docs:build": "jsdoc -c jsdoc.conf.json",
         "docs:view": "serve ./docs/api -l 8080",
@@ -72,6 +66,7 @@
         "prettier": "^3.3.3",
         "serve": "^14.2.4",
         "three": "^0.177.0",
+        "typescript": "^5.8.3",
         "vite": "^6.3.5",
         "vitest": "^1.6.1"
     }

@@ -120,6 +120,34 @@ Exploring these documents will help you leverage the full potential of SpaceGrap
 
 ---
 
+## Creating Custom Nodes
+
+SpaceGraph.js allows you to define your own custom node types, enabling rich, interactive experiences tailored to your application's needs. This is particularly powerful when using HTML and JavaScript to create complex user interface elements within the graph.
+
+The primary way to create custom HTML-based nodes is by extending the `HtmlAppNode` class (or a similar base class if you have specific needs not covered by `HtmlAppNode`). You define the structure, styling, and behavior of your node within its class methods.
+
+A definition object is then used to register your custom node with SpaceGraph, specifying its `typeName`, the `nodeClass` to use, and default properties (`getDefaults`).
+
+**Key Steps:**
+
+1.  **Define your Node Class**: Create a JavaScript class that extends `HtmlAppNode` (or another suitable base).
+    *   Implement `onInit()` to set up the initial HTML structure and event listeners.
+    *   Optionally, implement `onDataUpdate()` to react to changes in the node's data.
+2.  **Create a Node Definition**: Create an object that includes:
+    *   `typeName`: A unique string identifier for your node type (e.g., 'my-special-node'). This is also used to derive CSS class names (e.g., `.my-special-node-node`).
+    *   `nodeClass`: The class you defined in step 1.
+    *   `getDefaults`: A function that returns an object with default data properties for new instances of your node (e.g., default size, label).
+3.  **Register your Node Type**: Use `space.registerNodeType(definition.typeName, definition)` to make SpaceGraph aware of your custom node.
+4.  **Add Nodes**: Use `space.addNode({ type: 'your-type-name', ... })` to create instances of your custom node.
+
+For a practical example, see:
+*   `example-custom-node.html`: Demonstrates how to set up a page to use a custom node.
+*   `js/nodes/MyCustomNode.js`: Shows the implementation of a custom node class (`MyCustomNode`) and its definition object (`myCustomNodeDefinition`).
+
+By following this pattern, you can create highly customized and reusable components within your SpaceGraph visualizations. Refer to the `TUTORIAL_HTML_APP_NODE.md` for a more in-depth guide on `HtmlAppNode`.
+
+---
+
 ## Installation
 
 While the Quick Start Tutorial shows direct file usage, for larger projects or when using a package manager:
@@ -260,6 +288,42 @@ To generate and view browsable HTML documentation:
     This script will output a message suggesting you open `./docs/api/index.html` in your browser. Alternatively, you can directly open the `./docs/api/index.html` file in your preferred web browser.
 
 If you prefer to read the JSDoc comments directly in the source code, open the `spacegraph.js` file and read the JSDoc blocks (formatted as `/** ... */`) preceding class and method definitions.
+
+---
+
+## TypeScript Support
+
+SpaceGraph.js now includes TypeScript declaration files (`.d.ts`) as part of its distribution in the `dist` directory. These files provide type information for the library's API, enabling several benefits for developers using TypeScript in their projects:
+
+*   **Autocompletion**: Get intelligent autocompletion for SpaceGraph classes, methods, and properties directly in your code editor.
+*   **Type Checking**: Catch type-related errors at compile time, leading to more robust code.
+*   **Improved Readability**: Type annotations make it easier to understand the expected data types for functions and properties.
+
+When you install `spacegraph-zui` from npm (once available) and import it into a TypeScript project, the TypeScript compiler should automatically pick up these declaration files.
+
+For example:
+```typescript
+import { SpaceGraph, HtmlAppNode, SpaceGraphConfig } from 'spacegraph-zui'; // Or from './dist/spacegraph.esm.min.js' if using local files
+
+const container = document.getElementById('graph-container') as HTMLElement;
+
+const config: SpaceGraphConfig = { // Type checking for configuration
+    camera: {
+        initialPositionZ: 1000,
+    }
+};
+
+const space = new SpaceGraph(container, config);
+
+const node = space.addNode({ // Autocompletion for node properties
+    type: 'note',
+    id: 'ts-node',
+    x: 0, y: 0,
+    content: 'Hello from TypeScript!'
+});
+```
+
+The inclusion of type declarations aims to make integrating SpaceGraph.js into TypeScript projects smoother and more type-safe. The type generation is done using `tsc` based on JSDoc annotations in the JavaScript source code.
 
 ---
 

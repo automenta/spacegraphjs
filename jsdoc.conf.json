@@ -1,6 +1,6 @@
 {
     "source": {
-        "include": ["spacegraph.js"],
+        "include": ["js"],
         "includePattern": ".+\\.js(doc|x)?$",
         "excludePattern": "(^|[\\/\\\\])_"
     },
