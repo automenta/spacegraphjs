@@ -5,7 +5,6 @@
  */
 import * as THREE from 'three';
 import { CSS3DObject, CSS3DRenderer } from 'three/addons/renderers/CSS3DRenderer.js';
-import { gsap } from 'gsap';
 
 // UI Manager Imports (assuming these files are valid ES modules)
 import { PointerInputHandler } from './js/ui/PointerInputHandler.js';
