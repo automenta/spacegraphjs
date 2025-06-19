@@ -63,6 +63,7 @@
         </style>
     </head>
     <body>
+        <script src="./dist/spacegraph.umd.js"></script> <!-- Added UMD script -->
         <div id="space">
             <canvas id="webgl-canvas"></canvas>
             <div id="css3d-container"></div>
@@ -94,7 +95,14 @@
             // and add new nodes and edges to the graph after the initial setup.
             // It showcases direct manipulation of node data and underlying Three.js objects,
             // as well as using SpaceGraph methods to expand the graph.
-            import { SpaceGraph, NoteNode, ShapeNode, HtmlNodeElement, $ } from './dist/spacegraph.esm.min.js';
+            // ESM import removed, SpaceGraphZUI is now globally available
+
+            // Aliases for convenience
+            const SpaceGraph = SpaceGraphZUI.SpaceGraph;
+            const NoteNode = SpaceGraphZUI.NoteNode;
+            const ShapeNode = SpaceGraphZUI.ShapeNode;
+            const HtmlNodeElement = SpaceGraphZUI.HtmlNodeElement;
+            const $ = SpaceGraphZUI.$;
 
             let space;
             let statusIndicatorElement; // Will be dynamically created by UIManager or found if pre-existing.
@@ -175,46 +183,37 @@
              */
             function createInitialGraph(currentSpace) {
                 // Create an initial NoteNode that will be targeted for content updates.
-                const note1 = currentSpace.addNode(
-                    new NoteNode(
-                        'dynamic-note',
-                        { x: -150, y: 0, z: 0 },
-                        {
-                            content: '<h2>Initial Note</h2><p>This content will be updated dynamically.</p>',
-                            width: 250,
-                            height: 100,
-                            backgroundColor: '#3a3a70', // Custom background color
-                        }
-                    )
-                );
+                const note1 = currentSpace.addNode('dynamic-note', {
+                    type: 'note',
+                    position: { x: -150, y: 0, z: 0 },
+                    content: '<h2>Initial Note</h2><p>This content will be updated dynamically.</p>',
+                    width: 250,
+                    height: 100,
+                    backgroundColor: '#3a3a70', // Custom background color
+                    // mass: 1.0 (default for NoteNode if not specified by specific type 'note' handling)
+                });
 
                 // Create an initial ShapeNode that will be targeted for color and size updates.
-                const shape1 = currentSpace.addNode(
-                    new ShapeNode(
-                        'dynamic-shape',
-                        { x: 150, y: 0, z: 0 },
-                        {
-                            label: 'Dynamic Shape',
-                            shape: 'sphere',
-                            size: 60,
-                            color: 0xff8800, // Orange sphere
-                        }
-                    )
-                );
+                const shape1 = currentSpace.addNode('dynamic-shape', {
+                    type: 'shape',
+                    position: { x: 150, y: 0, z: 0 },
+                    label: 'Dynamic Shape',
+                    shape: 'sphere',
+                    size: 60,
+                    color: 0xff8800, // Orange sphere
+                    // mass: 1.5 (default for ShapeNode if not specified by specific type 'shape' handling)
+                });
 
                 // Create another node to serve as a target for dynamically added edges.
-                const targetNode = currentSpace.addNode(
-                    new NoteNode(
-                        'target-for-edge',
-                        { x: 0, y: 150, z: -30 },
-                        {
-                            content: '<h3>Target Node</h3><p>A new edge might connect here.</p>',
-                            width: 200,
-                            height: 90,
-                            backgroundColor: '#2a502a', // Greenish background
-                        }
-                    )
-                );
+                const targetNode = currentSpace.addNode('target-for-edge', {
+                    type: 'note',
+                    position: { x: 0, y: 150, z: -30 },
+                    content: '<h3>Target Node</h3><p>A new edge might connect here.</p>',
+                    width: 200,
+                    height: 90,
+                    backgroundColor: '#2a502a', // Greenish background
+                    // mass: 1.0 (default for NoteNode)
+                });
 
                 // Add initial edges connecting the nodes.
                 currentSpace.addEdge(note1, shape1, { constraintParams: { idealLength: 300 } }); // Longer ideal length
@@ -327,18 +326,15 @@
                     const randomHue = Math.random() * 360; // Random hue for background color
 
                     // Add the new node using SpaceGraph's addNode method.
-                    const newNode = currentSpace.addNode(
-                        new NoteNode(
-                            newNodeId,
-                            { x: randomX, y: randomY, z: randomZ },
-                            {
-                                content: `<h3>New Node ${newNodeCounter}</h3><p>Added dynamically!</p>`,
-                                width: 200,
-                                height: 80,
-                                backgroundColor: `hsl(${randomHue}, 50%, 60%)`, // Lighter background
-                            }
-                        )
-                    );
+                    const newNode = currentSpace.addNode(newNodeId, {
+                        type: 'note',
+                        position: { x: randomX, y: randomY, z: randomZ },
+                        content: `<h3>New Node ${newNodeCounter}</h3><p>Added dynamically!</p>`,
+                        width: 200,
+                        height: 80,
+                        backgroundColor: `hsl(${randomHue}, 50%, 60%)`, // Lighter background
+                        // mass: 1.0 (default for NoteNode)
+                    });
 
                     // Kick the layout engine to accommodate the new node.
                     currentSpace.layoutEngine.kick();

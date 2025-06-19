@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>SpaceGraph.js - Bundled Usage Example</title>
+    <title>SpaceGraph.js - UMD Bundled Usage Example</title> <!-- Title updated -->
     <link href="./index.css" rel="stylesheet" />
     <style>
         body { margin: 0; overflow: hidden; font-family: sans-serif; }
@@ -12,14 +12,49 @@
 <body>
     <div id="graph-container-bundled"></div>
 
-    <script type="importmap">
-    {
-        "imports": {
-            "spacegraph-zui": "./dist/spacegraph.esm.js",
-            "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
-        }
-    }
+    <!-- Removed importmap and external module script -->
+    <script src="./dist/spacegraph.umd.js"></script> <!-- Added UMD bundle -->
+
+    <script type="module">
+        // Logic from former js/example-bundled-usage.js, adapted for UMD bundle
+        document.addEventListener('DOMContentLoaded', () => {
+            const container = document.getElementById('graph-container-bundled');
+            if (!container) {
+                console.error('Graph container #graph-container-bundled not found!');
+                return;
+            }
+
+            // Use the global SpaceGraphZUI object from the UMD bundle
+            const graph = new SpaceGraphZUI.SpaceGraph(container);
+            console.log('SpaceGraph initialized in UMD bundled demo!', graph);
+
+            graph.addNode({
+                type: 'note', // Built-in note type
+                id: 'node-1-umd-bundled',
+                label: 'Note 1 (UMD Bundled)',
+                content: 'This node was added in the UMD bundled usage example.',
+                x: -100,
+                y: 0,
+                data: {
+                    backgroundColor: 'lightgreen'
+                }
+            });
+
+            graph.addNode({
+                type: 'shape',
+                id: 'node-2-umd-bundled',
+                label: 'Shape 1 (UMD Bundled)',
+                shape: 'sphere',
+                x: 100,
+                y: 0,
+                data: {
+                    color: 'skyblue'
+                }
+            });
+            graph.addEdge('node-1-umd-bundled', 'node-2-umd-bundled', {label: 'connected'});
+
+            graph.centerView();
+        });
     </script>
-    <script type="module" src="./js/example-bundled-usage.js"></script>
 </body>
 </html>

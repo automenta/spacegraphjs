@@ -53,17 +53,15 @@
 <body>
     <div id="graph-container"></div>
 
-    <script type="importmap">
-    {
-            "imports": {
-            "chart.js": "./node_modules/chart.js/dist/chart.js"
-            }
-    }
-    </script>
+    <!-- Removed importmap. Chart.js will be loaded via CDN, SpaceGraph via UMD bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.umd.min.js"></script> <!-- Added Chart.js CDN -->
+    <script src="./dist/spacegraph.umd.js"></script> <!-- Added SpaceGraph UMD script -->
 
     <script type="module">
-        import { SpaceGraph, HtmlAppNode } from './dist/spacegraph.esm.min.js';
-        import Chart from 'chart.js'; // Chart.js is imported for creating dynamic charts.
+        // ESM imports removed, SpaceGraphZUI and Chart (from CDN) are now globally available
+        const SpaceGraph = SpaceGraphZUI.SpaceGraph; // Alias for convenience
+        const HtmlAppNode = SpaceGraphZUI.HtmlAppNode; // Alias for convenience
+        // Chart is expected to be global via CDN script
 
         // --- DataSourceNode Implementation ---
         // DataSourceNode simulates a source of continuous data, like a sensor or a live feed.
@@ -215,7 +213,7 @@
 
         // --- SpaceGraph Setup ---
         const container = document.getElementById('graph-container');
-        const graph = new SpaceGraph(container, {
+        const graph = new SpaceGraph(container, { // SpaceGraph alias is already defined
             // Global defaults for nodes can be set here.
             defaults: {
                 node: {
