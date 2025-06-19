@@ -1,0 +1,60 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main # Trigger deployment on pushes to the main branch
+
+# Specifies permissions for the GITHUB_TOKEN for GitHub Pages deployment
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  # Build job
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Specify Node.js version, e.g., 18 or 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci # Use 'ci' for cleaner installs in CI environments
+
+      - name: Build GitHub Pages site
+        run: npm run build:gh-pages # This script populates the ./docs directory
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./docs # Path to the directory to upload
+
+  # Deploy job
+  deploy:
+    needs: build # Depends on the build job completing successfully
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }} # Output the deployed page URL
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        # No 'with' section needed if the artifact was uploaded with default name by upload-pages-artifact
+        # and if deploying to the root of the GitHub Pages site.
+        # If deploying to a subdirectory (e.g., /project-name/), additional configuration might be needed
+        # or ensure your site's asset paths are relative.
+        # The current setup with relative paths in docs/ should work well.

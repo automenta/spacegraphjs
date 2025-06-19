@@ -15,6 +15,12 @@ Spacegraph.js is a general-purpose, extensible JavaScript library for creating i
 
 ---
 
+## Live Demo & Documentation
+
+[View Live Demo & Documentation](https://automenta.github.io/spacegraphjs/)
+
+---
+
 ## Quick Start
 
 Get started with SpaceGraph.js by following these simple steps to set up a basic scene.
@@ -63,6 +69,7 @@ In your `<script type="module">`, import `SpaceGraph` and create an instance, li
 // Inside the <script type="module">
 
 // Adjust the path to where you've placed spacegraph.esm.min.js
+// For local development, after running 'npm run build', you can use:
 import { SpaceGraph } from './dist/spacegraph.esm.min.js';
 
 const container = document.getElementById('graph-container');
@@ -99,58 +106,83 @@ if (!container) {
 
     // Center the camera on the nodes
     graph.centerView();
-
-    // You can now interact with the graph using your mouse:
-    // - Click and drag to pan.
-    // - Scroll to zoom.
-    // - Click on nodes/edges to select them (if selectable).
 }
 ```
 
-This setup gives you a functioning SpaceGraph instance with two connected nodes. You can pan and zoom to explore the space.
+This setup gives you a functioning SpaceGraph instance with two connected nodes.
 
 ### Dive Deeper
-
-You've now created your first SpaceGraph scene! To unlock more powerful features, such as creating your own custom interactive HTML nodes or understanding the library's core mechanics, we recommend the following resources:
-
--   **[TUTORIAL_HTML_APP_NODE.md](TUTORIAL_HTML_APP_NODE.md)**: A step-by-step guide to building custom, interactive HTML-based nodes using the `HtmlAppNode` class. This is essential for creating rich user interfaces within your graph.
--   **[CORE_CONCEPTS.md](CORE_CONCEPTS.md)**: For a comprehensive understanding of SpaceGraph's architecture, including the node lifecycle, event system, layout engine, rendering pipeline, and configuration options.
-
-Exploring these documents will help you leverage the full potential of SpaceGraph.js for your projects. Happy visualizing!
+-   **[TUTORIAL_HTML_APP_NODE.md](TUTORIAL_HTML_APP_NODE.md)**: A step-by-step guide to building custom, interactive HTML-based nodes.
+-   **[CORE_CONCEPTS.md](CORE_CONCEPTS.md)**: For a comprehensive understanding of SpaceGraph's architecture.
 
 ---
 
-## Creating Custom Nodes
+## Local Development
 
-SpaceGraph.js allows you to define your own custom node types, enabling rich, interactive experiences tailored to your application's needs. This is particularly powerful when using HTML and JavaScript to create complex user interface elements within the graph.
+To set up the project for local development, testing, and building:
 
-The primary way to create custom HTML-based nodes is by extending the `HtmlAppNode` class (or a similar base class if you have specific needs not covered by `HtmlAppNode`). You define the structure, styling, and behavior of your node within its class methods.
+1.  **Clone the Repository:**
+    ```bash
+    git clone https://github.com/automenta/spacegraphjs.git
+    cd spacegraphjs
+    ```
 
-A definition object is then used to register your custom node with SpaceGraph, specifying its `typeName`, the `nodeClass` to use, and default properties (`getDefaults`).
+2.  **Install Dependencies:**
+    ```bash
+    npm install
+    ```
 
-**Key Steps:**
+3.  **Run Demo Launcher & Examples:**
+    To explore the various examples and demos locally, run:
+    ```bash
+    npm run demos
+    ```
+    This will start a Vite development server and open `demos.html`, which provides an interactive way to navigate to all example pages.
 
-1.  **Define your Node Class**: Create a JavaScript class that extends `HtmlAppNode` (or another suitable base).
-    *   Implement `onInit()` to set up the initial HTML structure and event listeners.
-    *   Optionally, implement `onDataUpdate()` to react to changes in the node's data.
-2.  **Create a Node Definition**: Create an object that includes:
-    *   `typeName`: A unique string identifier for your node type (e.g., 'my-special-node'). This is also used to derive CSS class names (e.g., `.my-special-node-node`).
-    *   `nodeClass`: The class you defined in step 1.
-    *   `getDefaults`: A function that returns an object with default data properties for new instances of your node (e.g., default size, label).
-3.  **Register your Node Type**: Use `space.registerNodeType(definition.typeName, definition)` to make SpaceGraph aware of your custom node.
-4.  **Add Nodes**: Use `space.addNode({ type: 'your-type-name', ... })` to create instances of your custom node.
+4.  **Build the Library:**
+    To produce the distributable library files (UMD, ESM, type declarations) in the `/dist` directory:
+    ```bash
+    npm run build
+    ```
 
-For a practical example, see:
-*   `example-custom-node.html`: Demonstrates how to set up a page to use a custom node.
-*   `js/nodes/MyCustomNode.js`: Shows the implementation of a custom node class (`MyCustomNode`) and its definition object (`myCustomNodeDefinition`).
+5.  **Build for GitHub Pages Deployment:**
+    To populate the `/docs` directory with all content for the GitHub Pages site (including the library, demos, and API documentation):
+    ```bash
+    npm run build:gh-pages
+    ```
 
-By following this pattern, you can create highly customized and reusable components within your SpaceGraph visualizations. Refer to the `TUTORIAL_HTML_APP_NODE.md` for a more in-depth guide on `HtmlAppNode`.
+6.  **Generate API Documentation:**
+    To generate only the API documentation (output to `/docs/api`):
+    ```bash
+    npm run docs:build
+    ```
+    To view the locally generated API docs:
+    ```bash
+    npm run docs:view
+    ```
+
+7.  **Run Tests:**
+    Execute the test suite using Vitest:
+    ```bash
+    npm test
+    ```
+
+8.  **Linting and Formatting:**
+    To check for linting issues:
+    ```bash
+    npm run lint
+    ```
+    To automatically fix linting and formatting issues:
+    ```bash
+    npm run lint:fix
+    npm run format
+    ```
 
 ---
 
-## Installation
+## Installation (for consuming the library)
 
-While the Quick Start Tutorial shows direct file usage, for larger projects or when using a package manager:
+While the Quick Start shows direct file usage, for larger projects or when using a package manager:
 
 Once published to npm, you will be able to install it via:
 
@@ -177,223 +209,55 @@ import { SpaceGraph, HtmlAppNode } // and other exports
 
 ## Key Features
 
-- **Zooming User Interface (ZUI)**: Navigate seamlessly between different scales in a fractal-like manner.
-- **2D & 3D Visualization**: Supports both 2D (top-down) and 3D (free-look, spherical) view modes.
-- **Versatile Node System**:
-    - **HTML Nodes**: Render DOM elements directly within the 3D space (e.g., `NoteNode`, or custom nodes extending `HtmlAppNode`).
-    - **Shape Nodes**: Create basic geometric shapes (boxes, spheres) via WebGL.
-    - **Registered Nodes**: Define and use custom node types with specific appearances and behaviors (e.g., using the `HtmlAppNode` base class for rich HTML content, or `RegisteredNode` for more generic custom nodes).
-- **Edge System**: Connect nodes with customizable lines, supporting physics constraints.
-- **Force-Directed Layout**: Automatic graph layout based on physics simulation to organize nodes and edges.
-- **Event System**: Subscribe to events like `nodeAdded`, `nodeSelected`, etc., to integrate with your application logic. (See "Event System" section).
-- **Configurable Defaults**: Customize many default aspects of the graph, nodes, and camera via a configuration object. (See "Configuration" section).
-- **Heads-Up Display (HUD)**: Includes an interactive HUD for logs, alerts, and REPL commands (though this is more of a UIManager feature built on top).
+- **Zooming User Interface (ZUI)**: Navigate seamlessly between different scales.
+- **2D & 3D Visualization**: Supports both 2D and 3D view modes.
+- **Versatile Node System**: HTML Nodes, Shape Nodes, Registered/Custom Nodes.
+- **Edge System**: Connect nodes with customizable lines.
+- **Force-Directed Layout**: Automatic graph organization.
+- **Event System**: Subscribe to graph events.
+- **Configurable Defaults**: Customize graph, nodes, and camera.
+
+---
+
+## Creating Custom Nodes
+SpaceGraph.js allows you to define your own custom node types. The primary way to create custom HTML-based nodes is by extending the `HtmlAppNode` class.
+Refer to `TUTORIAL_HTML_APP_NODE.md` for a detailed guide.
 
 ---
 
 ## Configuration
-
-You can customize many default behaviors and appearances by passing a configuration object as the _second_ argument to the `SpaceGraph` constructor.
-
-```javascript
-const myConfig = {
-    rendering: {
-        defaultBackgroundColor: 0x222222, // Dark gray background
-        defaultBackgroundAlpha: 1.0, // Opaque background
-    },
-    camera: {
-        initialPositionZ: 900, // Start camera a bit further out
-        fov: 65, // Adjust field of view
-    },
-    defaults: {
-        node: {
-            html: { backgroundColor: 'rgba(255, 255, 200, 0.85)' }, // Light yellow HTML nodes
-            shape: { color: 0x00aaee, size: 55 }, // Blueish, slightly larger shapes
-        },
-        edge: {
-            color: 0xcccccc, // Light gray edges
-            thickness: 1, // Thinner edges
-        },
-    },
-};
-
-// Initialize with the custom configuration
-// The SpaceGraph constructor is: new SpaceGraph(containerElement, config = {}, uiElements = {})
-const graph = new SpaceGraph(container, myConfig, {}); // Pass config as second arg
-```
-
-Refer to the API documentation (JSDoc for `SpaceGraphConfig` in `spacegraph.js`) for the full structure and all available options. For a conceptual overview, see [Configuration in Core Concepts](CORE_CONCEPTS.md#5-customizing-defaults-via-configuration).
+Customize default behaviors by passing a configuration object to the `SpaceGraph` constructor.
+Refer to `CORE_CONCEPTS.md#5-customizing-defaults-via-configuration` for details.
 
 ---
 
 ## Event System
-
-SpaceGraph uses an event emitter to announce significant actions within the graph. You can listen for these events using the `on()` method and stop listening with `off()`.
-
-```javascript
-// Listen for when a node is selected
-graph.on('nodeSelected', (eventData) => {
-    if (eventData.selectedNode) {
-        console.log('Node selected:', eventData.selectedNode.id);
-        console.log('Previously selected node:', eventData.previouslySelectedNode?.id);
-    } else {
-        console.log('Node deselected. Previously selected:', eventData.previouslySelectedNode?.id);
-    }
-});
-
-// Listen for when a new node is added
-graph.on('nodeAdded', (eventData) => {
-    console.log('New node added to the graph:', eventData.node);
-});
-
-// To remove a listener:
-// const myCallback = (data) => { /* ... */ };
-// graph.on('someEvent', myCallback);
-// graph.off('someEvent', myCallback);
-```
-
-**Key Events:**
-
-- `nodeAdded`: When a node is added. (Data: `{ node: BaseNode }`)
-- `nodeRemoved`: When a node is removed. (Data: `{ nodeId: string, node: BaseNode }`)
-- `edgeAdded`: When an edge is added. (Data: `{ edge: Edge }`)
-- `edgeRemoved`: When an edge is removed. (Data: `{ edgeId: string, edge: Edge }`)
-- `nodeSelected`: When a node is selected or deselected. (Data: `{ selectedNode: BaseNode | null, previouslySelectedNode: BaseNode | null }`)
-- `edgeSelected`: When an edge is selected or deselected. (Data: `{ selectedEdge: Edge | null, previouslySelectedEdge: Edge | null }`)
-
-See the API documentation (JSDoc in `spacegraph.js`) for more details on events and their data. For a more detailed explanation of the event system and its role in edge linking and inter-node communication, see the [Event System in Core Concepts](CORE_CONCEPTS.md#4-event-systems-and-edge-linking).
-
----
-
-## API Documentation
-
-The API documentation is embedded as JSDoc comments directly within the `spacegraph.js` source code.
-
-To generate and view browsable HTML documentation:
-
-1.  **Build the documentation:**
-    Run the following command in your terminal at the root of the project:
-
-    ```bash
-    npm run docs:build
-    ```
-
-    This will generate the documentation in the `./docs/api/` directory.
-
-2.  **View the documentation:**
-    You can then view the generated documentation by running:
-    ```bash
-    npm run docs:view
-    ```
-    This script will output a message suggesting you open `./docs/api/index.html` in your browser. Alternatively, you can directly open the `./docs/api/index.html` file in your preferred web browser.
-
-If you prefer to read the JSDoc comments directly in the source code, open the `spacegraph.js` file and read the JSDoc blocks (formatted as `/** ... */`) preceding class and method definitions.
+SpaceGraph uses an event emitter for graph actions. Use `graph.on()` to listen and `graph.off()` to stop.
+Key events include `nodeAdded`, `nodeRemoved`, `edgeAdded`, `edgeRemoved`, `nodeSelected`, `edgeSelected`.
+Refer to `CORE_CONCEPTS.md#4-event-systems-and-edge-linking` for details.
 
 ---
 
 ## TypeScript Support
+SpaceGraph.js includes TypeScript declaration files (`.d.ts`) in its `dist` directory, providing autocompletion and type checking for TypeScript projects.
 
-SpaceGraph.js now includes TypeScript declaration files (`.d.ts`) as part of its distribution in the `dist` directory. These files provide type information for the library's API, enabling several benefits for developers using TypeScript in their projects:
-
-*   **Autocompletion**: Get intelligent autocompletion for SpaceGraph classes, methods, and properties directly in your code editor.
-*   **Type Checking**: Catch type-related errors at compile time, leading to more robust code.
-*   **Improved Readability**: Type annotations make it easier to understand the expected data types for functions and properties.
-
-When you install `spacegraph-zui` from npm (once available) and import it into a TypeScript project, the TypeScript compiler should automatically pick up these declaration files.
-
-For example:
 ```typescript
-import { SpaceGraph, HtmlAppNode, SpaceGraphConfig } from 'spacegraph-zui'; // Or from './dist/spacegraph.esm.min.js' if using local files
+import { SpaceGraph, HtmlAppNode, SpaceGraphConfig } from 'spacegraph-zui'; // Or from './dist/spacegraph.esm.min.js'
 
 const container = document.getElementById('graph-container') as HTMLElement;
-
-const config: SpaceGraphConfig = { // Type checking for configuration
-    camera: {
-        initialPositionZ: 1000,
-    }
-};
-
+const config: SpaceGraphConfig = { /* ... */ };
 const space = new SpaceGraph(container, config);
-
-const node = space.addNode({ // Autocompletion for node properties
-    type: 'note',
-    id: 'ts-node',
-    x: 0, y: 0,
-    content: 'Hello from TypeScript!'
-});
+// ...
 ```
-
-The inclusion of type declarations aims to make integrating SpaceGraph.js into TypeScript projects smoother and more type-safe. The type generation is done using `tsc` based on JSDoc annotations in the JavaScript source code.
-
----
-
-## Running Examples
-
-For a convenient overview and access to all live examples, open the **[Demos Page](demos.html)** in your browser.
-
-While `demos.html` provides a good overview, you can also explore individual examples directly. Here’s a categorized guide to some key examples that showcase different aspects of SpaceGraph.js:
-
-*   **Core Concepts & Basic Usage:**
-    *   `index.html`: A minimal starting point.
-    *   `example-3d-scene.html`: Demonstrates basic 3D scene setup.
-    *   `example-shape-nodes.html`: Focuses on using built-in 3D shapes.
-    *   `example-text-nodes.html`: Shows simple text rendering in the graph.
-
-*   **Custom HTML Nodes (using `HtmlAppNode`):**
-    *   `TUTORIAL_HTML_APP_NODE.md`: The primary tutorial for `HtmlAppNode`.
-    *   `example-simple-counter-app-node.html`: A beginner-friendly custom HTML node.
-    *   `example-custom-node.html` (uses `js/nodes/MyCustomNode.js`): A straightforward custom `HtmlAppNode` example.
-    *   `example-app-nodes.html`: Features more complex `HtmlAppNode` examples like a Markdown Editor and a Task List.
-    *   `example-dashboard.html`: Illustrates building a dashboard with HTML-based nodes.
-
-*   **Custom WebGL Nodes (using `RegisteredNode`):**
-    *   `example-custom-webgl-node.html`: Shows creating a custom WebGL node by extending `RegisteredNode` with a class, including custom geometry and `emit`/`listenTo` usage. (Recommended for class-based approach)
-    *   `example-registered-node-webgl.html`: Demonstrates defining a custom WebGL node using functional callbacks directly within the `TypeDefinition` object. (Alternative approach)
-
-*   **Custom HTML Nodes (using `RegisteredNode` with functional `TypeDefinition`):**
-    *   `example-registered-node-html.html`: Illustrates creating custom HTML nodes via functional callbacks in the `TypeDefinition`, without a dedicated `HtmlAppNode` subclass.
-
-*   **Inter-Node Communication & Events:**
-    *   `example-event-emitter.html`: Focuses on global graph events (e.g., `nodeAdded`, `nodeSelected`).
-    *   `example-inter-node-communication.html`: Details node-to-node communication using `emit`/`listenTo` and data propagation through ports.
-
-*   **Dynamic Graph Operations & Configuration:**
-    *   `example-dynamic-updates.html`: Shows how to add, remove, and update nodes and edges dynamically.
-    *   `example-dynamic-dashboard.html`: Expands on the dashboard concept with dynamic elements.
-    *   `example-centralized-config.html`: Explains how to use the global configuration object to customize SpaceGraph.
-
-*   **Specific Layouts & Use Cases:**
-    *   `example-hierarchical-data.html`: Example of displaying hierarchical structures.
-    *   `example-mindmap.html`: A mind-mapping application example.
-
-*   **Bundled Usage:**
-    *   `example-bundled-usage.html`: Demonstrates how to use the pre-bundled `spacegraph.umd.js` or `spacegraph.esm.js` files.
-
-To run any of these, ensure you have the project files (especially `dist/spacegraph.esm.min.js` or other builds, and `index.css`), and then open the respective `example-*.html` file in your web browser.
 
 ---
 
 ## Further Guides and Examples
 
-For more in-depth guides and practical examples, refer to:
-
--   **[Core Concepts Document](CORE_CONCEPTS.md)**: Delves into the architecture, node lifecycle, rendering pipeline, and advanced topics.
--   **[SpaceGraph.js Cookbook](COOKBOOK.md)**: Contains recipes for advanced styling, custom interactions, performance tips, and more.
--   **[HtmlAppNode Tutorial](TUTORIAL_HTML_APP_NODE.md)**: A detailed guide to creating custom interactive HTML nodes.
--   The example HTML files in the root directory also showcase various features.
-
----
-
-## Testing
-
-A basic testing infrastructure is set up using Vitest.
-To run the tests:
-
-```bash
-npm test
-```
-
-The current test suite primarily covers utility functions and is a work in progress. Contributions to expand test coverage are welcome!
+-   **[Core Concepts Document](CORE_CONCEPTS.md)**
+-   **[SpaceGraph.js Cookbook](COOKBOOK.md)**
+-   **[HtmlAppNode Tutorial](TUTORIAL_HTML_APP_NODE.md)**
+-   Individual example HTML files in the root directory and the interactive [Demos Page](demos.html) (view locally with `npm run demos`).
 
 ---
 
