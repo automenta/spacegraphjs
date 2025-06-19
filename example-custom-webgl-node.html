@@ -18,9 +18,7 @@
     <div id="graph-container"></div>
 
     <script type="module">
-        import { SpaceGraph, HtmlAppNode, RegisteredNode } from '../spacegraph.js';
-
-        const THREE = SpaceGraph.THREE;
+        import { SpaceGraph, HtmlAppNode, RegisteredNode, THREE } from './dist/spacegraph.esm.min.js';
 
         class MyCustomWebGLNode extends RegisteredNode {
             constructor(id, initialUserData, typeDefinition, spaceGraphRef) {

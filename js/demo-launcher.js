@@ -8,8 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    if (typeof SpaceGraphZUI === 'undefined') {
-        console.error('SpaceGraphZUI is not loaded. Make sure spacegraph.js is included.');
+    if (typeof SpaceGraphZUI === 'undefined' || typeof SpaceGraphZUI.SpaceGraph === 'undefined') {
+        console.error('SpaceGraphZUI or SpaceGraphZUI.SpaceGraph is not loaded. Make sure spacegraph.umd.js is included and built correctly.');
         return;
     }
 
@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const graph = new SpaceGraphZUI(container, graphConfig);
+    const graph = new SpaceGraphZUI.SpaceGraph(container, graphConfig);
 
     const categories = {
         "featured": { label: "🌟 Keystone Showcase", style: { color: '#FFD700', size: 35, shape: 'diamond' }, id: 'category-featured' },
