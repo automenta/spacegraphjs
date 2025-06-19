@@ -257,7 +257,7 @@ const space = new SpaceGraph(container, config);
 -   **[Core Concepts Document](CORE_CONCEPTS.md)**
 -   **[SpaceGraph.js Cookbook](COOKBOOK.md)**
 -   **[HtmlAppNode Tutorial](TUTORIAL_HTML_APP_NODE.md)**
--   Individual example HTML files in the root directory and the interactive [Demos Page](demos.html) (view locally with `npm run demos`).
+-   Individual example HTML files in the root directory and the interactive [Interactive Demos & Documentation Page](demos.html) (view locally with `npm run demos`).
 
 ---
 

@@ -1,8 +1,10 @@
 // js/demo-launcher.js
 document.addEventListener('DOMContentLoaded', () => {
     const container = document.getElementById('demo-graph-container');
-    if (!container) {
-        console.error('Demo graph container not found!');
+    const demoInfoPanel = document.getElementById('demo-info-panel');
+
+    if (!container || !demoInfoPanel) {
+        console.error('Demo graph container or info panel not found!');
         return;
     }
 
@@ -34,20 +36,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const graph = new SpaceGraphZUI(container, {
         backgroundColor: '#f0f0f0',
         camera: {
-            initialPosition: { x: 0, y: 0, z: 700 } // Zoom out a bit to see nodes
+            initialPosition: { x: 0, y: 0, z: 900 } // Zoom out a bit more
         },
         layout: {
-            type: 'force-directed', // or 'circular', 'grid'
+            type: 'force-directed',
             options: {
-                linkDistance: 150,
-                chargeStrength: -300,
+                linkDistance: 200, // Increased link distance
+                chargeStrength: -400, // Adjusted charge strength
+                iterations: 200, // More iterations for stability
+                repulsion: 1.5 // Standard repulsion
             }
         },
         node: {
-            defaultType: 'text', // Use text nodes by default
+            defaultType: 'shape', // Change default node type to shape
             defaultStyle: {
+                shape: 'roundedRect', // Specify the shape
                 color: '#333333',
-                size: 10, // Default size, can be overridden
+                size: 15, // Default size for shapes
                 label: {
                     font: 'Arial',
                     size: 12,
@@ -61,15 +66,26 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     demos.forEach(demo => {
+        // Simple category detection based on keywords in ID or label (can be improved)
+        let category = 'general';
+        if (demo.id.includes('app') || demo.label.toLowerCase().includes('application')) category = 'app';
+        else if (demo.id.includes('dynamic')) category = 'dynamic';
+        else if (demo.id.includes('reg') || demo.label.toLowerCase().includes('registered')) category = 'customization';
+        else if (demo.id.includes('3d') || demo.label.toLowerCase().includes('webgl')) category = 'webgl';
+
+
         const node = graph.addNode(demo.id, {
             label: demo.label,
-            type: 'text', // Explicitly text node
+            // type: 'shape', // Now default, but can be explicit
             style: {
-                size: 15, // Slightly larger for demo nodes
+                // size: 20, // Larger for demo nodes, or adjust defaultStyle.size
+                shape: 'roundedRect', // Ensure it's a shape
                 label: {
-                    // color based on some hash of id or fixed
-                    backgroundColor: `hsl(${demo.id.length * 20 % 360}, 70%, 80%)`
-                }
+                    color: '#000000', // Ensure label is readable
+                    backgroundColor: `hsla(${demo.id.length * 20 % 360}, 70%, 80%, 0.7)` // Keep dynamic background for label
+                },
+                // Assign color based on category
+                color: getCategoryColor(category)
             }
         });
         // Store href and description in node's custom data
@@ -87,15 +103,26 @@ document.addEventListener('DOMContentLoaded', () => {
     graph.on('node:pointerover', (event) => {
         const node = event.detail.node;
         if (node && node.sgNode.data.description) {
-            // Basic hover effect: change cursor and maybe show a tooltip (browser default for now)
-            container.title = node.sgNode.data.description;
+            demoInfoPanel.innerHTML = node.sgNode.data.description;
+            demoInfoPanel.style.display = 'block';
         }
     });
 
     graph.on('node:pointerout', (event) => {
-        container.title = ''; // Clear title on pointer out
+        demoInfoPanel.innerHTML = '';
+        demoInfoPanel.style.display = 'none';
     });
 
+    // Function to get color based on category
+    function getCategoryColor(category) {
+        switch (category) {
+            case 'app': return '#4CAF50'; // Green
+            case 'dynamic': return '#FFC107'; // Amber
+            case 'customization': return '#2196F3'; // Blue
+            case 'webgl': return '#9C27B0'; // Purple
+            default: return '#795548'; // Brown (General)
+        }
+    }
 
     // Initial layout rendering
     graph.render();
