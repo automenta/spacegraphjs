@@ -13,36 +13,27 @@ export default defineConfig({
     sourcemap: true, // Enable sourcemap generation globally
     rollupOptions: {
       // Ensure 'three' and 'gsap' are treated as external dependencies
-      external: ['three', 'gsap'],
+      external: [], // MODIFIED
       output: [
         {
           format: 'es',
           entryFileNames: 'spacegraph.esm.js',
           // sourcemap is inherited from build.sourcemap
-          globals: {
-            three: 'THREE',
-            gsap: 'gsap'
-          }
+          globals: {} // MODIFIED
         },
         {
           format: 'es',
           entryFileNames: 'spacegraph.esm.min.js',
           // sourcemap is inherited
           plugins: [terser()],
-          globals: {
-            three: 'THREE',
-            gsap: 'gsap'
-          }
+          globals: {} // MODIFIED
         },
         {
           format: 'umd',
           name: 'SpaceGraphZUI',
           entryFileNames: 'spacegraph.umd.js',
           // sourcemap is inherited
-          globals: {
-            three: 'THREE',
-            gsap: 'gsap'
-          }
+          globals: {} // MODIFIED
         },
         {
           format: 'umd',
@@ -50,10 +41,7 @@ export default defineConfig({
           entryFileNames: 'spacegraph.umd.min.js',
           // sourcemap is inherited
           plugins: [terser()],
-          globals: {
-            three: 'THREE',
-            gsap: 'gsap'
-          }
+          globals: {} // MODIFIED
         }
       ]
     }

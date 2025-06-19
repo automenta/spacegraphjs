@@ -49,10 +49,11 @@
         "url": "https://github.com/automenta/spacegraphjs/issues"
     },
     "homepage": "https://github.com/automenta/spacegraphjs#readme",
-    "peerDependencies": {
+    "dependencies": {
         "gsap": "^3.13.0",
         "three": "^0.177.0"
     },
+    "peerDependencies": {},
     "devDependencies": {
         "@babel/core": "^7.27.4",
         "@babel/preset-env": "^7.27.2",
@@ -61,12 +62,10 @@
         "eslint": "^8.57.0",
         "eslint-config-prettier": "^9.1.0",
         "eslint-plugin-prettier": "^5.2.1",
-        "gsap": "^3.13.0",
         "jsdoc": "^4.0.4",
         "jsdom": "^24.0.0",
         "prettier": "^3.3.3",
         "serve": "^14.2.4",
-        "three": "^0.177.0",
         "typescript": "^5.8.3",
         "vite": "^6.3.5",
         "vitest": "^1.6.1"
