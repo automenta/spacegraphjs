@@ -101,8 +101,11 @@
             <!-- SpaceGraph canvas and CSS3D container will be injected here by spacegraph.js -->
         </div>
 
+        <script src="./dist/spacegraph.umd.js"></script> <!-- Added UMD script -->
         <script type="module">
-            import { SpaceGraph, HtmlAppNode } from './dist/spacegraph.esm.min.js';
+            // ESM import removed, SpaceGraphZUI is now globally available
+            const SpaceGraph = SpaceGraphZUI.SpaceGraph; // Alias for convenience
+            const HtmlAppNode = SpaceGraphZUI.HtmlAppNode; // Alias for convenience
 
             // --- Data Source Node ---
             class DataSourceNode extends HtmlAppNode {
@@ -195,7 +198,7 @@
                     return;
                 }
 
-                const space = new SpaceGraph(container);
+                const space = new SpaceGraph(container); // SpaceGraph alias is already defined
                 window.space = space; // For debugging
 
                 // Register node types

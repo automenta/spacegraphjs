@@ -12,6 +12,7 @@
         <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     </head>
     <body>
+        <script src="dist/spacegraph.umd.js"></script> <!-- Added UMD script -->
         <div id="space">
             <canvas id="webgl-canvas"></canvas>
             <div id="css3d-container"></div>
@@ -30,7 +31,10 @@
             //    It also shows how to define input/output ports for inter-node communication.
             // 2. Task List: A node that manages a list of tasks with add, complete, and delete functionalities.
             //    It demonstrates dynamic HTML generation within a node and emitting events for task updates.
-            import { SpaceGraph, HtmlAppNode, $ } from './dist/spacegraph.esm.min.js';
+            // ESM import removed, SpaceGraphZUI is now globally available
+            const SpaceGraph = SpaceGraphZUI.SpaceGraph;
+            const HtmlAppNode = SpaceGraphZUI.HtmlAppNode;
+            const $ = SpaceGraphZUI.$;
 
             // --- Markdown Editor Node (Refactored to use HtmlAppNode) ---
             class MarkdownEditorNode extends HtmlAppNode {

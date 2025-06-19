@@ -97,29 +97,23 @@
                 let colorIndex = 0;
                 const nextColor = () => colors[colorIndex++ % colors.length];
 
-                const n_core = space.addNode(
-                    new S.NoteNode(
-                        'core',
-                        { x: 0, y: 0, z: 0 },
-                        {
-                            content:
-                                '<h1>🚀 SpaceGraph Keystone 🧠</h1><p>A 3D interactive information space.</p><ul><li>HTML & 3D Nodes</li><li>Customizable Edges</li><li>Physics Layout</li></ul>',
-                            width: 320,
-                            height: 160,
-                            backgroundColor: nextColor(),
-                            contentScale: 1.1,
-                        },
-                        2.0
-                    )
-                );
+                const n_core = space.addNode('core', {
+                    type: 'note',
+                    position: { x: 0, y: 0, z: 0 },
+                    content:
+                        '<h1>🚀 SpaceGraph Keystone 🧠</h1><p>A 3D interactive information space.</p><ul><li>HTML & 3D Nodes</li><li>Customizable Edges</li><li>Physics Layout</li></ul>',
+                    width: 320,
+                    height: 160,
+                    backgroundColor: nextColor(),
+                    contentScale: 1.1,
+                    mass: 2.0,
+                });
 
                 const interactiveNodeId = S.generateId('interactive');
-                const n_interactive = space.addNode(
-                    new S.NoteNode(
-                        interactiveNodeId,
-                        { x: 380, y: 100, z: 30 },
-                        {
-                            content: `<h2>Interactive Content</h2>
+                const n_interactive = space.addNode(interactiveNodeId, {
+                    type: 'note',
+                    position: { x: 380, y: 100, z: 30 },
+                    content: `<h2>Interactive Content</h2>
                       <p>Slider: <span class="slider-val-${interactiveNodeId}">50</span></p>
                       <input type="range" min="0" max="100" value="50" style="width: 90%; pointer-events: auto; cursor: pointer;"
                              oninput="document.querySelector('.slider-val-${interactiveNodeId}').textContent = this.value; event.stopPropagation();"
@@ -134,8 +128,8 @@
                             width: 260,
                             height: 220,
                             backgroundColor: nextColor(),
+                            mass: 1.0, // Default mass for NoteNode
                         }
-                    )
                 );
                 space.addEdge(n_core, n_interactive, {
                     constraintType: 'elastic',
@@ -153,55 +147,45 @@
                     console.warn(`Button #update-content-btn-${interactiveNodeId} not found for event listener setup.`);
                 }
 
-                const n_box = space.addNode(
-                    new S.ShapeNode(
-                        'shapeBox',
-                        { x: -350, y: 120, z: -20 },
-                        {
-                            label: '3D Box Node 📦',
-                            shape: 'box',
-                            size: 80,
-                            color: 0xcc8833,
-                        },
-                        1.5
-                    )
-                );
+                const n_box = space.addNode('shapeBox', {
+                    type: 'shape',
+                    position: { x: -350, y: 120, z: -20 },
+                    label: '3D Box Node 📦',
+                    shape: 'box',
+                    size: 80,
+                    color: 0xcc8833,
+                    mass: 1.5,
+                });
                 space.addEdge(n_core, n_box, {
                     constraintType: 'rigid',
                     constraintParams: { distance: 280, stiffness: 0.05 },
                 });
 
-                const n_sphere = space.addNode(
-                    new S.ShapeNode(
-                        'shapeSphere',
-                        { x: -400, y: -100, z: 50 },
-                        {
-                            label: '3D Sphere 🌐',
-                            shape: 'sphere',
-                            size: 70,
-                            color: 0x33aabb,
-                        }
-                    )
-                );
+                const n_sphere = space.addNode('shapeSphere', {
+                    type: 'shape',
+                    position: { x: -400, y: -100, z: 50 },
+                    label: '3D Sphere 🌐',
+                    shape: 'sphere',
+                    size: 70,
+                    color: 0x33aabb,
+                    mass: 1.5, // Default mass for ShapeNode
+                });
                 space.addEdge(n_core, n_sphere, {
                     constraintType: 'elastic',
                     constraintParams: { idealLength: 320, stiffness: 0.001 },
                 });
                 space.addEdge(n_box, n_sphere, { constraintType: 'weld', constraintParams: { stiffness: 0.1 } });
 
-                const n_details = space.addNode(
-                    new S.NoteNode(
-                        'details',
-                        { x: 50, y: -280, z: -40 },
-                        {
-                            content:
-                                '<h3>Node Details</h3><p>This node shows more connections and different edge types.</p><p>Try context menus (right-click) on nodes, edges, or background.</p>',
-                            width: 280,
-                            height: 130,
-                            backgroundColor: nextColor(),
-                        }
-                    )
-                );
+                const n_details = space.addNode('details', {
+                    type: 'note',
+                    position: { x: 50, y: -280, z: -40 },
+                    content:
+                        '<h3>Node Details</h3><p>This node shows more connections and different edge types.</p><p>Try context menus (right-click) on nodes, edges, or background.</p>',
+                    width: 280,
+                    height: 130,
+                    backgroundColor: nextColor(),
+                    mass: 1.0, // Default mass for NoteNode
+                });
                 space.addEdge(n_core, n_details, {
                     color: 0xff8800,
                     thickness: 2.5,
@@ -219,18 +203,15 @@
                     constraintParams: { idealLength: 300, stiffness: 0.0015 },
                 });
 
-                const n_fractal_root = space.addNode(
-                    new S.NoteNode(
-                        'fractalRoot',
-                        { x: n_box.position.x + 150, y: n_box.position.y + 150, z: n_box.position.z - 50 },
-                        {
-                            content: '<h4>Sub-Cluster</h4>',
-                            width: 130,
-                            height: 60,
-                            backgroundColor: nextColor(),
-                        }
-                    )
-                );
+                const n_fractal_root = space.addNode('fractalRoot', {
+                    type: 'note',
+                    position: { x: n_box.position.x + 150, y: n_box.position.y + 150, z: n_box.position.z - 50 },
+                    content: '<h4>Sub-Cluster</h4>',
+                    width: 130,
+                    height: 60,
+                    backgroundColor: nextColor(),
+                    mass: 1.0, // Default mass for NoteNode
+                });
                 space.addEdge(n_box, n_fractal_root, {
                     constraintType: 'rigid',
                     constraintParams: { distance: 150, stiffness: 0.02 },
@@ -238,23 +219,21 @@
 
                 for (let i = 0; i < 2; i++) {
                     const angle = (i / 2) * Math.PI * 2 + Math.PI / 4;
-                    const n_level1 = space.addNode(
-                        new S.NoteNode(
-                            null,
-                            {
-                                x: n_fractal_root.position.x + Math.cos(angle) * 120,
-                                y: n_fractal_root.position.y + Math.sin(angle) * 120,
-                                z: n_fractal_root.position.z + (Math.random() - 0.5) * 60,
-                            },
-                            {
-                                content: `L1-${i + 1}`,
-                                width: 90,
-                                height: 45,
-                                backgroundColor: nextColor(),
-                                contentScale: 0.9,
-                            }
-                        )
-                    );
+                    const nodeId = S.generateId('level1-note-' + i);
+                    const n_level1 = space.addNode(nodeId, {
+                        type: 'note',
+                        position: {
+                            x: n_fractal_root.position.x + Math.cos(angle) * 120,
+                            y: n_fractal_root.position.y + Math.sin(angle) * 120,
+                            z: n_fractal_root.position.z + (Math.random() - 0.5) * 60,
+                        },
+                        content: `L1-${i + 1}`,
+                        width: 90,
+                        height: 45,
+                        backgroundColor: nextColor(),
+                        contentScale: 0.9,
+                        mass: 1.0, // Default mass for NoteNode
+                    });
                     space.addEdge(n_fractal_root, n_level1, {
                         constraintType: 'elastic',
                         constraintParams: { idealLength: 100, stiffness: 0.005 },

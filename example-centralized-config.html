@@ -25,18 +25,19 @@
         </style>
     </head>
     <body>
+        <script src="dist/spacegraph.umd.js"></script> <!-- Added UMD script -->
         <div id="graph-container"></div>
 
         <script type="module">
             // This example demonstrates how to use the `SpaceGraphConfig` object to customize
             // default appearances and behaviors for nodes, edges, camera, and rendering
             // when initializing a SpaceGraph instance.
-            import { SpaceGraph } from './dist/spacegraph.esm.min.js';
+            // ESM import removed, SpaceGraphZUI is now globally available
 
             const container = document.getElementById('graph-container');
 
             /**
-             * @type {import('./dist/spacegraph.esm.min.js').SpaceGraphConfig}
+             * @type {SpaceGraphZUI.SpaceGraphConfig}
              */
             const customConfig = {
                 // --- RENDERING SETTINGS ---
@@ -88,7 +89,7 @@
             // The `customConfig` will be merged with SpaceGraph's internal default configuration,
             // with properties in `customConfig` taking precedence.
             // The third parameter, uiElements, is empty here as we are not focusing on custom UI DOM elements.
-            const graph = new SpaceGraph(container, customConfig, {});
+            const graph = new SpaceGraphZUI.SpaceGraph(container, customConfig, {});
 
             // Add nodes and edges to demonstrate the effects of the custom configuration.
 
