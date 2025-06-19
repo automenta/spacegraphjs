@@ -16,21 +16,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const demos = [
         { id: "3d-scene", label: "3D Scene Demo", href: "example-3d-scene.html", description: "Demonstrates basic 3D scene setup and navigation." },
-        { id: "app-nodes", label: "Application Nodes Demo", href: "example-app-nodes.html", description: "Showcases custom HTML-based application nodes." },
-        { id: "simple-counter", label: "Simple Counter App Node", href: "example-simple-counter-app-node.html", description: "A minimal example of creating a custom interactive HTML node." },
-        { id: "central-config", label: "Centralized Configuration", href: "example-centralized-config.html", description: "Illustrates how to use a central configuration object." },
+        { id: "app-nodes", label: "Application Nodes Demo", href: "example-app-nodes.html", description: "Showcases custom HTML-based application nodes and their interactions." },
+        { id: "bundled-usage", label: "Bundled Usage Demo", href: "example-bundled-usage.html", description: "Illustrates using SpaceGraph via npm-style import with an import map." },
+        { id: "central-config", label: "Centralized Configuration Demo", href: "example-centralized-config.html", description: "Illustrates how to use a central configuration object." },
+        { id: "custom-node", label: "Custom Node Demo", href: "example-custom-node.html", description: "Basic example of creating a custom node type." },
+        { id: "custom-webgl-node", label: "Custom Webgl Node Demo", href: "example-custom-webgl-node.html", description: "Demonstrates a custom node type with WebGL rendering." },
         { id: "dashboard", label: "Dashboard Demo", href: "example-dashboard.html", description: "A simple dashboard with interconnected data widgets." },
-        { id: "dynamic-dashboard", label: "Dynamic Dashboard with Charts", href: "example-dynamic-dashboard.html", description: "Dashboard that dynamically updates and includes Chart.js." },
+        { id: "dynamic-dashboard", label: "Dynamic Dashboard Demo", href: "example-dynamic-dashboard.html", description: "Dashboard that dynamically updates and includes Chart.js." },
         { id: "dynamic-updates", label: "Dynamic Updates Demo", href: "example-dynamic-updates.html", description: "Shows nodes dynamically updating their content and appearance." },
         { id: "event-emitter", label: "Event Emitter Demo", href: "example-event-emitter.html", description: "Demonstrates the graph's event system." },
         { id: "hierarchical-data", label: "Hierarchical Data Demo", href: "example-hierarchical-data.html", description: "Example of visualizing hierarchical data structures." },
-        { id: "inter-node-comm", label: "Inter-Node Communication", href: "example-inter-node-communication.html", description: "Illustrates direct communication and data flow between nodes." },
-        { id: "mindmap", label: "Mind Map Demo", href: "example-mindmap.html", description: "A mind map visualization example." },
-        { id: "reg-html-node", label: "Registered HTML Node", href: "example-registered-node-html.html", description: "Shows registration and usage of custom HTML-based node types." },
-        { id: "reg-webgl-node", label: "Registered WebGL Node", href: "example-registered-node-webgl.html", description: "Shows registration and usage of custom WebGL-based node types." },
+        { id: "inter-node-communication", label: "Inter Node Communication Demo", href: "example-inter-node-communication.html", description: "Illustrates direct communication and data flow between nodes." },
+        { id: "mindmap", label: "Mindmap Demo", href: "example-mindmap.html", description: "A mind map visualization example." },
+        { id: "registered-node-html", label: "Registered Node Html Demo", href: "example-registered-node-html.html", description: "Shows registration and usage of custom HTML-based node types." },
+        { id: "registered-node-webgl", label: "Registered Node Webgl Demo", href: "example-registered-node-webgl.html", description: "Shows registration and usage of custom WebGL-based node types." },
         { id: "shape-nodes", label: "Shape Nodes Demo", href: "example-shape-nodes.html", description: "Demonstrates various built-in shape nodes (spheres, boxes)." },
-        { id: "text-nodes", label: "Text Nodes Demo", href: "example-text-nodes.html", description: "Showcases nodes primarily focused on displaying text." },
-        { id: "bundled-usage", label: "Bundled Usage Demo", href: "example-bundled-usage.html", description: "Illustrates using SpaceGraph via npm-style import with an import map." }
+        { id: "simple-counter-app-node", label: "Simple Counter App Node Demo", href: "example-simple-counter-app-node.html", description: "A minimal example of creating a custom interactive HTML node." },
+        { id: "text-nodes", label: "Text Nodes Demo", href: "example-text-nodes.html", description: "Showcases nodes primarily focused on displaying text." }
     ];
 
     const graph = new SpaceGraphZUI(container, {
