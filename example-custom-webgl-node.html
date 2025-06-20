@@ -17,13 +17,8 @@
     </div>
     <div id="graph-container"></div>
 
-    <script src="./dist/spacegraph.umd.js"></script> <!-- Added UMD script -->
     <script type="module">
-        // ESM import removed, SpaceGraphZUI is now globally available
-        const SpaceGraph = SpaceGraphZUI.SpaceGraph; // Alias for convenience
-        const HtmlAppNode = SpaceGraphZUI.HtmlAppNode;
-        const RegisteredNode = SpaceGraphZUI.RegisteredNode;
-        const THREE = SpaceGraphZUI.THREE;
+        import { SpaceGraph, HtmlAppNode, BaseNode, RegisteredNode, ShapeNode, NoteNode, THREE } from './spacegraph.js';
 
         class MyCustomWebGLNode extends RegisteredNode {
             constructor(id, initialUserData, typeDefinition, spaceGraphRef) {
@@ -129,7 +124,7 @@
         // Wait for the DOM to be fully loaded
         document.addEventListener('DOMContentLoaded', () => {
             const container = document.getElementById('graph-container');
-            const space = new SpaceGraph(container); // SpaceGraph alias is already defined
+            const space = new SpaceGraph(container); // Use imported SpaceGraph
 
             const myCustomWebGLNodeDefinition = {
                 typeName: 'my-custom-webgl',

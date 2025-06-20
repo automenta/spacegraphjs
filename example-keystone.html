@@ -6,7 +6,7 @@
         <title>SpaceGraph Keystone Example 🧠</title>
         <link href="/favicon.png" rel="icon" type="image/png">
         <link href="index.css" rel="stylesheet" />
-        <script src="dist/spacegraph.umd.js"></script>
+        <!-- <script src="dist/spacegraph.umd.js"></script> -->
     </head>
     <body>
         <div id="examples-list">
@@ -34,13 +34,13 @@
         </div>
 
         <script type="module">
-            const S = window.SpaceGraphZUI;
+            import { SpaceGraph, NoteNode, ShapeNode, HtmlNodeElement, BaseNode, RegisteredNode, THREE, $, generateId } from './spacegraph.js';
 
             function init() {
-                const container = S.$('#space');
-                // const contextMenuEl = S.$('#context-menu'); // No longer needed to pass explicitly
-                // const confirmDialogEl = S.$('#confirm-dialog'); // No longer needed to pass explicitly
-                // const statusIndicator = S.$('#status-indicator'); // No longer needed to pass explicitly
+                const container = $('#space'); // Use imported $
+                // const contextMenuEl = $('#context-menu'); // No longer needed to pass explicitly
+                // const confirmDialogEl = $('#confirm-dialog'); // No longer needed to pass explicitly
+                // const statusIndicator = $('#status-indicator'); // No longer needed to pass explicitly
 
                 if (!container) {
                     // Only need to check for the main container
@@ -54,7 +54,7 @@
                     // UIManager will now create UI elements if not found.
                     // Pass empty uiElements or specific ones if they *were* on the page.
                     // For this cleanup, we assume they are not on the page and will be auto-created.
-                    const space = new S.SpaceGraph(container, {});
+                    const space = new SpaceGraph(container, {}); // Use imported SpaceGraph
 
                     createKeystoneExampleGraph(space);
 
@@ -64,7 +64,7 @@
                     window.space = space;
                     // UIManager should handle its own status indicator if necessary, or examples can manage it if a specific one is on page.
                     // For now, let's assume the UIManager's dynamically created one is sufficient or CSS handles initial state.
-                    const statusEl = S.$('#status-indicator'); // Find the auto-created one
+                    const statusEl = $('#status-indicator'); // Find the auto-created one, use imported $
                     if (statusEl) {
                         statusEl.textContent = 'SpaceGraph Ready ✨';
                         setTimeout(() => statusEl.classList.add('hidden'), 1500);
@@ -72,7 +72,7 @@
                 } catch (error) {
                     console.error('Initialization Failed:', error);
                     const statusEl =
-                        S.$('#status-indicator') || document.body.appendChild(document.createElement('div'));
+                        $('#status-indicator') || document.body.appendChild(document.createElement('div')); // Use imported $
                     statusEl.id = 'status-indicator'; // Ensure it has an ID if newly created
                     statusEl.textContent = `Error: ${error.message}`;
                     statusEl.style.backgroundColor = 'var(--delete-button-bg)';
@@ -109,7 +109,7 @@
                     mass: 2.0,
                 });
 
-                const interactiveNodeId = S.generateId('interactive');
+                const interactiveNodeId = generateId('interactive'); // Use imported generateId
                 const n_interactive = space.addNode(interactiveNodeId, {
                     type: 'note',
                     position: { x: 380, y: 100, z: 30 },
@@ -136,11 +136,11 @@
                     constraintParams: { idealLength: 300, stiffness: 0.002 },
                 });
 
-                const updateBtn = S.$(`#update-content-btn-${interactiveNodeId}`, n_interactive.htmlElement);
+                const updateBtn = $(`#update-content-btn-${interactiveNodeId}`, n_interactive.htmlElement); // Use imported $
                 if (updateBtn) {
                     updateBtn.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        const textEl = S.$(`#dynamic-text-${interactiveNodeId}`, n_interactive.htmlElement);
+                        const textEl = $(`#dynamic-text-${interactiveNodeId}`, n_interactive.htmlElement); // Use imported $
                         if (textEl) textEl.textContent = `Text updated at ${new Date().toLocaleTimeString()}`;
                     });
                 } else {
@@ -219,7 +219,7 @@
 
                 for (let i = 0; i < 2; i++) {
                     const angle = (i / 2) * Math.PI * 2 + Math.PI / 4;
-                    const nodeId = S.generateId('level1-note-' + i);
+                    const nodeId = generateId('level1-note-' + i); // Use imported generateId
                     const n_level1 = space.addNode(nodeId, {
                         type: 'note',
                         position: {

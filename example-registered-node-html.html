@@ -65,7 +65,7 @@
             // by defining a `TypeDefinition` object and registering it with SpaceGraph
             // using `space.registerNodeType()`.
             // The custom node represents a "User Profile" card with an avatar, name, title, and status.
-            import { SpaceGraph, RegisteredNode, NoteNode, $ } from './dist/spacegraph.esm.min.js';
+            import { SpaceGraph, RegisteredNode, NoteNode, HtmlAppNode, BaseNode, ShapeNode, THREE, $, generateId } from './spacegraph.js';
 
             function init() {
                 const container = $('#space');

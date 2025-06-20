@@ -20,10 +20,10 @@
             // This example demonstrates the creation and usage of `ShapeNode` instances in SpaceGraph.
             // `ShapeNode` is a built-in node type that renders WebGL geometric shapes (like spheres and boxes).
             // The example showcases how to customize properties such as shape type, size, color, label, and mass.
-            // ESM import removed, assuming SpaceGraphZUI is globally available via spacegraph.umd.js
+            import { SpaceGraph, NoteNode, ShapeNode, HtmlNodeElement, BaseNode, RegisteredNode, THREE, $, generateId } from './spacegraph.js';
 
             function init() {
-                const container = SpaceGraphZUI.$('#space');
+                const container = $('#space'); // Use imported $
                 // UI elements like contextMenuEl, confirmDialogEl, statusIndicator are now auto-created
                 // by the UIManager within SpaceGraph if they are not found in the DOM.
                 if (!container) {
@@ -35,7 +35,7 @@
 
                 try {
                     // Initialize SpaceGraph. We pass an empty object for uiElements to use default auto-creation.
-                    const space = new SpaceGraphZUI.SpaceGraph(container, {});
+                    const space = new SpaceGraph(container, {}); // Use imported SpaceGraph
 
                     // Call a function to populate the graph with ShapeNode examples.
                     createShapeNodesExample(space);
@@ -48,7 +48,7 @@
                     window.space = space; // Make the SpaceGraph instance globally accessible for debugging.
 
                     // Display a status message indicating successful initialization.
-                    const statusEl = SpaceGraphZUI.$('#status-indicator'); // Find the auto-created status indicator.
+                    const statusEl = $('#status-indicator'); // Find the auto-created status indicator, use imported $.
                     if (statusEl) {
                         statusEl.textContent = 'Shape Node Example Ready ✨';
                         setTimeout(() => statusEl.classList.add('hidden'), 1500); // Hide after 1.5 seconds.
@@ -57,7 +57,7 @@
                     console.error('Shape Node Example Initialization Failed:', error);
                     // Fallback error display if initialization fails.
                     const statusEl =
-                        SpaceGraphZUI.$('#status-indicator') || document.body.appendChild(document.createElement('div'));
+                        $('#status-indicator') || document.body.appendChild(document.createElement('div')); // Use imported $
                     statusEl.id = 'status-indicator'; // Ensure it has an ID if newly created.
                     statusEl.textContent = `Error: ${error.message}`;
                     statusEl.style.backgroundColor = 'var(--delete-button-bg)'; // Use a distinct error style.

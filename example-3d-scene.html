@@ -27,11 +27,8 @@
 <body>
     <div id="graph-container"></div>
 
-    <script src="dist/spacegraph.umd.js"></script> <!-- Added UMD script -->
     <script type="module">
-        // ESM import removed, SpaceGraphZUI is now globally available from spacegraph.umd.js
-        const SpaceGraph = SpaceGraphZUI.SpaceGraph; // Alias for convenience
-        const THREE = SpaceGraphZUI.THREE;           // Alias for convenience
+        import { SpaceGraph, THREE, HtmlAppNode, BaseNode, RegisteredNode, ShapeNode, NoteNode } from './spacegraph.js';
 
         // CSS3DObject will be accessed via the imported THREE object e.g. new THREE.CSS3DObject(element)
         // or if SpaceGraph makes it available directly.
@@ -248,7 +245,7 @@
 
         // Expose instances to the window for easy debugging in the browser console.
         window.graph = graph;
-        window.THREE = THREE; // Expose THREE.js namespace for inspection.
+        // window.THREE = THREE; // THREE is already available via the import
 
     </script>
 </body>

@@ -63,7 +63,6 @@
         </style>
     </head>
     <body>
-        <script src="./dist/spacegraph.umd.js"></script> <!-- Added UMD script -->
         <div id="space">
             <canvas id="webgl-canvas"></canvas>
             <div id="css3d-container"></div>
@@ -98,11 +97,9 @@
             // ESM import removed, SpaceGraphZUI is now globally available
 
             // Aliases for convenience
-            const SpaceGraph = SpaceGraphZUI.SpaceGraph;
-            const NoteNode = SpaceGraphZUI.NoteNode;
-            const ShapeNode = SpaceGraphZUI.ShapeNode;
-            const HtmlNodeElement = SpaceGraphZUI.HtmlNodeElement;
-            const $ = SpaceGraphZUI.$;
+            import { SpaceGraph, NoteNode, ShapeNode, HtmlNodeElement, BaseNode, RegisteredNode, THREE } from './spacegraph.js';
+            // Define $ locally if it was from SpaceGraphZUI, assuming querySelector functionality
+            const $ = (selector, parent = document) => parent.querySelector(selector);
 
             let space;
             let statusIndicatorElement; // Will be dynamically created by UIManager or found if pre-existing.

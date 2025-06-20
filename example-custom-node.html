@@ -32,14 +32,13 @@
     </style>
 </head>
 <body>
-    <script src="./dist/spacegraph.umd.js"></script> <!-- Added UMD script -->
     <div id="graph-container"></div>
 
     <script type="module">
-        // ESM imports removed, SpaceGraphZUI is now globally available
+        import { SpaceGraph, HtmlAppNode, BaseNode, RegisteredNode, ShapeNode, NoteNode, THREE } from './spacegraph.js';
 
         // --- Inlined MyCustomNode.js content ---
-        class MyCustomNode extends SpaceGraphZUI.HtmlAppNode {
+        class MyCustomNode extends HtmlAppNode {
             onInit() {
                 // super.onInit(); // HtmlAppNode's onInit logs a warning, specific setup is done here.
                                  // Base class constructor already creates htmlElement.
@@ -86,7 +85,7 @@
         // --- End of Inlined MyCustomNode.js content ---
 
         const container = document.getElementById('graph-container');
-        const space = new SpaceGraphZUI.SpaceGraph(container); // Use global SpaceGraphZUI
+        const space = new SpaceGraph(container); // Use imported SpaceGraph
         window.space = space; // For debugging
 
         // Register the custom node type

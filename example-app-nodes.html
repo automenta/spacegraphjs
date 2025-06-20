@@ -12,7 +12,6 @@
         <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     </head>
     <body>
-        <script src="dist/spacegraph.umd.js"></script> <!-- Added UMD script -->
         <div id="space">
             <canvas id="webgl-canvas"></canvas>
             <div id="css3d-container"></div>
@@ -31,10 +30,14 @@
             //    It also shows how to define input/output ports for inter-node communication.
             // 2. Task List: A node that manages a list of tasks with add, complete, and delete functionalities.
             //    It demonstrates dynamic HTML generation within a node and emitting events for task updates.
-            // ESM import removed, SpaceGraphZUI is now globally available
-            const SpaceGraph = SpaceGraphZUI.SpaceGraph;
-            const HtmlAppNode = SpaceGraphZUI.HtmlAppNode;
-            const $ = SpaceGraphZUI.$;
+            import { SpaceGraph, HtmlAppNode, BaseNode, RegisteredNode, ShapeNode, NoteNode, THREE } from './spacegraph.js';
+            // Assuming $ is a utility function, if it's from SpaceGraphZUI, it needs to be handled.
+            // For now, let's assume $ might be a global or needs to be imported if it was part of SpaceGraphZUI.
+            // If $ was SpaceGraphZUI.$, it's not directly available.
+            // Let's check if it's used and if it's a simple querySelector.
+            // It is used in init(): const container = $('#space');
+            // Replace $ with document.querySelector for this specific case or define $ if it's more complex.
+            const $ = (selector) => document.querySelector(selector);
 
             // --- Markdown Editor Node (Refactored to use HtmlAppNode) ---
             class MarkdownEditorNode extends HtmlAppNode {
