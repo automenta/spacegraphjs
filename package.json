@@ -53,7 +53,6 @@
         "gsap": "^3.13.0",
         "three": "^0.177.0"
     },
-    "peerDependencies": {},
     "devDependencies": {
         "@babel/core": "^7.27.4",
         "@babel/preset-env": "^7.27.2",

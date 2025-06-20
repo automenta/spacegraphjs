@@ -23,6 +23,7 @@ import { ContextMenuManager } from './js/ui/ContextMenuManager.js';
 import { LinkingManager } from './js/ui/LinkingManager.js';
 import { EdgeMenuManager } from './js/ui/EdgeMenuManager.js';
 import { DialogManager } from './js/ui/DialogManager.js';
+import { UIManager } from './js/ui/UIManager.js';
 
 // Utility Functions (exported directly)
 export const $ = (selector, context = document) => context.querySelector(selector);
