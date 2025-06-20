@@ -13,9 +13,10 @@
     <div id="graph-container-bundled"></div>
 
     <!-- Removed importmap and external module script -->
-    <script src="./dist/spacegraph.umd.js"></script> <!-- Added UMD bundle -->
+    <!-- <script src="./dist/spacegraph.umd.js"></script> --> <!-- Removed UMD bundle -->
 
     <script type="module">
+        import { SpaceGraph, THREE, HtmlAppNode, BaseNode, RegisteredNode, ShapeNode, NoteNode } from './dist/spacegraph.esm.js';
         // Logic from former js/example-bundled-usage.js, adapted for UMD bundle
         document.addEventListener('DOMContentLoaded', () => {
             const container = document.getElementById('graph-container-bundled');
@@ -25,7 +26,7 @@
             }
 
             // Use the global SpaceGraphZUI object from the UMD bundle
-            const graph = new SpaceGraphZUI.SpaceGraph(container);
+            const graph = new SpaceGraph(container); // Changed to direct import
             console.log('SpaceGraph initialized in UMD bundled demo!', graph);
 
             graph.addNode({

@@ -55,12 +55,10 @@
 
     <!-- Removed importmap. Chart.js will be loaded via CDN, SpaceGraph via UMD bundle -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.umd.min.js"></script> <!-- Added Chart.js CDN -->
-    <script src="./dist/spacegraph.umd.js"></script> <!-- Added SpaceGraph UMD script -->
+    <!-- <script src="./dist/spacegraph.umd.js"></script> --> <!-- Removed SpaceGraph UMD script -->
 
     <script type="module">
-        // ESM imports removed, SpaceGraphZUI and Chart (from CDN) are now globally available
-        const SpaceGraph = SpaceGraphZUI.SpaceGraph; // Alias for convenience
-        const HtmlAppNode = SpaceGraphZUI.HtmlAppNode; // Alias for convenience
+        import { SpaceGraph, HtmlAppNode, BaseNode, RegisteredNode, ShapeNode, NoteNode, THREE } from './dist/spacegraph.esm.js';
         // Chart is expected to be global via CDN script
 
         // --- DataSourceNode Implementation ---
@@ -213,7 +211,7 @@
 
         // --- SpaceGraph Setup ---
         const container = document.getElementById('graph-container');
-        const graph = new SpaceGraph(container, { // SpaceGraph alias is already defined
+        const graph = new SpaceGraph(container, { // Use imported SpaceGraph
             // Global defaults for nodes can be set here.
             defaults: {
                 node: {

@@ -19,8 +19,8 @@
         "lint": "eslint . --ext .js",
         "lint:fix": "eslint . --ext .js --fix",
         "format": "prettier --write \"**/*.{js,json,md,html,css}\"",
-        "start": "npx vite dev",
-        "demos": "npx vite dev --open /demos.html",
+        "start": "npm run build && npx vite dev",
+        "demos": "npm run build && npx vite dev --open /demos.html",
         "build:watch": "vite build --watch",
         "build:gh-pages": "npm run build && (npm run docs:build || true) && rm -rf docs/dist docs/js docs/index.html docs/example-*.html docs/index.css && mkdir -p docs/js docs/dist && cp index.html docs/index.html && cp example-*.html docs/ && cp js/demo-launcher.js docs/js/demo-launcher.js && cp -R dist/. docs/dist/ && cp index.css docs/index.css"
     },

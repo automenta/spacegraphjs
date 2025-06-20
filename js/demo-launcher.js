@@ -1,4 +1,6 @@
 // js/demo-launcher.js
+import { SpaceGraph, THREE, HtmlAppNode, BaseNode, RegisteredNode, ShapeNode, NoteNode, $, generateId } from '../dist/spacegraph.esm.js';
+
 document.addEventListener('DOMContentLoaded', () => {
     const container = document.getElementById('demo-graph-container');
     const demoInfoPanel = document.getElementById('demo-info-panel');
@@ -8,10 +10,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    if (typeof SpaceGraphZUI === 'undefined' || typeof SpaceGraphZUI.SpaceGraph === 'undefined') {
-        console.error('SpaceGraphZUI or SpaceGraphZUI.SpaceGraph is not loaded. Make sure spacegraph.umd.js is included and built correctly.');
-        return;
-    }
+    // Removed SpaceGraphZUI check, relying on successful import.
+    // if (typeof SpaceGraph === 'undefined') {
+    //     console.error('SpaceGraph is not loaded. Check import from ../spacegraph.js');
+    //     return;
+    // }
 
     const demos = [
         { id: "keystone-showcase", label: "Keystone Showcase ✨", href: "example-keystone.html", description: "A comprehensive demonstration of SpaceGraph's features, including various node types, interactive elements, and dynamic updates.", category: "featured" },
@@ -66,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const graph = new SpaceGraphZUI.SpaceGraph(container, graphConfig);
+    const graph = new SpaceGraph(container, graphConfig); // Replaced SpaceGraphZUI.SpaceGraph
 
     const categories = {
         "featured": { label: "🌟 Keystone Showcase", style: { color: '#FFD700', size: 35, shape: 'diamond' }, id: 'category-featured' },

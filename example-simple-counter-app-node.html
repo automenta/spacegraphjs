@@ -15,7 +15,7 @@
     <div id="graph-container"></div>
 
     <script type="module">
-        import { SpaceGraph, HtmlAppNode } from './dist/spacegraph.esm.min.js';
+        import { SpaceGraph, HtmlAppNode, BaseNode, RegisteredNode, ShapeNode, NoteNode, THREE, $, generateId } from './dist/spacegraph.esm.js';
 
         // --- CounterNode Implementation ---
         class CounterNode extends HtmlAppNode {
