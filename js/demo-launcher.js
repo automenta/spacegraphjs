@@ -1,5 +1,5 @@
 // js/demo-launcher.js
-import { SpaceGraph, THREE, HtmlAppNode, BaseNode, RegisteredNode, ShapeNode, NoteNode, $, generateId } from '../spacegraph.js';
+import { SpaceGraph, THREE, HtmlAppNode, BaseNode, RegisteredNode, ShapeNode, NoteNode, $, generateId } from '../dist/spacegraph.esm.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const container = document.getElementById('demo-graph-container');
