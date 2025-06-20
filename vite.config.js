@@ -13,40 +13,54 @@ export default defineConfig({
     sourcemap: true, // Enable sourcemap generation globally
     rollupOptions: {
       // Ensure 'three' and 'gsap' are treated as external dependencies
-      external: [], // MODIFIED
+      external: ['three', 'gsap'], // Ensure 'three' and 'gsap' are treated as external dependencies
       output: [
         {
           format: 'es',
           entryFileNames: 'spacegraph.esm.js',
           // sourcemap is inherited from build.sourcemap
-          globals: {} // MODIFIED
+          globals: {
+            three: 'THREE',
+            gsap: 'gsap'
+          }
         },
         {
           format: 'es',
           entryFileNames: 'spacegraph.esm.min.js',
-          // sourcemap is inherited
           plugins: [terser()],
-          globals: {} // MODIFIED
+          globals: {
+            three: 'THREE',
+            gsap: 'gsap'
+          }
         },
         {
           format: 'umd',
           name: 'SpaceGraphZUI',
           entryFileNames: 'spacegraph.umd.js',
-          // sourcemap is inherited
-          globals: {} // MODIFIED
+          globals: {
+            three: 'THREE',
+            gsap: 'gsap'
+          }
         },
         {
           format: 'umd',
           name: 'SpaceGraphZUI',
           entryFileNames: 'spacegraph.umd.min.js',
-          // sourcemap is inherited
           plugins: [terser()],
-          globals: {} // MODIFIED
+          globals: {
+            three: 'THREE',
+            gsap: 'gsap'
+          }
         }
       ]
     }
   },
   // Keep existing server and optimizeDeps configurations if any
+  resolve: {
+    alias: {
+      'three/addons': resolve(__dirname, 'node_modules/three/examples/jsm')
+    }
+  },
   server: {
     open: true,
     fs: {

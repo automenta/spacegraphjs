@@ -142,8 +142,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
-        node.sgNode.data.href = demo.href;
-        node.sgNode.data.description = demo.description;
+        node.data.href = demo.href;
+        node.data.description = demo.description;
 
         if (isFeatured) {
             graph.addEdge(welcomeNode.id, node.id, {
@@ -167,20 +167,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     graph.on('node:click', (event) => {
         const node = event.detail.node;
-        if (node && node.sgNode.data.href) {
-            window.location.href = node.sgNode.data.href;
+        if (node && node.data.href) {
+            window.location.href = node.data.href;
         }
     });
 
     graph.on('node:pointerover', (event) => {
         const node = event.detail.node;
-        if (node && node.sgNode.data.description) {
-            demoInfoPanel.innerHTML = `<strong>${node.sgNode.data.label || node.id}</strong><hr style="margin: 4px 0;"/>${node.sgNode.data.description}`;
+        if (node && node.data.description) {
+            demoInfoPanel.innerHTML = `<strong>${node.data.label || node.id}</strong><hr style="margin: 4px 0;"/>${node.data.description}`;
             demoInfoPanel.style.display = 'block';
             // Highlight node and its direct connections
             graph.highlightNode(node.id, true);
         } else if (node) { // For category nodes or welcome node that might not have a description
-             demoInfoPanel.innerHTML = `<strong>${node.sgNode.data.label || node.id}</strong>`;
+             demoInfoPanel.innerHTML = `<strong>${node.data.label || node.id}</strong>`;
              demoInfoPanel.style.display = 'block';
              graph.highlightNode(node.id, true);
         }
@@ -192,7 +192,12 @@ document.addEventListener('DOMContentLoaded', () => {
         graph.highlightNode(null); // Clear highlights
     });
 
+console.log('Graph object before render call:', graph);
+    if (typeof graph.render !== 'function') {
+        console.error('graph.render is not a function. SpaceGraph instance is missing the render method.');
+    }
     graph.render();
     graph.zoomToFit(null, 0.9, 800); // Zoom to fit after layout
     console.log('Enhanced demo launcher graph initialized with SpaceGraphZUI.');
 });
+
