@@ -202,5 +202,6 @@ console.log('Graph object before render call:', graph);
     graph.render();
     graph.zoomToFit(null, 0.9, 800); // Zoom to fit after layout
     console.log('Enhanced demo launcher graph initialized with SpaceGraphZUI.');
+    window.dispatchEvent(new CustomEvent('spaceGraphInitialized'));
 });
 
