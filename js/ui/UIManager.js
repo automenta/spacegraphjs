@@ -14,12 +14,28 @@ export class UIManager {
         this.spaceGraph = spaceGraph;
         this.uiElements = uiElements; // Might be used by specific managers
 
+        if (this.uiElements.contextMenuContainer instanceof HTMLElement) {
+            this.uiElements.contextMenu = this.uiElements.contextMenuContainer;
+        } else {
+            const contextMenuEl = document.createElement('div');
+            contextMenuEl.id = 'spacegraph-context-menu';
+            contextMenuEl.className = 'spacegraph-context-menu';
+            contextMenuEl.style.display = 'none';
+            contextMenuEl.style.position = 'absolute';
+            contextMenuEl.style.zIndex = '1000';
+            contextMenuEl.style.background = 'white';
+            contextMenuEl.style.border = '1px solid #ccc';
+            // Optionally, add more default styling or classes as needed
+            this.spaceGraph.container.appendChild(contextMenuEl);
+            this.uiElements.contextMenu = contextMenuEl;
+        }
+
         // Instantiate all UI handlers and managers
         this.pointerInputHandler = new PointerInputHandler(spaceGraph, this);
         this.keyboardInputHandler = new KeyboardInputHandler(spaceGraph, this);
         this.wheelInputHandler = new WheelInputHandler(spaceGraph, this);
         this.dragAndDropHandler = new DragAndDropHandler(spaceGraph, this, uiElements.dropZoneElement || spaceGraph.container);
-        this.contextMenuManager = new ContextMenuManager(spaceGraph, this, uiElements.contextMenuContainer);
+        this.contextMenuManager = new ContextMenuManager(spaceGraph, this);
         this.linkingManager = new LinkingManager(spaceGraph, this);
         this.edgeMenuManager = new EdgeMenuManager(spaceGraph, this, uiElements.edgeMenuContainer);
         this.dialogManager = new DialogManager(spaceGraph, this, uiElements.dialogContainer);
@@ -134,5 +150,9 @@ export class UIManager {
 
     hideDialog() {
         this.dialogManager.hide();
+    }
+
+    getDomElement(name) {
+        return this.uiElements[name];
     }
 }
