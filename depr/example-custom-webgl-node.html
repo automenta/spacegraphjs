@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpaceGraph Custom WebGL Node Example</title>
+    <link rel="stylesheet" href="../index.css">
+    <style>
+        body { margin: 0; font-family: Arial, sans-serif; background-color: #f0f0f0; }
+        #graph-container { width: 100%; height: 600px; border: 1px solid #ccc; }
+        #controls { padding: 10px; text-align: center; background-color: #fff; border-bottom: 1px solid #ccc;}
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.177.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.177.0/examples/jsm/",
+    "gsap": "https://unpkg.com/gsap@3.13.0/index.js"
+  }
+}
+</script>
+</head>
+<body>
+    <div id="controls">
+        <button id="triggerBtn">Trigger Event on WebGL Node</button>
+    </div>
+    <div id="graph-container"></div>
+
+    <script type="module">
+        import { SpaceGraph, HtmlAppNode, BaseNode, RegisteredNode, ShapeNode, NoteNode, THREE } from './dist/spacegraph.esm.js';
+
+        class MyCustomWebGLNode extends RegisteredNode {
+            constructor(id, initialUserData, typeDefinition, spaceGraphRef) {
+                super(id, initialUserData, typeDefinition, spaceGraphRef);
+                // this.data is now populated by typeDefinition.getDefaults merged with initialUserData from addNode
+
+                const knotRadius = this.data.knotRadius || 20;
+                const knotTube = this.data.knotTube || 5;
+                const tubularSegments = this.data.tubularSegments || 64;
+                const radialSegments = this.data.radialSegments || 8;
+
+                const geometry = new THREE.TorusKnotGeometry(knotRadius, knotTube, tubularSegments, radialSegments);
+                const material = new THREE.MeshStandardMaterial({
+                    color: this.data.color || 0x00ff00,
+                    metalness: 0.5,
+                    roughness: 0.5
+                });
+                this.mesh = new THREE.Mesh(geometry, material);
+                this.mesh.userData = { nodeId: this.id, type: this.data.type };
+
+                // Make the node selectable by clicking the mesh
+                if (this.spaceGraph && this.spaceGraph.selectionManager) {
+                    this.spaceGraph.selectionManager.addSelectableObject(this.mesh, () => {
+                        this.spaceGraph.selectionManager.selectNode(this);
+                        // Optionally, trigger an event on selection
+                        // this.triggerEvent('Selected via mesh click!');
+                    });
+                }
+            }
+
+            // getBoundingSphereRadius is important for layout and camera focusing
+            getBoundingSphereRadius() {
+                const radius = this.data.knotRadius || 20;
+                // Add tube radius and some padding
+                return radius + (this.data.knotTube || 5) + 5;
+            }
+
+            setSelectedStyle(selected) {
+                super.setSelectedStyle(selected); // Handles default outline if any
+                if (this.mesh && this.mesh.material) {
+                    if (selected) {
+                        this.mesh.material.emissive.setHex(0x555500);
+                    } else {
+                        this.mesh.material.emissive.setHex(0x000000);
+                    }
+                }
+            }
+
+            triggerEvent(message) {
+                this.emit('customEvent', { nodeId: this.id, message: message });
+            }
+
+            onUpdate(deltaTime) {
+                super.onUpdate(deltaTime); // Important for base class updates
+                if (this.mesh) {
+                    this.mesh.rotation.y += 0.01;
+                    this.mesh.rotation.x += 0.005;
+                }
+            }
+
+            // This method is called by BaseNode constructor to initialize this.data
+            // It's overridden here just for clarity, but the actual merging logic
+            // is handled by RegisteredNode -> BaseNode constructors using typeDefinition.getDefaults
+            // and the data from addNode.
+            // getDefaultData() {
+            //     // This would be the class's own defaults if typeDefinition.getDefaults wasn't primary
+            //     return { label: this.id, color: 0x00ff00, type: 'my-custom-webgl-class-default' };
+            // }
+
+            // onCreate is not strictly needed if the constructor sets up visuals,
+            // but if defined in TypeDefinition, it would be called.
+            // For RegisteredNode, constructor is the place for mesh setup.
+            // VisualOutputs (mesh, htmlElement) are automatically picked up if they are properties of the instance.
+        }
+
+        class LoggerNode extends HtmlAppNode {
+            constructor(id, initialUserData, typeDefinition, spaceGraphRef) {
+                super(id, initialUserData, typeDefinition, spaceGraphRef);
+            }
+
+            onInit() {
+                super.onInit(); // Sets up this.htmlElement
+                this.htmlElement.innerHTML = `
+                    <div style="padding: 10px; color: white;">
+                        <h3 style="margin-top:0; margin-bottom: 5px; font-size: 16px;">Event Log</h3>
+                        <div class="log-display" style="height: 100px; overflow-y: auto; background: #222; padding: 5px; border: 1px solid #444; font-size: 12px; line-height: 1.4;"></div>
+                    </div>
+                `;
+                this.autoStopPropagation(); // Prevent graph interactions from triggering inside node
+            }
+
+            logMessage(message) {
+                const logDisplay = this.htmlElement.querySelector('.log-display');
+                if (logDisplay) {
+                    const messageDiv = document.createElement('div');
+                    messageDiv.textContent = message;
+                    logDisplay.appendChild(messageDiv);
+                    logDisplay.scrollTop = logDisplay.scrollHeight;
+                }
+            }
+        }
+
+        // Wait for the DOM to be fully loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            const container = document.getElementById('graph-container');
+            const space = new SpaceGraph(container); // Use imported SpaceGraph
+
+            const myCustomWebGLNodeDefinition = {
+                typeName: 'my-custom-webgl',
+                nodeClass: MyCustomWebGLNode,
+                // These defaults are merged with data provided in addNode.
+                // The MyCustomWebGLNode constructor will find these in this.data.
+                getDefaults: (node) => ({
+                    label: node.id || 'Custom WebGL',
+                    color: 0x11aa33, // Default color if not specified in addNode
+                    knotRadius: 15,
+                    knotTube: 4,
+                    tubularSegments: 50,
+                    radialSegments: 7,
+                    type: 'my-custom-webgl' // Ensure type is part of data for easy access
+                }),
+                // onCreate is not needed as MyCustomWebGLNode constructor handles mesh creation
+                // and the mesh is assigned to this.mesh, which SpaceGraph automatically adds to the scene.
+            };
+
+            const loggerNodeDefinition = {
+                typeName: 'logger',
+                nodeClass: LoggerNode,
+                getDefaults: () => ({
+                    label: 'Event Logger',
+                    width: 300,
+                    height: 150, // Includes padding etc.
+                    backgroundColor: '#33363D' // HtmlAppNode uses this for the main div
+                })
+            };
+
+            space.registerNodeType(myCustomWebGLNodeDefinition.typeName, myCustomWebGLNodeDefinition);
+            space.registerNodeType(loggerNodeDefinition.typeName, loggerNodeDefinition);
+
+            const customNode1 = space.addNode({
+                type: 'my-custom-webgl',
+                id: 'webgl1',
+                label: 'Torus Knot A', // Overrides getDefaults label
+                x: -100,
+                y: 0,
+                data: { // This data is merged with getDefaults
+                    color: 0xff00ff, // Magenta
+                    knotRadius: 22
+                }
+            });
+
+            const customNode2 = space.addNode({
+                type: 'my-custom-webgl',
+                id: 'webgl2',
+                label: 'Torus Knot B',
+                x: 50,
+                y: 50,
+                data: {
+                    color: 0x00ffff, // Cyan
+                    knotRadius: 12,
+                    knotTube: 2
+                }
+            });
+
+            const loggerNode1 = space.addNode({
+                type: 'logger',
+                id: 'log1',
+                x: 200,
+                y: -50
+            });
+
+            // Listen to events from customNode1
+            loggerNode1.listenTo(customNode1, 'customEvent', (payload, sender) => {
+                loggerNode1.logMessage(`Event from ${sender.id} (${sender.data.label}): ${payload.message}`);
+            });
+
+            // Listen to events from customNode2
+            loggerNode1.listenTo(customNode2, 'customEvent', (payload, sender) => {
+                loggerNode1.logMessage(`Event from ${sender.id} (${sender.data.label}): ${payload.message}`);
+            });
+
+            customNode1.triggerEvent('Node Initialized!');
+            customNode2.triggerEvent('Node Initialized!');
+
+            setTimeout(() => {
+                customNode1.triggerEvent('Delayed event!');
+            }, 3000);
+            setTimeout(() => {
+                customNode2.triggerEvent('Another delayed event!');
+            }, 4500);
+
+            document.getElementById('triggerBtn').addEventListener('click', () => {
+                if (space.selectedNode && space.selectedNode instanceof MyCustomWebGLNode) {
+                    space.selectedNode.triggerEvent('Button Clicked for selected node!');
+                } else {
+                    customNode1.triggerEvent('Button Clicked (defaulting to webgl1)!');
+                }
+            });
+
+            // Example of how to connect them with an edge, though not strictly used for eventing here
+            space.addEdge(customNode1, customNode2, { data: { label: 'knows' } });
+
+            // Fit to screen
+            setTimeout(() => space.cameraController.fitToScene(true), 500);
+        });
+    </script>
+</body>
+</html>

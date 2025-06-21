@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpaceGraph - Custom Node Example (UMD)</title> <!-- Title Updated -->
+    <link href="index.css" rel="stylesheet">
+    <style>
+        body { margin: 0; overflow: hidden; font-family: var(--font-family); background-color: var(--bg-color-dark); }
+        #graph-container { width: 100vw; height: 100vh; }
+
+        /* --- Basic Styling for MyCustomNode --- */
+        .html-app-node.my-custom-node-node { /* Adjusted selector to match HtmlAppNode behavior */
+            background-color: var(--node-bg-color, #333); /* Added fallback */
+            border: 1px solid var(--node-border-color, #555); /* Added fallback */
+            border-radius: 5px;
+            color: var(--node-text-color, #DDD); /* Added fallback */
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        .my-custom-node-node .my-custom-node-title {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 8px;
+            color: var(--node-title-color, #FFF); /* Added fallback */
+            text-align: center;
+        }
+        .my-custom-node-node .my-custom-node-content p {
+            margin: 4px 0;
+            font-size: 0.9em;
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.177.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.177.0/examples/jsm/",
+    "gsap": "https://unpkg.com/gsap@3.13.0/index.js"
+  }
+}
+</script>
+</head>
+<body>
+    <div id="graph-container"></div>
+
+    <script type="module">
+        import { SpaceGraph, HtmlAppNode, BaseNode, RegisteredNode, ShapeNode, NoteNode, THREE } from './dist/spacegraph.esm.js';
+
+        // --- Inlined MyCustomNode.js content ---
+        class MyCustomNode extends HtmlAppNode {
+            onInit() {
+                // super.onInit(); // HtmlAppNode's onInit logs a warning, specific setup is done here.
+                                 // Base class constructor already creates htmlElement.
+
+                // Ensure htmlElement has the necessary base class if not already applied by HtmlAppNode
+                // this.htmlElement.classList.add('html-app-node'); // HtmlAppNode constructor should do this
+                // this.htmlElement.classList.add(myCustomNodeDefinition.typeName + '-node'); // HtmlAppNode constructor should do this based on typeName
+
+                this.htmlElement.innerHTML = `
+                    <div class="my-custom-node-title">${this.data.label || 'Custom Node'}</div>
+                    <div class="my-custom-node-content">
+                        <p>ID: ${this.id}</p>
+                        <p>Position: ${this.x.toFixed(0)}, ${this.y.toFixed(0)}</p>
+                    </div>
+                `;
+                // Add any specific event listeners or logic here
+                // Example: this.getChild('.my-custom-node-title').addEventListener(...)
+            }
+
+            onDataUpdate(updatedData) {
+                super.onDataUpdate(updatedData); // Handle base updates (like width/height, bound props)
+
+                if (updatedData.label !== undefined) {
+                    // Make sure to access data via this.data as it's the source of truth after update
+                    const titleElement = this.getChild('.my-custom-node-title');
+                    if (titleElement) {
+                        titleElement.textContent = this.data.label;
+                    }
+                }
+                // Add more reactions to data changes as needed
+            }
+        }
+
+        const myCustomNodeDefinition = {
+            typeName: 'my-custom-node', // Will result in 'my-custom-node-node' CSS class
+            nodeClass: MyCustomNode,
+            getDefaults: (nodeInst) => ({ // Default data for new instances
+                width: 200,
+                height: 100,
+                label: nodeInst?.id ? `Custom ${nodeInst.id}` : 'Custom Node',
+                // Add any other default properties for your node's data
+            }),
+        };
+        // --- End of Inlined MyCustomNode.js content ---
+
+        const container = document.getElementById('graph-container');
+        const space = new SpaceGraph(container); // Use imported SpaceGraph
+        window.space = space; // For debugging
+
+        // Register the custom node type
+        space.registerNodeType(myCustomNodeDefinition.typeName, myCustomNodeDefinition);
+
+        // Add instances of the custom node
+        space.addNode({
+            type: myCustomNodeDefinition.typeName, // 'my-custom-node'
+            id: 'custom1',
+            x: -150, y: 0,
+            data: { label: 'First Custom Node' } // This data will be passed to MyCustomNode's getDefaults and constructor
+        });
+
+        space.addNode({
+            type: myCustomNodeDefinition.typeName, // 'my-custom-node'
+            id: 'custom2',
+            x: 150, y: 50,
+            // data: { label: 'Second Node' } // Optional: if not provided, getDefaults will supply 'label'
+        });
+
+        space.centerView();
+    </script>
+</body>
+</html>

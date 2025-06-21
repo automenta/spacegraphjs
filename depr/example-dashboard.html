@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
+        <title>SpaceGraph - Dashboard Example</title>
+        <link
+            href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>"
+            rel="icon"
+        />
+        <link href="index.css" rel="stylesheet" />
+        <style>
+        body { /* Keep existing body rule for font-family from example */
+            font-family: var(--font-family);
+        }
+        #graph-container { /* Keep existing graph-container rule */
+            position: fixed;
+            inset: 0;
+        }
+
+        /* General enhancements for dashboard widgets */
+        .html-app-node.data-source-widget-node,
+        .html-app-node.display-widget-node {
+            transition: all var(--transition-med); /* Smooth transitions for any property changes */
+        }
+
+        /* Widget Headers */
+        .data-source-widget-node h4,
+        .display-widget-node h4 {
+            margin: -15px -15px 10px -15px;
+            padding: 10px 15px;
+            background-color: rgba(0,0,0,0.05); /* Subtle header background */
+            border-bottom: 1px solid var(--node-border, #ddd);
+            font-size: 1.1em;
+            font-weight: 600;
+            color: var(--primary-color, #333);
+            border-top-left-radius: 8px; /* Match node's border-radius */
+            border-top-right-radius: 8px;
+        }
+
+        /* Data Source Widget Specifics */
+        .data-source-widget-node button {
+            background-color: var(--accent-color);
+            color: var(--bg-color, #fff); /* Ensure contrast if accent is light */
+            font-weight: bold;
+            padding: 10px 15px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            transition: background-color var(--transition-fast), transform var(--transition-fast);
+            display: inline-block;
+            margin-top: 10px;
+        }
+        .data-source-widget-node button:hover {
+            background-color: var(--accent-color-darker);
+            transform: translateY(-1px); /* Subtle lift */
+        }
+
+        /* Display Widget Specifics */
+        .display-widget-node .widget-content {
+            margin-top: 10px;
+            padding: 15px; /* Increased padding */
+            background-color: rgba(0,0,0,0.08); /* Slightly darker than header */
+            border-radius: 6px; /* Slightly smaller radius */
+            min-height: 60px;
+            display: flex;
+            flex-direction: column; /* Stack items vertically */
+            justify-content: center;
+            align-items: center;
+            font-family: var(--font-mono);
+            font-size: 0.95em; /* Slightly larger */
+            line-height: 1.6; /* Better spacing for multiline */
+            transition: background-color var(--transition-fast); /* For highlight effect */
+        }
+
+        .display-widget-node .widget-content strong {
+            color: var(--accent-color); /* Highlight the value */
+            font-size: 1.2em; /* Make value stand out */
+        }
+
+        .display-widget-node .widget-content.data-updated {
+            animation: highlight-update 0.7s ease-out;
+        }
+
+        @keyframes highlight-update {
+            0% { background-color: var(--accent-color-darker); }
+            70% { background-color: var(--accent-color-darker); } /* Hold highlight */
+            100% { background-color: rgba(0,0,0,0.08); } /* Fade back to original */
+        }
+
+        /* Ensure body of example page has a decent background if not covered by index.css */
+        body.example-page-body {
+            background-color: var(--bg-color, #282c34); /* Default if --bg-color not defined */
+            color: var(--primary-color, #f0f0f0);
+            padding: 20px; /* Add some padding to the body itself */
+        }
+        </style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.177.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.177.0/examples/jsm/",
+    "gsap": "https://unpkg.com/gsap@3.13.0/index.js"
+  }
+}
+</script>
+    </head>
+    <body class="example-page-body">
+        <div id="graph-container">
+            <!-- SpaceGraph canvas and CSS3D container will be injected here by spacegraph.js -->
+        </div>
+
+        <script type="module">
+            import { SpaceGraph, HtmlAppNode, BaseNode, RegisteredNode, ShapeNode, NoteNode, THREE } from './dist/spacegraph.esm.js';
+
+            // --- Data Source Node ---
+            class DataSourceNode extends HtmlAppNode {
+                onInit() {
+                    this.htmlElement.innerHTML = `
+                        <h4>${this.data.label}</h4>
+                        <button id="emit-data-btn">Generate & Emit Data</button>
+                    `;
+                    const emitButton = this.getChild('#emit-data-btn');
+                    this.stopEventPropagation(emitButton);
+
+                    emitButton.addEventListener('click', () => {
+                        const data = {
+                            value: Math.floor(Math.random() * 100),
+                            timestamp: new Date().toLocaleTimeString()
+                        };
+                        console.log(`${this.id} emitting 'value_out':`, data);
+                        this.emit('value_out', data);
+                    });
+                }
+            }
+
+            const dataSourceNodeDefinition = {
+                typeName: 'data-source-widget',
+                nodeClass: DataSourceNode,
+                getDefaults: (nodeInst) => ({
+                    width: 200,
+                    height: 120,
+                    label: 'Data Emitter',
+                    backgroundColor: 'hsl(180, 70%, 80%)', // Light cyan
+                    ports: {
+                        outputs: { value_out: { label: 'Value Out', type: 'object' } }
+                    }
+                })
+            };
+
+            // --- Display Widget Node ---
+            class DisplayWidgetNode extends HtmlAppNode {
+                contentDiv = null;
+
+                onInit() {
+                    this.htmlElement.innerHTML = `
+                        <h4>${this.data.label}</h4>
+                        <div class="widget-content">Waiting for data...</div>
+                    `;
+                    this.contentDiv = this.getChild('.widget-content');
+                    // No specific event listeners needed here, data updates via onDataUpdate
+                }
+
+                onDataUpdate(updatedData) {
+                    // super.onDataUpdate(updatedData); // For base class handling if any
+
+                    if (updatedData.data_in !== undefined) {
+                        const data = this.data.data_in; // Data is already merged into this.data
+                        if (this.contentDiv && data) {
+                            this.contentDiv.innerHTML = `
+                                Value: <strong>${data.value}</strong><br>
+                                Time: ${data.timestamp}
+                            `;
+                            if (this.contentDiv) { // Ensure contentDiv exists
+                                this.contentDiv.classList.remove('data-updated');
+                                void this.contentDiv.offsetWidth; // Force reflow
+                                this.contentDiv.classList.add('data-updated');
+                            }
+                            console.log(`${this.id} received data for 'data_in':`, data);
+                        }
+                    }
+                }
+            }
+
+            const displayWidgetNodeDefinition = {
+                typeName: 'display-widget',
+                nodeClass: DisplayWidgetNode,
+                getDefaults: (nodeInst) => ({
+                    width: 250,
+                    height: 150,
+                    label: 'Display Widget',
+                    backgroundColor: 'hsl(60, 70%, 85%)', // Light yellow
+                    ports: {
+                        inputs: { data_in: { label: 'Data In', type: 'object' } }
+                    }
+                })
+            };
+
+            // --- Graph Setup ---
+            function initGraph() {
+                const container = document.getElementById('graph-container');
+                if (!container) {
+                    console.error("Container #graph-container not found!");
+                    return;
+                }
+
+                const space = new SpaceGraph(container); // Use imported SpaceGraph
+                window.space = space; // For debugging
+
+                // Register node types
+                space.registerNodeType(dataSourceNodeDefinition.typeName, dataSourceNodeDefinition);
+                space.registerNodeType(displayWidgetNodeDefinition.typeName, displayWidgetNodeDefinition);
+
+                // Add nodes
+                const source = space.addNode({
+                    type: 'data-source-widget',
+                    id: 'source-1',
+                    x: -250,
+                    y: 0
+                });
+
+                const display1 = space.addNode({
+                    type: 'display-widget',
+                    id: 'display-A',
+                    label: 'Display A',
+                    x: 150,
+                    y: -100
+                });
+
+                const display2 = space.addNode({
+                    type: 'display-widget',
+                    id: 'display-B',
+                    label: 'Display B',
+                    x: 150,
+                    y: 100
+                });
+
+                // Connect ports
+                if (source && display1 && display2) {
+                    space.addEdge(source, display1, {
+                        sourcePort: 'value_out',
+                        targetPort: 'data_in'
+                    });
+                    space.addEdge(source, display2, {
+                        sourcePort: 'value_out',
+                        targetPort: 'data_in'
+                    });
+                }
+
+                // Layout and center
+                space.layoutEngine.runOnce(150);
+                space.centerView();
+
+                console.log("Dashboard example initialized. Click the button on 'Data Emitter' node.");
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initGraph);
+            } else {
+                initGraph();
+            }
+        </script>
+    </body>
+</html>
+```

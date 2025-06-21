@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SpaceGraph.js - UMD Bundled Usage Example</title> <!-- Title updated -->
+    <link href="./index.css" rel="stylesheet" />
+    <style>
+        body { margin: 0; overflow: hidden; font-family: sans-serif; }
+        #graph-container-bundled { width: 100vw; height: 100vh; }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.177.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.177.0/examples/jsm/",
+    "gsap": "https://unpkg.com/gsap@3.13.0/index.js"
+  }
+}
+</script>
+</head>
+<body>
+    <div id="graph-container-bundled"></div>
+
+    <!-- Removed importmap and external module script -->
+    <!-- <script src="./dist/spacegraph.umd.js"></script> --> <!-- Removed UMD bundle -->
+
+    <script type="module">
+        import { SpaceGraph, THREE, HtmlAppNode, BaseNode, RegisteredNode, ShapeNode, NoteNode } from './dist/spacegraph.esm.js';
+        // Logic from former js/example-bundled-usage.js, adapted for UMD bundle
+        document.addEventListener('DOMContentLoaded', () => {
+            const container = document.getElementById('graph-container-bundled');
+            if (!container) {
+                console.error('Graph container #graph-container-bundled not found!');
+                return;
+            }
+
+            // Use the global SpaceGraphZUI object from the UMD bundle
+            const graph = new SpaceGraph(container); // Changed to direct import
+            console.log('SpaceGraph initialized in UMD bundled demo!', graph);
+
+            graph.addNode({
+                type: 'note', // Built-in note type
+                id: 'node-1-umd-bundled',
+                label: 'Note 1 (UMD Bundled)',
+                content: 'This node was added in the UMD bundled usage example.',
+                x: -100,
+                y: 0,
+                data: {
+                    backgroundColor: 'lightgreen'
+                }
+            });
+
+            graph.addNode({
+                type: 'shape',
+                id: 'node-2-umd-bundled',
+                label: 'Shape 1 (UMD Bundled)',
+                shape: 'sphere',
+                x: 100,
+                y: 0,
+                data: {
+                    color: 'skyblue'
+                }
+            });
+            graph.addEdge('node-1-umd-bundled', 'node-2-umd-bundled', {label: 'connected'});
+
+            graph.centerView();
+        });
+    </script>
+</body>
+</html>

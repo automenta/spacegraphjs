@@ -1,0 +1,741 @@
+:root {
+    --bg-color: #000000;
+    --dot-color: rgba(100, 100, 120, 0.2);
+    --primary-color: #e0e0f0;
+    --accent-color: #00d0ff;
+    --accent-color-darker: #008ea8;
+    --node-bg-default: rgba(15, 15, 35, 0.85);
+    --node-border: var(--accent-color-darker);
+    --node-shadow: rgba(0, 208, 255, 0.1);
+    --node-hover-shadow: rgba(0, 208, 255, 0.3);
+    --node-selected-shadow: rgba(0, 208, 255, 0.5);
+    --edge-color: rgba(0, 208, 255, 0.5);
+    --edge-highlight-color: #00ffff;
+    --delete-button-bg: #d03030;
+    --delete-button-text: #ffffff;
+    --menu-bg: rgba(20, 20, 40, 0.95);
+    --menu-border: var(--accent-color);
+    --menu-hover-bg: rgba(0, 208, 255, 0.15);
+    --dialog-bg: rgba(25, 25, 50, 0.98);
+    --font-family:
+        system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans',
+        'Helvetica Neue', sans-serif;
+    --font-mono: 'Fira Code', 'Consolas', 'Monaco', monospace;
+    --transition-fast: 0.15s ease-out;
+    --transition-med: 0.3s ease-out;
+    --node-button-bg: rgba(255, 255, 255, 0.1);
+    --node-button-hover-bg: rgba(0, 208, 255, 0.3);
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    overflow: hidden;
+    background-color: var(--bg-color);
+    color: var(--primary-color);
+    font-family: var(--font-family);
+    font-size: 14px;
+    overscroll-behavior: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-image: radial-gradient(var(--dot-color) 1px, transparent 1px);
+    background-size: 20px 20px;
+}
+
+/* Main container for the SpaceGraph instance */
+#space {
+    /* Updated from #mindmap-container to match index.html */
+    position: fixed;
+    inset: 0;
+    cursor: grab;
+}
+
+#space.panning {
+    /* Class added by CameraController */
+    cursor: grabbing;
+}
+
+#space.linking {
+    /* Class added by UIManager */
+    cursor: crosshair;
+}
+
+#webgl-canvas,
+#css3d-container {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+#webgl-canvas {
+    z-index: 1; /* WebGL behind CSS3D */
+}
+
+#css3d-container {
+    z-index: 2; /* CSS3D objects on top */
+    pointer-events: none; /* Allow pointer events to pass through to canvas unless specific elements have pointer-events: auto */
+}
+
+/* Styles for HTML-based nodes (HtmlNodeElement, NoteNode) */
+.node-html {
+    position: absolute; /* Managed by CSS3DRenderer */
+    background-color: var(--node-bg, var(--node-bg-default));
+    border: 1px solid var(--node-border);
+    border-radius: 8px;
+    padding: 0; /* Padding handled by inner container */
+    color: var(--primary-color);
+    pointer-events: auto; /* Nodes themselves are interactive */
+    cursor: grab;
+    transition:
+        transform var(--transition-fast),
+        box-shadow var(--transition-med),
+        border-color var(--transition-med);
+    box-shadow: 0 2px 8px 1px var(--node-shadow);
+    min-width: 80px;
+    min-height: 40px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Important for rounded corners and content clipping */
+    backdrop-filter: blur(6px);
+    user-select: none; /* Prevent text selection on node drag */
+}
+
+.node-html:hover {
+    box-shadow: 0 4px 15px 3px var(--node-hover-shadow);
+    border-color: var(--accent-color);
+    z-index: 10 !important; /* Ensure hovered nodes are visually on top */
+}
+
+.node-html.selected {
+    box-shadow: 0 0 20px 5px var(--node-selected-shadow);
+    border-color: var(--accent-color);
+    z-index: 11 !important;
+}
+
+.node-html.dragging {
+    cursor: grabbing;
+    box-shadow: 0 8px 25px 6px var(--node-hover-shadow);
+    z-index: 1000 !important; /* Highest z-index while dragging */
+    transition: none; /* Disable transition during drag for responsiveness */
+}
+
+.node-html.resizing {
+    transition: none; /* Disable transition during resize */
+}
+
+.node-html.linking-target {
+    /* Highlight for potential link target */
+    border-color: #ffaa00;
+    box-shadow: 0 0 20px 5px rgba(255, 170, 0, 0.5);
+}
+
+.node-inner-wrapper {
+    padding: 12px 15px; /* Standardized padding */
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
+.node-content {
+    flex-grow: 1;
+    outline: none;
+    overflow-y: auto; /* Allow vertical scrolling within content */
+    max-height: 400px; /* Example max height */
+    font-size: 1em;
+    line-height: 1.45;
+    white-space: pre-wrap; /* Preserve whitespace and wrap lines */
+    word-wrap: break-word;
+    user-select: text; /* Allow text selection inside content area */
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent-color-darker) transparent;
+    transition: transform var(--transition-fast); /* For content zoom */
+    transform-origin: top left;
+}
+
+.node-content::-webkit-scrollbar {
+    width: 6px;
+}
+.node-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+.node-content::-webkit-scrollbar-thumb {
+    background-color: var(--accent-color-darker);
+    border-radius: 3px;
+}
+
+.node-content:focus {
+    /* Visual cue when content is focused for editing */
+    box-shadow: inset 0 0 0 1px var(--accent-color);
+    margin: -1px; /* Prevent layout shift due to box-shadow */
+}
+
+/* Rich text styling within node-content */
+.node-content > *:first-child {
+    margin-top: 0;
+}
+.node-content > *:last-child {
+    margin-bottom: 0;
+}
+.node-content h1,
+.node-content h2,
+.node-content h3 {
+    margin: 0.5em 0;
+    color: var(--accent-color);
+    font-weight: 600;
+}
+.node-content h1 {
+    font-size: 1.3em;
+}
+.node-content h2 {
+    font-size: 1.15em;
+}
+.node-content h3 {
+    font-size: 1.05em;
+}
+.node-content p {
+    margin: 0.5em 0;
+}
+.node-content ul,
+.node-content ol {
+    margin: 0.5em 0;
+    padding-left: 20px;
+}
+.node-content li {
+    margin-bottom: 0.2em;
+}
+.node-content code {
+    font-family: var(--font-mono);
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 0.1em 0.3em;
+    border-radius: 3px;
+    font-size: 0.9em;
+}
+.node-content pre {
+    font-family: var(--font-mono);
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 0.5em;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-size: 0.9em;
+}
+.node-content blockquote {
+    border-left: 3px solid var(--accent-color-darker);
+    margin: 0.5em 0 0.5em 10px;
+    padding-left: 10px;
+    color: #bbb;
+}
+.node-content a {
+    color: var(--accent-color);
+    text-decoration: none;
+}
+.node-content a:hover {
+    text-decoration: underline;
+}
+
+/* Interactive elements within node-content */
+.node-content button,
+.node-content input,
+.node-content select,
+.node-content textarea {
+    pointer-events: auto; /* Crucial for interaction */
+    margin: 5px;
+    padding: 5px 10px;
+    background-color: var(--accent-color-darker);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.node-content input[type='range'] {
+    padding: 0;
+}
+.node-content button:hover {
+    background-color: var(--accent-color);
+}
+
+/* Node Controls (hover buttons) */
+.node-controls {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+    pointer-events: none;
+}
+.node-html:hover .node-controls,
+.node-html.selected .node-controls {
+    opacity: 0.9;
+    pointer-events: auto;
+}
+.node-quick-button {
+    background-color: var(--node-button-bg);
+    color: var(--primary-color);
+    border: none;
+    border-radius: 4px;
+    width: 22px;
+    height: 22px;
+    font-size: 14px;
+    line-height: 22px;
+    text-align: center;
+    cursor: pointer;
+    transition:
+        background-color var(--transition-fast),
+        transform var(--transition-fast);
+}
+.node-quick-button:hover {
+    background-color: var(--node-button-hover-bg);
+    transform: scale(1.1);
+}
+.node-quick-button.delete-button {
+    background-color: var(--delete-button-bg);
+    color: var(--delete-button-text);
+    font-weight: bold;
+}
+.node-quick-button.delete-button:hover {
+    background-color: #ff5555;
+}
+
+/* Resize Handle */
+.resize-handle {
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 16px;
+    height: 16px;
+    background-color: var(--accent-color);
+    border-top: 1px solid var(--bg-color);
+    border-left: 1px solid var(--bg-color);
+    border-bottom-right-radius: 7px;
+    cursor: nwse-resize;
+    opacity: 0;
+    transition:
+        opacity var(--transition-fast),
+        transform var(--transition-fast);
+    pointer-events: auto;
+    z-index: 10;
+}
+.node-html:hover .resize-handle,
+.node-html.selected .resize-handle {
+    opacity: 0.7;
+}
+.resize-handle:hover {
+    opacity: 1;
+    transform: scale(1.15);
+}
+
+/* Context Menu & Dialogs */
+.context-menu,
+.dialog {
+    position: fixed;
+    background-color: var(--menu-bg);
+    border: 1px solid var(--menu-border);
+    border-radius: 6px;
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.6);
+    z-index: 10000; /* Ensure UI is on top of everything */
+    display: none; /* Controlled by JS */
+    backdrop-filter: blur(8px);
+    animation: fadeIn 0.1s ease-out forwards;
+}
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.context-menu {
+    padding: 6px 0;
+    min-width: 180px;
+}
+.context-menu ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.context-menu li {
+    padding: 8px 18px;
+    cursor: pointer;
+    transition:
+        background-color var(--transition-fast),
+        color var(--transition-fast);
+    color: var(--primary-color);
+    white-space: nowrap;
+}
+.context-menu li:hover {
+    background-color: var(--menu-hover-bg);
+    color: var(--accent-color);
+}
+.context-menu li.separator {
+    height: 1px;
+    background-color: var(--accent-color-darker);
+    margin: 5px 0;
+    padding: 0;
+    cursor: default;
+}
+.context-menu li.separator:hover {
+    background-color: var(--accent-color-darker);
+} /* No hover effect for separator */
+.context-menu li[data-action^='delete'],
+.context-menu li.delete-action {
+    color: var(--delete-button-bg);
+} /* Match delete button color */
+.context-menu li[data-action^='delete']:hover,
+.context-menu li.delete-action:hover {
+    background-color: rgba(208, 48, 48, 0.2);
+}
+
+.dialog {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 25px 30px;
+    text-align: center;
+    color: var(--primary-color);
+    min-width: 300px;
+}
+.dialog p {
+    margin: 0 0 25px 0;
+    font-size: 1.1em;
+}
+.dialog button {
+    background-color: var(--accent-color);
+    color: var(--bg-color);
+    border: none;
+    padding: 10px 22px;
+    margin: 0 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    transition:
+        background-color var(--transition-fast),
+        box-shadow var(--transition-fast);
+    min-width: 80px;
+}
+.dialog button:hover {
+    background-color: #3fffff;
+    box-shadow: 0 0 12px var(--accent-color);
+}
+.dialog button#confirm-no {
+    background-color: #555;
+    color: var(--primary-color);
+}
+.dialog button#confirm-no:hover {
+    background-color: #777;
+    box-shadow: none;
+}
+
+/* Status Indicator */
+#status-indicator {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: var(--primary-color);
+    padding: 5px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    z-index: 5;
+    opacity: 1;
+    transition: opacity 0.5s ease 1s;
+    pointer-events: none;
+}
+#status-indicator.hidden {
+    opacity: 0;
+}
+
+/* Edge Menu (for selected edges) */
+.edge-menu-frame {
+    position: absolute; /* Managed by CSS3DRenderer */
+    background: var(--menu-bg);
+    border: 1px solid var(--accent-color);
+    border-radius: 4px;
+    padding: 4px;
+    display: flex;
+    gap: 3px;
+    pointer-events: auto; /* Interactive */
+    z-index: 100;
+    opacity: 0.9;
+    transition: opacity 0.1s;
+}
+.edge-menu-frame button,
+.edge-menu-frame input,
+.edge-menu-frame select {
+    background: var(--node-button-bg);
+    color: var(--primary-color);
+    border: none;
+    border-radius: 3px;
+    height: 22px;
+    font-size: 12px;
+    line-height: 20px;
+    text-align: center;
+    cursor: pointer;
+    padding: 0 5px;
+}
+.edge-menu-frame button {
+    width: 22px;
+}
+.edge-menu-frame button:hover,
+.edge-menu-frame input:hover,
+.edge-menu-frame select:hover {
+    background: var(--node-button-hover-bg);
+}
+.edge-menu-frame input[type='color'] {
+    width: 30px;
+    padding: 1px 2px;
+}
+.edge-menu-frame input[type='range'] {
+    width: 60px;
+}
+.edge-menu-frame button.delete {
+    background-color: var(--delete-button-bg);
+    color: var(--delete-button-text);
+}
+
+/* 3D Labels for ShapeNodes */
+.node-label-3d {
+    color: white;
+    background-color: rgba(0, 0, 0, 0.6);
+    padding: 3px 6px;
+    border-radius: 4px;
+    font-size: 14px;
+    text-align: center;
+    pointer-events: none; /* Labels themselves are not interactive */
+    white-space: nowrap;
+}
+.node-label-3d.selected {
+    /* Example style for selected ShapeNode label */
+    background-color: rgba(0, 208, 255, 0.3); /* Similar to node selection shadow */
+    color: #fff;
+}
+
+/* Common class for node highlighting during linking (applied by JS) */
+.node-common.linking-target {
+    /* For ShapeNode labels */
+    outline: 2px dashed #ffaa00;
+}
+.node-html.linking-target {
+    /* For HtmlNodeElement itself */
+    border-color: #ffaa00; /* Already defined, but ensure consistency */
+    box-shadow: 0 0 20px 5px rgba(255, 170, 0, 0.5);
+}
+
+/* Styles for HtmlNodeElement when it's being dragged */
+.node-html.node-dragging-html {
+    opacity: 0.7 !important; /* Ensure opacity change takes precedence */
+    box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.4) !important; /* Ensure shadow change takes precedence */
+    transform: scale(1.02); /* Optional: slight scale up */
+    /* Transitions might conflict with rapid drag updates, so commented out by default */
+    /* transition: opacity 0.1s ease-out, transform 0.1s ease-out, box-shadow 0.1s ease-out; */
+}
+
+/* Node Ports Styling */
+.node-port {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background-color: #555; /* Default for generic/untyped ports */
+    border: 1px solid #888;
+    border-radius: 50%; /* Circle */
+    z-index: 10; /* Ensure ports are above node content but below node controls if any */
+    cursor: pointer; /* Indicate interactivity */
+    box-sizing: border-box;
+    transition:
+        transform 0.1s ease-out,
+        border-color 0.1s ease-out;
+    display: none; /* Hidden by default, shown on selection */
+}
+
+.node-port.port-input {
+    background-color: #3a7bd5; /* Blue for inputs */
+}
+
+.node-port.port-output {
+    background-color: #ff8c00; /* Orange for outputs */
+}
+
+.node-port:hover {
+    border-color: #fff !important; /* Ensure hover is visible */
+    transform: scale(1.2);
+}
+
+/* Visibility of ports can be controlled by JS adding/removing a class or directly setting display style.
+   If controlled by a class on the node-port itself (e.g., .port-visible):
+.node-port.port-visible {
+    display: block;
+}
+   The prompt asks for direct style manipulation in RegisteredNode.setSelectedStyle,
+   so the .node-html.selected .node-port rule is removed for now. */
+
+.node-port.linking-target-port {
+    background-color: #00ff00 !important; /* Bright green */
+    border: 2px solid #00cc00 !important;
+    transform: scale(1.3) !important; /* Slightly larger scale for target port */
+}
+
+/* Styles for Markdown Editor Node (from example-app-nodes.html) */
+.html-app-node.markdown-editor-node .editor-area {
+    /* Target textarea within the specific node type */
+    background-color: #2d2d2d; /* Darker background for text area */
+    color: #f0f0f0; /* Light text */
+    font-family: monospace;
+    border: none;
+    padding: 8px;
+    margin: 0; /* Remove default textarea margin */
+    box-sizing: border-box;
+}
+.html-app-node.markdown-editor-node .preview-area {
+    /* Target preview div */
+    background-color: #fff; /* White background for preview */
+    color: #333; /* Dark text for preview */
+    padding: 8px;
+    overflow-y: auto;
+    box-sizing: border-box;
+}
+
+/* Task List Node Specific Styles (from example-app-nodes.html) */
+.html-app-node.task-list-node {
+    padding: 10px;
+    color: #333;
+    font-family: var(--font-family); /* Ensure consistent font */
+}
+.html-app-node.task-list-node h3 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    text-align: center;
+    color: #007bff;
+}
+.html-app-node.task-list-node .input-container {
+    /* Container for input + button */
+    display: flex;
+    margin-bottom: 8px;
+}
+.html-app-node.task-list-node .new-task-input {
+    flex-grow: 1;
+    margin-right: 5px;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+.html-app-node.task-list-node .add-task-button {
+    padding: 5px 10px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+.html-app-node.task-list-node .add-task-button:hover {
+    background-color: #218838;
+}
+.html-app-node.task-list-node .task-list-ul {
+    list-style-type: none;
+    padding: 0;
+    margin-top: 0; /* No extra space above list */
+    flex-grow: 1; /* Allow list to take available space */
+    overflow-y: auto;
+    min-height: 50px; /* Ensure it's visible even when empty */
+}
+.html-app-node.task-list-node .task-list-ul li {
+    display: flex;
+    align-items: center;
+    padding: 6px 2px;
+    border-bottom: 1px solid #eee;
+}
+.html-app-node.task-list-node .task-list-ul li:last-child {
+    border-bottom: none;
+}
+.html-app-node.task-list-node .task-list-ul li input[type='checkbox'] {
+    margin-right: 10px;
+    cursor: pointer;
+    width: 16px; /* Larger checkboxes */
+    height: 16px;
+}
+.html-app-node.task-list-node .task-list-ul li span {
+    /* Task text span */
+    flex-grow: 1;
+    word-break: break-word;
+}
+.html-app-node.task-list-node .task-list-ul li span.completed {
+    text-decoration: line-through;
+    color: #999;
+}
+.html-app-node.task-list-node .task-list-ul li .delete-task-button {
+    margin-left: 8px; /* Space between text and button */
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    padding: 3px 6px;
+    font-size: 10px;
+    line-height: 1;
+}
+.html-app-node.task-list-node .task-list-ul li .delete-task-button:hover {
+    background: #c82333;
+}
+
+/* Styling for Simple Counter Node (from example-simple-counter-app-node.html) */
+.html-app-node.simple-counter-node {
+    border: 1px solid var(--border-color-medium);
+    border-radius: var(--border-radius-medium);
+    box-shadow: var(--shadow-medium);
+    padding: 15px; /* Add padding to the node itself */
+    box-sizing: border-box; /* Ensure padding is included in width/height */
+}
+
+.simple-counter-node h4 { /* Note: Original selector was .html-app-node.simple-counter-node h4, simplified for brevity if unique */
+    margin-top: 0;
+    margin-bottom: 10px;
+    text-align: center;
+    color: var(--text-color-emphasis);
+    font-size: 1em;
+}
+
+.simple-counter-node .count-display {
+    font-size: 24px;
+    margin: 15px 0;
+    text-align: center;
+    font-weight: bold;
+    color: var(--text-color-highlight);
+}
+
+.simple-counter-node .buttons-container {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+
+.simple-counter-node button {
+    background-color: var(--button-bg-color);
+    color: var(--button-text-color);
+    border: 1px solid var(--button-border-color);
+    border-radius: var(--border-radius-small);
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.2s ease;
+}
+
+.simple-counter-node button:hover {
+    background-color: var(--button-hover-bg-color);
+    border-color: var(--button-hover-border-color);
+}
+
+.simple-counter-node button:active {
+    background-color: var(--button-active-bg-color);
+}
