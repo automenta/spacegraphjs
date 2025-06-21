@@ -1,0 +1,65 @@
+import * as THREE from 'three';
+import { Utils } from '../../utils.js';
+
+export class BaseNode {
+    space = null;
+    position = new THREE.Vector3();
+    data = {};
+    mass = 1.0;
+    id = null;
+    mesh = null; // For 3D object nodes
+    cssObject = null; // For HTML nodes
+    labelObject = null; // For 3D labels on ShapeNodes
+
+    constructor(id, position = {x: 0, y: 0, z: 0}, data = {}, mass = 1.0) {
+        this.id = id ?? Utils.generateId('node');
+        this.position.set(position.x, position.y, position.z);
+        this.data = Utils.mergeDeep({}, this.getDefaultData(), data);
+        this.mass = Math.max(0.1, mass);
+    }
+
+    getDefaultData() {
+        return {label: ''};
+    }
+
+    update(space) { /* Base update logic */
+    }
+
+    dispose() {
+        this.mesh?.geometry?.dispose();
+        this.mesh?.material?.dispose();
+        this.mesh?.parent?.remove(this.mesh);
+        this.cssObject?.element?.remove(); // Remove HTML element if it exists
+        this.cssObject?.parent?.remove(this.cssObject);
+        this.labelObject?.element?.remove(); // Remove label element if it exists
+        this.labelObject?.parent?.remove(this.labelObject);
+        this.space = null;
+        this.mesh = null;
+        this.cssObject = null;
+        this.labelObject = null;
+    }
+
+    getBoundingSphereRadius() {
+        return 50;
+    }
+
+    setSelectedStyle(selected) { /* Base selection style logic */
+    }
+
+    setPosition(x, y, z) {
+        this.position.set(x, y, z);
+    }
+
+    startDrag() {
+        this.space?.layout?.fixNode(this);
+    }
+
+    drag(newPosition) {
+        this.setPosition(newPosition.x, newPosition.y, newPosition.z);
+    }
+
+    endDrag() {
+        this.space?.layout?.releaseNode(this);
+        this.space?.layout?.kick();
+    }
+}
