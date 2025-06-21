@@ -2,17 +2,18 @@
     "name": "spacegraph-zui",
     "version": "0.1.0",
     "description": "A general-purpose, extensible JavaScript library for creating Zooming User Interfaces (ZUI) with 2D and 3D visualizations.",
-    "main": "src/spacegraph.js",
-    "module": "src/spacegraph.js",
-    "types": "",
+    "main": "dist/spacegraph.umd.js",
+    "module": "dist/spacegraph.es.js",
+    "types": "dist/spacegraph.d.ts",
     "files": [
+        "dist",
         "src",
         "README.md",
-        "index.html",
         ".github"
     ],
     "scripts": {
-        "build": "echo \"Build script not configured for src/ direct usage yet. Using Vite for dev only.\" && vite build && tsc",
+        "build": "tsc && vite build --config vite.lib.config.js",
+        "build:demo": "vite build --outDir dist-demo",
         "test": "vitest",
         "docs:build": "jsdoc -c jsdoc.conf.json",
         "docs:view": "serve ./docs/api -l 8080",
@@ -22,7 +23,7 @@
         "start": "npm run build && npx vite dev",
         "demos": "npm run build && npx vite dev --open /demos.html",
         "build:watch": "vite build --watch",
-        "build:gh-pages": "npm run build && (npm run docs:build || true) && rm -rf docs/dist docs/js docs/index.html docs/example-*.html docs/index.css && mkdir -p docs/js docs/dist && cp index.html docs/index.html && cp example-*.html docs/ && cp js/demo-launcher.js docs/js/demo-launcher.js && cp -R dist/. docs/dist/ && cp index.css docs/index.css"
+        "build:gh-pages": "npm run build && npm run build:demo && (npm run docs:build || true) && rm -rf docs/dist docs/js docs/index.html docs/example-*.html docs/index.css docs/lib && mkdir -p docs/js docs/dist docs/lib && cp -R dist-demo/* docs/ && cp -R dist/* docs/lib/ && cp example-*.html docs/ 2>/dev/null || true && cp js/demo-launcher.js docs/js/demo-launcher.js 2>/dev/null || true && cp index.css docs/index.css 2>/dev/null || true"
     },
     "author": "SpaceGraph Contributors",
     "license": "MIT",

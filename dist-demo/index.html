@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SpaceGraphJS Demo</title>
+    <link href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>" rel="icon">
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #111; color: #eee; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; }
+        header { padding: 10px 20px; background-color: #222; border-bottom: 1px solid #333; z-index: 1000; }
+        header h1 { margin: 0; font-size: 1.5em; }
+        header a { color: #0af; text-decoration: none; }
+        header a:hover { text-decoration: underline; }
+        main { flex-grow: 1; display: flex; position: relative; }
+        #graph-container { flex-grow: 1; position: relative; }
+        #webgl-canvas { display: block; } /* Will be handled by spacegraph's CSS usually */
+        #info-panel { width: 300px; background-color: #222; padding: 15px; overflow-y: auto; border-left: 1px solid #333; box-sizing: border-box; }
+        #info-panel h2 { margin-top: 0; color: #0af; }
+        #info-panel p, #info-panel ul { font-size: 0.9em; line-height: 1.6; }
+        #info-panel li { margin-bottom: 0.5em; }
+        #info-panel code { background-color: #333; padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+
+        /* Elements required by SpaceGraph UIManager */
+        .context-menu { display: none; /* Styled by spacegraph.css */ }
+        .dialog { display: none; /* Styled by spacegraph.css */ }
+
+        @media (max-width: 768px) {
+            main { flex-direction: column-reverse; }
+            #info-panel { width: 100%; height: 250px; border-left: none; border-top: 1px solid #333; }
+        }
+    </style>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.177.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.177.0/examples/jsm/",
+            "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.13.1/index.js"
+        }
+    }
+    </script>
+  <script type="module" crossorigin src="/assets/index-5iRh9NR6.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-Cx9IfHvn.css">
+</head>
+<body>
+    <header>
+        <h1>SpaceGraphJS Demo</h1>
+        <p>A JavaScript library for creating interactive 3D force-directed graphs. <a href="https://github.com/TTime/spacegraphjs" target="_blank">View on GitHub</a></p>
+    </header>
+    <main>
+        <div id="graph-container">
+            <!-- SpaceGraphJS will populate this -->
+            <canvas id="webgl-canvas"></canvas> <!-- Required by SpaceGraph -->
+            <!-- css3d-container will be added by SpaceGraph -->
+            <div class="context-menu" id="context-menu"></div> <!-- Required by UIManager -->
+            <div class="dialog" id="confirm-dialog"> <!-- Required by UIManager -->
+                <p id="confirm-message">Are you sure?</p>
+                <button id="confirm-yes">Yes</button>
+                <button id="confirm-no">No</button>
+            </div>
+        </div>
+        <aside id="info-panel">
+            <h2>About SpaceGraphJS</h2>
+            <p>SpaceGraphJS is a library for visualizing and interacting with graph data in a 3D space. It uses a force-directed layout to position nodes and supports various node types, including HTML content and 3D shapes.</p>
+
+            <h3>Key Features:</h3>
+            <ul>
+                <li><strong>3D Rendering:</strong> Utilizes Three.js for WebGL rendering of nodes and edges.</li>
+                <li><strong>HTML Nodes:</strong> Supports embedding rich HTML content within graph nodes via CSS3DRenderer.</li>
+                <li><strong>Force-Directed Layout:</strong> Automatically arranges nodes for optimal viewing.</li>
+                <li><strong>Interactive UI:</strong>
+                    <ul>
+                        <li>Drag & drop nodes.</li>
+                        <li>Resize HTML nodes.</li>
+                        <li>Context menus for nodes, edges, and background.</li>
+                        <li>Node linking/unlinking.</li>
+                        <li>Edge property editor.</li>
+                        <li>Zooming & panning.</li>
+                    </ul>
+                </li>
+                <li><strong>Customizable:</strong> Nodes and edges can be customized with different appearances and behaviors.</li>
+            </ul>
+
+            <h3>Design Principles:</h3>
+            <ul>
+                <li><strong>Modularity:</strong> Core logic, UI, layout, and camera are separated into distinct classes.</li>
+                <li><strong>Performance:</strong> Optimized for smooth interaction with potentially large graphs (though performance depends on complexity).</li>
+                <li><strong>Extensibility:</strong> Designed to allow for new node types and custom behaviors.</li>
+            </ul>
+            <p>This page demonstrates a basic setup of SpaceGraphJS. You can interact with the graph on the left: right-click for options, drag nodes, and use the mouse wheel to zoom.</p>
+        </aside>
+    </main>
+
+
+</body>
+</html>
