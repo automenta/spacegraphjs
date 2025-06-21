@@ -189,12 +189,13 @@ export class UIManager {
     }
 
     _onDocumentClick = (e) => {
-        // Use capture phase, check if click is outside relevant UI elements
         const clickedContextMenu = this.contextMenuElement.contains(e.target);
         const clickedEdgeMenu = this.edgeMenuObject?.element?.contains(e.target);
         const clickedConfirmDialog = this.confirmDialogElement.contains(e.target);
 
-        if (!clickedContextMenu) this._hideContextMenu();
+        if (!clickedContextMenu) {
+            this._hideContextMenu();
+        }
 
         if (!clickedEdgeMenu && this.edgeMenuObject) {
             const targetInfo = this._getTargetInfo(e);
@@ -204,12 +205,13 @@ export class UIManager {
             }
         }
 
-        // Deselect if clicking background (and not dragging/panning)
-        if (!clickedContextMenu && !clickedEdgeMenu && !clickedConfirmDialog) {
+        // Deselect node/edge if clicking background and not dragging/panning/linking
+        // and not clicking on any graph element (node HTML, node mesh, edge line)
+        if (!clickedContextMenu && !clickedEdgeMenu && !clickedConfirmDialog &&
+            this.pointerState.potentialClick && !this.space.camera?.isPanning && !this.space.isLinking) {
             const targetInfo = this._getTargetInfo(e);
-            // Check if click was on node element, node mesh, or edge line
             const clickedOnGraphElement = targetInfo.nodeElement || targetInfo.intersectedObjectResult?.node || targetInfo.intersectedObjectResult?.edge;
-            if (!clickedOnGraphElement && this.pointerState.potentialClick && !this.space.camera?.isPanning) {
+            if (!clickedOnGraphElement) {
                 this.space.setSelectedNode(null);
                 this.space.setSelectedEdge(null);
             }
@@ -310,9 +312,15 @@ export class UIManager {
         switch (e.key) {
             case 'Delete':
             case 'Backspace':
-                if (selectedNode) this._showConfirm(`Delete node "${selectedNode.id.substring(0, 10)}..."?`, () => this.space.removeNode(selectedNode.id));
-                else if (selectedEdge) this._showConfirm(`Delete edge "${selectedEdge.id.substring(0, 10)}..."?`, () => this.space.removeEdge(selectedEdge.id));
-                else handled = false;
+                if (selectedNode) {
+                    const nodeIdPreview = selectedNode.id.substring(0, 10);
+                    this._showConfirm(`Delete node "${nodeIdPreview}..."?`, () => this.space.removeNode(selectedNode.id));
+                } else if (selectedEdge) {
+                    const edgeIdPreview = selectedEdge.id.substring(0, 10);
+                    this._showConfirm(`Delete edge "${edgeIdPreview}..."?`, () => this.space.removeEdge(selectedEdge.id));
+                } else {
+                    handled = false;
+                }
                 break;
             case 'Escape':
                 if (this.space.isLinking) this.cancelLinking();
