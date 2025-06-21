@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
-import { Utils } from '../../utils.js';
+import { Utils, $ } from '../../utils.js'; // Added $ import
 import { BaseNode } from './BaseNode.js';
 
 export class HtmlNode extends BaseNode {
@@ -60,7 +60,7 @@ export class HtmlNode extends BaseNode {
     }
 
     _initContentEditable(element) {
-        const contentDiv = element.querySelector('.node-content'); // Refactored from $
+        const contentDiv = $('.node-content', element); // Changed to use $ utility
         if (contentDiv && this.data.editable) {
             contentDiv.contentEditable = "true";
             let debounceTimer;
@@ -102,7 +102,7 @@ export class HtmlNode extends BaseNode {
 
     setContentScale(scale) {
         this.data.contentScale = Utils.clamp(scale, HtmlNode.CONTENT_SCALE_RANGE.min, HtmlNode.CONTENT_SCALE_RANGE.max);
-        const contentEl = this.htmlElement.querySelector('.node-content');
+        const contentEl = $('.node-content', this.htmlElement); // Changed to use $ utility
         if (contentEl) contentEl.style.transform = `scale(${this.data.contentScale})`;
     }
 

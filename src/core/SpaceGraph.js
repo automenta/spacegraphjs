@@ -5,8 +5,6 @@ import { Camera } from '../camera/Camera.js';
 import { UIManager } from '../ui/UIManager.js';
 import { ForceLayout } from '../layout/ForceLayout.js';
 import { Edge } from '../graph/Edge.js';
-import { NoteNode } from '../graph/nodes/NoteNode.js';
-import { ShapeNode } from '../graph/nodes/ShapeNode.js';
 
 export class SpaceGraph {
     nodes = new Map();
