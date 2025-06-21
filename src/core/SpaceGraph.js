@@ -22,18 +22,15 @@ export class SpaceGraph {
     layout = null;
     renderGL = null;
     renderCSS3D = null;
-    // Removed renderCSS2D
     css3dContainer = null;
-    // Removed css2dContainer
     webglCanvas = null;
     background = {color: 0x1a1a1d, alpha: 1.0};
 
     constructor(containerElement) {
-        if (!containerElement) throw new Error("SpaceGraph requires a container element.");
+        if (!containerElement) throw new Error("SpaceGraph requires a valid HTML container element.");
         this.container = containerElement;
         this.scene = new THREE.Scene();
-        this.cssScene = new THREE.Scene(); // Scene for HTML nodes AND 3D labels
-        // Removed css2DScene
+        this.cssScene = new THREE.Scene();
 
         this._cam = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 20000);
         this._cam.position.z = 700;
@@ -70,8 +67,6 @@ export class SpaceGraph {
         });
         this.css3dContainer.appendChild(this.renderCSS3D.domElement);
         this.container.appendChild(this.css3dContainer);
-
-        // Removed CSS2DRenderer setup
     }
 
     _setupLighting() {
@@ -84,7 +79,6 @@ export class SpaceGraph {
     setBackground(color = 0x000000, alpha = 0) {
         this.background = {color, alpha};
         this.renderGL.setClearColor(color, alpha);
-        // Update canvas style for visual consistency if not transparent
         this.webglCanvas.style.backgroundColor = alpha === 0 ? 'transparent' : `#${color.toString(16).padStart(6, '0')}`;
     }
 
@@ -94,11 +88,8 @@ export class SpaceGraph {
 
         this.nodes.set(nodeInstance.id, nodeInstance);
         nodeInstance.space = this;
-        // Add CSSObject (HTML node or 3D Label) to cssScene
         if (nodeInstance.cssObject) this.cssScene.add(nodeInstance.cssObject);
-        // Add Mesh (Shape node) to WebGL scene
         if (nodeInstance.mesh) this.scene.add(nodeInstance.mesh);
-        // Add 3D Label (Shape node) to cssScene
         if (nodeInstance.labelObject) this.cssScene.add(nodeInstance.labelObject);
         this.layout?.addNode(nodeInstance);
         return nodeInstance;
@@ -116,7 +107,7 @@ export class SpaceGraph {
             .forEach(edge => this.removeEdge(edge.id));
 
         this.layout?.removeNode(node);
-        node.dispose(); // Node handles removal from scenes
+        node.dispose();
         this.nodes.delete(nodeId);
     }
 
@@ -157,7 +148,6 @@ export class SpaceGraph {
     render = () => {
         this.renderGL.render(this.scene, this._cam);
         this.renderCSS3D.render(this.cssScene, this._cam);
-        // Removed renderCSS2D call
     }
 
     _onWindowResize = () => {
@@ -166,7 +156,6 @@ export class SpaceGraph {
         this._cam.updateProjectionMatrix();
         this.renderGL.setSize(iw, ih);
         this.renderCSS3D.setSize(iw, ih);
-        // Removed renderCSS2D resize
     }
 
     centerView(targetPosition = null, duration = 0.7) {
@@ -246,7 +235,7 @@ export class SpaceGraph {
     }
 
     intersectedObjects(screenX, screenY) {
-        this._cam.updateMatrixWorld(); // Ensure camera matrix is up-to-date
+        this._cam.updateMatrixWorld();
         const vec = new THREE.Vector2((screenX / window.innerWidth) * 2 - 1, -(screenY / window.innerHeight) * 2 + 1);
         const raycaster = new THREE.Raycaster();
         raycaster.setFromCamera(vec, this._cam);
@@ -273,10 +262,9 @@ export class SpaceGraph {
 
     animate() {
         const frame = () => {
-            // Layout simulation runs independently via its own requestAnimationFrame loop
-            this.updateNodesAndEdges(); // Update visuals based on current positions
-            this.render();              // Render the scenes
-            requestAnimationFrame(frame); // Continue the main render loop
+            this.updateNodesAndEdges();
+            this.render();
+            requestAnimationFrame(frame);
         };
         frame();
     }
@@ -290,12 +278,9 @@ export class SpaceGraph {
         this.edges.clear();
         this.scene?.clear();
         this.cssScene?.clear();
-        // Removed css2DScene clear
         this.renderGL?.dispose();
         this.renderCSS3D?.domElement?.remove();
-        // Removed renderCSS2D dispose/remove
         this.css3dContainer?.remove();
-        // Removed css2dContainer remove
         window.removeEventListener('resize', this._onWindowResize);
         this.ui?.dispose();
         console.log("SpaceGraph disposed.");

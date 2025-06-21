@@ -60,7 +60,7 @@ export class HtmlNode extends BaseNode {
     }
 
     _initContentEditable(element) {
-        const contentDiv = element.querySelector('.node-content');
+        const contentDiv = element.querySelector('.node-content'); // Refactored from $
         if (contentDiv && this.data.editable) {
             contentDiv.contentEditable = "true";
             let debounceTimer;
@@ -118,16 +118,12 @@ export class HtmlNode extends BaseNode {
         if (this.cssObject) {
             this.cssObject.position.copy(this.position);
             if (this.billboard && space?.camera?._cam) {
-                // Use camera quaternion for smoother billboard rotation
                 this.cssObject.quaternion.copy(space.camera._cam.quaternion);
             }
         }
     }
 
-    // dispose() is handled by BaseNode
-
     getBoundingSphereRadius() {
-        // Use diagonal for layout padding calculation
         return Math.sqrt(this.size.width ** 2 + this.size.height ** 2) / 2;
     }
 
