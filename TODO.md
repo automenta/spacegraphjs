@@ -83,6 +83,8 @@ To improve extensibility and maintainability, we’ll refactor SpaceGraph.js int
   - **OrbitCamera**: Rotate around a focal point (like Three.js OrbitControls).
   - **FreeCamera**: FPS-style navigation for exploration.
   - **AutoCamera**: Automatically frame the graph or follow a node.
+  - background pan dragging
+  - autozoom
 - **Animations**:
   - Use spring-based animations (via `react-spring` or GSAP) for smoother transitions.
   - Add shake or bounce effects for feedback (e.g., on node creation).
