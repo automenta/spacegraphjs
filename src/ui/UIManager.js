@@ -4,7 +4,7 @@ import { Utils, $, $$ } from '../utils.js';
 import { HtmlNode } from '../graph/nodes/HtmlNode.js';
 import { NoteNode } from '../graph/nodes/NoteNode.js';
 import { ShapeNode } from '../graph/nodes/ShapeNode.js';
-import { Edge } from '../graph/Edge.js'; // Import Edge for type checking
+// import { Edge } from '../graph/Edge.js'; // Import Edge for type checking - not strictly needed if only for comments
 
 export class UIManager {
     space = null;
@@ -40,17 +40,17 @@ export class UIManager {
     }
 
     _bindEvents() {
-        const opts = {passive: false};
-        this.container.addEventListener('pointerdown', this._onPointerDown, false);
-        window.addEventListener('pointermove', this._onPointerMove, false);
-        window.addEventListener('pointerup', this._onPointerUp, false);
-        this.container.addEventListener('contextmenu', this._onContextMenu, opts);
+        const passiveOpts = {passive: false}; // Define once
+        this.container.addEventListener('pointerdown', this._onPointerDown, passiveOpts);
+        window.addEventListener('pointermove', this._onPointerMove, passiveOpts);
+        window.addEventListener('pointerup', this._onPointerUp, passiveOpts);
+        this.container.addEventListener('contextmenu', this._onContextMenu, passiveOpts);
         document.addEventListener('click', this._onDocumentClick, true); // Capture phase
         this.contextMenuElement.addEventListener('click', this._onContextMenuClick, false);
         $('#confirm-yes', this.confirmDialogElement)?.addEventListener('click', this._onConfirmYes, false);
         $('#confirm-no', this.confirmDialogElement)?.addEventListener('click', this._onConfirmNo, false);
         window.addEventListener('keydown', this._onKeyDown, false);
-        this.container.addEventListener('wheel', this._onWheel, opts);
+        this.container.addEventListener('wheel', this._onWheel, passiveOpts);
     }
 
     _updatePointerState(e, isDown) {
@@ -67,12 +67,13 @@ export class UIManager {
 
     _onPointerDown = (e) => {
         this._updatePointerState(e, true);
-        const targetInfo = this._getTargetInfo(e);
 
         if (this.pointerState.secondary) {
             e.preventDefault();
             return;
         }
+
+        const targetInfo = this._getTargetInfo(e);
 
         if (this.pointerState.primary) {
             if (this._handlePointerDownControls(e, targetInfo)) return;
@@ -93,8 +94,6 @@ export class UIManager {
             return;
         }
 
-        const dx = e.clientX - this.pointerState.lastPos.x;
-        const dy = e.clientY - this.pointerState.lastPos.y;
         const totalDx = e.clientX - this.pointerState.startPos.x;
         const totalDy = e.clientY - this.pointerState.startPos.y;
 
@@ -135,6 +134,8 @@ export class UIManager {
         }
 
         if (this.pointerState.primary) {
+            const dx = e.clientX - this.pointerState.lastPos.x; // Recalculate dx, dy for pan
+            const dy = e.clientY - this.pointerState.lastPos.y;
             this.space.camera?.pan(dx, dy);
         }
     }
@@ -768,17 +769,17 @@ export class UIManager {
 
     dispose() {
         // Remove event listeners (ensure correct options if used)
-        const opts = {passive: false};
+        const passiveOpts = {passive: false}; // Define once
         this.container.removeEventListener('pointerdown', this._onPointerDown);
         window.removeEventListener('pointermove', this._onPointerMove);
         window.removeEventListener('pointerup', this._onPointerUp);
-        this.container.removeEventListener('contextmenu', this._onContextMenu, opts);
+        this.container.removeEventListener('contextmenu', this._onContextMenu, passiveOpts);
         document.removeEventListener('click', this._onDocumentClick, true);
         this.contextMenuElement.removeEventListener('click', this._onContextMenuClick);
         $('#confirm-yes', this.confirmDialogElement)?.removeEventListener('click', this._onConfirmYes);
         $('#confirm-no', this.confirmDialogElement)?.removeEventListener('click', this._onConfirmNo);
         window.removeEventListener('keydown', this._onKeyDown);
-        this.container.removeEventListener('wheel', this._onWheel, opts);
+        this.container.removeEventListener('wheel', this._onWheel, passiveOpts);
 
         this.hideEdgeMenu(); // Clean up edge menu object
         // Clear references
