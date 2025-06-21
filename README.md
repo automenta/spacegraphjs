@@ -1,0 +1,149 @@
+# SpaceGraphJS
+
+SpaceGraphJS is a JavaScript library for creating interactive 3D force-directed graphs in the browser. It leverages Three.js for WebGL rendering of 3D elements and CSS3DRenderer for embedding rich HTML content within graph nodes. The library is designed to be modular, performant, and extensible.
+
+## Features
+
+-   **3D Graph Visualization**: Renders nodes and edges in a 3D space.
+-   **HTML Nodes**: Allows complex HTML content to be used as node visuals, enabling rich UIs within the graph.
+-   **Shape Nodes**: Supports basic 3D shapes (spheres, boxes) for simpler node representations, with 3D text labels.
+-   **Force-Directed Layout**: Implements a force simulation to automatically arrange nodes and edges.
+    -   Customizable forces (repulsion, spring-like edges with configurable stiffness and length).
+    -   Support for different edge constraint types (elastic, rigid, weld).
+-   **Interactive UI**:
+    -   Drag & drop nodes.
+    -   Resize HTML nodes.
+    -   Context menus for creating nodes, linking, deleting, etc.
+    -   Interactive edge menu for adjusting properties like color and thickness.
+    -   Smooth camera controls (pan, zoom, focus on node) with GSAP animations.
+    -   History for camera movements (back/forward).
+-   **Modular Design**: Core components like `SpaceGraph`, `UIManager`, `ForceLayout`, `Camera`, and Node types are organized into classes.
+-   **ES Module Support**: Can be easily integrated into modern JavaScript projects.
+
+## Live Demo
+
+A live demo is available on GitHub Pages: [https://TTime.github.io/spacegraphjs/](https://TTime.github.io/spacegraphjs/) (Note: This link will work once deployed via GitHub Actions as configured in `.github/workflows/gh-pages.yml`)
+
+The `index.html` in the root of this repository also serves as the live demo.
+
+## Getting Started
+
+### Prerequisites
+
+SpaceGraphJS relies on ES modules and modern browser features. You'll need to import `three.js` and `gsap`. The demo uses CDN links via an import map.
+
+### Basic Usage
+
+1.  **HTML Setup**:
+    Create an HTML file with a container for the graph and the necessary UI elements for context menus and dialogs.
+
+    ```html
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>My SpaceGraph App</title>
+        <link rel="stylesheet" href="path/to/your/spacegraph.css"> <!-- Or your custom styles -->
+        <style>
+            body { margin: 0; overflow: hidden; }
+            #graph-container { width: 100vw; height: 100vh; position: relative; }
+            /* Required hidden elements for UIManager, styled by spacegraph.css or your CSS */
+            .context-menu { display: none; }
+            .dialog { display: none; }
+        </style>
+    </head>
+    <body>
+        <div id="graph-container">
+            <canvas id="webgl-canvas"></canvas> <!-- Required by SpaceGraph -->
+            <!-- css3d-container will be added by SpaceGraph -->
+            <div class="context-menu" id="context-menu"></div>
+            <div class="dialog" id="confirm-dialog">
+                <p id="confirm-message">Are you sure?</p>
+                <button id="confirm-yes">Yes</button>
+                <button id="confirm-no">No</button>
+            </div>
+        </div>
+
+        <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
+                "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
+            }
+        }
+        </script>
+        <script type="module" src="my-app.js"></script>
+    </body>
+    </html>
+    ```
+
+2.  **JavaScript (`my-app.js`)**:
+    Import the necessary classes from `spacegraph.js` and initialize your graph.
+
+    ```javascript
+    import {
+        SpaceGraph,
+        UIManager,
+        ForceLayout,
+        NoteNode,
+        ShapeNode,
+        $ // Optional utility for querySelector
+    } from './path/to/src/spacegraph.js';
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const graphContainer = $('#graph-container'); // Or document.getElementById('graph-container')
+        const contextMenuEl = $('#context-menu');
+        const confirmDialogEl = $('#confirm-dialog');
+
+        if (!graphContainer || !contextMenuEl || !confirmDialogEl) {
+            console.error("Missing required DOM elements for SpaceGraphJS.");
+            return;
+        }
+
+        const space = new SpaceGraph(graphContainer);
+        space.ui = new UIManager(space, contextMenuEl, confirmDialogEl);
+        space.layout = new ForceLayout(space);
+
+        // Add some nodes
+        const node1 = space.addNode(new NoteNode('node1', { x: 0, y: 0, z: 0 }, {
+            content: 'Hello World!',
+            width: 150, height: 50
+        }));
+        const node2 = space.addNode(new ShapeNode('node2', { x: 100, y: 50, z: 10 }, {
+            label: '3D Sphere',
+            shape: 'sphere',
+            size: 40,
+            color: 0xff00ff
+        }));
+
+        // Add an edge
+        space.addEdge(node1, node2);
+
+        // Start layout and rendering
+        space.layout.runOnce(100); // Settle layout
+        space.centerView();
+        space.layout.start();      // Continuous layout updates
+        space.animate();           // Start render loop
+
+        window.mySpaceGraph = space; // For easy debugging
+    });
+    ```
+
+### CSS
+
+You'll need CSS to style the HTML nodes, context menus, dialogs, and other UI elements. You can use `src/spacegraph.css` as a starting point or write your own.
+
+## Development
+
+(This section can be expanded with build instructions if a build process is added later.)
+
+To run the demo locally, simply open `index.html` in a modern web browser that supports ES modules.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit issues or pull requests.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details (TODO: Add LICENSE file).
