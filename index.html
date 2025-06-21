@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SpaceGraphJS Demo</title>
+    <link href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>" rel="icon">
+    <link href="src/spacegraph.css" rel="stylesheet"/>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #111; color: #eee; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; }
+        header { padding: 10px 20px; background-color: #222; border-bottom: 1px solid #333; z-index: 1000; }
+        header h1 { margin: 0; font-size: 1.5em; }
+        header a { color: #0af; text-decoration: none; }
+        header a:hover { text-decoration: underline; }
+        main { flex-grow: 1; display: flex; position: relative; }
+        #graph-container { flex-grow: 1; position: relative; }
+        #webgl-canvas { display: block; } /* Will be handled by spacegraph's CSS usually */
+        #info-panel { width: 300px; background-color: #222; padding: 15px; overflow-y: auto; border-left: 1px solid #333; box-sizing: border-box; }
+        #info-panel h2 { margin-top: 0; color: #0af; }
+        #info-panel p, #info-panel ul { font-size: 0.9em; line-height: 1.6; }
+        #info-panel li { margin-bottom: 0.5em; }
+        #info-panel code { background-color: #333; padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+
+        /* Elements required by SpaceGraph UIManager */
+        .context-menu { display: none; /* Styled by spacegraph.css */ }
+        .dialog { display: none; /* Styled by spacegraph.css */ }
+
+        @media (max-width: 768px) {
+            main { flex-direction: column-reverse; }
+            #info-panel { width: 100%; height: 250px; border-left: none; border-top: 1px solid #333; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>SpaceGraphJS Demo</h1>
+        <p>A JavaScript library for creating interactive 3D force-directed graphs. <a href="https://github.com/TTime/spacegraphjs" target="_blank">View on GitHub</a></p>
+    </header>
+    <main>
+        <div id="graph-container">
+            <!-- SpaceGraphJS will populate this -->
+            <canvas id="webgl-canvas"></canvas> <!-- Required by SpaceGraph -->
+            <!-- css3d-container will be added by SpaceGraph -->
+            <div class="context-menu" id="context-menu"></div> <!-- Required by UIManager -->
+            <div class="dialog" id="confirm-dialog"> <!-- Required by UIManager -->
+                <p id="confirm-message">Are you sure?</p>
+                <button id="confirm-yes">Yes</button>
+                <button id="confirm-no">No</button>
+            </div>
+        </div>
+        <aside id="info-panel">
+            <h2>About SpaceGraphJS</h2>
+            <p>SpaceGraphJS is a library for visualizing and interacting with graph data in a 3D space. It uses a force-directed layout to position nodes and supports various node types, including HTML content and 3D shapes.</p>
+
+            <h3>Key Features:</h3>
+            <ul>
+                <li><strong>3D Rendering:</strong> Utilizes Three.js for WebGL rendering of nodes and edges.</li>
+                <li><strong>HTML Nodes:</strong> Supports embedding rich HTML content within graph nodes via CSS3DRenderer.</li>
+                <li><strong>Force-Directed Layout:</strong> Automatically arranges nodes for optimal viewing.</li>
+                <li><strong>Interactive UI:</strong>
+                    <ul>
+                        <li>Drag & drop nodes.</li>
+                        <li>Resize HTML nodes.</li>
+                        <li>Context menus for nodes, edges, and background.</li>
+                        <li>Node linking/unlinking.</li>
+                        <li>Edge property editor.</li>
+                        <li>Zooming & panning.</li>
+                    </ul>
+                </li>
+                <li><strong>Customizable:</strong> Nodes and edges can be customized with different appearances and behaviors.</li>
+            </ul>
+
+            <h3>Design Principles:</h3>
+            <ul>
+                <li><strong>Modularity:</strong> Core logic, UI, layout, and camera are separated into distinct classes.</li>
+                <li><strong>Performance:</strong> Optimized for smooth interaction with potentially large graphs (though performance depends on complexity).</li>
+                <li><strong>Extensibility:</strong> Designed to allow for new node types and custom behaviors.</li>
+            </ul>
+            <p>This page demonstrates a basic setup of SpaceGraphJS. You can interact with the graph on the left: right-click for options, drag nodes, and use the mouse wheel to zoom.</p>
+        </aside>
+    </main>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.177.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.177.0/examples/jsm/",
+            "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.13.1/index.js"
+        }
+    }
+    </script>
+    <script type="module">
+        import { SpaceGraph, UIManager, ForceLayout, NoteNode, ShapeNode, $ } from './src/spacegraph.js';
+
+        function initGraph() {
+            const graphContainer = $('#graph-container');
+            const contextMenuEl = $('#context-menu');
+            const confirmDialogEl = $('#confirm-dialog');
+
+            if (!graphContainer || !contextMenuEl || !confirmDialogEl) {
+                console.error("Initialization Failed: Missing required DOM elements.");
+                graphContainer.innerHTML = "<p style='color:red; padding: 20px;'>Error: Missing required HTML elements for graph.</p>";
+                return;
+            }
+
+            // Ensure canvas and css3d-container are correctly parented for SpaceGraph
+            // SpaceGraph expects to find #webgl-canvas and creates #css3d-container inside its main container.
+            // The main container for SpaceGraph will be 'graphContainer'.
+
+            try {
+                const space = new SpaceGraph(graphContainer);
+                space.ui = new UIManager(space, contextMenuEl, confirmDialogEl);
+                space.layout = new ForceLayout(space);
+
+                createDemoGraph(space);
+
+                space.layout.runOnce(200); // Initial settling
+                space.centerView(null, 0.7);
+                space.layout.start();
+                space.animate();
+
+                window.sg = space; // Expose for debugging
+
+            } catch (error) {
+                console.error("SpaceGraphJS Initialization Failed:", error);
+                graphContainer.innerHTML = `<div style="color: red; padding: 20px;">Error initializing SpaceGraphJS: ${error.message}<br><pre>${error.stack}</pre></div>`;
+            }
+        }
+
+        function createDemoGraph(space) {
+            const n1 = space.addNode(new NoteNode('welcome', { x: 0, y: 0, z: 0 }, {
+                content: "<h3>Welcome to SpaceGraphJS!</h3><p>Right-click to explore options.</p>",
+                width: 280, height: 100, backgroundColor: '#223344'
+            }, 2.0));
+
+            const nFeatures = space.addNode(new NoteNode('features', { x: 250, y: 80, z: 0 }, {
+                content: "<h4>Core Features</h4><ul><li>3D & HTML Nodes</li><li>Force Layout</li><li>Interactive UI</li></ul>",
+                width: 220, height: 130, backgroundColor: '#334422'
+            }));
+            space.addEdge(n1, nFeatures);
+
+            const nShape = space.addNode(new ShapeNode('shape_ex', { x: -200, y: 100, z: 0 }, {
+                label: "3D Shape Node", shape: 'sphere', size: 60, color: 0xaa33ff
+            }, 1.5));
+            space.addEdge(n1, nShape);
+
+            const nTech = space.addNode(new NoteNode('tech_stack', { x: 0, y: -150, z: 0 }, {
+                content: "<p>Built with Three.js & GSAP</p>",
+                width: 200, height: 60, backgroundColor: '#442233'
+            }));
+            space.addEdge(n1, nTech, { constraintType: 'rigid', constraintParams: { distance: 200 }});
+
+            const nInteract = space.addNode(new NoteNode('interact_tip', {x: 200, y: -100, z: 20}, {
+                content: "<p>Drag me around!</p><p>Link to others by right-clicking a node.</p>",
+                width: 200, height: 90, backgroundColor: '#224444', editable: true
+            }));
+            space.addEdge(nFeatures, nInteract);
+            space.addEdge(nTech, nInteract, {constraintType: 'elastic', constraintParams: { idealLength: 220, stiffness: 0.0005 }});
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initGraph);
+        } else {
+            initGraph(); // DOMContentLoaded has already fired
+        }
+    </script>
+</body>
+</html>
