@@ -25,20 +25,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20' # Specify Node.js version, e.g., 18 or 20
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci # Use 'ci' for cleaner installs in CI environments
-
       - name: Build GitHub Pages site
-        run: npm run build:gh-pages # This script populates the ./docs directory
+        run: rm -rf docs && mkdir -p docs/src && cp index.html docs/index.html && cp -R src/. docs/src/
 
       - name: Verify build output
-        run: ls -RF docs/ # List files and directories to confirm 'docs' exists and its content
+        run: ls -RF docs/ && echo "--- Content of docs/index.html ---" && cat docs/index.html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

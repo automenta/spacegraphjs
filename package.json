@@ -23,7 +23,7 @@
         "start": "npm run build && npx vite dev",
         "demos": "npm run build && npx vite dev --open /demos.html",
         "build:watch": "vite build --watch",
-    "build:gh-pages": "mkdir -p docs/src docs/lib docs/api docs/assets && npm run build && cp index.html docs/index.html && cp -R src/. docs/src/ && cp -R dist/* docs/lib/ && (npm run docs:build || true) && cp example-*.html docs/ 2>/dev/null || true"
+    "build:gh-pages": "mkdir -p docs && cp index.html docs/index.html && echo '<h1>Test Page</h1><p>This is docs/test.html</p>' > docs/test.html && echo 'Content of root index.html that will be copied:' && cat index.html"
     },
     "author": "SpaceGraph Contributors",
     "license": "MIT",
