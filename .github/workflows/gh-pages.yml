@@ -43,7 +43,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist # Path to the directory to upload (changed from ./docs)
+          path: ./docs # Path to the directory to upload
 
   # Deploy job
   deploy:
