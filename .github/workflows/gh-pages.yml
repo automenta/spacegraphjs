@@ -38,7 +38,7 @@ jobs:
         run: npm run build:gh-pages # This script populates the ./docs directory
 
       - name: Verify build output
-        run: ls -F # List files and directories to confirm 'dist' exists
+        run: ls -RF docs/ # List files and directories to confirm 'docs' exists and its content
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
