@@ -37,10 +37,13 @@ jobs:
       - name: Build GitHub Pages site
         run: npm run build:gh-pages # This script populates the ./docs directory
 
+      - name: Verify build output
+        run: ls -F # List files and directories to confirm 'dist' exists
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./docs # Path to the directory to upload
+          path: ./dist # Path to the directory to upload (changed from ./docs)
 
   # Deploy job
   deploy:
