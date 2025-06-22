@@ -23,7 +23,7 @@
         "start": "npm run build && npx vite dev",
         "demos": "npm run build && npx vite dev --open /demos.html",
         "build:watch": "vite build --watch",
-    "build:gh-pages": "mkdir -p docs/api && npm run build && npm run build:demo && (npm run docs:build || true) && rm -rf docs/dist docs/js docs/index.html docs/example-*.html docs/index.css docs/lib && mkdir -p docs/js docs/dist docs/lib && cp -R dist-demo/* docs/ && cp -R dist/* docs/lib/ && cp example-*.html docs/ 2>/dev/null || true && cp js/demo-launcher.js docs/js/demo-launcher.js 2>/dev/null || true && cp index.css docs/index.css 2>/dev/null || true"
+    "build:gh-pages": "mkdir -p docs/src docs/lib docs/api docs/assets && npm run build && cp index.html docs/index.html && cp -R src/. docs/src/ && cp -R dist/* docs/lib/ && (npm run docs:build || true) && cp example-*.html docs/ 2>/dev/null || true"
     },
     "author": "SpaceGraph Contributors",
     "license": "MIT",
