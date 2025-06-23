@@ -13,8 +13,8 @@ export class UIPlugin extends Plugin {
     confirmDialogElement = null;
 
     // Selection state
-    nodeSelected = null;
-    edgeSelected = null;
+    selectedNodes = new Set(); // Stores selected BaseNode instances
+    selectedEdges = new Set(); // Stores selected Edge instances
 
     // Linking state
     isLinking = false;
@@ -48,44 +48,141 @@ export class UIPlugin extends Plugin {
     }
 
     _setupInternalListeners() {
-        this.space.on('ui:request:setSelectedNode', (node) => this.setSelectedNode(node));
-        this.space.on('ui:request:setSelectedEdge', (edge) => this.setSelectedEdge(edge));
+        this.space.on('ui:request:setSelectedNode', (node, isMultiSelect) => this.setSelectedNode(node, isMultiSelect));
+        this.space.on('ui:request:setSelectedEdge', (edge, isMultiSelect) => this.setSelectedEdge(edge, isMultiSelect));
         this.space.on('ui:request:startLinking', (sourceNode) => this.startLinking(sourceNode));
         this.space.on('ui:request:cancelLinking', () => this.cancelLinking());
         this.space.on('ui:request:completeLinking', (screenX, screenY) => this.completeLinking(screenX, screenY));
     }
 
     // --- Selection Methods ---
-    setSelectedNode(node) {
-        if (this.nodeSelected === node) return;
-        const oldSelection = this.nodeSelected;
-        this.nodeSelected = node;
-        if (this.edgeSelected && node) {
-            // Clear edge selection if node is selected
-            this.setSelectedEdge(null);
+    setSelectedNode(targetNode, isShiftPressed = false) {
+        const changedItemsPayload = { selected: [], deselected: [] }; // For the 'selection:changed' event
+
+        if (isShiftPressed) {
+            if (!targetNode) return; // Shift-clicking background doesn't change node selection
+
+            if (this.selectedNodes.has(targetNode)) {
+                this.selectedNodes.delete(targetNode);
+                targetNode.setSelectedStyle(false);
+                changedItemsPayload.deselected.push({ item: targetNode, type: 'node' });
+            } else {
+                this.selectedNodes.add(targetNode);
+                targetNode.setSelectedStyle(true);
+                changedItemsPayload.selected.push({ item: targetNode, type: 'node' });
+            }
+
+            // If nodes are being selected, ensure edges are cleared (maintaining mutual exclusivity for now)
+            if (this.selectedNodes.size > 0 && this.selectedEdges.size > 0) {
+                this.selectedEdges.forEach(edge => {
+                    edge.setHighlight(false);
+                    changedItemsPayload.deselected.push({ item: edge, type: 'edge' });
+                });
+                this.selectedEdges.clear();
+            }
+        } else { // Single selection logic
+            const previouslySelectedNodes = new Set(this.selectedNodes);
+            const previouslySelectedEdges = new Set(this.selectedEdges);
+
+            // Clear all current selections from their respective sets and update styles
+            previouslySelectedNodes.forEach(node => {
+                if (node !== targetNode) { // Don't deselect if it's the target of the single select
+                    node.setSelectedStyle(false);
+                    changedItemsPayload.deselected.push({ item: node, type: 'node' });
+                }
+            });
+            this.selectedNodes.clear();
+
+            previouslySelectedEdges.forEach(edge => {
+                edge.setHighlight(false);
+                changedItemsPayload.deselected.push({ item: edge, type: 'edge' });
+            });
+            this.selectedEdges.clear();
+
+            if (targetNode) {
+                this.selectedNodes.add(targetNode);
+                if (!previouslySelectedNodes.has(targetNode) || !targetNode.isSelected) { // isSelected might be a direct prop or inferred
+                    targetNode.setSelectedStyle(true); // Ensure style is applied if it wasn't already
+                }
+                changedItemsPayload.selected.push({ item: targetNode, type: 'node' });
+            }
         }
-        this.space.emit('selection:changed', { type: 'node', selected: this.nodeSelected, deselected: oldSelection });
-        this.space.emit('node:selected', this.nodeSelected); // Keep specific event for now
-    }
 
-    getSelectedNode() {
-        return this.nodeSelected;
-    }
-
-    setSelectedEdge(edge) {
-        if (this.edgeSelected === edge) return;
-        const oldSelection = this.edgeSelected;
-        this.edgeSelected = edge;
-        if (this.nodeSelected && edge) {
-            // Clear node selection if edge is selected
-            this.setSelectedNode(null);
+        if (changedItemsPayload.selected.length > 0 || changedItemsPayload.deselected.length > 0) {
+            this.space.emit('selection:changed', changedItemsPayload);
         }
-        this.space.emit('selection:changed', { type: 'edge', selected: this.edgeSelected, deselected: oldSelection });
-        this.space.emit('edge:selected', this.edgeSelected); // Keep specific event for now
+
+        // Emit specific event for the primary node interacted with.
+        // UIManager might rely on this for context menus or quick actions.
+        // If targetNode was just deselected via shift-click, it's still the "target" of the action.
+        this.space.emit('node:selected', targetNode);
     }
 
-    getSelectedEdge() {
-        return this.edgeSelected;
+    getSelectedNodes() {
+        return this.selectedNodes; // Returns the Set
+    }
+
+    setSelectedEdge(targetEdge, isShiftPressed = false) {
+        const changedItemsPayload = { selected: [], deselected: [] }; // For the 'selection:changed' event
+
+        if (isShiftPressed) {
+            if (!targetEdge) return; // Shift-clicking background doesn't change edge selection
+
+            if (this.selectedEdges.has(targetEdge)) {
+                this.selectedEdges.delete(targetEdge);
+                targetEdge.setHighlight(false);
+                changedItemsPayload.deselected.push({ item: targetEdge, type: 'edge' });
+            } else {
+                this.selectedEdges.add(targetEdge);
+                targetEdge.setHighlight(true);
+                changedItemsPayload.selected.push({ item: targetEdge, type: 'edge' });
+            }
+
+            // If edges are being selected, ensure nodes are cleared (maintaining mutual exclusivity for now)
+            if (this.selectedEdges.size > 0 && this.selectedNodes.size > 0) {
+                this.selectedNodes.forEach(node => {
+                    node.setSelectedStyle(false);
+                    changedItemsPayload.deselected.push({ item: node, type: 'node' });
+                });
+                this.selectedNodes.clear();
+            }
+        } else { // Single selection logic
+            const previouslySelectedEdges = new Set(this.selectedEdges);
+            const previouslySelectedNodes = new Set(this.selectedNodes);
+
+            // Clear all current selections from their respective sets and update styles
+            previouslySelectedEdges.forEach(edge => {
+                if (edge !== targetEdge) {
+                    edge.setHighlight(false);
+                    changedItemsPayload.deselected.push({ item: edge, type: 'edge' });
+                }
+            });
+            this.selectedEdges.clear();
+
+            previouslySelectedNodes.forEach(node => {
+                node.setSelectedStyle(false);
+                changedItemsPayload.deselected.push({ item: node, type: 'node' });
+            });
+            this.selectedNodes.clear();
+
+            if (targetEdge) {
+                this.selectedEdges.add(targetEdge);
+                 if (!previouslySelectedEdges.has(targetEdge) || !targetEdge.isHighlighted) { // isHighlighted might be a direct prop or inferred
+                    targetEdge.setHighlight(true); // Ensure style is applied
+                }
+                changedItemsPayload.selected.push({ item: targetEdge, type: 'edge' });
+            }
+        }
+
+        if (changedItemsPayload.selected.length > 0 || changedItemsPayload.deselected.length > 0) {
+            this.space.emit('selection:changed', changedItemsPayload);
+        }
+
+        this.space.emit('edge:selected', targetEdge);
+    }
+
+    getSelectedEdges() {
+        return this.selectedEdges;
     }
 
     // --- Linking Methods ---

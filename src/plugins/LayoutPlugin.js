@@ -45,26 +45,37 @@ export class LayoutPlugin extends Plugin {
 
     _setupEventListeners() {
         if (!this.space) return;
+        const uiPlugin = this.pluginManager.getPlugin('UIPlugin');
 
-        this.space.on('node:dragstart', (node) => {
+        this.space.on('node:dragstart', (draggedNodeInstance) => {
             if (this.activeLayout && typeof this.activeLayout.fixNode === 'function') {
-                this.activeLayout.fixNode(node);
+                const selectedNodes = uiPlugin?.getSelectedNodes();
+                if (selectedNodes && selectedNodes.has(draggedNodeInstance)) {
+                    selectedNodes.forEach(sNode => this.activeLayout.fixNode(sNode));
+                } else {
+                    // Fallback or if dragging a non-selected node (though selection should precede drag)
+                    this.activeLayout.fixNode(draggedNodeInstance);
+                }
             }
         });
 
         this.space.on('node:drag', (eventData) => {
             // Node position is already updated by BaseNode.drag().
-            // Layout system might need a kick during drag if it's not automatically handling fixed node movements.
-            // For many force-directed layouts, this isn't strictly necessary as fixed nodes are respected.
-            // If continuous update during drag is desired:
-            // this.kick();
+            // Layout system might need a kick if it's not automatically handling fixed node movements.
+            // If layout is very active, continuous kicking might be performance intensive.
+            // For now, let dragend handle the kick.
         });
 
-        this.space.on('node:dragend', (node) => {
+        this.space.on('node:dragend', (draggedNodeInstance) => {
             if (this.activeLayout && typeof this.activeLayout.releaseNode === 'function') {
-                this.activeLayout.releaseNode(node);
+                 const selectedNodes = uiPlugin?.getSelectedNodes();
+                if (selectedNodes && selectedNodes.has(draggedNodeInstance)) {
+                    selectedNodes.forEach(sNode => this.activeLayout.releaseNode(sNode));
+                } else {
+                    this.activeLayout.releaseNode(draggedNodeInstance);
+                }
             }
-            this.kick(); // Recalculate layout after node is released.
+            this.kick(); // Recalculate layout after node(s) are released.
         });
 
         // Event-driven updates for graph structure changes
