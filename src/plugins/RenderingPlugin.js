@@ -3,7 +3,7 @@
  * @licence MIT
  */
 
-import *TTHREE from 'three';
+import * as THREE from 'three';
 import { CSS3DRenderer } from 'three/addons/renderers/CSS3DRenderer.js';
 import { Plugin } from '../core/Plugin.js';
 import { $ } from '../utils.js'; // Assuming $ is a utility like querySelector
