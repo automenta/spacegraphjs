@@ -1,224 +1,133 @@
-## Vision
-SpaceGraph.js aims to be the premier open-source library for interactive 3D graph visualization, enabling users to create, explore, and share complex knowledge graphs with ease. It will offer a delightful user experience through intuitive interactions, visually appealing rendering, and robust customization options. For developers, it will provide a modular, well-documented API that supports rapid prototyping, integration, and extension for diverse applications, from mind mapping to network analysis.
+## **SpaceGraph.js: A Development Plan**
 
-## Goals
-1. **Utility**: Support a wide range of use cases, including data visualization, education, and collaborative workflows.
-2. **Flexibility**: Allow customization of nodes, edges, layouts, and interactions without modifying core code.
-3. **Extensibility**: Enable developers to add new node types, layouts, and plugins seamlessly.
-4. **Enjoyability**: Create a fun, responsive, and visually engaging user experience with animations and feedback.
-5. **User Ergonomics**: Simplify interactions with intuitive controls, touch support, and accessibility features.
-6. **Developer Ergonomics**: Provide a clean API, TypeScript support, and comprehensive documentation.
+### Vision
+SpaceGraph.js aims to be the premier open-source library for interactive 3D graph visualization. It will provide a modular, well-documented API that enables developers to create, explore, and share complex knowledge graphs with ease, featuring a delightful user experience through intuitive interactions and visually appealing rendering.
 
-## Core Enhancements
+### Guiding Principles
+*   **Core Library Focus:** The library provides the tools for visualization and interaction. The application built with it handles state management (saving/loading) and data fetching logic.
+*   **Developer-First:** A clean API, comprehensive documentation, and a robust plugin system are paramount.
+*   **Predictable by Default, Powerful when Needed:** The API will offer sensible defaults that work out-of-the-box. Advanced features will be opt-in and explicitly configured, ensuring a smooth learning curve.
+*   **Progressive Complexity:** The API should be simple for basic use cases but powerful enough for advanced customization.
 
-### 1. Modular Architecture
-To improve extensibility and maintainability, we’ll refactor SpaceGraph.js into a plugin-based architecture with clear separation of concerns.
+---
 
-- **Core Module**: Minimal `SpaceGraph` class handling scene management, rendering, and event dispatching.
-- **Plugin System**:
-  - Plugins register components (nodes, edges, layouts, UI elements) via a `PluginManager`.
-  - Example: `registerNodeType('custom', CustomNode)`, `registerLayout('grid', GridLayout)`.
-  - Plugins can hook into lifecycle events (e.g., `onNodeAdded`, `onRender`).
-- **Event Bus**: Centralized event system for loose coupling (e.g., `spaceGraph.emit('node:select', node)`).
-- **Dependency Injection**: Allow plugins to inject custom renderers, cameras, or input handlers.
+### **Phase 1: Core Foundation & Architecture**
 
-### 2. TypeScript Integration
-- Rewrite the codebase in TypeScript for better developer ergonomics and type safety.
-- Provide type definitions for all public APIs, nodes, edges, and plugins.
-- Use interfaces for extensibility (e.g., `INode`, `IEdge`, `ILayout`).
+**Goal:** Establish a stable, modern, and extensible architecture. The output of this phase is a minimal but functional graph that can render basic nodes and edges, with a solid foundation for all future development.
 
-### 3. Rendering Pipeline
-- **Hybrid Rendering**:
-  - Retain WebGL (`THREE.WebGLRenderer`) for 3D meshes and CSS3D (`CSS3DRenderer`) for HTML elements.
-  - Add optional WebGPU support via `three.js` WebGPURenderer for future-proofing.
-- **Edge Rendering**: Replace `THREE.Line` with `Line2` (from `three-fatline`) for dynamic thickness and better visual quality.
-- **Post-Processing**: Add bloom, ambient occlusion, and outline effects via `Postprocessing` for visual polish.
-- **Performance**:
-  - Implement instanced rendering for large node sets.
-  - Use frustum culling and LOD (Level of Detail) for nodes and edges.
-  - Optimize CSS3D rendering with transform caching.
+1.  **Project & Tooling Setup**
+    *   **Build System:** Configure Vite for fast development, Hot Module Replacement (HMR), and optimized production builds.
+    *   **Code Quality:** Set up ESLint and Prettier for consistent code style and quality.
+    *   **CI/CD:** Implement GitHub Actions for automated testing and builds on every commit.
 
-### 4. Node System
-- **Node Factory**: Centralize node creation with a `NodeFactory` supporting custom types.
-  - Example: `spaceGraph.createNode('note', { content: 'Hello', position: { x: 0, y: 0, z: 0 } })`.
-- **New Node Types**:
-  - **ImageNode**: Display images with zoom and pan controls.
-  - **VideoNode**: Embed videos with playback controls.
-  - **GroupNode**: Container for subgraphs, collapsible for hierarchical organization.
-  - **DataNode**: Visualize tabular data or charts (using Chart.js or D3.js).
-- **Node Customization**:
-  - Support custom templates for HtmlNode (e.g., React/Vue components).
-  - Allow 3D model imports (GLTF) for ShapeNode.
-  - Add node properties like opacity, border, and shadow.
-- **Node Interactions**:
-  - Drag in 3D space (not just XY plane) with depth adjustment via modifier keys.
-  - Support multi-select and group dragging.
-  - Add pinning/unpinning for layout control.
+2.  **Explicit Testing Strategy**
+    *   **Unit Tests (Jest):** For pure functions, algorithms (e.g., layout physics), and individual class methods.
+    *   **Component Tests (Storybook/Testing Library):** For UI components in isolation to verify rendering and interaction.
+    *   **Integration Tests (Playwright):** To test core user workflows (e.g., "add node -> connect edge -> run layout").
+    *   **Visual Regression Tests (e.g., with Percy):** To automatically catch unintended visual changes in nodes, edges, and UI.
 
-### 5. Edge System
-- **Edge Types**:
-  - **CurvedEdge**: Bezier or spline curves for aesthetic connections.
-  - **LabeledEdge**: Display text labels along edges.
-  - **WeightedEdge**: Visualize weights with varying thickness or color gradients.
-- **Constraints**:
-  - Add `directed` (one-way force) and `bidirectional` constraints.
-  - Support custom constraint functions via plugins.
-- **Styling**: Allow gradients, dashed patterns, and arrowheads.
-- **Performance**: Use instanced geometry for large edge sets.
+3.  **Modular Architecture**
+    *   **Core `SpaceGraph` Class:** A minimal class responsible for scene management, the render loop, and coordinating modules.
+    *   **Event Bus:** A centralized event system for decoupled communication (e.g., `emit('node:select')`, `on('render:before')`).
+    *   **Plugin System:** A `PluginManager` that allows plugins to register themselves and hook into the lifecycle. All core systems will be implemented as default plugins.
+    *   **Internal Data Model:** Define a clear and efficient internal data structure for the graph, providing optimized methods for traversal and manipulation.
 
-### 6. Layout System
-- **Multiple Layouts**:
-  - **ForceDirectedLayout**: Enhanced with clustering and collision detection.
-  - **GridLayout**: Arrange nodes in a 2D/3D grid.
-  - **CircularLayout**: Position nodes in a circle or sphere.
-  - **HierarchicalLayout**: Tree-like structure for directed acyclic graphs.
-- **Layout Transitions**: Smoothly interpolate between layouts using GSAP.
-- **Constraints**:
-  - Add region constraints (e.g., keep nodes within a bounding box).
-  - Support alignment constraints (e.g., align nodes on a plane).
-- **Performance**: Parallelize force calculations using Web Workers for large graphs.
+4.  **Basic Rendering Pipeline**
+    *   **Renderer:** Integrate `THREE.WebGLRenderer` and `CSS3DRenderer` for hybrid rendering.
+    *   **Scene Management:** Basic setup of `THREE.Scene`, `THREE.Camera`, and default lighting.
+    *   **Render Loop:** A clean, efficient `requestAnimationFrame` loop.
 
-### 7. Camera System
-- **Camera Modes**:
-  - **OrbitCamera**: Rotate around a focal point (like Three.js OrbitControls).
-  - **FreeCamera**: FPS-style navigation for exploration.
-  - **AutoCamera**: Automatically frame the graph or follow a node.
-  - background pan dragging
-  - autozoom
-- **Animations**:
-  - Use spring-based animations (via `react-spring` or GSAP) for smoother transitions.
-  - Add shake or bounce effects for feedback (e.g., on node creation).
-- **View Management**:
-  - Save named views (e.g., “Overview”, “Cluster A”).
-  - Implement a minimap for large graphs.
-- **Accessibility**: Support keyboard-only navigation (e.g., arrow keys for panning).
+5.  **Initial Systems (as Core Plugins)**
+    *   **Node System (v1):** A simple `Node` class. Ability to add/remove basic 3D objects to the scene.
+    *   **Edge System (v1):** A simple `Edge` class using `THREE.Line`. Ability to connect two nodes.
+    *   **Camera System (v1):** Integrate `OrbitControls` for basic pan, zoom, and rotate functionality.
 
-### 8. User Interface
-- **Modern UI Framework**:
-  - Integrate React for UI components (context menus, dialogs, edge menus).
-  - Use Tailwind CSS for consistent styling.
-  - Example: `<ContextMenu items={[{ label: 'Add Node', action: 'add-node' }]} />`.
-- **Toolbar**:
-  - Add a top/side toolbar for common actions (new node, save, undo).
-  - Include layout selector and theme toggle (light/dark mode).
-- **Feedback**:
-  - Show tooltips for controls and shortcuts.
-  - Add subtle animations (e.g., node pulse on creation, edge fade-in).
-- **Touch Support**:
-  - Implement pinch-to-zoom, two-finger pan, and tap-to-select.
-  - Support long-press for context menus.
-- **Accessibility**:
-  - Add ARIA labels for nodes, edges, and menus.
-  - Support screen reader navigation.
-  - Enable high-contrast mode.
+6.  **Documentation & API Foundation**
+    *   **API Design:** Design the initial configuration object and fluent API structure.
+    *   **Documentation Setup:** Configure TypeDoc to generate API docs from TSDoc comments and Storybook for interactive examples.
 
-### 9. Interaction Enhancements
-- **Undo/Redo**: Implement a command stack for node/edge operations (e.g., `CommandManager.execute(new AddNodeCommand(node))`).
-- **Clipboard**: Support copy/paste for nodes and subgraphs.
-- **Search**: Add a search bar to find nodes by label or ID.
-- **Collaboration**:
-  - Integrate WebSocket for real-time multi-user editing.
-  - Show user cursors and selection highlights.
-- **Gamification**:
-  - Add achievements (e.g., “Created 10 nodes!”).
-  - Include sound effects for actions (optional, toggleable).
+---
 
-### 10. Data Management
-- **Serialization**:
-  - Export/import graphs as JSON, GraphML, or GEXF.
-  - Support partial exports (e.g., selected subgraph).
-- **Data Binding**:
-  - Allow nodes to bind to external data sources (e.g., REST API, CSV).
-  - Support live updates for dynamic graphs.
-- **Metadata**:
-  - Add graph-level metadata (title, author, tags).
-  - Support node/edge annotations (e.g., comments, tags).
+### **Phase 2: Interaction & Core Features**
 
-## Developer Ergonomics
+**Goal:** Make the graph fully interactive and visually compelling. This phase focuses on implementing the primary features users and developers expect from a graph library.
 
-### 1. API Design
-- **Fluent API**:
-  ```typescript
-  spaceGraph
-    .addNode({ type: 'note', content: 'Idea' })
-    .addEdge({ source: 'node1', target: 'node2', style: { color: '#ff0000' } })
-    .setLayout('force-directed')
-    .start();
-  ```
-- **Configuration**:
-  ```typescript
-  const spaceGraph = new SpaceGraph({
-    container: '#graph',
-    plugins: [NotePlugin, ShapePlugin, ForceLayoutPlugin],
-    theme: 'dark',
-    camera: { fov: 70, position: { z: 700 } },
-  });
-  ```
-- **Event Hooks**:
-  ```typescript
-  spaceGraph.on('node:select', (node) => console.log(`Selected ${node.id}`));
-  ```
+1.  **Advanced Rendering & Visuals**
+    *   **High-Quality Edges:** Replace `THREE.Line` with `Line2` (fat lines) for variable thickness and superior visual quality.
+    *   **Post-Processing:** Integrate `Postprocessing` to add effects like Bloom, Screen Space Ambient Occlusion (SSAO), and an Outline effect on selection/hover.
+    *   **Lighting Control:** Provide a developer API to configure scene lighting (Ambient, Directional, Point lights) and enable shadows for improved depth perception.
 
-### 2. Documentation
-- Use **TypeDoc** for API documentation.
-- Provide interactive examples with **Storybook**.
-- Include tutorials for common tasks (e.g., custom node, plugin creation).
-- Host a live playground (CodeSandbox or similar).
+2.  **Mature Node & Edge Systems**
+    *   **Node Factory:** Implement a `NodeFactory` to support registering and creating different node types.
+    *   **Core Node Types:**
+        *   **HtmlNode:** For displaying rich HTML/CSS content.
+        *   **ShapeNode:** For basic 3D shapes (Sphere, Box), with support for GLTF model imports.
+    *   **Edge System Enhancements:**
+        *   **Edge Types:** Add `CurvedEdge` (Bezier/Spline) and `LabeledEdge`.
+        *   **Styling:** Support for dashed lines, color gradients, and arrowheads.
 
-### 3. Tooling
-- **Build System**: Use Vite for fast bundling and HMR.
-- **Testing**: Add unit tests with Jest and integration tests with Playwright.
-- **Linting/Formatting**: Enforce ESLint and Prettier for consistency.
-- **CI/CD**: Automate testing, building, and publishing with GitHub Actions.
+3.  **Layout System**
+    *   **Layout Manager:** Create a system to register and switch between different layout algorithms.
+    *   **Force-Directed Layout:** Implement a robust force-directed layout with collision detection and clustering.
+    *   **Layout Transitions:** Use a library like GSAP to ensure smooth, animated transitions when layouts change or the graph is modified.
 
-### 4. Plugin Ecosystem
-- Publish a plugin registry (npm or GitHub).
-- Provide templates for common plugins (e.g., `create-spacegraph-plugin`).
-- Encourage community contributions with clear guidelines.
+4.  **Interaction Model**
+    *   **3D Dragging:** Implement node dragging in 3D space, with modifier keys for depth adjustment.
+    *   **Selection Model:** Support single-select, multi-select (e.g., with `Shift+Click`), and group dragging.
+    *   **Node Pinning:** Allow users to pin nodes to fix their position during layout calculations.
 
-## Enjoyability Features
-- **Themes**: Support light, dark, and custom themes with CSS variables.
-- **Animations**: Add particle effects for node creation/deletion.
-- **Sound**: Optional sound effects for interactions (e.g., click, link).
-- **Customization**: Allow users to upload background images or 3D environments.
-- **Onboarding**: Include an interactive tutorial for new users.
+5.  **UI Framework & Theming**
+    *   **UI Integration:** Integrate React for building UI components.
+    *   **Core UI Elements:** A `Toolbar` for common actions and `Context Menus` for node, edge, and canvas interactions.
+    *   **Advanced Theming System:** Implement a theming system based on CSS Custom Properties for deep, non-intrusive customization (e.g., `--spacegraph-node-bg`, `--spacegraph-accent-color`).
 
-## Implementation Plan
-1. **Phase 1: Foundation (3 months)**
-   - Rewrite in TypeScript.
-   - Implement plugin system and event bus.
-   - Refactor rendering pipeline with WebGL and CSS3D.
-   - Add basic node types (NoteNode, ShapeNode) and edge constraints.
+---
 
-2. **Phase 2: Interaction (3 months)**
-   - Integrate React for UI components.
-   - Implement touch support and accessibility features.
-   - Add undo/redo, search, and toolbar.
-   - Enhance camera with multiple modes and animations.
+### **Phase 3: Extensibility & Advanced Capabilities**
 
-3. **Phase 3: Extensibility (2 months)**
-   - Develop new node types (ImageNode, GroupNode).
-   - Add multiple layout algorithms.
-   - Create plugin templates and documentation.
-   - Implement serialization and data binding.
+**Goal:** Expand the library's capabilities to handle more complex use cases and empower developers to extend it easily.
 
-4. **Phase 4: Polish (2 months)**
-   - Add post-processing effects and themes.
-   - Implement collaboration and gamification features.
-   - Optimize performance for large graphs.
-   - Launch documentation site and playground.
+1.  **Performance Optimization**
+    *   **Instanced Rendering:** Implement for nodes and edges to efficiently render thousands of objects.
+    *   **Level of Detail (LOD):** Use LODs for complex node geometries and text labels to maintain high frame rates.
+    *   **Parallelization:** Offload heavy layout calculations to Web Workers.
 
-## Backward Compatibility
-- Provide a compatibility layer for existing SpaceGraph.js projects.
-- Deprecate old APIs with clear migration guides.
-- Maintain core functionality (node/edge management, force layout) in the new version.
+2.  **Expanded Content & Layouts (as Plugins)**
+    *   **Advanced Node Types:** `ImageNode`, `VideoNode`, `GroupNode` (collapsible container), `DataNode` (for charts), and `IFrameNode` (for embedding web content).
+    *   **Additional Layouts:** `GridLayout` (2D/3D), `CircularLayout`/`SphericalLayout`, and `HierarchicalLayout` (for tree-like structures).
 
-## Limitations and Mitigations
-- **Performance**: Mitigate with instanced rendering, Web Workers, and LOD.
-- **Complexity**: Simplify APIs with fluent interfaces and comprehensive docs.
-- **Browser Compatibility**: Test across major browsers; fallback to WebGL for WebGPU.
-- **Learning Curve**: Provide tutorials, examples, and a playground to ease onboarding.
+3.  **Advanced Camera & View Management**
+    *   **Camera Modes:** Add `FreeCamera` (FPS-style) and `AutoCamera` (auto-frame/follow).
+    *   **View Management:** API to save and restore camera states ("Named Views").
+    *   **Minimap:** Implement an optional minimap for navigating large graphs.
 
-## Conclusion
-The evolved SpaceGraph.js will be a versatile, user-friendly, and developer-friendly library that pushes the boundaries of 3D graph visualization. By focusing on modularity, modern tooling, and delightful interactions, it will cater to a wide audience, from casual users to advanced developers, and support a thriving ecosystem of plugins and community contributions.
+4.  **Data Management API**
+    *   **Serialization:** Implement `export/import` functionality for common graph formats (JSON, GraphML, GEXF).
+    *   **Data Binding API:** Provide a clear API for applications to bind node/edge properties to external data sources and push updates efficiently.
+    *   **API for Real-Time:** Ensure the API is robust enough to handle rapid, programmatic changes, enabling applications to build collaborative features on top.
 
+---
+
+### **Phase 4: Polish, Accessibility & Ecosystem**
+
+**Goal:** Refine the user and developer experience, ensure the library is accessible to all, and provide resources to foster a thriving community.
+
+1.  **User Experience Polish**
+    *   **Advanced Interactions:** A `Command Palette` for power users and `Lasso/Marquee Select` for easier group selection.
+    *   **Touch Support:** Implement robust touch controls (pinch-to-zoom, two-finger pan, tap-to-select, long-press).
+    *   **Feedback:** Add subtle animations, tooltips, and optional, toggleable sound effects.
+    *   **Onboarding Plugin:** Create a built-in, optional tutorial plugin to provide an interactive tour of core features for new users.
+
+2.  **Accessibility (A11y)**
+    *   **Screen Reader Support:** Add ARIA labels and roles to all nodes, edges, and UI controls.
+    *   **Keyboard Navigation:** Ensure the entire graph and UI can be navigated and operated via keyboard alone.
+    *   **High-Contrast Mode:** Implement a theme that meets WCAG contrast requirements.
+
+3.  **Advanced Visualization & Diagnostics**
+    *   **Edge Bundling:** Offer an optional edge bundling feature to reduce visual clutter in dense graphs.
+    *   **Error Handling:** Implement a formal diagnostic system with custom error types and a configurable logger to improve developer debugging.
+
+4.  **Developer Ecosystem**
+    *   **Complete Documentation:** Finalize API documentation, create tutorials for common use cases (e.g., "Creating a Custom Node Type"), and write migration guides.
+    *   **Live Playground:** Host an interactive playground (e.g., on CodeSandbox or StackBlitz) embedded in the documentation site.
+    *   **Plugin Infrastructure:** Create a `create-spacegraph-plugin` template and establish clear contribution guidelines to encourage community involvement.
