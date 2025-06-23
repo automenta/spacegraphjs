@@ -14,6 +14,7 @@ export class UIManager {
     edgeMenuObject = null;
 
     draggedNode = null;
+    draggedNodeInitialZ = 0; // For Z-depth adjustment
     resizedNode = null;
     hoveredEdge = null;
     resizeStartPos = { x: 0, y: 0 };
@@ -129,10 +130,59 @@ export class UIManager {
 
         if (this.draggedNode) {
             e.preventDefault();
-            const worldPos = this.space.screenToWorld(e.clientX, e.clientY, this.draggedNode.position.z);
+            let targetZ = this.draggedNodeInitialZ; // Start with the Z-plane established at pointer down
+
+            if (e.altKey) {
+                const dy = e.clientY - this.pointerState.lastPos.y; // Delta Y since last frame
+                const zSensitivity = 1.0; // Adjust sensitivity as needed
+                // Modify the targetZ for dragging based on vertical mouse movement
+                // Subtracting dy: moving mouse up (negative dy) increases targetZ (moves further away if camera setup is typical)
+                // Or, if positive Z is "up" in your world, and mouse up should move node "up", then it's targetZ += dy * zSensitivity
+                // Let's assume standard screen coords: mouse_y_up = smaller clientY.
+                // If world +Z is further from camera: mouse_y_up (smaller clientY, negative dy) should mean larger Z.
+                // So, targetZ -= dy * zSensitivity; (if dy is positive for mouse down)
+                // If dy is (newY - oldY): mouse down = larger clientY = positive dy.
+                // targetZ should decrease if mouse moves down (closer to user).
+                // Let's verify: clientY increases downwards.
+                // dy = e.clientY - this.pointerState.lastPos.y:
+                // Mouse moves down: e.clientY > lastPos.y -> dy is positive.
+                // Mouse moves up: e.clientY < lastPos.y -> dy is negative.
+                // If positive Z is away from camera:
+                // Mouse moves down (positive dy) -> targetZ should decrease (closer).
+                // Mouse moves up (negative dy) -> targetZ should increase (further).
+                // So: targetZ -= dy * zSensitivity; is correct for "mouse Y controls depth on screen"
+                targetZ -= dy * zSensitivity;
+                this.draggedNodeInitialZ = targetZ; // Update the reference Z plane for next Alt-drag frame
+            }
+
+            const worldPos = this.space.screenToWorld(e.clientX, e.clientY, targetZ);
+
             if (worldPos) {
-                this.draggedNode.drag(worldPos.sub(this.dragOffset));
-                // No need to call updateNodesAndEdges here, happens in main loop
+                let primaryNodeNewCalculatedPos = worldPos.clone().sub(this.dragOffset);
+                primaryNodeNewCalculatedPos.z = targetZ; // Ensure the Z is exactly the targetZ for the primary node
+
+                // Calculate the delta of movement for the primary dragged node based on its current position
+                const dragDelta = primaryNodeNewCalculatedPos.clone().sub(this.draggedNode.position);
+
+                const uiPlugin = this.space.plugins.getPlugin('UIPlugin');
+                const selectedNodes = uiPlugin?.getSelectedNodes();
+
+                if (selectedNodes && selectedNodes.size > 0) {
+                    // Apply the drag to all selected nodes
+                    selectedNodes.forEach(sNode => {
+                        if (sNode === this.draggedNode) {
+                            // The primary dragged node moves to the calculated position
+                            sNode.drag(primaryNodeNewCalculatedPos);
+                        } else {
+                            // Other selected nodes move by the same delta
+                            const sNodeTargetPos = sNode.position.clone().add(dragDelta);
+                            sNode.drag(sNodeTargetPos);
+                        }
+                    });
+                } else if (this.draggedNode) {
+                    // Fallback if somehow selectedNodes is empty but we are dragging (should not happen with proper selection updates)
+                    this.draggedNode.drag(primaryNodeNewCalculatedPos);
+                }
             }
             return;
         }
@@ -191,17 +241,18 @@ export class UIManager {
         // Prioritize node hit from raycast or element check
         if (targetInfo.node) {
             target = targetInfo.node;
-            this.space.emit('ui:request:setSelectedNode', target);
+            // Context menu click implies single selection of the target
+            this.space.emit('ui:request:setSelectedNode', target, false);
             menuItems = this._getContextMenuItemsNode(target);
         } else if (targetInfo.intersectedEdge) {
             // Check edge only if no node hit
             target = targetInfo.intersectedEdge;
-            this.space.emit('ui:request:setSelectedEdge', target);
+            this.space.emit('ui:request:setSelectedEdge', target, false);
             menuItems = this._getContextMenuItemsEdge(target);
         } else {
             // Background
-            this.space.emit('ui:request:setSelectedNode', null);
-            this.space.emit('ui:request:setSelectedEdge', null);
+            this.space.emit('ui:request:setSelectedNode', null, false);
+            // Selecting null node also clears edges in UIPlugin's setSelectedNode
             const worldPos = this.space.screenToWorld(e.clientX, e.clientY, 0);
             menuItems = this._getContextMenuItemsBackground(worldPos);
         }
@@ -220,17 +271,20 @@ export class UIManager {
         if (!clickedEdgeMenu && this.edgeMenuObject) {
             const targetInfo = this._getTargetInfo(e);
             // Hide edge menu unless clicking the selected edge itself again
-            if (this.space.edgeSelected !== targetInfo.intersectedEdge) {
-                this.space.emit('ui:request:setSelectedEdge', null);
+            // Check against selectedEdges set from UIPlugin
+            const uiPlugin = this.space.plugins.getPlugin('UIPlugin');
+            if (uiPlugin && !uiPlugin.getSelectedEdges().has(targetInfo.intersectedEdge)) {
+                this.space.emit('ui:request:setSelectedEdge', null, false);
             }
         }
 
         // Deselect node/edge if clicking background and not dragging/panning/linking
         // and not clicking on any graph element (node HTML, node mesh, edge line)
-        // MODIFIED: Use CameraPlugin for isPanning
+        // and not holding shift (to allow for starting a selection marquee in the future)
         const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
         const cameraControls = cameraPlugin?.getControls(); // CameraControls instance
         if (
+            !e.shiftKey && // Don't deselect if shift is held (for future marquee select)
             !clickedContextMenu &&
             !clickedEdgeMenu &&
             !clickedConfirmDialog &&
@@ -244,8 +298,8 @@ export class UIManager {
                 targetInfo.intersectedObjectResult?.node ||
                 targetInfo.intersectedObjectResult?.edge;
             if (!clickedOnGraphElement) {
-                this.space.emit('ui:request:setSelectedNode', null);
-                this.space.emit('ui:request:setSelectedEdge', null);
+                this.space.emit('ui:request:setSelectedNode', null, false);
+                // setSelectedNode(null, false) in UIPlugin will also clear edge selections.
             }
         }
     };
@@ -346,23 +400,34 @@ export class UIManager {
             activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable);
         if (isEditing && e.key !== 'Escape') return;
 
-        const selectedNode = this.space.nodeSelected;
-        const selectedEdge = this.space.edgeSelected;
+        const uiPlugin = this.space.plugins.getPlugin('UIPlugin');
+        const selectedNodes = uiPlugin?.getSelectedNodes();
+        const selectedEdges = uiPlugin?.getSelectedEdges();
+
+        // For now, shortcuts primarily act on a single "primary" selected item.
+        // Group actions (e.g., deleting all selected) can be a future enhancement.
+        const primarySelectedNode = selectedNodes && selectedNodes.size > 0 ? selectedNodes.values().next().value : null;
+        const primarySelectedEdge = selectedEdges && selectedEdges.size > 0 ? selectedEdges.values().next().value : null;
+
         let handled = true;
 
         switch (e.key) {
             case 'Delete':
             case 'Backspace':
-                if (selectedNode) {
-                    const nodeIdPreview = selectedNode.id.substring(0, 10);
-                    this._showConfirm(`Delete node "${nodeIdPreview}..."?`, () =>
-                        this.space.emit('ui:request:removeNode', selectedNode.id)
-                    );
-                } else if (selectedEdge) {
-                    const edgeIdPreview = selectedEdge.id.substring(0, 10);
-                    this._showConfirm(`Delete edge "${edgeIdPreview}..."?`, () =>
-                        this.space.emit('ui:request:removeEdge', selectedEdge.id)
-                    );
+                // If multiple nodes are selected, this will currently only prompt for the "primary" one.
+                // A fuller implementation might delete all or prompt differently.
+                if (primarySelectedNode) {
+                    const nodeIdPreview = primarySelectedNode.id.substring(0, 10);
+                    const message = selectedNodes.size > 1 ? `Delete ${selectedNodes.size} selected nodes?` : `Delete node "${nodeIdPreview}..."?`;
+                    this._showConfirm(message, () => {
+                        selectedNodes.forEach(node => this.space.emit('ui:request:removeNode', node.id));
+                    });
+                } else if (primarySelectedEdge) {
+                    const edgeIdPreview = primarySelectedEdge.id.substring(0, 10);
+                     const message = selectedEdges.size > 1 ? `Delete ${selectedEdges.size} selected edges?` : `Delete edge "${edgeIdPreview}..."?`;
+                    this._showConfirm(message, () => {
+                        selectedEdges.forEach(edge => this.space.emit('ui:request:removeEdge', edge.id));
+                    });
                 } else {
                     handled = false;
                 }
@@ -371,43 +436,42 @@ export class UIManager {
                 if (this.space.isLinking) this.space.emit('ui:request:cancelLinking');
                 else if (this.contextMenuElement.style.display === 'block') this._hideContextMenu();
                 else if (this.confirmDialogElement.style.display === 'block') this._hideConfirm();
-                else if (this.edgeMenuObject) this.space.emit('ui:request:setSelectedEdge', null);
-                else if (selectedNode || selectedEdge) {
-                    this.space.emit('ui:request:setSelectedNode', null);
-                    this.space.emit('ui:request:setSelectedEdge', null);
+                else if (this.edgeMenuObject) this.space.emit('ui:request:setSelectedEdge', null, false); // Deselects edge for menu
+                else if ((selectedNodes && selectedNodes.size > 0) || (selectedEdges && selectedEdges.size > 0)) {
+                    // Deselect all by emitting null with non-multi-select
+                    this.space.emit('ui:request:setSelectedNode', null, false);
                 } else handled = false;
                 break;
             case 'Enter':
-                if (selectedNode instanceof HtmlNode && selectedNode.data.editable)
-                    selectedNode.htmlElement?.querySelector('.node-content')?.focus();
+                if (primarySelectedNode instanceof HtmlNode && primarySelectedNode.data.editable)
+                    primarySelectedNode.htmlElement?.querySelector('.node-content')?.focus();
                 else handled = false;
                 break;
             case '+':
             case '=':
-                if (selectedNode instanceof HtmlNode) {
+                if (primarySelectedNode instanceof HtmlNode) {
                     e.ctrlKey || e.metaKey
-                        ? this.space.emit('ui:request:adjustNodeSize', selectedNode, 1.2)
-                        : this.space.emit('ui:request:adjustContentScale', selectedNode, 1.15);
+                        ? this.space.emit('ui:request:adjustNodeSize', primarySelectedNode, 1.2)
+                        : this.space.emit('ui:request:adjustContentScale', primarySelectedNode, 1.15);
                 } else handled = false;
                 break;
             case '-':
             case '_':
-                if (selectedNode instanceof HtmlNode) {
+                if (primarySelectedNode instanceof HtmlNode) {
                     e.ctrlKey || e.metaKey
-                        ? this.space.emit('ui:request:adjustNodeSize', selectedNode, 1 / 1.2)
-                        : this.space.emit('ui:request:adjustContentScale', selectedNode, 1 / 1.15);
+                        ? this.space.emit('ui:request:adjustNodeSize', primarySelectedNode, 1 / 1.2)
+                        : this.space.emit('ui:request:adjustContentScale', primarySelectedNode, 1 / 1.15);
                 } else handled = false;
                 break;
-            case ' ':
-                if (selectedNode) this.space.emit('ui:request:focusOnNode', selectedNode, 0.5, true);
-                else if (selectedEdge) {
+            case ' ': // Spacebar focuses on the primary selected node/edge or centers view
+                if (primarySelectedNode) this.space.emit('ui:request:focusOnNode', primarySelectedNode, 0.5, true);
+                else if (primarySelectedEdge) {
                     const midPoint = new THREE.Vector3().lerpVectors(
-                        selectedEdge.source.position,
-                        selectedEdge.target.position,
+                        primarySelectedEdge.source.position,
+                        primarySelectedEdge.target.position,
                         0.5
                     );
-                    const dist = selectedEdge.source.position.distanceTo(selectedEdge.target.position);
-                    // MODIFIED: Use CameraPlugin
+                    const dist = primarySelectedEdge.source.position.distanceTo(primarySelectedEdge.target.position);
                     const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
                     cameraPlugin?.pushState();
                     cameraPlugin?.moveTo(midPoint.x, midPoint.y, midPoint.z + dist * 0.6 + 100, 0.5, midPoint);
@@ -475,25 +539,27 @@ export class UIManager {
     }
 
     _handleHover(e) {
+        const uiPlugin = this.space.plugins.getPlugin('UIPlugin');
+        const selectedEdges = uiPlugin?.getSelectedEdges();
+
         if (this.pointerState.down || this.draggedNode || this.resizedNode || this.space.isLinking) {
-            if (this.hoveredEdge && this.hoveredEdge !== this.space.edgeSelected) {
+            // If currently interacting, ensure any non-selected hovered edge is un-highlighted
+            if (this.hoveredEdge && !selectedEdges?.has(this.hoveredEdge)) {
                 this.hoveredEdge.setHighlight(false);
-                this.hoveredEdge = null;
             }
+            this.hoveredEdge = null; // Clear current hover regardless
             return;
         }
 
-        // Raycast to find hovered edge, ignoring nodes for hover effect
-        // MODIFIED: Use CameraPlugin and EdgePlugin
         const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
         const edgePlugin = this.space.plugins.getPlugin('EdgePlugin');
         const camInstance = cameraPlugin?.getCameraInstance();
 
-        if (!camInstance || !edgePlugin) {
-            if (this.hoveredEdge && this.hoveredEdge !== this.space.edgeSelected) {
+        if (!camInstance || !edgePlugin) { // Should not happen if plugins are initialized
+            if (this.hoveredEdge && !selectedEdges?.has(this.hoveredEdge)) {
                 this.hoveredEdge.setHighlight(false);
-                this.hoveredEdge = null;
             }
+            this.hoveredEdge = null;
             return;
         }
 
@@ -503,17 +569,27 @@ export class UIManager {
         );
         const raycaster = new THREE.Raycaster();
         raycaster.setFromCamera(vec, camInstance);
-        raycaster.params.Line.threshold = 5;
-        const currentEdges = edgePlugin.getEdges();
-        const edgeLines = [...currentEdges.values()].map((edge) => edge.line).filter(Boolean);
+        raycaster.params.Line.threshold = 5; // Adjust sensitivity for line intersection
+
+        const currentEdgesMap = edgePlugin.getEdges();
+        const edgeLines = [...currentEdgesMap.values()].map((edge) => edge.line).filter(Boolean);
+
         const intersects = edgeLines.length > 0 ? raycaster.intersectObjects(edgeLines, false) : [];
-        const intersectedEdge =
+        const intersectedEdgeInstance =
             intersects.length > 0 ? edgePlugin.getEdgeById(intersects[0].object.userData.edgeId) : null;
 
-        if (this.hoveredEdge !== intersectedEdge) {
-            if (this.hoveredEdge && this.hoveredEdge !== this.space.edgeSelected) this.hoveredEdge.setHighlight(false);
-            this.hoveredEdge = intersectedEdge;
-            if (this.hoveredEdge && this.hoveredEdge !== this.space.edgeSelected) this.hoveredEdge.setHighlight(true);
+        if (this.hoveredEdge !== intersectedEdgeInstance) {
+            // If there was a previously hovered edge, and it's not part of current selection, un-highlight it
+            if (this.hoveredEdge && !selectedEdges?.has(this.hoveredEdge)) {
+                this.hoveredEdge.setHighlight(false);
+            }
+
+            this.hoveredEdge = intersectedEdgeInstance; // Update to the new hovered edge (or null)
+
+            // If the new hovered edge exists and is not part of current selection, highlight it
+            if (this.hoveredEdge && !selectedEdges?.has(this.hoveredEdge)) {
+                this.hoveredEdge.setHighlight(true);
+            }
         }
     }
 
@@ -571,10 +647,11 @@ export class UIManager {
             e.preventDefault();
             this.draggedNode = targetInfo.node;
             this.draggedNode.startDrag();
-            const worldPos = this.space.screenToWorld(e.clientX, e.clientY, this.draggedNode.position.z); // screenToWorld is on SpaceGraph, uses CameraPlugin
+            this.draggedNodeInitialZ = this.draggedNode.position.z; // Store initial Z for planar dragging / Z adjustment
+            const worldPos = this.space.screenToWorld(e.clientX, e.clientY, this.draggedNodeInitialZ);
             this.dragOffset = worldPos ? worldPos.sub(this.draggedNode.position) : new THREE.Vector3();
             this.container.style.cursor = 'grabbing';
-            this.space.emit('ui:request:setSelectedNode', targetInfo.node);
+            this.space.emit('ui:request:setSelectedNode', targetInfo.node, e.shiftKey); // Pass shiftKey status
             this._hideContextMenu();
             return true;
         }
@@ -582,7 +659,8 @@ export class UIManager {
         // If clicking interactive/editable content, select node but allow default interaction
         if (targetInfo.node && (targetInfo.interactiveElement || targetInfo.contentEditable)) {
             e.stopPropagation(); // Prevent background panning
-            this.space.emit('ui:request:setSelectedNode', targetInfo.node);
+            // Single selection for interactive elements, not multi-select
+            this.space.emit('ui:request:setSelectedNode', targetInfo.node, false);
             this._hideContextMenu();
             // Return false to allow default browser behavior (e.g., focus input, select text)
         }
@@ -593,7 +671,7 @@ export class UIManager {
         // Select edge only if raycast hit edge AND didn't hit a node mesh closer
         if (targetInfo.intersectedEdge && !targetInfo.node) {
             e.preventDefault();
-            this.space.emit('ui:request:setSelectedEdge', targetInfo.intersectedEdge);
+            this.space.emit('ui:request:setSelectedEdge', targetInfo.intersectedEdge, e.shiftKey); // Pass shiftKey status
             this._hideContextMenu();
             return true;
         }
@@ -817,11 +895,21 @@ export class UIManager {
     };
 
     updateEdgeMenuPosition = () => {
-        if (!this.edgeMenuObject || !this.space.edgeSelected) return;
-        const edge = this.space.edgeSelected;
+        const uiPlugin = this.space.plugins.getPlugin('UIPlugin');
+        const selectedEdges = uiPlugin?.getSelectedEdges();
+
+        if (!this.edgeMenuObject || !this.edgeMenuObject.element?.parentNode) return; // Not visible or not in DOM
+
+        if (!selectedEdges || selectedEdges.size !== 1) {
+            // This case should ideally be handled by _onEdgeSelected causing hideEdgeMenu.
+            // If somehow it's visible when it shouldn't be, hide it.
+            this.hideEdgeMenu();
+            return;
+        }
+
+        const edge = selectedEdges.values().next().value; // Get the single selected edge
         const midPoint = new THREE.Vector3().lerpVectors(edge.source.position, edge.target.position, 0.5);
         this.edgeMenuObject.position.copy(midPoint);
-        // MODIFIED: Use CameraPlugin
         const camInstance = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
         if (camInstance) {
             // Billboard effect
@@ -830,29 +918,30 @@ export class UIManager {
     };
 
     // --- Event Handlers for SpaceGraph Events ---
-    _onNodeSelected = (node) => {
-        // Deselect previously selected node if any
-        // MODIFIED: Use NodePlugin
-        const nodePlugin = this.space.plugins.getPlugin('NodePlugin');
-        nodePlugin?.getNodes().forEach((n) => {
-            if (n !== node) n.setSelectedStyle(false);
-        });
-        // Apply style to newly selected node
-        node?.setSelectedStyle(true);
+    // Note: 'node:selected' event now passes the node that was the target of the interaction.
+    // UIPlugin is responsible for managing the selected set and applying styles.
+    // This handler is for UIManager specific reactions to a primary selection event.
+    _onNodeSelected = (targetNode) => {
+        // console.log('UIManager._onNodeSelected, target:', targetNode?.id);
+        // Styling is handled by UIPlugin.setSelectedNode.
+        // This callback can be used for other UI updates, like focusing a properties panel,
+        // but for now, it does not need to do anything regarding visual selection state.
     };
 
-    _onEdgeSelected = (edge) => {
-        // Deselect previously selected edge if any
-        // MODIFIED: Use EdgePlugin
-        const edgePlugin = this.space.plugins.getPlugin('EdgePlugin');
-        edgePlugin?.getEdges().forEach((e) => {
-            if (e !== edge) e.setHighlight(false);
-        });
-        // Apply highlight to newly selected edge
-        edge?.setHighlight(true);
+    // Note: 'edge:selected' event now passes the edge that was the target of the interaction.
+    _onEdgeSelected = (targetEdge) => {
+        // console.log('UIManager._onEdgeSelected, target:', targetEdge?.id);
+        // Styling is handled by UIPlugin.setSelectedEdge.
+        // This callback primarily manages the edge context menu.
 
-        if (edge) {
-            this.showEdgeMenu(edge);
+        // The edge menu should be shown if the targetEdge is non-null AND it's the only selected edge.
+        // If multiple edges are selected, the simple context menu might not be appropriate,
+        // or it should adapt. For now, show menu only for a single selected edge.
+        const uiPlugin = this.space.plugins.getPlugin('UIPlugin');
+        const selectedEdges = uiPlugin?.getSelectedEdges();
+
+        if (targetEdge && selectedEdges && selectedEdges.size === 1 && selectedEdges.has(targetEdge)) {
+            this.showEdgeMenu(targetEdge);
         } else {
             this.hideEdgeMenu();
         }
