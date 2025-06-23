@@ -87,6 +87,7 @@ export class ForceLayout {
         console.log("ForceLayout: Starting simulation.");
         this.isRunning = true;
         this.lastKickTime = Date.now();
+        this.space.emit('layout:started'); // Emit event
         const loop = () => {
             if (!this.isRunning) return;
             this.totalEnergy = this._calculateStep();
@@ -109,6 +110,7 @@ export class ForceLayout {
         this.animationFrameId = null;
         this.autoStopTimeout = null;
         console.log("ForceLayout: Simulation stopped. Energy:", this.totalEnergy.toFixed(4));
+        this.space.emit('layout:stopped'); // Emit event
     }
 
     kick(intensity = 1) {

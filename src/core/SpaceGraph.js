@@ -5,6 +5,7 @@ import { Camera } from '../camera/Camera.js';
 import { UIManager } from '../ui/UIManager.js';
 import { ForceLayout } from '../layout/ForceLayout.js';
 import { Edge } from '../graph/Edge.js';
+import { HtmlNode } from '../graph/nodes/HtmlNode.js';
 
 export class SpaceGraph {
     nodes = new Map();
@@ -24,6 +25,8 @@ export class SpaceGraph {
     webglCanvas = null;
     background = {color: 0x1a1a1d, alpha: 1.0};
 
+    _listeners = new Map(); // Event bus listeners
+
     constructor(containerElement) {
         if (!containerElement) throw new Error("SpaceGraph requires a valid HTML container element.");
         this.container = containerElement;
@@ -33,6 +36,7 @@ export class SpaceGraph {
         this._cam = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 20000);
         this._cam.position.z = 700;
         this.camera = new Camera(this);
+        this.layout = new ForceLayout(this); // Pass SpaceGraph instance to layout
 
         this._setupRenderers();
         this._setupLighting();
@@ -42,6 +46,109 @@ export class SpaceGraph {
         this.camera.setInitialState();
 
         window.addEventListener('resize', this._onWindowResize, false);
+
+        this._setupEventListeners(); // Setup internal event listeners for UI requests
+    }
+
+    // --- Event Bus Methods ---
+    on(eventName, callback) {
+        if (!this._listeners.has(eventName)) {
+            this._listeners.set(eventName, new Set());
+        }
+        this._listeners.get(eventName).add(callback);
+    }
+
+    off(eventName, callback) {
+        if (this._listeners.has(eventName)) {
+            this._listeners.get(eventName).delete(callback);
+        }
+    }
+
+    emit(eventName, ...args) {
+        if (this._listeners.has(eventName)) {
+            this._listeners.get(eventName).forEach(callback => {
+                try {
+                    callback(...args);
+                } catch (error) {
+                    console.error(`Error in event listener for "${eventName}":`, error);
+                }
+            });
+        }
+    }
+
+    // --- Internal Event Listeners for UI Requests ---
+    _setupEventListeners() {
+        this.on('ui:request:addNode', (nodeInstance) => {
+            this.addNode(nodeInstance);
+            this.layout?.kick();
+            setTimeout(() => { // Allow node to be added to scene before focusing
+                this.focusOnNode(nodeInstance, 0.6, true);
+                this.setSelectedNode(nodeInstance);
+                if (nodeInstance instanceof HtmlNode && nodeInstance.data.editable) {
+                    nodeInstance.htmlElement?.querySelector('.node-content')?.focus();
+                }
+            }, 100);
+        });
+        this.on('ui:request:removeNode', (nodeId) => this.removeNode(nodeId));
+        this.on('ui:request:addEdge', (sourceNode, targetNode, data) => this.addEdge(sourceNode, targetNode, data));
+        this.on('ui:request:removeEdge', (edgeId) => this.removeEdge(edgeId));
+        this.on('ui:request:setSelectedNode', (node) => this.setSelectedNode(node));
+        this.on('ui:request:setSelectedEdge', (edge) => this.setSelectedEdge(edge));
+        this.on('ui:request:autoZoomNode', (node) => this.autoZoom(node));
+        this.on('ui:request:centerView', () => this.centerView());
+        this.on('ui:request:resetView', () => this.camera?.resetView());
+        this.on('ui:request:toggleBackground', (color, alpha) => this.setBackground(color, alpha));
+        this.on('ui:request:startLinking', (sourceNode) => this._startLinking(sourceNode));
+        this.on('ui:request:cancelLinking', () => this._cancelLinking());
+        this.on('ui:request:completeLinking', (screenX, screenY) => this._completeLinking(screenX, screenY));
+        this.on('ui:request:reverseEdge', (edgeId) => {
+            const edge = this.getEdgeById(edgeId);
+            if (edge) {
+                [edge.source, edge.target] = [edge.target, edge.source];
+                edge.update();
+                this.layout?.kick();
+            }
+        });
+        this.on('ui:request:adjustContentScale', (node, factor) => {
+            if (node instanceof HtmlNode) node.adjustContentScale(factor);
+        });
+        this.on('ui:request:adjustNodeSize', (node, factor) => {
+            if (node instanceof HtmlNode) node.adjustNodeSize(factor);
+        });
+        this.on('ui:request:zoomCamera', (deltaY) => this.camera?.zoom(deltaY));
+        this.on('ui:request:focusOnNode', (node, duration, pushHistory) => this.focusOnNode(node, duration, pushHistory));
+        this.on('ui:request:updateEdge', (edgeId, property, value) => {
+            const edge = this.getEdgeById(edgeId);
+            if (!edge) return;
+            switch (property) {
+                case 'color':
+                    edge.data.color = value;
+                    edge.setHighlight(this.edgeSelected === edge); // Re-apply highlight state
+                    break;
+                case 'thickness':
+                    edge.data.thickness = value;
+                    if (edge.line?.material) edge.line.material.linewidth = edge.data.thickness;
+                    break;
+                case 'constraintType':
+                    edge.data.constraintType = value;
+                    // Update default params if switching type
+                    if (value === 'rigid' && !edge.data.constraintParams?.distance) {
+                        edge.data.constraintParams = {
+                            distance: edge.source.position.distanceTo(edge.target.position),
+                            stiffness: 0.1
+                        };
+                    } else if (value === 'weld' && !edge.data.constraintParams?.distance) {
+                        edge.data.constraintParams = {
+                            distance: edge.source.getBoundingSphereRadius() + edge.target.getBoundingSphereRadius(),
+                            stiffness: 0.5
+                        };
+                    } else if (value === 'elastic' && !edge.data.constraintParams?.stiffness) {
+                        edge.data.constraintParams = {stiffness: 0.001, idealLength: 200};
+                    }
+                    this.layout?.kick();
+                    break;
+            }
+        });
     }
 
     _setupRenderers() {
@@ -90,6 +197,7 @@ export class SpaceGraph {
         if (nodeInstance.mesh) this.scene.add(nodeInstance.mesh);
         if (nodeInstance.labelObject) this.cssScene.add(nodeInstance.labelObject);
         this.layout?.addNode(nodeInstance);
+        this.emit('node:added', nodeInstance); // Emit event
         return nodeInstance;
     }
 
@@ -98,7 +206,7 @@ export class SpaceGraph {
         if (!node) return;
 
         if (this.nodeSelected === node) this.setSelectedNode(null);
-        if (this.linkSourceNode === node) this.ui?.cancelLinking();
+        if (this.linkSourceNode === node) this._cancelLinking();
 
         [...this.edges.values()]
             .filter(edge => edge.source === node || edge.target === node)
@@ -107,6 +215,7 @@ export class SpaceGraph {
         this.layout?.removeNode(node);
         node.dispose();
         this.nodes.delete(nodeId);
+        this.emit('node:removed', nodeId, node); // Emit event
     }
 
     addEdge(sourceNode, targetNode, data = {}) {
@@ -122,6 +231,7 @@ export class SpaceGraph {
         this.edges.set(edge.id, edge);
         if (edge.line) this.scene.add(edge.line);
         this.layout?.addEdge(edge);
+        this.emit('edge:added', edge); // Emit event
         return edge;
     }
 
@@ -132,6 +242,7 @@ export class SpaceGraph {
         this.layout?.removeEdge(edge);
         edge.dispose();
         this.edges.delete(edgeId);
+        this.emit('edge:removed', edgeId, edge); // Emit event
     }
 
     getNodeById = (id) => this.nodes.get(id);
@@ -139,7 +250,7 @@ export class SpaceGraph {
 
     updateNodesAndEdges() {
         this.nodes.forEach(node => node.update(this));
-        this.edges.forEach(edge => edge.update(this));
+        this.edges.forEach(edge => edge.update()); // Edge update doesn't need space
         this.ui?.updateEdgeMenuPosition();
     }
 
@@ -212,24 +323,14 @@ export class SpaceGraph {
 
     setSelectedNode(node) {
         if (this.nodeSelected === node) return;
-        this.nodeSelected?.setSelectedStyle(false);
-        this.nodeSelected = node;
-        this.nodeSelected?.setSelectedStyle(true);
-        if (node) this.setSelectedEdge(null);
+        this.nodeSelected = node; // Update internal state first
+        this.emit('node:selected', node); // Then emit event
     }
 
     setSelectedEdge(edge) {
         if (this.edgeSelected === edge) return;
-        if (this.edgeSelected) {
-            this.edgeSelected.setHighlight(false);
-            this.ui?.hideEdgeMenu();
-        }
-        this.edgeSelected = edge;
-        if (this.edgeSelected) {
-            this.edgeSelected.setHighlight(true);
-            this.ui?.showEdgeMenu(this.edgeSelected);
-            this.setSelectedNode(null);
-        }
+        this.edgeSelected = edge; // Update internal state first
+        this.emit('edge:selected', edge); // Then emit event
     }
 
     intersectedObjects(screenX, screenY) {
@@ -258,6 +359,29 @@ export class SpaceGraph {
         return null;
     }
 
+    _startLinking(sourceNode) {
+        if (!sourceNode || this.isLinking) return;
+        this.isLinking = true;
+        this.linkSourceNode = sourceNode;
+        this.emit('ui:linking:started', sourceNode);
+    }
+
+    _completeLinking(screenX, screenY) {
+        const targetInfo = this.ui?._getTargetInfo({clientX: screenX, clientY: screenY}); // Use UIManager's target info logic
+        if (targetInfo?.node && targetInfo.node !== this.linkSourceNode) {
+            this.addEdge(this.linkSourceNode, targetInfo.node);
+        }
+        this.isLinking = false;
+        this.linkSourceNode = null;
+        this.emit('ui:linking:completed');
+    }
+
+    _cancelLinking() {
+        this.isLinking = false;
+        this.linkSourceNode = null;
+        this.emit('ui:linking:cancelled');
+    }
+
     animate() {
         const frame = () => {
             this.updateNodesAndEdges();
@@ -280,7 +404,8 @@ export class SpaceGraph {
         this.renderCSS3D?.domElement?.remove();
         this.css3dContainer?.remove();
         window.removeEventListener('resize', this._onWindowResize);
-        this.ui?.dispose();
+        this.ui?.dispose(); // UIManager will unsubscribe from events
+        this._listeners.clear(); // Clear all event listeners
         console.log("SpaceGraph disposed.");
     }
 }

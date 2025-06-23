@@ -37,6 +37,7 @@ export class UIManager {
         this.contextMenuElement = contextMenuEl;
         this.confirmDialogElement = confirmDialogEl;
         this._bindEvents();
+        this._subscribeToSpaceGraphEvents();
     }
 
     _bindEvents() {
@@ -51,6 +52,20 @@ export class UIManager {
         $('#confirm-no', this.confirmDialogElement)?.addEventListener('click', this._onConfirmNo, false);
         window.addEventListener('keydown', this._onKeyDown, false);
         this.container.addEventListener('wheel', this._onWheel, passiveOpts);
+    }
+
+    _subscribeToSpaceGraphEvents() {
+        this.space.on('node:selected', this._onNodeSelected);
+        this.space.on('edge:selected', this._onEdgeSelected);
+        this.space.on('node:added', this._onNodeAdded);
+        this.space.on('node:removed', this._onNodeRemoved);
+        this.space.on('edge:added', this._onEdgeAdded);
+        this.space.on('edge:removed', this._onEdgeRemoved);
+        this.space.on('layout:started', this._onLayoutStarted);
+        this.space.on('layout:stopped', this._onLayoutStopped);
+        this.space.on('ui:linking:started', this._onLinkingStarted);
+        this.space.on('ui:linking:cancelled', this._onLinkingCancelled);
+        this.space.on('ui:linking:completed', this._onLinkingCompleted);
     }
 
     _updatePointerState(e, isDown) {
@@ -141,8 +156,6 @@ export class UIManager {
     }
 
     _onPointerUp = (e) => {
-        this.container.style.cursor = this.space.isLinking ? 'crosshair' : 'grab';
-
         if (this.resizedNode) {
             this.resizedNode.endResize();
             this.resizedNode = null;
@@ -150,11 +163,11 @@ export class UIManager {
             this.draggedNode.endDrag();
             this.draggedNode = null;
         } else if (this.space.isLinking && e.button === 0) {
-            this._completeLinking(e);
+            this.space.emit('ui:request:completeLinking', e.clientX, e.clientY);
         } else if (e.button === 1 && this.pointerState.potentialClick) {
             const {node} = this._getTargetInfo(e);
             if (node) {
-                this.space.autoZoom(node);
+                this.space.emit('ui:request:autoZoomNode', node);
                 e.preventDefault();
             }
         }
@@ -174,15 +187,15 @@ export class UIManager {
         // Prioritize node hit from raycast or element check
         if (targetInfo.node) {
             target = targetInfo.node;
-            if (this.space.nodeSelected !== target) this.space.setSelectedNode(target);
+            this.space.emit('ui:request:setSelectedNode', target);
             menuItems = this._getContextMenuItemsNode(target);
         } else if (targetInfo.intersectedEdge) { // Check edge only if no node hit
             target = targetInfo.intersectedEdge;
-            if (this.space.edgeSelected !== target) this.space.setSelectedEdge(target);
+            this.space.emit('ui:request:setSelectedEdge', target);
             menuItems = this._getContextMenuItemsEdge(target);
         } else { // Background
-            this.space.setSelectedNode(null);
-            this.space.setSelectedEdge(null);
+            this.space.emit('ui:request:setSelectedNode', null);
+            this.space.emit('ui:request:setSelectedEdge', null);
             const worldPos = this.space.screenToWorld(e.clientX, e.clientY, 0);
             menuItems = this._getContextMenuItemsBackground(worldPos);
         }
@@ -202,7 +215,7 @@ export class UIManager {
             const targetInfo = this._getTargetInfo(e);
             // Hide edge menu unless clicking the selected edge itself again
             if (this.space.edgeSelected !== targetInfo.intersectedEdge) {
-                this.space.setSelectedEdge(null);
+                this.space.emit('ui:request:setSelectedEdge', null);
             }
         }
 
@@ -213,8 +226,8 @@ export class UIManager {
             const targetInfo = this._getTargetInfo(e);
             const clickedOnGraphElement = targetInfo.nodeElement || targetInfo.intersectedObjectResult?.node || targetInfo.intersectedObjectResult?.edge;
             if (!clickedOnGraphElement) {
-                this.space.setSelectedNode(null);
-                this.space.setSelectedEdge(null);
+                this.space.emit('ui:request:setSelectedNode', null);
+                this.space.emit('ui:request:setSelectedEdge', null);
             }
         }
     }
@@ -228,71 +241,25 @@ export class UIManager {
         const actions = {
             'edit-node': () => {
                 const node = this.space.getNodeById(nodeId);
-                // Only focus editable HTML nodes
                 if (node instanceof HtmlNode && node.data.editable) {
                     node.htmlElement?.querySelector('.node-content')?.focus();
                 }
             },
-            'delete-node': () => this._showConfirm(`Delete node "${nodeId?.substring(0, 10)}..."?`, () => this.space.removeNode(nodeId)),
-            'delete-edge': () => this._showConfirm(`Delete edge "${edgeId?.substring(0, 10)}..."?`, () => this.space.removeEdge(edgeId)),
-            'autozoom-node': () => this.space.autoZoom(this.space.getNodeById(nodeId)),
-            'create-note': () => this._createHtmlNode(positionData),
-            'create-box': () => this._createShapeNode(positionData, 'box'),
-            'create-sphere': () => this._createShapeNode(positionData, 'sphere'),
-            'center-view': () => this.space.centerView(),
-            'reset-view': () => this.space.camera?.resetView(),
-            'start-link': () => this._startLinking(this.space.getNodeById(nodeId)),
-            'reverse-edge': () => {
-                const edge = this.space.getEdgeById(edgeId);
-                if (edge) {
-                    [edge.source, edge.target] = [edge.target, edge.source];
-                    edge.update();
-                    this.space.layout?.kick();
-                }
-            },
-            'edit-edge': () => this.space.setSelectedEdge(this.space.getEdgeById(edgeId)),
-            'toggle-background': () => this.space.setBackground(
-                this.space.background.alpha === 0 ? 0x1a1a1d : 0x000000,
-                this.space.background.alpha === 0 ? 1.0 : 0
-            ),
+            'delete-node': () => this._showConfirm(`Delete node "${nodeId?.substring(0, 10)}..."?`, () => this.space.emit('ui:request:removeNode', nodeId)),
+            'delete-edge': () => this._showConfirm(`Delete edge "${edgeId?.substring(0, 10)}..."?`, () => this.space.emit('ui:request:removeEdge', edgeId)),
+            'autozoom-node': () => this.space.emit('ui:request:autoZoomNode', this.space.getNodeById(nodeId)),
+            'create-note': () => this.space.emit('ui:request:addNode', new NoteNode(null, JSON.parse(positionData), {content: 'New Note ✨'})),
+            'create-box': () => this.space.emit('ui:request:addNode', new ShapeNode(null, JSON.parse(positionData), {label: "Box Node 📦", shape: 'box', size: 60, color: Math.random() * 0xffffff})),
+            'create-sphere': () => this.space.emit('ui:request:addNode', new ShapeNode(null, JSON.parse(positionData), {label: "Sphere Node 🌐", shape: 'sphere', size: 60, color: Math.random() * 0xffffff})),
+            'center-view': () => this.space.emit('ui:request:centerView'),
+            'reset-view': () => this.space.emit('ui:request:resetView'),
+            'start-link': () => this.space.emit('ui:request:startLinking', this.space.getNodeById(nodeId)),
+            'reverse-edge': () => this.space.emit('ui:request:reverseEdge', edgeId),
+            'edit-edge': () => this.space.emit('ui:request:setSelectedEdge', this.space.getEdgeById(edgeId)),
+            'toggle-background': () => this.space.emit('ui:request:toggleBackground', this.space.background.alpha === 0 ? 0x1a1a1d : 0x000000, this.space.background.alpha === 0 ? 1.0 : 0),
         };
 
         actions[action]?.() ?? console.warn("Unknown context menu action:", action);
-    }
-
-    _createHtmlNode(positionData, initialContent = 'New Note ✨') {
-        try {
-            const pos = JSON.parse(positionData);
-            const newNode = this.space.addNode(new NoteNode(null, pos, {content: initialContent}));
-            this.space.layout?.kick();
-            setTimeout(() => {
-                this.space.focusOnNode(newNode, 0.6, true);
-                this.space.setSelectedNode(newNode);
-                newNode.htmlElement?.querySelector('.node-content')?.focus();
-            }, 100);
-        } catch (err) {
-            console.error("Failed to parse position for new note:", err);
-        }
-    }
-
-    _createShapeNode(positionData, shapeType) {
-        try {
-            const pos = JSON.parse(positionData);
-            const label = `${shapeType.charAt(0).toUpperCase() + shapeType.slice(1)} Node`;
-            const newNode = this.space.addNode(new ShapeNode(null, pos, {
-                label,
-                shape: shapeType,
-                size: 60,
-                color: Math.random() * 0xffffff
-            }));
-            this.space.layout?.kick();
-            setTimeout(() => {
-                this.space.focusOnNode(newNode, 0.6, true);
-                this.space.setSelectedNode(newNode);
-            }, 100);
-        } catch (err) {
-            console.error(`Failed to parse position for new ${shapeType} node:`, err);
-        }
     }
 
     _onConfirmYes = () => {
@@ -315,22 +282,22 @@ export class UIManager {
             case 'Backspace':
                 if (selectedNode) {
                     const nodeIdPreview = selectedNode.id.substring(0, 10);
-                    this._showConfirm(`Delete node "${nodeIdPreview}..."?`, () => this.space.removeNode(selectedNode.id));
+                    this._showConfirm(`Delete node "${nodeIdPreview}..."?`, () => this.space.emit('ui:request:removeNode', selectedNode.id));
                 } else if (selectedEdge) {
                     const edgeIdPreview = selectedEdge.id.substring(0, 10);
-                    this._showConfirm(`Delete edge "${edgeIdPreview}..."?`, () => this.space.removeEdge(selectedEdge.id));
+                    this._showConfirm(`Delete edge "${edgeIdPreview}..."?`, () => this.space.emit('ui:request:removeEdge', selectedEdge.id));
                 } else {
                     handled = false;
                 }
                 break;
             case 'Escape':
-                if (this.space.isLinking) this.cancelLinking();
+                if (this.space.isLinking) this.space.emit('ui:request:cancelLinking');
                 else if (this.contextMenuElement.style.display === 'block') this._hideContextMenu();
                 else if (this.confirmDialogElement.style.display === 'block') this._hideConfirm();
-                else if (this.edgeMenuObject) this.space.setSelectedEdge(null);
+                else if (this.edgeMenuObject) this.space.emit('ui:request:setSelectedEdge', null);
                 else if (selectedNode || selectedEdge) {
-                    this.space.setSelectedNode(null);
-                    this.space.setSelectedEdge(null);
+                    this.space.emit('ui:request:setSelectedNode', null);
+                    this.space.emit('ui:request:setSelectedEdge', null);
                 } else handled = false;
                 break;
             case 'Enter':
@@ -339,22 +306,24 @@ export class UIManager {
                 break;
             case '+':
             case '=':
-                if (selectedNode instanceof HtmlNode) (e.ctrlKey || e.metaKey) ? selectedNode.adjustNodeSize(1.2) : selectedNode.adjustContentScale(1.15);
-                else handled = false;
+                if (selectedNode instanceof HtmlNode) {
+                    (e.ctrlKey || e.metaKey) ? this.space.emit('ui:request:adjustNodeSize', selectedNode, 1.2) : this.space.emit('ui:request:adjustContentScale', selectedNode, 1.15);
+                } else handled = false;
                 break;
             case '-':
             case '_':
-                if (selectedNode instanceof HtmlNode) (e.ctrlKey || e.metaKey) ? selectedNode.adjustNodeSize(1 / 1.2) : selectedNode.adjustContentScale(1 / 1.15);
-                else handled = false;
+                if (selectedNode instanceof HtmlNode) {
+                    (e.ctrlKey || e.metaKey) ? this.space.emit('ui:request:adjustNodeSize', selectedNode, 1 / 1.2) : this.space.emit('ui:request:adjustContentScale', selectedNode, 1 / 1.15);
+                } else handled = false;
                 break;
             case ' ':
-                if (selectedNode) this.space.focusOnNode(selectedNode, 0.5, true);
+                if (selectedNode) this.space.emit('ui:request:focusOnNode', selectedNode, 0.5, true);
                 else if (selectedEdge) {
                     const midPoint = new THREE.Vector3().lerpVectors(selectedEdge.source.position, selectedEdge.target.position, 0.5);
                     const dist = selectedEdge.source.position.distanceTo(selectedEdge.target.position);
                     this.space.camera?.pushState();
                     this.space.camera?.moveTo(midPoint.x, midPoint.y, midPoint.z + dist * 0.6 + 100, 0.5, midPoint);
-                } else this.space.centerView();
+                } else this.space.emit('ui:request:centerView');
                 break;
             default:
                 handled = false;
@@ -371,11 +340,11 @@ export class UIManager {
             if (targetInfo.node instanceof HtmlNode) {
                 e.preventDefault();
                 e.stopPropagation();
-                targetInfo.node.adjustContentScale(e.deltaY < 0 ? 1.1 : (1 / 1.1));
+                this.space.emit('ui:request:adjustContentScale', targetInfo.node, e.deltaY < 0 ? 1.1 : (1 / 1.1));
             } // Allow browser zoom otherwise
         } else {
             e.preventDefault();
-            this.space.camera?.zoom(e.deltaY);
+            this.space.emit('ui:request:zoomCamera', e.deltaY);
         }
     }
 
@@ -446,11 +415,11 @@ export class UIManager {
             const action = actionClass?.substring('node-'.length);
 
             const actions = {
-                'delete': () => this._showConfirm(`Delete node "${targetInfo.node.id.substring(0, 10)}..."?`, () => this.space.removeNode(targetInfo.node.id)),
-                'content-zoom-in': () => targetInfo.node.adjustContentScale(1.15),
-                'content-zoom-out': () => targetInfo.node.adjustContentScale(1 / 1.15),
-                'grow': () => targetInfo.node.adjustNodeSize(1.2),
-                'shrink': () => targetInfo.node.adjustNodeSize(1 / 1.2),
+                'delete': () => this._showConfirm(`Delete node "${targetInfo.node.id.substring(0, 10)}..."?`, () => this.space.emit('ui:request:removeNode', targetInfo.node.id)),
+                'content-zoom-in': () => this.space.emit('ui:request:adjustContentScale', targetInfo.node, 1.15),
+                'content-zoom-out': () => this.space.emit('ui:request:adjustContentScale', targetInfo.node, 1 / 1.15),
+                'grow': () => this.space.emit('ui:request:adjustNodeSize', targetInfo.node, 1.2),
+                'shrink': () => this.space.emit('ui:request:adjustNodeSize', targetInfo.node, 1 / 1.2),
             };
             if (action && actions[action]) actions[action]();
             this._hideContextMenu();
@@ -485,7 +454,7 @@ export class UIManager {
             const worldPos = this.space.screenToWorld(e.clientX, e.clientY, this.draggedNode.position.z);
             this.dragOffset = worldPos ? worldPos.sub(this.draggedNode.position) : new THREE.Vector3();
             this.container.style.cursor = 'grabbing';
-            if (this.space.nodeSelected !== targetInfo.node) this.space.setSelectedNode(targetInfo.node);
+            this.space.emit('ui:request:setSelectedNode', targetInfo.node);
             this._hideContextMenu();
             return true;
         }
@@ -493,7 +462,7 @@ export class UIManager {
         // If clicking interactive/editable content, select node but allow default interaction
         if (targetInfo.node && (targetInfo.interactiveElement || targetInfo.contentEditable)) {
             e.stopPropagation(); // Prevent background panning
-            if (this.space.nodeSelected !== targetInfo.node) this.space.setSelectedNode(targetInfo.node);
+            this.space.emit('ui:request:setSelectedNode', targetInfo.node);
             this._hideContextMenu();
             // Return false to allow default browser behavior (e.g., focus input, select text)
         }
@@ -504,7 +473,7 @@ export class UIManager {
         // Select edge only if raycast hit edge AND didn't hit a node mesh closer
         if (targetInfo.intersectedEdge && !targetInfo.node) {
             e.preventDefault();
-            if (this.space.edgeSelected !== targetInfo.intersectedEdge) this.space.setSelectedEdge(targetInfo.intersectedEdge);
+            this.space.emit('ui:request:setSelectedEdge', targetInfo.intersectedEdge);
             this._hideContextMenu();
             return true;
         }
@@ -607,15 +576,6 @@ export class UIManager {
         this.confirmCallback = null;
     }
 
-    _startLinking(sourceNode) {
-        if (!sourceNode || this.space.isLinking) return;
-        this.space.isLinking = true;
-        this.space.linkSourceNode = sourceNode;
-        this.container.style.cursor = 'crosshair';
-        this._createTempLinkLine(sourceNode);
-        this._hideContextMenu();
-    }
-
     _createTempLinkLine(sourceNode) {
         this._removeTempLinkLine();
         const material = new THREE.LineDashedMaterial({
@@ -656,23 +616,6 @@ export class UIManager {
         }
     }
 
-    _completeLinking(event) {
-        this._removeTempLinkLine();
-        const targetInfo = this._getTargetInfo(event);
-        if (targetInfo.node && targetInfo.node !== this.space.linkSourceNode) {
-            this.space.addEdge(this.space.linkSourceNode, targetInfo.node);
-        }
-        this.cancelLinking();
-    }
-
-    cancelLinking = () => {
-        this._removeTempLinkLine();
-        this.space.isLinking = false;
-        this.space.linkSourceNode = null;
-        this.container.style.cursor = 'grab';
-        $$('.node-common.linking-target').forEach(el => el.classList.remove('linking-target'));
-    }
-
     showEdgeMenu(edge) {
         if (!edge) return;
         this.hideEdgeMenu();
@@ -691,9 +634,7 @@ export class UIManager {
             <input type="color" value="#${edge.data.color.toString(16).padStart(6, '0')}" title="Color" data-action="color">
             <input type="range" min="0.5" max="5" step="0.1" value="${edge.data.thickness}" title="Thickness" data-action="thickness">
             <select title="Constraint Type" data-action="constraintType">
-                <option value="elastic" ${edge.data.constraintType === 'elastic' ? 'selected' : ''}>Elastic</option>
-                <option value="rigid" ${edge.data.constraintType === 'rigid' ? 'selected' : ''}>Rigid</option>
-                <option value="weld" ${edge.data.constraintType === 'weld' ? 'selected' : ''}>Weld</option>
+                ${["elastic","rigid","weld"].map(n=>`<option value="${n}" ${edge.data.constraintType===n?'selected':''}>${n}</option>`).join('')}
             </select>
             <button title="Delete Edge" class="delete" data-action="delete">×</button>
         `;
@@ -709,41 +650,26 @@ export class UIManager {
             const currentEdge = this.space.getEdgeById(edgeId);
             if (!currentEdge) return;
 
+            let value;
             switch (action) {
                 case 'color':
-                    currentEdge.data.color = parseInt(target.value.substring(1), 16);
-                    currentEdge.setHighlight(this.space.edgeSelected === currentEdge); // Re-apply highlight state
+                    value = parseInt(target.value.substring(1), 16);
                     break;
                 case 'thickness':
-                    currentEdge.data.thickness = parseFloat(target.value);
-                    if (currentEdge.line?.material) currentEdge.line.material.linewidth = currentEdge.data.thickness;
+                    value = parseFloat(target.value);
                     break;
                 case 'constraintType':
-                    currentEdge.data.constraintType = target.value;
-                    // Update default params if switching type
-                    if (target.value === 'rigid' && !currentEdge.data.constraintParams?.distance) {
-                        currentEdge.data.constraintParams = {
-                            distance: currentEdge.source.position.distanceTo(currentEdge.target.position),
-                            stiffness: 0.1
-                        };
-                    } else if (target.value === 'weld' && !currentEdge.data.constraintParams?.distance) {
-                        currentEdge.data.constraintParams = {
-                            distance: currentEdge.source.getBoundingSphereRadius() + currentEdge.target.getBoundingSphereRadius(),
-                            stiffness: 0.5
-                        };
-                    } else if (target.value === 'elastic' && !currentEdge.data.constraintParams?.stiffness) {
-                        currentEdge.data.constraintParams = {stiffness: 0.001, idealLength: 200};
-                    }
-                    this.space.layout?.kick();
+                    value = target.value;
                     break;
             }
+            this.space.emit('ui:request:updateEdge', edgeId, action, value);
         });
 
         menu.addEventListener('click', (e) => {
             const button = e.target.closest('button[data-action]');
             if (!button || button.dataset.action !== 'delete') return;
             const edgeId = menu.dataset.edgeId;
-            this._showConfirm(`Delete edge "${edgeId?.substring(0, 10)}..."?`, () => this.space.removeEdge(edgeId));
+            this._showConfirm(`Delete edge "${edgeId?.substring(0, 10)}..."?`, () => this.space.emit('ui:request:removeEdge', edgeId));
         });
 
         return menu;
@@ -767,6 +693,78 @@ export class UIManager {
         }
     }
 
+    // --- Event Handlers for SpaceGraph Events ---
+    _onNodeSelected = (node) => {
+        // Deselect previously selected node if any
+        this.space.nodes.forEach(n => {
+            if (n !== node) n.setSelectedStyle(false);
+        });
+        // Apply style to newly selected node
+        node?.setSelectedStyle(true);
+    }
+
+    _onEdgeSelected = (edge) => {
+        // Deselect previously selected edge if any
+        this.space.edges.forEach(e => {
+            if (e !== edge) e.setHighlight(false);
+        });
+        // Apply highlight to newly selected edge
+        edge?.setHighlight(true);
+
+        if (edge) {
+            this.showEdgeMenu(edge);
+        } else {
+            this.hideEdgeMenu();
+        }
+    }
+
+    _onNodeAdded = (node) => {
+        // Potentially update UI lists, etc.
+        // For now, just log or react if needed
+        // console.log("UI: Node added:", node.id);
+    }
+
+    _onNodeRemoved = (nodeId, node) => {
+        // Potentially update UI lists, etc.
+        // console.log("UI: Node removed:", nodeId);
+    }
+
+    _onEdgeAdded = (edge) => {
+        // console.log("UI: Edge added:", edge.id);
+    }
+
+    _onEdgeRemoved = (edgeId, edge) => {
+        // console.log("UI: Edge removed:", edgeId);
+    }
+
+    _onLayoutStarted = () => {
+        // console.log("UI: Layout started");
+        // Potentially show a "layout running" indicator
+    }
+
+    _onLayoutStopped = () => {
+        // console.log("UI: Layout stopped");
+        // Potentially hide the indicator
+    }
+
+    _onLinkingStarted = (sourceNode) => {
+        this.container.style.cursor = 'crosshair';
+        this._createTempLinkLine(sourceNode);
+        this._hideContextMenu();
+    }
+
+    _onLinkingCancelled = () => {
+        this._removeTempLinkLine();
+        this.container.style.cursor = 'grab';
+        $$('.node-common.linking-target').forEach(el => el.classList.remove('linking-target'));
+    }
+
+    _onLinkingCompleted = () => {
+        this._removeTempLinkLine();
+        this.container.style.cursor = 'grab';
+        $$('.node-common.linking-target').forEach(el => el.classList.remove('linking-target'));
+    }
+
     dispose() {
         // Remove event listeners (ensure correct options if used)
         const passiveOpts = {passive: false}; // Define once
@@ -780,6 +778,20 @@ export class UIManager {
         $('#confirm-no', this.confirmDialogElement)?.removeEventListener('click', this._onConfirmNo);
         window.removeEventListener('keydown', this._onKeyDown);
         this.container.removeEventListener('wheel', this._onWheel, passiveOpts);
+
+        // Unsubscribe from SpaceGraph events
+        this.space.off('node:selected', this._onNodeSelected);
+        this.space.off('edge:selected', this._onEdgeSelected);
+        this.space.off('node:added', this._onNodeAdded);
+        this.space.off('node:removed', this._onNodeRemoved);
+        this.space.off('edge:added', this._onEdgeAdded);
+        this.space.off('edge:removed', this._onEdgeRemoved);
+        this.space.off('layout:started', this._onLayoutStarted);
+        this.space.off('layout:stopped', this._onLayoutStopped);
+        this.space.off('ui:linking:started', this._onLinkingStarted);
+        this.space.off('ui:linking:cancelled', this._onLinkingCancelled);
+        this.space.off('ui:linking:completed', this._onLinkingCompleted);
+
 
         this.hideEdgeMenu(); // Clean up edge menu object
         // Clear references

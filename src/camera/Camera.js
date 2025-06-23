@@ -11,6 +11,8 @@ export class Camera {
     targetPosition = new THREE.Vector3();
     targetLookAt = new THREE.Vector3();
     currentLookAt = new THREE.Vector3();
+    _prevPosition = new THREE.Vector3(); // For movement detection
+    _prevLookAt = new THREE.Vector3(); // For movement detection
     viewHistory = [];
     currentTargetNodeId = null;
     initialState = null;
@@ -24,13 +26,15 @@ export class Camera {
 
     constructor(space) {
         if (!space?._cam || !space.container) throw new Error("Camera requires SpaceGraph instance with camera and container.");
-        this.space = space;
+        this.space = space; // Store SpaceGraph instance
         this._cam = space._cam;
         this.domElement = space.container;
         this.targetPosition.copy(this._cam.position);
         // Initial lookAt is projected onto Z=0 plane from initial camera position
         this.targetLookAt.set(this._cam.position.x, this._cam.position.y, 0);
         this.currentLookAt.copy(this.targetLookAt);
+        this._prevPosition.copy(this._cam.position);
+        this._prevLookAt.copy(this.targetLookAt);
         this._startUpdateLoop();
     }
 
@@ -159,10 +163,23 @@ export class Camera {
             this.currentLookAt.lerp(this.targetLookAt, this.dampingFactor);
             this._cam.lookAt(this.currentLookAt);
             // No need for updateProjectionMatrix unless FOV/aspect changes
+
+            // Emit camera:moved event if position or lookAt has changed significantly
+            const movementThreshold = 0.1; // World units
+            if (this._cam.position.distanceTo(this._prevPosition) > movementThreshold ||
+                this.currentLookAt.distanceTo(this._prevLookAt) > movementThreshold) {
+                this.space.emit('camera:moved', this._cam.position.clone(), this.currentLookAt.clone());
+                this._prevPosition.copy(this._cam.position);
+                this._prevLookAt.copy(this.currentLookAt);
+            }
         } else if (deltaPos > 0 || deltaLookAt > 0) { // Snap to final position if close enough
             this._cam.position.copy(this.targetPosition);
             this.currentLookAt.copy(this.targetLookAt);
             this._cam.lookAt(this.currentLookAt);
+            // Ensure one final emit after snapping
+            this.space.emit('camera:moved', this._cam.position.clone(), this.currentLookAt.clone());
+            this._prevPosition.copy(this._cam.position);
+            this._prevLookAt.copy(this.currentLookAt);
         }
         this.animationFrameId = requestAnimationFrame(this._startUpdateLoop);
     }
