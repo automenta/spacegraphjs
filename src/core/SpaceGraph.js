@@ -44,10 +44,10 @@ export class SpaceGraph {
         this.confirmDialogElement = confirmDialogElement; // Added
         this.plugins = new PluginManager(this);
 
-        // Register RenderingPlugin
-        this.plugins.add(new RenderingPlugin(this, this.plugins));
-        // Register CameraPlugin
+        // Register CameraPlugin FIRST
         this.plugins.add(new CameraPlugin(this, this.plugins));
+        // Register RenderingPlugin SECOND
+        this.plugins.add(new RenderingPlugin(this, this.plugins));
         // Register NodePlugin
         this.plugins.add(new NodePlugin(this, this.plugins));
         // Register EdgePlugin
