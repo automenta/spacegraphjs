@@ -4,3 +4,4 @@ dist-demo/
 docs/
 .idea
 .aider*
+npm_start.log
