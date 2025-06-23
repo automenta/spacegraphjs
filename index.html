@@ -47,18 +47,26 @@
         }
 
         try {
-            const space = new S.SpaceGraph(container);
+            // Pass contextMenuEl and confirmDialogEl to SpaceGraph constructor
+            const space = new S.SpaceGraph(container, contextMenuEl, confirmDialogEl);
 
-            space.ui = new S.UIManager(space, contextMenuEl, confirmDialogEl);
-
-            const layout = new S.ForceLayout(space);
-            space.layout = layout;
+            // UIManager and ForceLayout are now created and managed by plugins internally.
+            // space.ui = new S.UIManager(space, contextMenuEl, confirmDialogEl); // REMOVED
+            // const layout = new S.ForceLayout(space); // REMOVED
+            // space.layout = layout; // REMOVED
 
             createExampleGraph(space); // Call the imported function
 
-            layout.runOnce(250); // Initial settling steps
+            // Access layout via LayoutPlugin
+            const layoutPlugin = space.pluginManager.getPlugin('LayoutPlugin');
+            if (layoutPlugin && layoutPlugin.activeLayout) {
+                layoutPlugin.activeLayout.runOnce(250); // Initial settling steps
+                layoutPlugin.activeLayout.start(); // Start continuous layout simulation
+            } else {
+                console.error("LayoutPlugin or activeLayout not available for initialization.");
+            }
+
             space.centerView(null, 0.8); // Center view smoothly
-            layout.start(); // Start continuous layout simulation
             space.animate(); // Start render loop
 
             window.space = space; // Expose for debugging

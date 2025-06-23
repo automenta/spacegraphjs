@@ -29,6 +29,7 @@ export class UIManager {
         startPos: {x: 0, y: 0}
     };
     confirmCallback = null;
+    tempLinkLine = null; // Added: Managed by UIManager now
 
     constructor(space, contextMenuEl, confirmDialogEl) {
         if (!space || !contextMenuEl || !confirmDialogEl) throw new Error("UIManager requires SpaceGraph instance and UI elements.");
@@ -151,7 +152,8 @@ export class UIManager {
         if (this.pointerState.primary) {
             const dx = e.clientX - this.pointerState.lastPos.x; // Recalculate dx, dy for pan
             const dy = e.clientY - this.pointerState.lastPos.y;
-            this.space.camera?.pan(dx, dy);
+            // MODIFIED: Use CameraPlugin
+            this.space.pluginManager.getPlugin('CameraPlugin')?.pan(dx, dy);
         }
     }
 
@@ -172,7 +174,8 @@ export class UIManager {
             }
         }
 
-        this.space.camera?.endPan();
+        // MODIFIED: Use CameraPlugin
+        this.space.pluginManager.getPlugin('CameraPlugin')?.endPan();
         this._updatePointerState(e, false);
         $$('.node-common.linking-target').forEach(el => el.classList.remove('linking-target'));
     }
@@ -221,8 +224,11 @@ export class UIManager {
 
         // Deselect node/edge if clicking background and not dragging/panning/linking
         // and not clicking on any graph element (node HTML, node mesh, edge line)
+        // MODIFIED: Use CameraPlugin for isPanning
+        const cameraPlugin = this.space.pluginManager.getPlugin('CameraPlugin');
+        const cameraControls = cameraPlugin?.getControls(); // CameraControls instance
         if (!clickedContextMenu && !clickedEdgeMenu && !clickedConfirmDialog &&
-            this.pointerState.potentialClick && !this.space.camera?.isPanning && !this.space.isLinking) {
+            this.pointerState.potentialClick && !(cameraControls?.isPanning) && !this.space.isLinking) {
             const targetInfo = this._getTargetInfo(e);
             const clickedOnGraphElement = targetInfo.nodeElement || targetInfo.intersectedObjectResult?.node || targetInfo.intersectedObjectResult?.edge;
             if (!clickedOnGraphElement) {
@@ -240,23 +246,33 @@ export class UIManager {
 
         const actions = {
             'edit-node': () => {
-                const node = this.space.getNodeById(nodeId);
+                // MODIFIED: Use NodePlugin
+                const node = this.space.pluginManager.getPlugin('NodePlugin')?.getNodeById(nodeId);
                 if (node instanceof HtmlNode && node.data.editable) {
                     node.htmlElement?.querySelector('.node-content')?.focus();
                 }
             },
             'delete-node': () => this._showConfirm(`Delete node "${nodeId?.substring(0, 10)}..."?`, () => this.space.emit('ui:request:removeNode', nodeId)),
             'delete-edge': () => this._showConfirm(`Delete edge "${edgeId?.substring(0, 10)}..."?`, () => this.space.emit('ui:request:removeEdge', edgeId)),
-            'autozoom-node': () => this.space.emit('ui:request:autoZoomNode', this.space.getNodeById(nodeId)),
+            // MODIFIED: Use NodePlugin
+            'autozoom-node': () => this.space.emit('ui:request:autoZoomNode', this.space.pluginManager.getPlugin('NodePlugin')?.getNodeById(nodeId)),
             'create-note': () => this.space.emit('ui:request:addNode', new NoteNode(null, JSON.parse(positionData), {content: 'New Note ✨'})),
             'create-box': () => this.space.emit('ui:request:addNode', new ShapeNode(null, JSON.parse(positionData), {label: "Box Node 📦", shape: 'box', size: 60, color: Math.random() * 0xffffff})),
             'create-sphere': () => this.space.emit('ui:request:addNode', new ShapeNode(null, JSON.parse(positionData), {label: "Sphere Node 🌐", shape: 'sphere', size: 60, color: Math.random() * 0xffffff})),
             'center-view': () => this.space.emit('ui:request:centerView'),
             'reset-view': () => this.space.emit('ui:request:resetView'),
-            'start-link': () => this.space.emit('ui:request:startLinking', this.space.getNodeById(nodeId)),
+            // MODIFIED: Use NodePlugin
+            'start-link': () => this.space.emit('ui:request:startLinking', this.space.pluginManager.getPlugin('NodePlugin')?.getNodeById(nodeId)),
             'reverse-edge': () => this.space.emit('ui:request:reverseEdge', edgeId),
-            'edit-edge': () => this.space.emit('ui:request:setSelectedEdge', this.space.getEdgeById(edgeId)),
-            'toggle-background': () => this.space.emit('ui:request:toggleBackground', this.space.background.alpha === 0 ? 0x1a1a1d : 0x000000, this.space.background.alpha === 0 ? 1.0 : 0),
+            // MODIFIED: Use EdgePlugin
+            'edit-edge': () => this.space.emit('ui:request:setSelectedEdge', this.space.pluginManager.getPlugin('EdgePlugin')?.getEdgeById(edgeId)),
+            // MODIFIED: Use RenderingPlugin for background info
+            'toggle-background': () => {
+                const renderingPlugin = this.space.pluginManager.getPlugin('RenderingPlugin');
+                if (renderingPlugin) {
+                    this.space.emit('ui:request:toggleBackground', renderingPlugin.background.alpha === 0 ? 0x1a1a1d : 0x000000, renderingPlugin.background.alpha === 0 ? 1.0 : 0);
+                }
+            },
         };
 
         actions[action]?.() ?? console.warn("Unknown context menu action:", action);
@@ -321,8 +337,10 @@ export class UIManager {
                 else if (selectedEdge) {
                     const midPoint = new THREE.Vector3().lerpVectors(selectedEdge.source.position, selectedEdge.target.position, 0.5);
                     const dist = selectedEdge.source.position.distanceTo(selectedEdge.target.position);
-                    this.space.camera?.pushState();
-                    this.space.camera?.moveTo(midPoint.x, midPoint.y, midPoint.z + dist * 0.6 + 100, 0.5, midPoint);
+                    // MODIFIED: Use CameraPlugin
+                    const cameraPlugin = this.space.pluginManager.getPlugin('CameraPlugin');
+                    cameraPlugin?.pushState();
+                    cameraPlugin?.moveTo(midPoint.x, midPoint.y, midPoint.z + dist * 0.6 + 100, 0.5, midPoint);
                 } else this.space.emit('ui:request:centerView');
                 break;
             default:
@@ -357,7 +375,8 @@ export class UIManager {
         const contentEditable = element?.closest('[contenteditable="true"]');
         const interactiveElement = element?.closest('button, input, textarea, select, a'); // Inside node content
 
-        let node = nodeElement ? this.space.getNodeById(nodeElement.dataset.nodeId) : null;
+        // MODIFIED: Use NodePlugin
+        let node = nodeElement ? this.space.pluginManager.getPlugin('NodePlugin')?.getNodeById(nodeElement.dataset.nodeId) : null;
         let intersectedObjectResult = null;
 
         // Raycast if not interacting with specific HTML node parts or if clicking background/label
@@ -389,13 +408,27 @@ export class UIManager {
         }
 
         // Raycast to find hovered edge, ignoring nodes for hover effect
+        // MODIFIED: Use CameraPlugin and EdgePlugin
+        const cameraPlugin = this.space.pluginManager.getPlugin('CameraPlugin');
+        const edgePlugin = this.space.pluginManager.getPlugin('EdgePlugin');
+        const camInstance = cameraPlugin?.getCameraInstance();
+
+        if (!camInstance || !edgePlugin) {
+            if (this.hoveredEdge && this.hoveredEdge !== this.space.edgeSelected) {
+                this.hoveredEdge.setHighlight(false);
+                this.hoveredEdge = null;
+            }
+            return;
+        }
+
         const vec = new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
         const raycaster = new THREE.Raycaster();
-        raycaster.setFromCamera(vec, this.space._cam);
+        raycaster.setFromCamera(vec, camInstance);
         raycaster.params.Line.threshold = 5;
-        const edgeLines = [...this.space.edges.values()].map(edge => edge.line).filter(Boolean);
+        const currentEdges = edgePlugin.getEdges();
+        const edgeLines = [...currentEdges.values()].map(edge => edge.line).filter(Boolean);
         const intersects = edgeLines.length > 0 ? raycaster.intersectObjects(edgeLines, false) : [];
-        const intersectedEdge = intersects.length > 0 ? this.space.getEdgeById(intersects[0].object.userData.edgeId) : null;
+        const intersectedEdge = intersects.length > 0 ? edgePlugin.getEdgeById(intersects[0].object.userData.edgeId) : null;
 
 
         if (this.hoveredEdge !== intersectedEdge) {
@@ -451,7 +484,7 @@ export class UIManager {
             e.preventDefault();
             this.draggedNode = targetInfo.node;
             this.draggedNode.startDrag();
-            const worldPos = this.space.screenToWorld(e.clientX, e.clientY, this.draggedNode.position.z);
+            const worldPos = this.space.screenToWorld(e.clientX, e.clientY, this.draggedNode.position.z); // screenToWorld is on SpaceGraph, uses CameraPlugin
             this.dragOffset = worldPos ? worldPos.sub(this.draggedNode.position) : new THREE.Vector3();
             this.container.style.cursor = 'grabbing';
             this.space.emit('ui:request:setSelectedNode', targetInfo.node);
@@ -484,7 +517,8 @@ export class UIManager {
         // Start panning if click is on background (no node, no edge from raycast)
         if (!targetInfo.node && !targetInfo.intersectedEdge) {
             this._hideContextMenu();
-            this.space.camera?.startPan(e.clientX, e.clientY);
+            // MODIFIED: Use CameraPlugin
+            this.space.pluginManager.getPlugin('CameraPlugin')?.startPan(e.clientX, e.clientY);
             // Deselection happens on click up / document click
         }
         return false;
@@ -524,10 +558,14 @@ export class UIManager {
         items.push({type: 'separator'});
         items.push({label: "Center View 🧭", action: "center-view"});
         items.push({label: "Reset Zoom & Pan", action: "reset-view"});
-        items.push({
-            label: this.space.background.alpha === 0 ? "Set Dark Background" : "Set Transparent BG",
-            action: "toggle-background"
-        });
+        // MODIFIED: Use RenderingPlugin for background info
+        const renderingPlugin = this.space.pluginManager.getPlugin('RenderingPlugin');
+        if (renderingPlugin) {
+            items.push({
+                label: renderingPlugin.background.alpha === 0 ? "Set Dark Background" : "Set Transparent BG",
+                action: "toggle-background"
+            });
+        }
         return items;
     }
 
@@ -589,30 +627,32 @@ export class UIManager {
         });
         const points = [sourceNode.position.clone(), sourceNode.position.clone()];
         const geometry = new THREE.BufferGeometry().setFromPoints(points);
-        this.space.tempLinkLine = new THREE.Line(geometry, material);
-        this.space.tempLinkLine.computeLineDistances();
-        this.space.tempLinkLine.renderOrder = 1;
-        this.space.scene.add(this.space.tempLinkLine);
+        this.tempLinkLine = new THREE.Line(geometry, material); // MODIFIED: Use this.tempLinkLine
+        this.tempLinkLine.computeLineDistances();
+        this.tempLinkLine.renderOrder = 1;
+        // MODIFIED: Use RenderingPlugin
+        this.space.pluginManager.getPlugin('RenderingPlugin')?.getWebGLScene()?.add(this.tempLinkLine);
     }
 
     _updateTempLinkLine(screenX, screenY) {
-        if (!this.space.tempLinkLine || !this.space.linkSourceNode) return;
+        if (!this.tempLinkLine || !this.space.linkSourceNode) return; // MODIFIED: Use this.tempLinkLine
         const targetPos = this.space.screenToWorld(screenX, screenY, this.space.linkSourceNode.position.z);
         if (targetPos) {
-            const positions = this.space.tempLinkLine.geometry.attributes.position;
+            const positions = this.tempLinkLine.geometry.attributes.position; // MODIFIED: Use this.tempLinkLine
             positions.setXYZ(1, targetPos.x, targetPos.y, targetPos.z);
             positions.needsUpdate = true;
-            this.space.tempLinkLine.geometry.computeBoundingSphere();
-            this.space.tempLinkLine.computeLineDistances();
+            this.tempLinkLine.geometry.computeBoundingSphere(); // MODIFIED: Use this.tempLinkLine
+            this.tempLinkLine.computeLineDistances(); // MODIFIED: Use this.tempLinkLine
         }
     }
 
     _removeTempLinkLine() {
-        if (this.space.tempLinkLine) {
-            this.space.tempLinkLine.geometry?.dispose();
-            this.space.tempLinkLine.material?.dispose();
-            this.space.scene.remove(this.space.tempLinkLine);
-            this.space.tempLinkLine = null;
+        if (this.tempLinkLine) { // MODIFIED: Use this.tempLinkLine
+            this.tempLinkLine.geometry?.dispose();
+            this.tempLinkLine.material?.dispose();
+            // MODIFIED: Use RenderingPlugin
+            this.space.pluginManager.getPlugin('RenderingPlugin')?.getWebGLScene()?.remove(this.tempLinkLine);
+            this.tempLinkLine = null; // MODIFIED: Use this.tempLinkLine
         }
     }
 
@@ -647,7 +687,9 @@ export class UIManager {
             const target = e.target;
             const action = target.dataset.action;
             const edgeId = menu.dataset.edgeId;
-            const currentEdge = this.space.getEdgeById(edgeId);
+            // MODIFIED: Use EdgePlugin
+            const edgePlugin = this.space.pluginManager.getPlugin('EdgePlugin');
+            const currentEdge = edgePlugin?.getEdgeById(edgeId);
             if (!currentEdge) return;
 
             let value;
@@ -688,15 +730,19 @@ export class UIManager {
         const edge = this.space.edgeSelected;
         const midPoint = new THREE.Vector3().lerpVectors(edge.source.position, edge.target.position, 0.5);
         this.edgeMenuObject.position.copy(midPoint);
-        if (this.space.camera?._cam) { // Billboard effect
-            this.edgeMenuObject.quaternion.copy(this.space.camera._cam.quaternion);
+        // MODIFIED: Use CameraPlugin
+        const camInstance = this.space.pluginManager.getPlugin('CameraPlugin')?.getCameraInstance();
+        if (camInstance) { // Billboard effect
+            this.edgeMenuObject.quaternion.copy(camInstance.quaternion);
         }
     }
 
     // --- Event Handlers for SpaceGraph Events ---
     _onNodeSelected = (node) => {
         // Deselect previously selected node if any
-        this.space.nodes.forEach(n => {
+        // MODIFIED: Use NodePlugin
+        const nodePlugin = this.space.pluginManager.getPlugin('NodePlugin');
+        nodePlugin?.getNodes().forEach(n => {
             if (n !== node) n.setSelectedStyle(false);
         });
         // Apply style to newly selected node
@@ -705,7 +751,9 @@ export class UIManager {
 
     _onEdgeSelected = (edge) => {
         // Deselect previously selected edge if any
-        this.space.edges.forEach(e => {
+        // MODIFIED: Use EdgePlugin
+        const edgePlugin = this.space.pluginManager.getPlugin('EdgePlugin');
+        edgePlugin?.getEdges().forEach(e => {
             if (e !== edge) e.setHighlight(false);
         });
         // Apply highlight to newly selected edge

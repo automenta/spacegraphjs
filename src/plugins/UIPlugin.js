@@ -9,9 +9,13 @@ import { UIManager } from '../ui/UIManager.js';
 export class UIPlugin extends Plugin {
     /** @type {UIManager | null} */
     uiManager = null;
+    contextMenuElement = null;
+    confirmDialogElement = null;
 
-    constructor(spaceGraph, pluginManager) {
+    constructor(spaceGraph, pluginManager, contextMenuElement, confirmDialogElement) {
         super(spaceGraph, pluginManager);
+        this.contextMenuElement = contextMenuElement;
+        this.confirmDialogElement = confirmDialogElement;
     }
 
     getName() {
@@ -20,8 +24,12 @@ export class UIPlugin extends Plugin {
 
     init() {
         super.init();
-        // UIManager constructor expects the SpaceGraph instance.
-        this.uiManager = new UIManager(this.space);
+        // UIManager constructor expects the SpaceGraph instance, contextMenuEl, confirmDialogEl.
+        if (!this.contextMenuElement || !this.confirmDialogElement) {
+            console.error("UIPlugin: Missing contextMenuElement or confirmDialogElement for UIManager initialization.");
+            return;
+        }
+        this.uiManager = new UIManager(this.space, this.contextMenuElement, this.confirmDialogElement);
 
         // Initialize UI elements if UIManager has such a method,
         // or UIManager's constructor handles it.

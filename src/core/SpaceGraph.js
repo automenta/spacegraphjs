@@ -32,10 +32,17 @@ export class SpaceGraph {
 
     _listeners = new Map(); // Event bus listeners
     pluginManager = null;
+    contextMenuElement = null; // Added
+    confirmDialogElement = null; // Added
 
-    constructor(containerElement) {
+    constructor(containerElement, contextMenuElement, confirmDialogElement) { // Modified
         if (!containerElement) throw new Error("SpaceGraph requires a valid HTML container element.");
+        if (!contextMenuElement) throw new Error("SpaceGraph requires a contextMenuElement.");
+        if (!confirmDialogElement) throw new Error("SpaceGraph requires a confirmDialogElement.");
+
         this.container = containerElement;
+        this.contextMenuElement = contextMenuElement; // Added
+        this.confirmDialogElement = confirmDialogElement; // Added
         this.pluginManager = new PluginManager(this);
 
         // Register RenderingPlugin
@@ -49,7 +56,7 @@ export class SpaceGraph {
         // Register LayoutPlugin
         this.pluginManager.registerPlugin(new LayoutPlugin(this, this.pluginManager));
         // Register UIPlugin
-        this.pluginManager.registerPlugin(new UIPlugin(this, this.pluginManager));
+        this.pluginManager.registerPlugin(new UIPlugin(this, this.pluginManager, this.contextMenuElement, this.confirmDialogElement)); // Modified
 
         // _cam is now created by CameraPlugin and assigned to this.space._cam in CameraPlugin.init() for now.
         // Direct instantiation of THREE.PerspectiveCamera, CameraControls, Layout, and UIManager is removed from here.
@@ -195,6 +202,34 @@ export class SpaceGraph {
 
     // getNodeById is removed, use NodePlugin.getNodeById(id) via pluginManager
     // getEdgeById is removed, use EdgePlugin.getEdgeById(id) via pluginManager
+
+    addNode(nodeInstance) {
+        const nodePlugin = this.pluginManager.getPlugin('NodePlugin');
+        const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin');
+        if (nodePlugin) {
+            const addedNode = nodePlugin.addNode(nodeInstance); // NodePlugin calls LayoutPlugin.addNodeToLayout
+            if (addedNode && layoutPlugin) {
+                layoutPlugin.kick();
+            }
+            return addedNode;
+        }
+        console.error("SpaceGraph: NodePlugin not available to add node.");
+        return undefined;
+    }
+
+    addEdge(sourceNode, targetNode, data = {}) {
+        const edgePlugin = this.pluginManager.getPlugin('EdgePlugin');
+        const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin');
+        if (edgePlugin) {
+            const addedEdge = edgePlugin.addEdge(sourceNode, targetNode, data); // EdgePlugin calls LayoutPlugin.addEdgeToLayout
+            if (addedEdge && layoutPlugin) {
+                layoutPlugin.kick();
+            }
+            return addedEdge;
+        }
+        console.error("SpaceGraph: EdgePlugin not available to add edge.");
+        return undefined;
+    }
 
     updateNodesAndEdges() {
         // Node, Edge, and UI updates (like updateEdgeMenuPosition) are now handled by their
