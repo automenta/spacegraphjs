@@ -1,5 +1,3 @@
-import * as THREE from 'three';
-
 export const $ = (selector, context) => (context || document).querySelector(selector);
 export const $$ = (selector, context) => (context || document).querySelectorAll(selector);
 

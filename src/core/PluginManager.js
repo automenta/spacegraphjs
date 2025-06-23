@@ -39,7 +39,7 @@ export class PluginManager {
      * The plugin should be an instance of a class that extends `Plugin`.
      * @param {import('./Plugin.js').Plugin} pluginInstance - The plugin instance to register.
      */
-    registerPlugin(pluginInstance) {
+    add(pluginInstance) {
         if (!pluginInstance || typeof pluginInstance.getName !== 'function') {
             console.error('PluginManager: Attempted to register an invalid plugin.', pluginInstance);
             return;

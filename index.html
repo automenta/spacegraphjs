@@ -58,7 +58,7 @@
             createExampleGraph(space); // Call the imported function
 
             // Access layout via LayoutPlugin
-            const layoutPlugin = space.pluginManager.getPlugin('LayoutPlugin');
+            const layoutPlugin = space.plugins.getPlugin('LayoutPlugin');
             if (layoutPlugin && layoutPlugin.activeLayout) {
                 layoutPlugin.activeLayout.runOnce(250); // Initial settling steps
                 layoutPlugin.activeLayout.start(); // Start continuous layout simulation

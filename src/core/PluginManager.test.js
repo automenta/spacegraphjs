@@ -46,7 +46,7 @@ describe('PluginManager', () => {
     it('should register a plugin', () => {
         const pm = new PluginManager(mockSpaceGraph);
         const plugin = new MockPlugin(mockSpaceGraph, pm);
-        pm.registerPlugin(plugin);
+        pm.add(plugin);
         expect(pm.plugins).toContain(plugin);
         expect(pm.pluginMap.get(plugin.getName())).toBe(plugin);
     });
@@ -57,8 +57,8 @@ describe('PluginManager', () => {
         const plugin2 = new MockPlugin(mockSpaceGraph, pm, 'DuplicateNamePlugin');
         const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-        pm.registerPlugin(plugin1);
-        pm.registerPlugin(plugin2);
+        pm.add(plugin1);
+        pm.add(plugin2);
 
         expect(pm.plugins.length).toBe(1);
         expect(pm.plugins[0]).toBe(plugin1);
@@ -74,7 +74,7 @@ describe('PluginManager', () => {
         const invalidPlugin = { name: 'InvalidPlugin' }; // Does not extend Plugin or have getName
         const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-        pm.registerPlugin(invalidPlugin);
+        pm.add(invalidPlugin);
 
         expect(pm.plugins.length).toBe(0);
         expect(consoleErrorSpy).toHaveBeenCalledWith(
@@ -88,8 +88,8 @@ describe('PluginManager', () => {
         const pm = new PluginManager(mockSpaceGraph);
         const plugin1 = new MockPlugin(mockSpaceGraph, pm, 'Plugin1');
         const plugin2 = new MockPlugin(mockSpaceGraph, pm, 'Plugin2');
-        pm.registerPlugin(plugin1);
-        pm.registerPlugin(plugin2);
+        pm.add(plugin1);
+        pm.add(plugin2);
 
         pm.initPlugins();
 
@@ -103,8 +103,8 @@ describe('PluginManager', () => {
         const pm = new PluginManager(mockSpaceGraph);
         const plugin1 = new MockPlugin(mockSpaceGraph, pm, 'Plugin1');
         const plugin2 = new MockPlugin(mockSpaceGraph, pm, 'Plugin2');
-        pm.registerPlugin(plugin1);
-        pm.registerPlugin(plugin2);
+        pm.add(plugin1);
+        pm.add(plugin2);
 
         pm.updatePlugins();
 
@@ -129,8 +129,8 @@ describe('PluginManager', () => {
             plugin2.isDisposed = true;
         });
 
-        pm.registerPlugin(plugin1);
-        pm.registerPlugin(plugin2);
+        pm.add(plugin1);
+        pm.add(plugin2);
         pm.disposePlugins();
 
         expect(plugin1.dispose).toHaveBeenCalled();
@@ -145,7 +145,7 @@ describe('PluginManager', () => {
     it('should retrieve a plugin by name', () => {
         const pm = new PluginManager(mockSpaceGraph);
         const plugin = new MockPlugin(mockSpaceGraph, pm, 'MyNamedPlugin');
-        pm.registerPlugin(plugin);
+        pm.add(plugin);
 
         const retrievedPlugin = pm.getPlugin('MyNamedPlugin');
         expect(retrievedPlugin).toBe(plugin);
@@ -157,8 +157,8 @@ describe('PluginManager', () => {
         const pm = new PluginManager(mockSpaceGraph);
         const plugin1 = new MockPlugin(mockSpaceGraph, pm, 'P1');
         const plugin2 = new MockPlugin(mockSpaceGraph, pm, 'P2');
-        pm.registerPlugin(plugin1);
-        pm.registerPlugin(plugin2);
+        pm.add(plugin1);
+        pm.add(plugin2);
 
         const allPlugins = pm.getAllPlugins();
         expect(allPlugins.length).toBe(2);

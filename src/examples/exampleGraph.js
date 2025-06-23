@@ -127,8 +127,8 @@ export function createExampleGraph(space) {
     space.addEdge(n_features, n_interactive);
     space.addEdge(n_style, n_interactive, { constraintType: 'elastic', constraintParams: { idealLength: 250 } });
 
-    const nodePlugin = space.pluginManager?.getPlugin('NodePlugin');
-    const edgePlugin = space.pluginManager?.getPlugin('EdgePlugin');
+    const nodePlugin = space.plugins?.getPlugin('NodePlugin');
+    const edgePlugin = space.plugins?.getPlugin('EdgePlugin');
     const nodeCount = nodePlugin?.getNodes()?.size || 0;
     const edgeCount = edgePlugin?.getEdges()?.size || 0;
 

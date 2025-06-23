@@ -14,14 +14,13 @@
     "scripts": {
         "build": "tsc && vite build --config vite.lib.config.js",
         "build:demo": "vite build --outDir dist-demo",
-        "test": "vitest",
+        "test": "vitest --run",
         "docs:build": "jsdoc -c jsdoc.conf.json",
         "docs:view": "serve ./docs/api -l 8080",
         "lint": "eslint . --ext .js",
         "lint:fix": "eslint . --ext .js --fix",
         "format": "prettier --write \"**/*.{js,json,md,html,css}\"",
         "start": "npm run build && npx vite dev",
-        "demos": "npm run build && npx vite dev --open /demos.html",
         "build:watch": "vite build --watch",
         "build:gh-pages": "mkdir -p docs && cp index.html docs/index.html && echo '<h1>Test Page</h1><p>This is docs/test.html</p>' > docs/test.html && echo 'Content of root index.html that will be copied:' && cat index.html"
     },

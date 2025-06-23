@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
-import { Utils, $, $$ } from '../utils.js';
+import { $, $$ } from '../utils.js';
 import { HtmlNode } from '../graph/nodes/HtmlNode.js';
 import { NoteNode } from '../graph/nodes/NoteNode.js';
 import { ShapeNode } from '../graph/nodes/ShapeNode.js';
@@ -154,7 +154,7 @@ export class UIManager {
             const dx = e.clientX - this.pointerState.lastPos.x; // Recalculate dx, dy for pan
             const dy = e.clientY - this.pointerState.lastPos.y;
             // MODIFIED: Use CameraPlugin
-            this.space.pluginManager.getPlugin('CameraPlugin')?.pan(dx, dy);
+            this.space.plugins.getPlugin('CameraPlugin')?.pan(dx, dy);
         }
     };
 
@@ -176,7 +176,7 @@ export class UIManager {
         }
 
         // MODIFIED: Use CameraPlugin
-        this.space.pluginManager.getPlugin('CameraPlugin')?.endPan();
+        this.space.plugins.getPlugin('CameraPlugin')?.endPan();
         this._updatePointerState(e, false);
         $$('.node-common.linking-target').forEach((el) => el.classList.remove('linking-target'));
     };
@@ -228,7 +228,7 @@ export class UIManager {
         // Deselect node/edge if clicking background and not dragging/panning/linking
         // and not clicking on any graph element (node HTML, node mesh, edge line)
         // MODIFIED: Use CameraPlugin for isPanning
-        const cameraPlugin = this.space.pluginManager.getPlugin('CameraPlugin');
+        const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
         const cameraControls = cameraPlugin?.getControls(); // CameraControls instance
         if (
             !clickedContextMenu &&
@@ -259,7 +259,7 @@ export class UIManager {
         const actions = {
             'edit-node': () => {
                 // MODIFIED: Use NodePlugin
-                const node = this.space.pluginManager.getPlugin('NodePlugin')?.getNodeById(nodeId);
+                const node = this.space.plugins.getPlugin('NodePlugin')?.getNodeById(nodeId);
                 if (node instanceof HtmlNode && node.data.editable) {
                     node.htmlElement?.querySelector('.node-content')?.focus();
                 }
@@ -276,7 +276,7 @@ export class UIManager {
             'autozoom-node': () =>
                 this.space.emit(
                     'ui:request:autoZoomNode',
-                    this.space.pluginManager.getPlugin('NodePlugin')?.getNodeById(nodeId)
+                    this.space.plugins.getPlugin('NodePlugin')?.getNodeById(nodeId)
                 ),
             'create-note': () =>
                 this.space.emit(
@@ -309,18 +309,18 @@ export class UIManager {
             'start-link': () =>
                 this.space.emit(
                     'ui:request:startLinking',
-                    this.space.pluginManager.getPlugin('NodePlugin')?.getNodeById(nodeId)
+                    this.space.plugins.getPlugin('NodePlugin')?.getNodeById(nodeId)
                 ),
             'reverse-edge': () => this.space.emit('ui:request:reverseEdge', edgeId),
             // MODIFIED: Use EdgePlugin
             'edit-edge': () =>
                 this.space.emit(
                     'ui:request:setSelectedEdge',
-                    this.space.pluginManager.getPlugin('EdgePlugin')?.getEdgeById(edgeId)
+                    this.space.plugins.getPlugin('EdgePlugin')?.getEdgeById(edgeId)
                 ),
             // MODIFIED: Use RenderingPlugin for background info
             'toggle-background': () => {
-                const renderingPlugin = this.space.pluginManager.getPlugin('RenderingPlugin');
+                const renderingPlugin = this.space.plugins.getPlugin('RenderingPlugin');
                 if (renderingPlugin) {
                     this.space.emit(
                         'ui:request:toggleBackground',
@@ -408,7 +408,7 @@ export class UIManager {
                     );
                     const dist = selectedEdge.source.position.distanceTo(selectedEdge.target.position);
                     // MODIFIED: Use CameraPlugin
-                    const cameraPlugin = this.space.pluginManager.getPlugin('CameraPlugin');
+                    const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
                     cameraPlugin?.pushState();
                     cameraPlugin?.moveTo(midPoint.x, midPoint.y, midPoint.z + dist * 0.6 + 100, 0.5, midPoint);
                 } else this.space.emit('ui:request:centerView');
@@ -447,7 +447,7 @@ export class UIManager {
 
         // MODIFIED: Use NodePlugin
         let node = nodeElement
-            ? this.space.pluginManager.getPlugin('NodePlugin')?.getNodeById(nodeElement.dataset.nodeId)
+            ? this.space.plugins.getPlugin('NodePlugin')?.getNodeById(nodeElement.dataset.nodeId)
             : null;
         let intersectedObjectResult = null;
 
@@ -485,8 +485,8 @@ export class UIManager {
 
         // Raycast to find hovered edge, ignoring nodes for hover effect
         // MODIFIED: Use CameraPlugin and EdgePlugin
-        const cameraPlugin = this.space.pluginManager.getPlugin('CameraPlugin');
-        const edgePlugin = this.space.pluginManager.getPlugin('EdgePlugin');
+        const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
+        const edgePlugin = this.space.plugins.getPlugin('EdgePlugin');
         const camInstance = cameraPlugin?.getCameraInstance();
 
         if (!camInstance || !edgePlugin) {
@@ -605,7 +605,7 @@ export class UIManager {
         if (!targetInfo.node && !targetInfo.intersectedEdge) {
             this._hideContextMenu();
             // MODIFIED: Use CameraPlugin
-            this.space.pluginManager.getPlugin('CameraPlugin')?.startPan(e.clientX, e.clientY);
+            this.space.plugins.getPlugin('CameraPlugin')?.startPan(e.clientX, e.clientY);
             // Deselection happens on click up / document click
         }
         return false;
@@ -647,7 +647,7 @@ export class UIManager {
         items.push({ label: 'Center View 🧭', action: 'center-view' });
         items.push({ label: 'Reset Zoom & Pan', action: 'reset-view' });
         // MODIFIED: Use RenderingPlugin for background info
-        const renderingPlugin = this.space.pluginManager.getPlugin('RenderingPlugin');
+        const renderingPlugin = this.space.plugins.getPlugin('RenderingPlugin');
         if (renderingPlugin) {
             items.push({
                 label: renderingPlugin.background.alpha === 0 ? 'Set Dark Background' : 'Set Transparent BG',
@@ -719,7 +719,7 @@ export class UIManager {
         this.tempLinkLine.computeLineDistances();
         this.tempLinkLine.renderOrder = 1;
         // MODIFIED: Use RenderingPlugin
-        this.space.pluginManager.getPlugin('RenderingPlugin')?.getWebGLScene()?.add(this.tempLinkLine);
+        this.space.plugins.getPlugin('RenderingPlugin')?.getWebGLScene()?.add(this.tempLinkLine);
     }
 
     _updateTempLinkLine(screenX, screenY) {
@@ -740,7 +740,7 @@ export class UIManager {
             this.tempLinkLine.geometry?.dispose();
             this.tempLinkLine.material?.dispose();
             // MODIFIED: Use RenderingPlugin
-            this.space.pluginManager.getPlugin('RenderingPlugin')?.getWebGLScene()?.remove(this.tempLinkLine);
+            this.space.plugins.getPlugin('RenderingPlugin')?.getWebGLScene()?.remove(this.tempLinkLine);
             this.tempLinkLine = null; // MODIFIED: Use this.tempLinkLine
         }
     }
@@ -777,7 +777,7 @@ export class UIManager {
             const action = target.dataset.action;
             const edgeId = menu.dataset.edgeId;
             // MODIFIED: Use EdgePlugin
-            const edgePlugin = this.space.pluginManager.getPlugin('EdgePlugin');
+            const edgePlugin = this.space.plugins.getPlugin('EdgePlugin');
             const currentEdge = edgePlugin?.getEdgeById(edgeId);
             if (!currentEdge) return;
 
@@ -822,7 +822,7 @@ export class UIManager {
         const midPoint = new THREE.Vector3().lerpVectors(edge.source.position, edge.target.position, 0.5);
         this.edgeMenuObject.position.copy(midPoint);
         // MODIFIED: Use CameraPlugin
-        const camInstance = this.space.pluginManager.getPlugin('CameraPlugin')?.getCameraInstance();
+        const camInstance = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
         if (camInstance) {
             // Billboard effect
             this.edgeMenuObject.quaternion.copy(camInstance.quaternion);
@@ -833,7 +833,7 @@ export class UIManager {
     _onNodeSelected = (node) => {
         // Deselect previously selected node if any
         // MODIFIED: Use NodePlugin
-        const nodePlugin = this.space.pluginManager.getPlugin('NodePlugin');
+        const nodePlugin = this.space.plugins.getPlugin('NodePlugin');
         nodePlugin?.getNodes().forEach((n) => {
             if (n !== node) n.setSelectedStyle(false);
         });
@@ -844,7 +844,7 @@ export class UIManager {
     _onEdgeSelected = (edge) => {
         // Deselect previously selected edge if any
         // MODIFIED: Use EdgePlugin
-        const edgePlugin = this.space.pluginManager.getPlugin('EdgePlugin');
+        const edgePlugin = this.space.plugins.getPlugin('EdgePlugin');
         edgePlugin?.getEdges().forEach((e) => {
             if (e !== edge) e.setHighlight(false);
         });

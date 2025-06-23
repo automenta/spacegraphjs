@@ -1,10 +1,8 @@
 import * as THREE from 'three';
-import { CSS3DRenderer } from 'three/addons/renderers/CSS3DRenderer.js';
-import { Utils, $ } from '../utils.js';
 // import { Camera } from '../camera/Camera.js'; // Used by CameraPlugin
-import { UIManager } from '../ui/UIManager.js'; // Will be managed by UIPlugin
+// Will be managed by UIPlugin
 // import { ForceLayout } from '../layout/ForceLayout.js'; // Used by LayoutPlugin
-import { Edge } from '../graph/Edge.js'; // Used by EdgePlugin & Edge class itself
+// Used by EdgePlugin & Edge class itself
 import { HtmlNode } from '../graph/nodes/HtmlNode.js'; // Example node type
 import { PluginManager } from './PluginManager.js';
 import { RenderingPlugin } from '../plugins/RenderingPlugin.js';
@@ -31,7 +29,7 @@ export class SpaceGraph {
     // CameraControls instance, and Layout instance are now managed by their respective plugins.
 
     _listeners = new Map(); // Event bus listeners
-    pluginManager = null;
+    plugins = null;
     contextMenuElement = null; // Added
     confirmDialogElement = null; // Added
 
@@ -44,21 +42,21 @@ export class SpaceGraph {
         this.container = containerElement;
         this.contextMenuElement = contextMenuElement; // Added
         this.confirmDialogElement = confirmDialogElement; // Added
-        this.pluginManager = new PluginManager(this);
+        this.plugins = new PluginManager(this);
 
         // Register RenderingPlugin
-        this.pluginManager.registerPlugin(new RenderingPlugin(this, this.pluginManager));
+        this.plugins.add(new RenderingPlugin(this, this.plugins));
         // Register CameraPlugin
-        this.pluginManager.registerPlugin(new CameraPlugin(this, this.pluginManager));
+        this.plugins.add(new CameraPlugin(this, this.plugins));
         // Register NodePlugin
-        this.pluginManager.registerPlugin(new NodePlugin(this, this.pluginManager));
+        this.plugins.add(new NodePlugin(this, this.plugins));
         // Register EdgePlugin
-        this.pluginManager.registerPlugin(new EdgePlugin(this, this.pluginManager));
+        this.plugins.add(new EdgePlugin(this, this.plugins));
         // Register LayoutPlugin
-        this.pluginManager.registerPlugin(new LayoutPlugin(this, this.pluginManager));
+        this.plugins.add(new LayoutPlugin(this, this.plugins));
         // Register UIPlugin
-        this.pluginManager.registerPlugin(
-            new UIPlugin(this, this.pluginManager, this.contextMenuElement, this.confirmDialogElement)
+        this.plugins.add(
+            new UIPlugin(this, this.plugins, this.contextMenuElement, this.confirmDialogElement)
         ); // Modified
 
         // _cam is now created by CameraPlugin and assigned to this.space._cam in CameraPlugin.init() for now.
@@ -67,10 +65,10 @@ export class SpaceGraph {
         // Initialize all registered plugins.
         // RenderingPlugin's init() sets up scenes, renderers, lighting.
         // CameraPlugin's init() creates the camera, controls.
-        this.pluginManager.initPlugins();
+        this.plugins.initPlugins();
 
         // Initial camera setup
-        const cameraPlugin = this.pluginManager.getPlugin('CameraPlugin');
+        const cameraPlugin = this.plugins.getPlugin('CameraPlugin');
         if (cameraPlugin) {
             cameraPlugin.centerView(null, 0); // Request plugin to center
             cameraPlugin.setInitialState(); // Request plugin to set initial state
@@ -110,7 +108,7 @@ export class SpaceGraph {
         // Listener for adding a node, simplified
         this.on('ui:request:addNode', (nodeInstance) => {
             // NodePlugin.addNode will emit 'node:added' which is handled below
-            this.pluginManager.getPlugin('NodePlugin')?.addNode(nodeInstance);
+            this.plugins.getPlugin('NodePlugin')?.addNode(nodeInstance);
             // If LayoutPlugin doesn't listen to node:added to kick, we might need to kick here.
             // For now, assuming NodePlugin's addNode or LayoutPlugin's addNodeToLayout handles kicking or LayoutPlugin listens.
             // const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin');
@@ -127,7 +125,7 @@ export class SpaceGraph {
                 setTimeout(() => {
                     // Allow node to be added to scene before focusing
                     this.focusOnNode(addedNode, 0.6, true); // focusOnNode delegates to CameraPlugin
-                    this.pluginManager.getPlugin('UIPlugin')?.setSelectedNode(addedNode);
+                    this.plugins.getPlugin('UIPlugin')?.setSelectedNode(addedNode);
                     if (addedNode instanceof HtmlNode && addedNode.data.editable) {
                         addedNode.htmlElement?.querySelector('.node-content')?.focus();
                     }
@@ -136,11 +134,11 @@ export class SpaceGraph {
         });
 
         this.on('ui:request:removeNode', (nodeId) => {
-            this.pluginManager.getPlugin('NodePlugin')?.removeNode(nodeId); // NodePlugin's removeNode will call EdgePlugin
+            this.plugins.getPlugin('NodePlugin')?.removeNode(nodeId); // NodePlugin's removeNode will call EdgePlugin
         });
         this.on('ui:request:addEdge', (sourceNode, targetNode, data) => {
             // EdgePlugin.addEdge will emit 'edge:added'
-            this.pluginManager.getPlugin('EdgePlugin')?.addEdge(sourceNode, targetNode, data);
+            this.plugins.getPlugin('EdgePlugin')?.addEdge(sourceNode, targetNode, data);
             // Assuming LayoutPlugin listens to 'edge:added' to kick, or its addEdgeToLayout handles it.
             // const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin');
             // layoutPlugin?.kick();
@@ -158,7 +156,7 @@ export class SpaceGraph {
 
         this.on('ui:request:removeEdge', (edgeId) => {
             // EdgePlugin.removeEdge calls LayoutPlugin.removeEdgeFromLayout
-            this.pluginManager.getPlugin('EdgePlugin')?.removeEdge(edgeId);
+            this.plugins.getPlugin('EdgePlugin')?.removeEdge(edgeId);
         });
         // UIPlugin now listens to these events directly. SpaceGraph doesn't need to handle them here.
         // this.on('ui:request:setSelectedNode', (node) => this.pluginManager.getPlugin('UIPlugin')?.setSelectedNode(node));
@@ -166,10 +164,10 @@ export class SpaceGraph {
         this.on('ui:request:autoZoomNode', (node) => this.autoZoom(node)); // Uses methods now on CameraPlugin
         this.on('ui:request:centerView', () => this.centerView()); // Uses methods now on CameraPlugin
         this.on('ui:request:resetView', () => {
-            this.pluginManager.getPlugin('CameraPlugin')?.resetView();
+            this.plugins.getPlugin('CameraPlugin')?.resetView();
         });
         this.on('ui:request:toggleBackground', (color, alpha) => {
-            const renderingPlugin = this.pluginManager.getPlugin('RenderingPlugin');
+            const renderingPlugin = this.plugins.getPlugin('RenderingPlugin');
             renderingPlugin?.setBackground(color, alpha);
         });
         // UIPlugin now listens to these events directly.
@@ -177,13 +175,13 @@ export class SpaceGraph {
         // this.on('ui:request:cancelLinking', () => this.pluginManager.getPlugin('UIPlugin')?.cancelLinking());
         // this.on('ui:request:completeLinking', (screenX, screenY) => this.pluginManager.getPlugin('UIPlugin')?.completeLinking(screenX, screenY));
         this.on('ui:request:reverseEdge', (edgeId) => {
-            const edgePlugin = this.pluginManager.getPlugin('EdgePlugin');
-            const uiPlugin = this.pluginManager.getPlugin('UIPlugin');
+            const edgePlugin = this.plugins.getPlugin('EdgePlugin');
+            const uiPlugin = this.plugins.getPlugin('UIPlugin');
             const edge = edgePlugin?.getEdgeById(edgeId);
             if (edge) {
                 [edge.source, edge.target] = [edge.target, edge.source];
                 edge.update(); // Edge internal update
-                this.pluginManager.getPlugin('LayoutPlugin')?.kick();
+                this.plugins.getPlugin('LayoutPlugin')?.kick();
             }
         });
         this.on('ui:request:adjustContentScale', (node, factor) => {
@@ -193,14 +191,14 @@ export class SpaceGraph {
             if (node instanceof HtmlNode) node.adjustNodeSize(factor);
         });
         this.on('ui:request:zoomCamera', (deltaY) => {
-            this.pluginManager.getPlugin('CameraPlugin')?.zoom(deltaY);
+            this.plugins.getPlugin('CameraPlugin')?.zoom(deltaY);
         });
         this.on('ui:request:focusOnNode', (node, duration, pushHistory) =>
             this.focusOnNode(node, duration, pushHistory)
         ); // Uses methods now on CameraPlugin
         this.on('ui:request:updateEdge', (edgeId, property, value) => {
-            const edgePlugin = this.pluginManager.getPlugin('EdgePlugin');
-            const uiPlugin = this.pluginManager.getPlugin('UIPlugin');
+            const edgePlugin = this.plugins.getPlugin('EdgePlugin');
+            const uiPlugin = this.plugins.getPlugin('UIPlugin');
             const edge = edgePlugin?.getEdgeById(edgeId);
             if (!edge) return;
             switch (property) {
@@ -229,7 +227,7 @@ export class SpaceGraph {
                     } else if (value === 'elastic' && !edge.data.constraintParams?.stiffness) {
                         edge.data.constraintParams = { stiffness: 0.001, idealLength: 200 };
                     }
-                    this.pluginManager.getPlugin('LayoutPlugin')?.kick();
+                    this.plugins.getPlugin('LayoutPlugin')?.kick();
                     break;
             }
         });
@@ -243,8 +241,8 @@ export class SpaceGraph {
     // getEdgeById is removed, use EdgePlugin.getEdgeById(id) via pluginManager
 
     addNode(nodeInstance) {
-        const nodePlugin = this.pluginManager.getPlugin('NodePlugin');
-        const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin');
+        const nodePlugin = this.plugins.getPlugin('NodePlugin');
+        const layoutPlugin = this.plugins.getPlugin('LayoutPlugin');
         if (nodePlugin) {
             const addedNode = nodePlugin.addNode(nodeInstance); // NodePlugin calls LayoutPlugin.addNodeToLayout
             if (addedNode && layoutPlugin) {
@@ -257,8 +255,8 @@ export class SpaceGraph {
     }
 
     addEdge(sourceNode, targetNode, data = {}) {
-        const edgePlugin = this.pluginManager.getPlugin('EdgePlugin');
-        const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin');
+        const edgePlugin = this.plugins.getPlugin('EdgePlugin');
+        const layoutPlugin = this.plugins.getPlugin('LayoutPlugin');
         if (edgePlugin) {
             const addedEdge = edgePlugin.addEdge(sourceNode, targetNode, data); // EdgePlugin calls LayoutPlugin.addEdgeToLayout
             if (addedEdge && layoutPlugin) {
@@ -282,7 +280,7 @@ export class SpaceGraph {
      * @param {number} duration - Animation duration.
      */
     centerView(targetPosition = null, duration = 0.7) {
-        this.pluginManager.getPlugin('CameraPlugin')?.centerView(targetPosition, duration);
+        this.plugins.getPlugin('CameraPlugin')?.centerView(targetPosition, duration);
     }
 
     /**
@@ -293,7 +291,7 @@ export class SpaceGraph {
      * @param {boolean} pushHistory - Whether to push the current camera state to history.
      */
     focusOnNode(node, duration = 0.6, pushHistory = false) {
-        this.pluginManager.getPlugin('CameraPlugin')?.focusOnNode(node, duration, pushHistory);
+        this.plugins.getPlugin('CameraPlugin')?.focusOnNode(node, duration, pushHistory);
     }
 
     /**
@@ -302,7 +300,7 @@ export class SpaceGraph {
      * @param {BaseNode} node - The node to auto-zoom to.
      */
     autoZoom(node) {
-        const cameraPlugin = this.pluginManager.getPlugin('CameraPlugin');
+        const cameraPlugin = this.plugins.getPlugin('CameraPlugin');
         if (!node || !cameraPlugin) return;
 
         if (cameraPlugin.getCurrentTargetNodeId() === node.id) {
@@ -317,7 +315,7 @@ export class SpaceGraph {
     }
 
     screenToWorld(screenX, screenY, targetZ = 0) {
-        const cameraPlugin = this.pluginManager.getPlugin('CameraPlugin');
+        const cameraPlugin = this.plugins.getPlugin('CameraPlugin');
         const camInstance = cameraPlugin?.getCameraInstance();
         if (!camInstance) return null;
 
@@ -334,7 +332,7 @@ export class SpaceGraph {
     // have been moved to UIPlugin.js
 
     intersectedObjects(screenX, screenY) {
-        const cameraPlugin = this.pluginManager.getPlugin('CameraPlugin');
+        const cameraPlugin = this.plugins.getPlugin('CameraPlugin');
         const camInstance = cameraPlugin?.getCameraInstance();
         if (!camInstance) return null;
 
@@ -344,7 +342,7 @@ export class SpaceGraph {
         raycaster.setFromCamera(vec, camInstance);
         raycaster.params.Line.threshold = 5; // This might become configurable or part of an InteractionPlugin
 
-        const nodePlugin = this.pluginManager.getPlugin('NodePlugin');
+        const nodePlugin = this.plugins.getPlugin('NodePlugin');
         const currentNodes = nodePlugin?.getNodes();
         if (!currentNodes) return null;
 
@@ -356,7 +354,7 @@ export class SpaceGraph {
             if (node) return { node, distance: nodeIntersects[0].distance };
         }
 
-        const edgePlugin = this.pluginManager.getPlugin('EdgePlugin');
+        const edgePlugin = this.plugins.getPlugin('EdgePlugin');
         const currentEdges = edgePlugin?.getEdges();
         if (!currentEdges) return null; // Or handle differently if only nodes are relevant
 
@@ -375,14 +373,14 @@ export class SpaceGraph {
 
     animate() {
         const frame = () => {
-            this.pluginManager.updatePlugins(); // Calls update on all plugins (Rendering, Layout, Nodes, Edges, UI, etc.)
+            this.plugins.updatePlugins(); // Calls update on all plugins (Rendering, Layout, Nodes, Edges, UI, etc.)
             requestAnimationFrame(frame);
         };
         frame();
     }
 
     dispose() {
-        this.pluginManager.disposePlugins(); // Disposes RenderingPlugin, CameraPlugin, NodePlugin, EdgePlugin, LayoutPlugin etc.
+        this.plugins.disposePlugins(); // Disposes RenderingPlugin, CameraPlugin, NodePlugin, EdgePlugin, LayoutPlugin etc.
 
         // this.camera?.dispose(); // Handled by CameraPlugin
         // this.layout?.stop(); // Handled by LayoutPlugin
