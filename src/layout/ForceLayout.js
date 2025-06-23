@@ -80,7 +80,8 @@ export class ForceLayout {
             if (this._calculateStep() < this.settings.minEnergyThreshold) break;
         }
         console.log(`ForceLayout: Initial steps completed after ${i} iterations.`);
-        this.space.updateNodesAndEdges(); // Update visuals once after settling
+        // Update visuals once after settling by calling all plugin update methods, which includes rendering.
+        this.space?.pluginManager?.updatePlugins();
     }
 
     start() {
