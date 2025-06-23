@@ -25,7 +25,8 @@ export class Camera {
     animationFrameId = null;
 
     constructor(space) {
-        if (!space?._cam || !space.container) throw new Error("Camera requires SpaceGraph instance with camera and container.");
+        if (!space?._cam || !space.container)
+            throw new Error('Camera requires SpaceGraph instance with camera and container.');
         this.space = space; // Store SpaceGraph instance
         this._cam = space._cam;
         this.domElement = space.container;
@@ -41,7 +42,7 @@ export class Camera {
     setInitialState() {
         if (!this.initialState) {
             // Capture the state *after* the first centerView/focus
-            this.initialState = {position: this.targetPosition.clone(), lookAt: this.targetLookAt.clone()};
+            this.initialState = { position: this.targetPosition.clone(), lookAt: this.targetLookAt.clone() };
         }
     }
 
@@ -87,7 +88,7 @@ export class Camera {
             this.isPanning = false;
             this.domElement.classList.remove('panning');
         }
-    }
+    };
 
     zoom(deltaY) {
         gsap.killTweensOf(this.targetPosition);
@@ -103,23 +104,38 @@ export class Camera {
         this.setInitialState(); // Ensure initial state exists
         const targetPos = new THREE.Vector3(x, y, z);
         // Default lookAt is XY of target, Z of current lookAt (avoids sudden Z jumps)
-        const targetLook = lookAtTarget instanceof THREE.Vector3 ? lookAtTarget.clone() : new THREE.Vector3(x, y, this.targetLookAt.z);
+        const targetLook =
+            lookAtTarget instanceof THREE.Vector3 ? lookAtTarget.clone() : new THREE.Vector3(x, y, this.targetLookAt.z);
         gsap.killTweensOf(this.targetPosition);
         gsap.killTweensOf(this.targetLookAt);
-        const ease = "power3.out";
-        gsap.to(this.targetPosition, {x: targetPos.x, y: targetPos.y, z: targetPos.z, duration, ease, overwrite: true});
+        const ease = 'power3.out';
+        gsap.to(this.targetPosition, {
+            x: targetPos.x,
+            y: targetPos.y,
+            z: targetPos.z,
+            duration,
+            ease,
+            overwrite: true,
+        });
         gsap.to(this.targetLookAt, {
             x: targetLook.x,
             y: targetLook.y,
             z: targetLook.z,
             duration,
             ease,
-            overwrite: true
+            overwrite: true,
         });
     }
 
     resetView(duration = 0.7) {
-        if (this.initialState) this.moveTo(this.initialState.position.x, this.initialState.position.y, this.initialState.position.z, duration, this.initialState.lookAt);
+        if (this.initialState)
+            this.moveTo(
+                this.initialState.position.x,
+                this.initialState.position.y,
+                this.initialState.position.z,
+                duration,
+                this.initialState.lookAt
+            );
         else this.moveTo(0, 0, 700, duration, new THREE.Vector3(0, 0, 0)); // Fallback default
         this.viewHistory = [];
         this.currentTargetNodeId = null;
@@ -131,7 +147,7 @@ export class Camera {
         this.viewHistory.push({
             position: this.targetPosition.clone(),
             lookAt: this.targetLookAt.clone(),
-            targetNodeId: this.currentTargetNodeId
+            targetNodeId: this.currentTargetNodeId,
         });
     }
 
@@ -156,7 +172,12 @@ export class Camera {
         const epsilon = 0.01; // Threshold to stop lerping
 
         // Only update if moving, panning, or animating significantly
-        const needsUpdate = deltaPos > epsilon || deltaLookAt > epsilon || this.isPanning || gsap.isTweening(this.targetPosition) || gsap.isTweening(this.targetLookAt);
+        const needsUpdate =
+            deltaPos > epsilon ||
+            deltaLookAt > epsilon ||
+            this.isPanning ||
+            gsap.isTweening(this.targetPosition) ||
+            gsap.isTweening(this.targetLookAt);
 
         if (needsUpdate) {
             this._cam.position.lerp(this.targetPosition, this.dampingFactor);
@@ -166,13 +187,16 @@ export class Camera {
 
             // Emit camera:moved event if position or lookAt has changed significantly
             const movementThreshold = 0.1; // World units
-            if (this._cam.position.distanceTo(this._prevPosition) > movementThreshold ||
-                this.currentLookAt.distanceTo(this._prevLookAt) > movementThreshold) {
+            if (
+                this._cam.position.distanceTo(this._prevPosition) > movementThreshold ||
+                this.currentLookAt.distanceTo(this._prevLookAt) > movementThreshold
+            ) {
                 this.space.emit('camera:moved', this._cam.position.clone(), this.currentLookAt.clone());
                 this._prevPosition.copy(this._cam.position);
                 this._prevLookAt.copy(this.currentLookAt);
             }
-        } else if (deltaPos > 0 || deltaLookAt > 0) { // Snap to final position if close enough
+        } else if (deltaPos > 0 || deltaLookAt > 0) {
+            // Snap to final position if close enough
             this._cam.position.copy(this.targetPosition);
             this.currentLookAt.copy(this.targetLookAt);
             this._cam.lookAt(this.currentLookAt);
@@ -182,7 +206,7 @@ export class Camera {
             this._prevLookAt.copy(this.currentLookAt);
         }
         this.animationFrameId = requestAnimationFrame(this._startUpdateLoop);
-    }
+    };
 
     dispose() {
         if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId);
@@ -192,6 +216,6 @@ export class Camera {
         this._cam = null;
         this.domElement = null;
         this.viewHistory = [];
-        console.log("Camera disposed.");
+        console.log('Camera disposed.');
     }
 }

@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { Plugin } from '../core/Plugin.js';
 import { Camera as CameraControls } from '../camera/Camera.js'; // Renaming to avoid class name collision
+import { Utils } from '../utils.js'; // For DEG2RAD
 
 export class CameraPlugin extends Plugin {
     /** @type {THREE.PerspectiveCamera | null} */
@@ -23,109 +24,140 @@ export class CameraPlugin extends Plugin {
 
     init() {
         super.init();
-        // Create the main perspective camera
-        this.perspectiveCamera = new THREE.PerspectiveCamera(
-            70, // fov
-            window.innerWidth / window.innerHeight, // aspect
-            0.1, // near
-            20000 // far
-        );
-        this.perspectiveCamera.position.z = 700; // Default position, matches old SpaceGraph
+        this.perspectiveCamera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 20000);
+        this.perspectiveCamera.position.z = 700;
 
-        // A bit of a hack: assign to space._cam for now if other parts expect it directly.
-        // This should be phased out by getting camera via plugin.
         if (this.space) {
-            this.space._cam = this.perspectiveCamera;
+            this.space._cam = this.perspectiveCamera; // TODO: Phase out direct _cam access
         }
 
-        // Initialize camera controls (from src/camera/Camera.js)
-        // The CameraControls class needs the space instance, which has _cam set by now.
         this.cameraControls = new CameraControls(this.space);
 
-        // Initial camera setup that was in SpaceGraph constructor after plugin init
-        // This needs to happen after cameraControls is initialized.
-        if (this.space && typeof this.space.centerView === 'function') { // centerView is still on SpaceGraph
-             // Defer this call slightly to ensure rendering plugin might have set up initial scene dimensions
-             // or if centerView relies on nodes which are added later.
-             // For now, direct call. This might need adjustment if there are ordering issues.
-            this.space.centerView(null, 0); // Calls this.camera.moveTo -> this.cameraControls.moveTo
-            this.cameraControls.setInitialState();
-        }
+        // Initial camera centering is now done more explicitly.
+        // Call this.centerView() after all plugins are initialized if needed,
+        // or let the application decide the initial view.
+        // For now, we'll make it available for SpaceGraph to call post-init.
+        // However, the original SpaceGraph called these *after* all plugins were inited.
+        // To replicate, we can defer or SpaceGraph calls them explicitly post-init.
+        // For now, let's assume SpaceGraph will call them.
+        // If this plugin should do it itself, it needs to be after NodePlugin might have nodes.
+        // A simple way is to do it at the end of this init, assuming NodePlugin runs before CameraPlugin,
+        // or use a 'ready' event system.
+        // For now, let SpaceGraph call these on the plugin instance after all plugins are ready.
+        // this.centerView(null, 0);
+        // this.setInitialState();
     }
 
-    /**
-     * Provides the main THREE.PerspectiveCamera instance.
-     * @returns {THREE.PerspectiveCamera | null}
-     */
+    /** @returns {THREE.PerspectiveCamera | null} */
     getCameraInstance() {
         return this.perspectiveCamera;
     }
 
-    /**
-     * Provides the camera controls instance.
-     * @returns {CameraControls | null}
-     */
+    /** @returns {CameraControls | null} */
     getControls() {
         return this.cameraControls;
     }
 
-    // --- Delegated Camera Control Methods ---
-    // These methods will be called by SpaceGraph or other plugins
+    // --- Core Camera Movement ---
     moveTo(x, y, z, duration = 0.7, lookAtTarget = null) {
         this.cameraControls?.moveTo(x, y, z, duration, lookAtTarget);
     }
 
+    // --- Higher-Level Camera Actions ---
+    _determineCenterViewTarget(targetPosition = null) {
+        const nodePlugin = this.pluginManager.getPlugin('NodePlugin');
+        const currentNodes = nodePlugin?.getNodes();
+        let finalTargetPos = new THREE.Vector3();
+
+        if (targetPosition instanceof THREE.Vector3) {
+            finalTargetPos = targetPosition.clone();
+        } else if (targetPosition && typeof targetPosition.x === 'number') {
+            finalTargetPos.set(targetPosition.x, targetPosition.y, targetPosition.z);
+        } else if (currentNodes && currentNodes.size > 0) {
+            currentNodes.forEach((node) => finalTargetPos.add(node.position));
+            finalTargetPos.divideScalar(currentNodes.size);
+        }
+        return finalTargetPos;
+    }
+
+    _determineOptimalDistance(baseDistance = 400, farDistance = 700, nodeCount = 0) {
+        return nodeCount > 1 ? farDistance : baseDistance;
+    }
+
+    centerView(targetPosition = null, duration = 0.7) {
+        if (!this.perspectiveCamera || !this.cameraControls) return;
+
+        const lookAtTarget = this._determineCenterViewTarget(targetPosition);
+        const nodePlugin = this.pluginManager.getPlugin('NodePlugin');
+        const nodeCount = nodePlugin?.getNodes()?.size || 0;
+        const distance = this._determineOptimalDistance(400, 700, nodeCount);
+
+        this.moveTo(lookAtTarget.x, lookAtTarget.y, lookAtTarget.z + distance, duration, lookAtTarget);
+    }
+
+    _determineFocusNodeDistance(node) {
+        if (!node || !this.perspectiveCamera) return 50; // Default small distance
+
+        const fov = this.perspectiveCamera.fov * Utils.DEG2RAD;
+        const aspect = this.perspectiveCamera.aspect;
+        // Ensure getBoundingSphereRadius is a method on the node object
+        const nodeSize = typeof node.getBoundingSphereRadius === 'function' ? node.getBoundingSphereRadius() * 2 : 100;
+        const projectedSize = Math.max(nodeSize, nodeSize / aspect); // Consider aspect ratio for flatness
+        const paddingFactor = 1.5; // How much padding around the node
+        const minDistance = 50; // Minimum distance to prevent camera clipping or being too close
+
+        return Math.max(minDistance, (projectedSize * paddingFactor) / (2 * Math.tan(fov / 2)));
+    }
+
+    focusOnNode(node, duration = 0.6, pushHistory = false) {
+        if (!node || !this.perspectiveCamera || !this.cameraControls) return;
+
+        const targetPos = node.position.clone();
+        const distance = this._determineFocusNodeDistance(node);
+
+        if (pushHistory) this.pushState();
+        this.moveTo(targetPos.x, targetPos.y, targetPos.z + distance, duration, targetPos);
+    }
+
+    // --- Delegated Camera Control Methods from CameraControls ---
     pan(deltaX, deltaY) {
         this.cameraControls?.pan(deltaX, deltaY);
     }
-
     startPan(startX, startY) {
         this.cameraControls?.startPan(startX, startY);
     }
-
     endPan() {
         this.cameraControls?.endPan();
     }
-
     zoom(deltaY) {
         this.cameraControls?.zoom(deltaY);
     }
-
     resetView(duration = 0.7) {
         this.cameraControls?.resetView(duration);
     }
-
     pushState() {
         this.cameraControls?.pushState();
     }
-
     popState(duration = 0.6) {
         this.cameraControls?.popState(duration);
     }
-
     getCurrentTargetNodeId() {
         return this.cameraControls?.getCurrentTargetNodeId();
     }
-
     setCurrentTargetNodeId(nodeId) {
         this.cameraControls?.setCurrentTargetNodeId(nodeId);
     }
-
-    setInitialState(){
+    setInitialState() {
         this.cameraControls?.setInitialState();
     }
-
-    // The update loop for camera (e.g., smooth damping) is handled within CameraControls.js
-    // So, this plugin's update() method might not be strictly needed unless it has other tasks.
 
     dispose() {
         super.dispose();
         this.cameraControls?.dispose();
         if (this.space && this.space._cam === this.perspectiveCamera) {
-            this.space._cam = null; // Clear the reference on space
+            this.space._cam = null;
         }
         this.perspectiveCamera = null;
         this.cameraControls = null;
-        // console.log('CameraPlugin disposed.');
     }
 }

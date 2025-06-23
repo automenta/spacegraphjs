@@ -17,14 +17,14 @@ import { UIPlugin } from '../plugins/UIPlugin.js';
 export class SpaceGraph {
     // nodes = new Map(); // Moved to NodePlugin
     // edges = new Map(); // Moved to EdgePlugin
-    nodeSelected = null; // Selection model will eventually be a plugin or part of UI/Interaction plugin
-    edgeSelected = null; // Selection model will eventually be a plugin or part of UI/Interaction plugin
-    isLinking = false;
-    linkSourceNode = null;
-    tempLinkLine = null;
+    // nodeSelected = null; // Moved to UIPlugin
+    // edgeSelected = null; // Moved to UIPlugin
+    // isLinking = false; // Moved to UIPlugin
+    // linkSourceNode = null; // Moved to UIPlugin
+    // tempLinkLine = null; // Managed by UIPlugin or a dedicated linking visual handler
     // ui = null; // Moved to UIPlugin
     _cam = null; // This THREE.PerspectiveCamera is now created and managed by CameraPlugin.
-                 // It's also set on this.space._cam by CameraPlugin for now.
+    // It's also set on this.space._cam by CameraPlugin for now.
     // layout = null; // Moved to LayoutPlugin
 
     // Properties like scene, cssScene, renderGL, camera instance (THREE.PerspectiveCamera),
@@ -35,10 +35,11 @@ export class SpaceGraph {
     contextMenuElement = null; // Added
     confirmDialogElement = null; // Added
 
-    constructor(containerElement, contextMenuElement, confirmDialogElement) { // Modified
-        if (!containerElement) throw new Error("SpaceGraph requires a valid HTML container element.");
-        if (!contextMenuElement) throw new Error("SpaceGraph requires a contextMenuElement.");
-        if (!confirmDialogElement) throw new Error("SpaceGraph requires a confirmDialogElement.");
+    constructor(containerElement, contextMenuElement, confirmDialogElement) {
+        // Modified
+        if (!containerElement) throw new Error('SpaceGraph requires a valid HTML container element.');
+        if (!contextMenuElement) throw new Error('SpaceGraph requires a contextMenuElement.');
+        if (!confirmDialogElement) throw new Error('SpaceGraph requires a confirmDialogElement.');
 
         this.container = containerElement;
         this.contextMenuElement = contextMenuElement; // Added
@@ -56,17 +57,24 @@ export class SpaceGraph {
         // Register LayoutPlugin
         this.pluginManager.registerPlugin(new LayoutPlugin(this, this.pluginManager));
         // Register UIPlugin
-        this.pluginManager.registerPlugin(new UIPlugin(this, this.pluginManager, this.contextMenuElement, this.confirmDialogElement)); // Modified
+        this.pluginManager.registerPlugin(
+            new UIPlugin(this, this.pluginManager, this.contextMenuElement, this.confirmDialogElement)
+        ); // Modified
 
         // _cam is now created by CameraPlugin and assigned to this.space._cam in CameraPlugin.init() for now.
         // Direct instantiation of THREE.PerspectiveCamera, CameraControls, Layout, and UIManager is removed from here.
 
         // Initialize all registered plugins.
         // RenderingPlugin's init() sets up scenes, renderers, lighting.
-        // CameraPlugin's init() creates the camera, controls, and does initial centering/state set.
+        // CameraPlugin's init() creates the camera, controls.
         this.pluginManager.initPlugins();
 
-        // Initial camera setup (centerView, setInitialState) is now handled within CameraPlugin.init()
+        // Initial camera setup
+        const cameraPlugin = this.pluginManager.getPlugin('CameraPlugin');
+        if (cameraPlugin) {
+            cameraPlugin.centerView(null, 0); // Request plugin to center
+            cameraPlugin.setInitialState(); // Request plugin to set initial state
+        }
 
         this._setupEventListeners(); // Setup internal event listeners for UI requests
     }
@@ -87,7 +95,7 @@ export class SpaceGraph {
 
     emit(eventName, ...args) {
         if (this._listeners.has(eventName)) {
-            this._listeners.get(eventName).forEach(callback => {
+            this._listeners.get(eventName).forEach((callback) => {
                 try {
                     callback(...args);
                 } catch (error) {
@@ -99,36 +107,62 @@ export class SpaceGraph {
 
     // --- Internal Event Listeners for UI Requests ---
     _setupEventListeners() {
+        // Listener for adding a node, simplified
         this.on('ui:request:addNode', (nodeInstance) => {
-            const nodePlugin = this.pluginManager.getPlugin('NodePlugin');
-            const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin');
-            const addedNode = nodePlugin?.addNode(nodeInstance); // NodePlugin calls LayoutPlugin.addNodeToLayout
+            // NodePlugin.addNode will emit 'node:added' which is handled below
+            this.pluginManager.getPlugin('NodePlugin')?.addNode(nodeInstance);
+            // If LayoutPlugin doesn't listen to node:added to kick, we might need to kick here.
+            // For now, assuming NodePlugin's addNode or LayoutPlugin's addNodeToLayout handles kicking or LayoutPlugin listens.
+            // const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin');
+            // layoutPlugin?.kick(); // Or this is handled by LayoutPlugin reacting to node:added
+        });
+
+        // Listener for when a node is actually added and confirmed by NodePlugin
+        this.on('node:added', (addedNode) => {
             if (addedNode) {
-                layoutPlugin?.kick();
-                setTimeout(() => { // Allow node to be added to scene before focusing
-                    this.focusOnNode(addedNode, 0.6, true); // focusOnNode uses CameraPlugin
-                    this.setSelectedNode(addedNode); // setSelectedNode is still on SpaceGraph (selection model TBD)
+                // LayoutPlugin now listens to node:added and kicks itself.
+                // const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin');
+                // layoutPlugin?.kick();
+
+                setTimeout(() => {
+                    // Allow node to be added to scene before focusing
+                    this.focusOnNode(addedNode, 0.6, true); // focusOnNode delegates to CameraPlugin
+                    this.pluginManager.getPlugin('UIPlugin')?.setSelectedNode(addedNode);
                     if (addedNode instanceof HtmlNode && addedNode.data.editable) {
                         addedNode.htmlElement?.querySelector('.node-content')?.focus();
                     }
                 }, 100);
             }
         });
+
         this.on('ui:request:removeNode', (nodeId) => {
             this.pluginManager.getPlugin('NodePlugin')?.removeNode(nodeId); // NodePlugin's removeNode will call EdgePlugin
         });
         this.on('ui:request:addEdge', (sourceNode, targetNode, data) => {
-            const edgePlugin = this.pluginManager.getPlugin('EdgePlugin');
-            const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin');
-            edgePlugin?.addEdge(sourceNode, targetNode, data); // EdgePlugin calls LayoutPlugin.addEdgeToLayout
-            layoutPlugin?.kick();
+            // EdgePlugin.addEdge will emit 'edge:added'
+            this.pluginManager.getPlugin('EdgePlugin')?.addEdge(sourceNode, targetNode, data);
+            // Assuming LayoutPlugin listens to 'edge:added' to kick, or its addEdgeToLayout handles it.
+            // const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin');
+            // layoutPlugin?.kick();
         });
+
+        // Listener for when an edge is actually added
+        this.on('edge:added', (addedEdge) => {
+            if (addedEdge) {
+                // LayoutPlugin now listens to edge:added and kicks itself.
+                // const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin');
+                // layoutPlugin?.kick();
+                // Any other actions upon edge addition can go here (e.g., selection)
+            }
+        });
+
         this.on('ui:request:removeEdge', (edgeId) => {
             // EdgePlugin.removeEdge calls LayoutPlugin.removeEdgeFromLayout
             this.pluginManager.getPlugin('EdgePlugin')?.removeEdge(edgeId);
         });
-        this.on('ui:request:setSelectedNode', (node) => this.setSelectedNode(node)); // Selection model TBD
-        this.on('ui:request:setSelectedEdge', (edge) => this.setSelectedEdge(edge)); // Selection model TBD
+        // UIPlugin now listens to these events directly. SpaceGraph doesn't need to handle them here.
+        // this.on('ui:request:setSelectedNode', (node) => this.pluginManager.getPlugin('UIPlugin')?.setSelectedNode(node));
+        // this.on('ui:request:setSelectedEdge', (edge) => this.pluginManager.getPlugin('UIPlugin')?.setSelectedEdge(edge));
         this.on('ui:request:autoZoomNode', (node) => this.autoZoom(node)); // Uses methods now on CameraPlugin
         this.on('ui:request:centerView', () => this.centerView()); // Uses methods now on CameraPlugin
         this.on('ui:request:resetView', () => {
@@ -138,11 +172,13 @@ export class SpaceGraph {
             const renderingPlugin = this.pluginManager.getPlugin('RenderingPlugin');
             renderingPlugin?.setBackground(color, alpha);
         });
-        this.on('ui:request:startLinking', (sourceNode) => this._startLinking(sourceNode));
-        this.on('ui:request:cancelLinking', () => this._cancelLinking());
-        this.on('ui:request:completeLinking', (screenX, screenY) => this._completeLinking(screenX, screenY)); // Uses addEdge
+        // UIPlugin now listens to these events directly.
+        // this.on('ui:request:startLinking', (sourceNode) => this.pluginManager.getPlugin('UIPlugin')?.startLinking(sourceNode));
+        // this.on('ui:request:cancelLinking', () => this.pluginManager.getPlugin('UIPlugin')?.cancelLinking());
+        // this.on('ui:request:completeLinking', (screenX, screenY) => this.pluginManager.getPlugin('UIPlugin')?.completeLinking(screenX, screenY));
         this.on('ui:request:reverseEdge', (edgeId) => {
             const edgePlugin = this.pluginManager.getPlugin('EdgePlugin');
+            const uiPlugin = this.pluginManager.getPlugin('UIPlugin');
             const edge = edgePlugin?.getEdgeById(edgeId);
             if (edge) {
                 [edge.source, edge.target] = [edge.target, edge.source];
@@ -159,16 +195,19 @@ export class SpaceGraph {
         this.on('ui:request:zoomCamera', (deltaY) => {
             this.pluginManager.getPlugin('CameraPlugin')?.zoom(deltaY);
         });
-        this.on('ui:request:focusOnNode', (node, duration, pushHistory) => this.focusOnNode(node, duration, pushHistory)); // Uses methods now on CameraPlugin
+        this.on('ui:request:focusOnNode', (node, duration, pushHistory) =>
+            this.focusOnNode(node, duration, pushHistory)
+        ); // Uses methods now on CameraPlugin
         this.on('ui:request:updateEdge', (edgeId, property, value) => {
             const edgePlugin = this.pluginManager.getPlugin('EdgePlugin');
+            const uiPlugin = this.pluginManager.getPlugin('UIPlugin');
             const edge = edgePlugin?.getEdgeById(edgeId);
             if (!edge) return;
             switch (property) {
                 case 'color':
                     edge.data.color = value;
                     // setHighlight might need to be a method on Edge or EdgePlugin
-                    edge.setHighlight(this.edgeSelected === edge);
+                    edge.setHighlight(uiPlugin?.getSelectedEdge() === edge);
                     break;
                 case 'thickness':
                     edge.data.thickness = value;
@@ -180,15 +219,15 @@ export class SpaceGraph {
                     if (value === 'rigid' && !edge.data.constraintParams?.distance) {
                         edge.data.constraintParams = {
                             distance: edge.source.position.distanceTo(edge.target.position),
-                            stiffness: 0.1
+                            stiffness: 0.1,
                         };
                     } else if (value === 'weld' && !edge.data.constraintParams?.distance) {
                         edge.data.constraintParams = {
                             distance: edge.source.getBoundingSphereRadius() + edge.target.getBoundingSphereRadius(),
-                            stiffness: 0.5
+                            stiffness: 0.5,
                         };
                     } else if (value === 'elastic' && !edge.data.constraintParams?.stiffness) {
-                        edge.data.constraintParams = {stiffness: 0.001, idealLength: 200};
+                        edge.data.constraintParams = { stiffness: 0.001, idealLength: 200 };
                     }
                     this.pluginManager.getPlugin('LayoutPlugin')?.kick();
                     break;
@@ -213,7 +252,7 @@ export class SpaceGraph {
             }
             return addedNode;
         }
-        console.error("SpaceGraph: NodePlugin not available to add node.");
+        console.error('SpaceGraph: NodePlugin not available to add node.');
         return undefined;
     }
 
@@ -227,70 +266,53 @@ export class SpaceGraph {
             }
             return addedEdge;
         }
-        console.error("SpaceGraph: EdgePlugin not available to add edge.");
+        console.error('SpaceGraph: EdgePlugin not available to add edge.');
         return undefined;
     }
 
-    updateNodesAndEdges() {
-        // Node, Edge, and UI updates (like updateEdgeMenuPosition) are now handled by their
-        // respective plugins' update methods, called by pluginManager.updatePlugins().
-        // This method can be removed if no other direct updates are needed here.
-        // For now, keeping it empty as a placeholder.
-    }
+    // updateNodesAndEdges() is removed as its responsibilities are covered by pluginManager.updatePlugins()
+    // which calls individual plugin update methods (Node, Edge, UI, Rendering, Layout).
 
     // render() and _onWindowResize() methods are removed as they are handled by RenderingPlugin.
 
+    /**
+     * Centers the view on a target position or the graph's centroid.
+     * Delegates to CameraPlugin.
+     * @param {THREE.Vector3 | object | null} targetPosition - Optional target position.
+     * @param {number} duration - Animation duration.
+     */
     centerView(targetPosition = null, duration = 0.7) {
-        const cameraPlugin = this.pluginManager.getPlugin('CameraPlugin');
-        const nodePlugin = this.pluginManager.getPlugin('NodePlugin');
-        if (!cameraPlugin || !nodePlugin) return;
-
-        const currentNodes = nodePlugin.getNodes();
-        let targetPos;
-        if (targetPosition instanceof THREE.Vector3) {
-            targetPos = targetPosition.clone();
-        } else {
-            targetPos = new THREE.Vector3();
-            if (currentNodes.size > 0) {
-                currentNodes.forEach(node => targetPos.add(node.position));
-                targetPos.divideScalar(currentNodes.size);
-            } else if (targetPosition && typeof targetPosition.x === 'number') {
-                targetPos.set(targetPosition.x, targetPosition.y, targetPosition.z);
-            }
-        }
-        const distance = currentNodes.size > 1 ? 700 : 400; // This logic might also move to CameraPlugin or be configurable
-        cameraPlugin.moveTo(targetPos.x, targetPos.y, targetPos.z + distance, duration, targetPos);
+        this.pluginManager.getPlugin('CameraPlugin')?.centerView(targetPosition, duration);
     }
 
+    /**
+     * Focuses the camera on a specific node.
+     * Delegates to CameraPlugin.
+     * @param {BaseNode} node - The node to focus on.
+     * @param {number} duration - Animation duration.
+     * @param {boolean} pushHistory - Whether to push the current camera state to history.
+     */
     focusOnNode(node, duration = 0.6, pushHistory = false) {
-        const cameraPlugin = this.pluginManager.getPlugin('CameraPlugin');
-        const camInstance = cameraPlugin?.getCameraInstance(); // THREE.PerspectiveCamera
-        if (!node || !camInstance || !cameraPlugin) return;
-
-        const targetPos = node.position.clone();
-        const fov = camInstance.fov * Utils.DEG2RAD;
-        const aspect = camInstance.aspect;
-        const nodeSize = node.getBoundingSphereRadius() * 2; // Assuming getBoundingSphereRadius exists on node
-        const projectedSize = Math.max(nodeSize, nodeSize / aspect);
-        const paddingFactor = 1.5;
-        const minDistance = 50;
-        const distance = Math.max(minDistance, (projectedSize * paddingFactor) / (2 * Math.tan(fov / 2)));
-
-        if (pushHistory) cameraPlugin.pushState();
-        cameraPlugin.moveTo(targetPos.x, targetPos.y, targetPos.z + distance, duration, targetPos);
+        this.pluginManager.getPlugin('CameraPlugin')?.focusOnNode(node, duration, pushHistory);
     }
 
+    /**
+     * Toggles zoom between the current view and a specific node.
+     * If already focused on the node, it pops the camera state. Otherwise, it focuses.
+     * @param {BaseNode} node - The node to auto-zoom to.
+     */
     autoZoom(node) {
         const cameraPlugin = this.pluginManager.getPlugin('CameraPlugin');
         if (!node || !cameraPlugin) return;
 
-        const currentTargetNodeId = cameraPlugin.getCurrentTargetNodeId();
-        if (currentTargetNodeId === node.id) {
+        if (cameraPlugin.getCurrentTargetNodeId() === node.id) {
             cameraPlugin.popState();
+            cameraPlugin.setCurrentTargetNodeId(null); // Clear target when zooming out
         } else {
             cameraPlugin.pushState();
             cameraPlugin.setCurrentTargetNodeId(node.id);
-            this.focusOnNode(node, 0.6, false); // focusOnNode already uses cameraPlugin
+            // focusOnNode in CameraPlugin handles the actual camera movement
+            cameraPlugin.focusOnNode(node, 0.6, false); // pushHistory is false because we already pushed
         }
     }
 
@@ -308,17 +330,8 @@ export class SpaceGraph {
         return raycaster.ray.intersectPlane(targetPlane, intersectPoint) ?? null;
     }
 
-    setSelectedNode(node) {
-        if (this.nodeSelected === node) return;
-        this.nodeSelected = node; // Update internal state first
-        this.emit('node:selected', node); // Then emit event
-    }
-
-    setSelectedEdge(edge) {
-        if (this.edgeSelected === edge) return;
-        this.edgeSelected = edge; // Update internal state first
-        this.emit('edge:selected', edge); // Then emit event
-    }
+    // setSelectedNode, setSelectedEdge, _startLinking, _completeLinking, _cancelLinking
+    // have been moved to UIPlugin.js
 
     intersectedObjects(screenX, screenY) {
         const cameraPlugin = this.pluginManager.getPlugin('CameraPlugin');
@@ -335,72 +348,34 @@ export class SpaceGraph {
         const currentNodes = nodePlugin?.getNodes();
         if (!currentNodes) return null;
 
-        const nodeMeshes = [...currentNodes.values()].map(n => n.mesh).filter(Boolean);
+        const nodeMeshes = [...currentNodes.values()].map((n) => n.mesh).filter(Boolean);
         const nodeIntersects = nodeMeshes.length > 0 ? raycaster.intersectObjects(nodeMeshes, false) : [];
         if (nodeIntersects.length > 0) {
             const intersectedMesh = nodeIntersects[0].object;
             const node = nodePlugin.getNodeById(intersectedMesh.userData?.nodeId);
-            if (node) return {node, distance: nodeIntersects[0].distance};
+            if (node) return { node, distance: nodeIntersects[0].distance };
         }
 
         const edgePlugin = this.pluginManager.getPlugin('EdgePlugin');
         const currentEdges = edgePlugin?.getEdges();
         if (!currentEdges) return null; // Or handle differently if only nodes are relevant
 
-        const edgeLines = [...currentEdges.values()].map(e => e.line).filter(Boolean);
+        const edgeLines = [...currentEdges.values()].map((e) => e.line).filter(Boolean);
         const edgeIntersects = edgeLines.length > 0 ? raycaster.intersectObjects(edgeLines, false) : [];
         if (edgeIntersects.length > 0) {
             const intersectedLine = edgeIntersects[0].object;
             const edge = edgePlugin.getEdgeById(intersectedLine.userData?.edgeId);
-            if (edge) return {edge, distance: edgeIntersects[0].distance};
+            if (edge) return { edge, distance: edgeIntersects[0].distance };
         }
 
         return null;
     }
 
-    _startLinking(sourceNode) {
-        if (!sourceNode || this.isLinking) return;
-        this.isLinking = true;
-        this.linkSourceNode = sourceNode;
-        this.emit('ui:linking:started', sourceNode);
-    }
-
-    _completeLinking(screenX, screenY) {
-        const uiPlugin = this.pluginManager.getPlugin('UIPlugin');
-        const uiManagerInstance = uiPlugin?.getUIManager();
-        const nodePlugin = this.pluginManager.getPlugin('NodePlugin');
-        const edgePlugin = this.pluginManager.getPlugin('EdgePlugin');
-        const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin');
-
-        if (uiManagerInstance && nodePlugin && edgePlugin && layoutPlugin && this.linkSourceNode) {
-            const targetInfo = uiManagerInstance._getTargetInfo({ clientX: screenX, clientY: screenY });
-
-            let targetNodeInstance = null;
-            if (targetInfo?.node) {
-                targetNodeInstance = (typeof targetInfo.node === 'string') ? nodePlugin.getNodeById(targetInfo.node) : targetInfo.node;
-            }
-
-            if (targetNodeInstance && targetNodeInstance !== this.linkSourceNode) {
-                edgePlugin.addEdge(this.linkSourceNode, targetNodeInstance); // EdgePlugin calls LayoutPlugin.addEdgeToLayout
-                layoutPlugin.kick();
-            }
-        }
-        this.isLinking = false;
-        this.linkSourceNode = null;
-        this.emit('ui:linking:completed');
-    }
-
-    _cancelLinking() {
-        this.isLinking = false;
-        this.linkSourceNode = null;
-        this.emit('ui:linking:cancelled');
-    }
+    // _startLinking, _completeLinking, _cancelLinking are moved to UIPlugin.js
 
     animate() {
         const frame = () => {
-            this.pluginManager.updatePlugins(); // This now calls RenderingPlugin.update() which includes rendering
-            this.updateNodesAndEdges(); // Node/edge position updates, UI updates etc. (parts to be moved to plugins)
-            // this.render(); // Removed, RenderingPlugin handles this via its update method.
+            this.pluginManager.updatePlugins(); // Calls update on all plugins (Rendering, Layout, Nodes, Edges, UI, etc.)
             requestAnimationFrame(frame);
         };
         frame();
@@ -419,6 +394,6 @@ export class SpaceGraph {
 
         // this.ui?.dispose(); // Handled by UIPlugin
         this._listeners.clear(); // Clear all event listeners on SpaceGraph itself
-        console.log("SpaceGraph disposed.");
+        console.log('SpaceGraph disposed.');
     }
 }

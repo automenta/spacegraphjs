@@ -10,8 +10,8 @@ export const Utils = {
     DEG2RAD: Math.PI / 180,
     isObject: (item) => item && typeof item === 'object' && !Array.isArray(item),
     mergeDeep: (target, ...sources) => {
-        sources.forEach(source => {
-            Object.keys(source).forEach(key => {
+        sources.forEach((source) => {
+            Object.keys(source).forEach((key) => {
                 const targetValue = target[key];
                 const sourceValue = source[key];
                 if (Utils.isObject(targetValue) && Utils.isObject(sourceValue)) {
@@ -22,5 +22,5 @@ export const Utils = {
             });
         });
         return target;
-    }
+    },
 };

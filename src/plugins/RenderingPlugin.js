@@ -46,24 +46,27 @@ export class RenderingPlugin extends Plugin {
         if (cam && this.renderGL && this.renderCSS3D) {
             this.renderGL.render(this.scene, cam);
             this.renderCSS3D.render(this.cssScene, cam);
-        } else if (!cam && this.space) { // Fallback for initial frames if camera plugin isn't ready
+        } else if (!cam && this.space) {
+            // Fallback for initial frames if camera plugin isn't ready
             // This fallback should ideally not be needed if init order is correct.
             if (this.space._cam) {
-                 this.renderGL.render(this.scene, this.space._cam);
-                 this.renderCSS3D.render(this.cssScene, this.space._cam);
+                this.renderGL.render(this.scene, this.space._cam);
+                this.renderCSS3D.render(this.cssScene, this.space._cam);
             }
         }
     }
 
     _setupRenderers() {
         if (!this.space || !this.space.container) {
-            console.error("RenderingPlugin: SpaceGraph container not available for renderer setup.");
+            console.error('RenderingPlugin: SpaceGraph container not available for renderer setup.');
             return;
         }
 
         this.webglCanvas = $('#webgl-canvas'); // Assumes your HTML has <canvas id="webgl-canvas">
         if (!this.webglCanvas) {
-            console.error("RenderingPlugin: #webgl-canvas not found. Make sure it's in your HTML structure passed to SpaceGraph.");
+            console.error(
+                "RenderingPlugin: #webgl-canvas not found. Make sure it's in your HTML structure passed to SpaceGraph."
+            );
             // Optionally, create and append canvas if not found
             this.webglCanvas = document.createElement('canvas');
             this.webglCanvas.id = 'webgl-canvas';
@@ -85,7 +88,7 @@ export class RenderingPlugin extends Plugin {
             left: '0',
             width: '100%',
             height: '100%',
-            pointerEvents: 'none'
+            pointerEvents: 'none',
         });
         this.css3dContainer.appendChild(this.renderCSS3D.domElement);
         this.space.container.appendChild(this.css3dContainer);
@@ -104,11 +107,13 @@ export class RenderingPlugin extends Plugin {
             this.renderGL.setClearColor(color, alpha);
         }
         if (this.webglCanvas) {
-            this.webglCanvas.style.backgroundColor = alpha === 0 ? 'transparent' : `#${color.toString(16).padStart(6, '0')}`;
+            this.webglCanvas.style.backgroundColor =
+                alpha === 0 ? 'transparent' : `#${color.toString(16).padStart(6, '0')}`;
         }
     }
 
-    _onWindowResize = () => { // Arrow function to keep 'this' context
+    _onWindowResize = () => {
+        // Arrow function to keep 'this' context
         const cameraPlugin = this.pluginManager?.getPlugin('CameraPlugin');
         const cam = cameraPlugin?.getCameraInstance() || this.space?._cam; // Fallback to space._cam if plugin not ready
 
@@ -122,7 +127,7 @@ export class RenderingPlugin extends Plugin {
             this.renderGL.setSize(iw, ih);
             this.renderCSS3D.setSize(iw, ih);
         }
-    }
+    };
 
     // Public accessors for scenes if other plugins need them
     getWebGLScene() {

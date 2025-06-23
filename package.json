@@ -23,7 +23,7 @@
         "start": "npm run build && npx vite dev",
         "demos": "npm run build && npx vite dev --open /demos.html",
         "build:watch": "vite build --watch",
-    "build:gh-pages": "mkdir -p docs && cp index.html docs/index.html && echo '<h1>Test Page</h1><p>This is docs/test.html</p>' > docs/test.html && echo 'Content of root index.html that will be copied:' && cat index.html"
+        "build:gh-pages": "mkdir -p docs && cp index.html docs/index.html && echo '<h1>Test Page</h1><p>This is docs/test.html</p>' > docs/test.html && echo 'Content of root index.html that will be copied:' && cat index.html"
     },
     "author": "SpaceGraph Contributors",
     "license": "MIT",
@@ -57,11 +57,13 @@
     "devDependencies": {
         "@babel/core": "^7.27.4",
         "@babel/preset-env": "^7.27.2",
+        "@eslint/js": "^9.29.0",
         "@rollup/plugin-terser": "^0.4.4",
         "chart.js": "^4.5.0",
         "eslint": "^8.57.0",
         "eslint-config-prettier": "^9.1.0",
-        "eslint-plugin-prettier": "^5.2.1",
+        "eslint-plugin-prettier": "^5.5.0",
+        "globals": "^16.2.0",
         "jsdoc": "^4.0.4",
         "jsdom": "^24.0.0",
         "prettier": "^3.3.3",
