@@ -57,7 +57,7 @@ export class RenderingPlugin extends Plugin {
         payload.deselected?.forEach(deselectedItem => {
             const object = deselectedItem.item?.mesh || deselectedItem.item?.line;
             if (object) {
-                this.selection.remove(object);
+                this.selection.delete(object); // Changed from remove to delete
             }
         });
 
@@ -181,9 +181,9 @@ export class RenderingPlugin extends Plugin {
         this.selection = new Selection();
         this.outlineEffect = new OutlineEffect(this.scene, cam, { // Pass scene and camera
             blendFunction: 21, // BlendFunction.SCREEN
-            edgeStrength: 2.5,
+            edgeStrength: 2.0, // Slightly reduced edgeStrength
             pulseSpeed: 0.0,
-            visibleEdgeColor: 0xffffff,
+            visibleEdgeColor: 0xffff00, // Changed to yellow for contrast
             hiddenEdgeColor: 0x22090a,
             kernelSize: KernelSize.SMALL, // Smaller kernel for finer outlines
             blur: false,
