@@ -1,7 +1,7 @@
 ## **SpaceGraph.js: A Development Plan**
 
 ### Vision
-SpaceGraph.js aims to be the premier open-source library for interactive 3D graph visualization. It will provide a modular, well-documented API that enables developers to create, explore, and share complex knowledge graphs with ease, featuring a delightful user experience through intuitive interactions and visually appealing rendering.
+SpaceGraph.js aims to be the premier open-source library for interactive 2D/3D zooming user interface. It will provide a modular, well-documented API that enables developers to create, explore, and share complex knowledge graphs with ease, featuring a delightful user experience through intuitive interactions and visually appealing rendering.
 
 ### Guiding Principles
 *   **Core Library Focus:** The library provides the tools for visualization and interaction. The application built with it handles state management (saving/loading) and data fetching logic.
