@@ -32,12 +32,60 @@ export class LayoutPlugin extends Plugin {
         const edgePlugin = this.pluginManager.getPlugin('EdgePlugin');
 
         if (nodePlugin && this.activeLayout && typeof this.activeLayout.addNode === 'function') {
-            nodePlugin.getNodes().forEach(node => this.activeLayout.addNode(node));
+            nodePlugin.getNodes().forEach((node) => this.activeLayout.addNode(node));
         }
         if (edgePlugin && this.activeLayout && typeof this.activeLayout.addEdge === 'function') {
-            edgePlugin.getEdges().forEach(edge => this.activeLayout.addEdge(edge));
+            edgePlugin.getEdges().forEach((edge) => this.activeLayout.addEdge(edge));
         }
-        this.kick(); // Initial kick to arrange any pre-existing elements.
+        // this.kick(); // Initial kick can be deferred or handled by application post-setup. Or done after listeners.
+
+        this._setupEventListeners();
+        this.kick(); // Kick after setup and potential population.
+    }
+
+    _setupEventListeners() {
+        if (!this.space) return;
+
+        this.space.on('node:dragstart', (node) => {
+            if (this.activeLayout && typeof this.activeLayout.fixNode === 'function') {
+                this.activeLayout.fixNode(node);
+            }
+        });
+
+        this.space.on('node:drag', (eventData) => {
+            // Node position is already updated by BaseNode.drag().
+            // Layout system might need a kick during drag if it's not automatically handling fixed node movements.
+            // For many force-directed layouts, this isn't strictly necessary as fixed nodes are respected.
+            // If continuous update during drag is desired:
+            // this.kick();
+        });
+
+        this.space.on('node:dragend', (node) => {
+            if (this.activeLayout && typeof this.activeLayout.releaseNode === 'function') {
+                this.activeLayout.releaseNode(node);
+            }
+            this.kick(); // Recalculate layout after node is released.
+        });
+
+        // Event-driven updates for graph structure changes
+        this.space.on('node:added', (node) => {
+            this.addNodeToLayout(node);
+            this.kick();
+        });
+        this.space.on('node:removed', (nodeId, node) => {
+            // node instance is passed as second arg
+            if (node) this.removeNodeFromLayout(node);
+            this.kick();
+        });
+        this.space.on('edge:added', (edge) => {
+            this.addEdgeToLayout(edge);
+            this.kick();
+        });
+        this.space.on('edge:removed', (edgeId, edge) => {
+            // edge instance is passed as second arg
+            if (edge) this.removeEdgeFromLayout(edge);
+            this.kick();
+        });
     }
 
     /**

@@ -4,20 +4,20 @@ import { Utils, $ } from '../../utils.js'; // Added $ import
 import { BaseNode } from './BaseNode.js';
 
 export class HtmlNode extends BaseNode {
-    static MIN_SIZE = {width: 80, height: 40};
-    static CONTENT_SCALE_RANGE = {min: 0.3, max: 3.0};
+    static MIN_SIZE = { width: 80, height: 40 };
+    static CONTENT_SCALE_RANGE = { min: 0.3, max: 3.0 };
     htmlElement = null; // Reference to the DOM element within cssObject
-    size = {width: 160, height: 70};
+    size = { width: 160, height: 70 };
     billboard = false;
 
     constructor(id, position, data = {}, mass = 1.0) {
         super(id, position, data, mass);
         const initialWidth = this.data.width ?? 160;
         const initialHeight = this.data.height ?? 70;
-        this.size = {width: initialWidth, height: initialHeight};
+        this.size = { width: initialWidth, height: initialHeight };
         this.htmlElement = this._createElement(); // Create the element first
         this.cssObject = new CSS3DObject(this.htmlElement); // Wrap it
-        this.cssObject.userData = {nodeId: this.id, type: 'html-node'}; // Link back
+        this.cssObject.userData = { nodeId: this.id, type: 'html-node' }; // Link back
         this.update();
         this.setContentScale(this.data.contentScale ?? 1.0);
         this.setBackgroundColor(this.data.backgroundColor ?? '#333344');
@@ -25,8 +25,14 @@ export class HtmlNode extends BaseNode {
 
     getDefaultData() {
         return {
-            label: '', content: '', width: 160, height: 70,
-            contentScale: 1.0, backgroundColor: '#333344', type: 'html', editable: false
+            label: '',
+            content: '',
+            width: 160,
+            height: 70,
+            contentScale: 1.0,
+            backgroundColor: '#333344',
+            type: 'html',
+            editable: false,
         };
     }
 
@@ -62,7 +68,7 @@ export class HtmlNode extends BaseNode {
     _initContentEditable(element) {
         const contentDiv = $('.node-content', element); // Changed to use $ utility
         if (contentDiv && this.data.editable) {
-            contentDiv.contentEditable = "true";
+            contentDiv.contentEditable = 'true';
             let debounceTimer;
             contentDiv.addEventListener('input', () => {
                 clearTimeout(debounceTimer);
@@ -71,17 +77,27 @@ export class HtmlNode extends BaseNode {
                 }, 300);
             });
             // Prevent interactions within content from triggering pan/drag
-            contentDiv.addEventListener('pointerdown', e => e.stopPropagation());
-            contentDiv.addEventListener('touchstart', e => e.stopPropagation(), {passive: true});
-            contentDiv.addEventListener('wheel', e => {
-                // Allow scrolling within the div if needed
-                const isScrollable = contentDiv.scrollHeight > contentDiv.clientHeight || contentDiv.scrollWidth > contentDiv.clientWidth;
-                const canScrollY = (e.deltaY < 0 && contentDiv.scrollTop > 0) || (e.deltaY > 0 && contentDiv.scrollTop < contentDiv.scrollHeight - contentDiv.clientHeight);
-                const canScrollX = (e.deltaX < 0 && contentDiv.scrollLeft > 0) || (e.deltaX > 0 && contentDiv.scrollLeft < contentDiv.scrollWidth - contentDiv.clientWidth);
-                if (isScrollable && (canScrollY || canScrollX)) {
-                    e.stopPropagation(); // Stop propagation only if scrolling is possible
-                }
-            }, {passive: false});
+            contentDiv.addEventListener('pointerdown', (e) => e.stopPropagation());
+            contentDiv.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
+            contentDiv.addEventListener(
+                'wheel',
+                (e) => {
+                    // Allow scrolling within the div if needed
+                    const isScrollable =
+                        contentDiv.scrollHeight > contentDiv.clientHeight ||
+                        contentDiv.scrollWidth > contentDiv.clientWidth;
+                    const canScrollY =
+                        (e.deltaY < 0 && contentDiv.scrollTop > 0) ||
+                        (e.deltaY > 0 && contentDiv.scrollTop < contentDiv.scrollHeight - contentDiv.clientHeight);
+                    const canScrollX =
+                        (e.deltaX < 0 && contentDiv.scrollLeft > 0) ||
+                        (e.deltaX > 0 && contentDiv.scrollLeft < contentDiv.scrollWidth - contentDiv.clientWidth);
+                    if (isScrollable && (canScrollY || canScrollX)) {
+                        e.stopPropagation(); // Stop propagation only if scrolling is possible
+                    }
+                },
+                { passive: false }
+            );
         }
     }
 

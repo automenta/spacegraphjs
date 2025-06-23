@@ -5,14 +5,11 @@
 
 import { Plugin } from '../core/Plugin.js';
 import { Edge } from '../graph/Edge.js'; // Assuming Edge class is in this path
-import { Utils } from '../utils.js';   // For Utils.generateId
+import { Utils } from '../utils.js'; // For Utils.generateId
 
 export class EdgePlugin extends Plugin {
     /** @type {Map<string, Edge>} */
     edges = new Map();
-
-    // For temporarily storing selected edge from SpaceGraph, until selection model is also a plugin
-    _tempSelectedEdgeRef = null;
 
     constructor(spaceGraph, pluginManager) {
         super(spaceGraph, pluginManager);
@@ -24,9 +21,7 @@ export class EdgePlugin extends Plugin {
 
     init() {
         super.init();
-        if (this.space) {
-            this._tempSelectedEdgeRef = this.space.edgeSelected;
-        }
+        // _tempSelectedEdgeRef removed, UIPlugin manages selection.
     }
 
     /**
@@ -38,14 +33,16 @@ export class EdgePlugin extends Plugin {
      */
     addEdge(sourceNode, targetNode, data = {}) {
         if (!sourceNode || !targetNode || sourceNode === targetNode) {
-            console.warn("EdgePlugin: Attempted to add edge with invalid source or target.");
+            console.warn('EdgePlugin: Attempted to add edge with invalid source or target.');
             return null;
         }
 
         // Check for duplicate edges
         for (const existingEdge of this.edges.values()) {
-            if ((existingEdge.source === sourceNode && existingEdge.target === targetNode) ||
-                (existingEdge.source === targetNode && existingEdge.target === sourceNode)) {
+            if (
+                (existingEdge.source === sourceNode && existingEdge.target === targetNode) ||
+                (existingEdge.source === targetNode && existingEdge.target === sourceNode)
+            ) {
                 console.warn(`EdgePlugin: Duplicate edge ignored between ${sourceNode.id} and ${targetNode.id}.`);
                 return existingEdge; // Or null, depending on desired behavior
             }
@@ -59,13 +56,13 @@ export class EdgePlugin extends Plugin {
         if (renderingPlugin && edge.line) {
             renderingPlugin.getWebGLScene()?.add(edge.line);
         } else if (!renderingPlugin) {
-            console.warn("EdgePlugin: RenderingPlugin not available to add edge to scene.");
+            console.warn('EdgePlugin: RenderingPlugin not available to add edge to scene.');
         }
 
-        const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin');
-        layoutPlugin?.addEdgeToLayout(edge);
+        // const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin'); // LayoutPlugin now listens to edge:added
+        // layoutPlugin?.addEdgeToLayout(edge);
 
-        this.space.emit('edge:added', edge);
+        this.space.emit('edge:added', edge); // Emit event
         return edge;
     }
 
@@ -80,8 +77,9 @@ export class EdgePlugin extends Plugin {
             return;
         }
 
-        if (this.space && this.space.edgeSelected === edge) {
-            this.space.setSelectedEdge(null); // setSelectedEdge is still on SpaceGraph
+        const uiPlugin = this.pluginManager.getPlugin('UIPlugin');
+        if (uiPlugin?.getSelectedEdge() === edge) {
+            uiPlugin.setSelectedEdge(null);
         }
 
         const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin');
@@ -124,10 +122,9 @@ export class EdgePlugin extends Plugin {
         return connectedEdges;
     }
 
-
     update() {
         // Corresponds to this.edges.forEach(edge => edge.update()); in old SpaceGraph.updateNodesAndEdges
-        this.edges.forEach(edge => {
+        this.edges.forEach((edge) => {
             if (edge.update && typeof edge.update === 'function') {
                 edge.update(); // Edge update usually doesn't need space instance
             }
@@ -136,7 +133,7 @@ export class EdgePlugin extends Plugin {
 
     dispose() {
         super.dispose();
-        this.edges.forEach(edge => edge.dispose());
+        this.edges.forEach((edge) => edge.dispose());
         this.edges.clear();
         // console.log('EdgePlugin disposed.');
     }

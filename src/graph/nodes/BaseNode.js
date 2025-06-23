@@ -11,7 +11,7 @@ export class BaseNode {
     cssObject = null; // For HTML nodes
     labelObject = null; // For 3D labels on ShapeNodes
 
-    constructor(id, position = {x: 0, y: 0, z: 0}, data = {}, mass = 1.0) {
+    constructor(id, position = { x: 0, y: 0, z: 0 }, data = {}, mass = 1.0) {
         this.id = id ?? Utils.generateId('node');
         this.position.set(position.x, position.y, position.z);
         this.data = Utils.mergeDeep({}, this.getDefaultData(), data);
@@ -19,10 +19,11 @@ export class BaseNode {
     }
 
     getDefaultData() {
-        return {label: ''};
+        return { label: '' };
     }
 
-    update(space) { /* Base update logic */
+    update(space) {
+        /* Base update logic */
     }
 
     dispose() {
@@ -43,7 +44,8 @@ export class BaseNode {
         return 50;
     }
 
-    setSelectedStyle(selected) { /* Base selection style logic */
+    setSelectedStyle(selected) {
+        /* Base selection style logic */
     }
 
     setPosition(x, y, z) {
@@ -51,15 +53,19 @@ export class BaseNode {
     }
 
     startDrag() {
-        this.space?.layout?.fixNode(this);
+        // Emits an event that LayoutPlugin (or InteractionPlugin) will listen to.
+        this.space?.emit('node:dragstart', this);
     }
 
     drag(newPosition) {
+        const oldPosition = this.position.clone();
         this.setPosition(newPosition.x, newPosition.y, newPosition.z);
+        // Emits an event with the node and its new/old positions.
+        this.space?.emit('node:drag', { node: this, newPosition: this.position, oldPosition });
     }
 
     endDrag() {
-        this.space?.layout?.releaseNode(this);
-        this.space?.layout?.kick();
+        // Emits an event that LayoutPlugin (or InteractionPlugin) will listen to.
+        this.space?.emit('node:dragend', this);
     }
 }

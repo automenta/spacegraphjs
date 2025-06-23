@@ -10,12 +10,6 @@ export class NodePlugin extends Plugin {
     /** @type {Map<string, import('../graph/nodes/BaseNode.js').BaseNode>} */
     nodes = new Map();
 
-    // For temporarily storing selected node from SpaceGraph, until selection model is also a plugin
-    // This is not ideal but helps transition.
-    _tempSelectedNodeRef = null;
-    _tempLinkSourceNodeRef = null;
-
-
     constructor(spaceGraph, pluginManager) {
         super(spaceGraph, pluginManager);
     }
@@ -26,12 +20,8 @@ export class NodePlugin extends Plugin {
 
     init() {
         super.init();
-        // If SpaceGraph has a selectedNode or linkSourceNode property we want to sync with,
-        // we could potentially get it here. For now, methods will update these.
-        if (this.space) {
-            this._tempSelectedNodeRef = this.space.nodeSelected;
-            this._tempLinkSourceNodeRef = this.space.linkSourceNode;
-        }
+        // _tempSelectedNodeRef and _tempLinkSourceNodeRef are removed as selection/linking
+        // state is now managed by UIPlugin.
     }
 
     /**
@@ -57,13 +47,13 @@ export class NodePlugin extends Plugin {
             if (nodeInstance.mesh && webglScene) webglScene.add(nodeInstance.mesh);
             if (nodeInstance.labelObject && cssScene) cssScene.add(nodeInstance.labelObject);
         } else {
-            console.warn("NodePlugin: RenderingPlugin not available to add node to scenes.");
+            console.warn('NodePlugin: RenderingPlugin not available to add node to scenes.');
         }
 
-        const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin');
-        layoutPlugin?.addNodeToLayout(nodeInstance);
+        // const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin'); // LayoutPlugin now listens to node:added
+        // layoutPlugin?.addNodeToLayout(nodeInstance);
 
-        this.space.emit('node:added', nodeInstance);
+        this.space.emit('node:added', nodeInstance); // Emit event AFTER node is added to plugin and scenes
         return nodeInstance;
     }
 
@@ -78,12 +68,13 @@ export class NodePlugin extends Plugin {
             return;
         }
 
-        // Handle selection if the removed node was selected (temporary direct access)
-        if (this.space && this.space.nodeSelected === node) {
-            this.space.setSelectedNode(null); // setSelectedNode is still on SpaceGraph
+        // Handle selection and linking state if the removed node was involved.
+        const uiPlugin = this.pluginManager.getPlugin('UIPlugin');
+        if (uiPlugin?.getSelectedNode() === node) {
+            uiPlugin.setSelectedNode(null);
         }
-        if (this.space && this.space.linkSourceNode === node) {
-            this.space._cancelLinking(); // _cancelLinking is still on SpaceGraph
+        if (uiPlugin?.getLinkSourceNode() === node) {
+            uiPlugin.cancelLinking(); // UIPlugin's cancelLinking should handle cleanup and events
         }
 
         // Remove connected edges. This logic might move to an EdgePlugin or be event-driven.
@@ -91,18 +82,13 @@ export class NodePlugin extends Plugin {
         const edgePlugin = this.pluginManager.getPlugin('EdgePlugin');
         if (edgePlugin && typeof edgePlugin.getEdgesForNode === 'function') {
             const connectedEdges = edgePlugin.getEdgesForNode(node);
-            connectedEdges.forEach(edge => edgePlugin.removeEdge(edge.id));
-        } else if (this.space && this.space.edges && typeof this.space.removeEdge === 'function') {
-            // Fallback for transitional period if EdgePlugin isn't fully active
-            // or if SpaceGraph still has direct edge management methods.
-            // This block should become obsolete after EdgePlugin is fully integrated.
-            const edgesToRemoveIds = [];
-            for (const [edgeId, edge] of this.space.edges) { // Accessing space.edges directly
-                if (edge.source === node || edge.target === node) {
-                    edgesToRemoveIds.push(edgeId);
-                }
-            }
-            edgesToRemoveIds.forEach(edgeId => this.space.removeEdge(edgeId)); // Calling space.removeEdge
+            connectedEdges.forEach((edge) => edgePlugin.removeEdge(edge.id));
+        } else {
+            // If EdgePlugin is not available or doesn't have getEdgesForNode,
+            // connected edges won't be removed. This indicates a setup issue.
+            console.warn(
+                `NodePlugin: EdgePlugin not available or functional during removeNode(${nodeId}). Connected edges may remain.`
+            );
         }
 
         const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin');
@@ -132,7 +118,7 @@ export class NodePlugin extends Plugin {
 
     update() {
         // Corresponds to this.nodes.forEach(node => node.update(this.space)); in old SpaceGraph.updateNodesAndEdges
-        this.nodes.forEach(node => {
+        this.nodes.forEach((node) => {
             if (node.update && typeof node.update === 'function') {
                 node.update(this.space); // Pass space instance for context if needed by node
             }
@@ -141,7 +127,7 @@ export class NodePlugin extends Plugin {
 
     dispose() {
         super.dispose();
-        this.nodes.forEach(node => node.dispose());
+        this.nodes.forEach((node) => node.dispose());
         this.nodes.clear();
         // console.log('NodePlugin disposed.');
     }

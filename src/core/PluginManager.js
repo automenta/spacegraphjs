@@ -99,8 +99,7 @@ export class PluginManager {
             const plugin = this.plugins[i];
             try {
                 plugin.dispose();
-            } catch (error)
-                {
+            } catch (error) {
                 console.error(`PluginManager: Error disposing plugin "${plugin.getName()}":`, error);
             }
         }

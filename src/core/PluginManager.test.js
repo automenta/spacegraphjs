@@ -9,7 +9,7 @@ const mockSpaceGraph = {
 };
 
 class MockPlugin extends Plugin {
-    customName = "TestPlugin";
+    customName = 'TestPlugin';
     isInitialized = false;
     isDisposed = false;
     isUpdated = false;
@@ -19,9 +19,15 @@ class MockPlugin extends Plugin {
         if (nameOverride) {
             this.customName = nameOverride;
         }
-        this.init = vi.fn(() => { this.isInitialized = true; });
-        this.dispose = vi.fn(() => { this.isDisposed = true; });
-        this.update = vi.fn(() => { this.isUpdated = true; });
+        this.init = vi.fn(() => {
+            this.isInitialized = true;
+        });
+        this.dispose = vi.fn(() => {
+            this.isDisposed = true;
+        });
+        this.update = vi.fn(() => {
+            this.isUpdated = true;
+        });
     }
 
     getName() {
@@ -47,8 +53,8 @@ describe('PluginManager', () => {
 
     it('should not register a plugin with a duplicate name', () => {
         const pm = new PluginManager(mockSpaceGraph);
-        const plugin1 = new MockPlugin(mockSpaceGraph, pm, "DuplicateNamePlugin");
-        const plugin2 = new MockPlugin(mockSpaceGraph, pm, "DuplicateNamePlugin");
+        const plugin1 = new MockPlugin(mockSpaceGraph, pm, 'DuplicateNamePlugin');
+        const plugin2 = new MockPlugin(mockSpaceGraph, pm, 'DuplicateNamePlugin');
         const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
         pm.registerPlugin(plugin1);
@@ -57,26 +63,31 @@ describe('PluginManager', () => {
         expect(pm.plugins.length).toBe(1);
         expect(pm.plugins[0]).toBe(plugin1);
         expect(pm.pluginMap.size).toBe(1);
-        expect(consoleWarnSpy).toHaveBeenCalledWith('PluginManager: Plugin with name "DuplicateNamePlugin" is already registered. Skipping.');
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+            'PluginManager: Plugin with name "DuplicateNamePlugin" is already registered. Skipping.'
+        );
         consoleWarnSpy.mockRestore();
     });
 
     it('should not register an invalid plugin object', () => {
         const pm = new PluginManager(mockSpaceGraph);
-        const invalidPlugin = { name: "InvalidPlugin" }; // Does not extend Plugin or have getName
+        const invalidPlugin = { name: 'InvalidPlugin' }; // Does not extend Plugin or have getName
         const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
         pm.registerPlugin(invalidPlugin);
 
         expect(pm.plugins.length).toBe(0);
-        expect(consoleErrorSpy).toHaveBeenCalledWith('PluginManager: Attempted to register an invalid plugin.', invalidPlugin);
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+            'PluginManager: Attempted to register an invalid plugin.',
+            invalidPlugin
+        );
         consoleErrorSpy.mockRestore();
     });
 
     it('should initialize all registered plugins', () => {
         const pm = new PluginManager(mockSpaceGraph);
-        const plugin1 = new MockPlugin(mockSpaceGraph, pm, "Plugin1");
-        const plugin2 = new MockPlugin(mockSpaceGraph, pm, "Plugin2");
+        const plugin1 = new MockPlugin(mockSpaceGraph, pm, 'Plugin1');
+        const plugin2 = new MockPlugin(mockSpaceGraph, pm, 'Plugin2');
         pm.registerPlugin(plugin1);
         pm.registerPlugin(plugin2);
 
@@ -90,8 +101,8 @@ describe('PluginManager', () => {
 
     it('should call update on all registered plugins', () => {
         const pm = new PluginManager(mockSpaceGraph);
-        const plugin1 = new MockPlugin(mockSpaceGraph, pm, "Plugin1");
-        const plugin2 = new MockPlugin(mockSpaceGraph, pm, "Plugin2");
+        const plugin1 = new MockPlugin(mockSpaceGraph, pm, 'Plugin1');
+        const plugin2 = new MockPlugin(mockSpaceGraph, pm, 'Plugin2');
         pm.registerPlugin(plugin1);
         pm.registerPlugin(plugin2);
 
@@ -103,19 +114,18 @@ describe('PluginManager', () => {
         expect(plugin2.isUpdated).toBe(true);
     });
 
-
     it('should dispose all registered plugins in reverse order', () => {
         const pm = new PluginManager(mockSpaceGraph);
-        const plugin1 = new MockPlugin(mockSpaceGraph, pm, "Plugin1");
-        const plugin2 = new MockPlugin(mockSpaceGraph, pm, "Plugin2");
+        const plugin1 = new MockPlugin(mockSpaceGraph, pm, 'Plugin1');
+        const plugin2 = new MockPlugin(mockSpaceGraph, pm, 'Plugin2');
         const disposeOrder = [];
 
         plugin1.dispose = vi.fn(() => {
-            disposeOrder.push("Plugin1");
+            disposeOrder.push('Plugin1');
             plugin1.isDisposed = true;
         });
         plugin2.dispose = vi.fn(() => {
-            disposeOrder.push("Plugin2");
+            disposeOrder.push('Plugin2');
             plugin2.isDisposed = true;
         });
 
@@ -127,26 +137,26 @@ describe('PluginManager', () => {
         expect(plugin1.isDisposed).toBe(true);
         expect(plugin2.dispose).toHaveBeenCalled();
         expect(plugin2.isDisposed).toBe(true);
-        expect(disposeOrder).toEqual(["Plugin2", "Plugin1"]);
+        expect(disposeOrder).toEqual(['Plugin2', 'Plugin1']);
         expect(pm.plugins.length).toBe(0);
         expect(pm.pluginMap.size).toBe(0);
     });
 
     it('should retrieve a plugin by name', () => {
         const pm = new PluginManager(mockSpaceGraph);
-        const plugin = new MockPlugin(mockSpaceGraph, pm, "MyNamedPlugin");
+        const plugin = new MockPlugin(mockSpaceGraph, pm, 'MyNamedPlugin');
         pm.registerPlugin(plugin);
 
-        const retrievedPlugin = pm.getPlugin("MyNamedPlugin");
+        const retrievedPlugin = pm.getPlugin('MyNamedPlugin');
         expect(retrievedPlugin).toBe(plugin);
-        const notFoundPlugin = pm.getPlugin("NonExistentPlugin");
+        const notFoundPlugin = pm.getPlugin('NonExistentPlugin');
         expect(notFoundPlugin).toBeUndefined();
     });
 
     it('should retrieve all plugins', () => {
         const pm = new PluginManager(mockSpaceGraph);
-        const plugin1 = new MockPlugin(mockSpaceGraph, pm, "P1");
-        const plugin2 = new MockPlugin(mockSpaceGraph, pm, "P2");
+        const plugin1 = new MockPlugin(mockSpaceGraph, pm, 'P1');
+        const plugin2 = new MockPlugin(mockSpaceGraph, pm, 'P2');
         pm.registerPlugin(plugin1);
         pm.registerPlugin(plugin2);
 

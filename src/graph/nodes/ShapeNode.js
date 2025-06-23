@@ -14,16 +14,16 @@ export class ShapeNode extends BaseNode {
         this.size = this.data.size ?? 50;
         this.color = this.data.color ?? 0xffffff;
         this.mesh = this._createMesh();
-        this.mesh.userData = {nodeId: this.id, type: 'shape-node'}; // Link back
+        this.mesh.userData = { nodeId: this.id, type: 'shape-node' }; // Link back
         if (this.data.label) {
             this.labelObject = this._createLabel(); // Create 3D label
-            this.labelObject.userData = {nodeId: this.id, type: 'shape-label'}; // Link back
+            this.labelObject.userData = { nodeId: this.id, type: 'shape-label' }; // Link back
         }
         this.update();
     }
 
     getDefaultData() {
-        return {label: '', shape: 'sphere', size: 50, color: 0xffffff, type: 'shape'};
+        return { label: '', shape: 'sphere', size: 50, color: 0xffffff, type: 'shape' };
     }
 
     _createMesh() {
@@ -40,7 +40,9 @@ export class ShapeNode extends BaseNode {
             // TODO: Add more shapes (Cone, Cylinder, Torus...)
         }
         const material = new THREE.MeshStandardMaterial({
-            color: this.color, roughness: 0.6, metalness: 0.2,
+            color: this.color,
+            roughness: 0.6,
+            metalness: 0.2,
         });
         return new THREE.Mesh(geometry, material);
     }
@@ -71,7 +73,8 @@ export class ShapeNode extends BaseNode {
             // Position label slightly above the node's bounding sphere top
             const offset = this.getBoundingSphereRadius() * 1.1 + 10; // 10px padding
             this.labelObject.position.copy(this.position).y += offset;
-            if (space?.camera?._cam) { // Billboard effect for label
+            if (space?.camera?._cam) {
+                // Billboard effect for label
                 this.labelObject.quaternion.copy(space.camera._cam.quaternion);
             }
         }

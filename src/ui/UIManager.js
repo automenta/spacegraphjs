@@ -16,8 +16,8 @@ export class UIManager {
     draggedNode = null;
     resizedNode = null;
     hoveredEdge = null;
-    resizeStartPos = {x: 0, y: 0};
-    resizeStartSize = {width: 0, height: 0};
+    resizeStartPos = { x: 0, y: 0 };
+    resizeStartSize = { width: 0, height: 0 };
     dragOffset = new THREE.Vector3();
     pointerState = {
         down: false,
@@ -25,14 +25,15 @@ export class UIManager {
         secondary: false,
         middle: false,
         potentialClick: true,
-        lastPos: {x: 0, y: 0},
-        startPos: {x: 0, y: 0}
+        lastPos: { x: 0, y: 0 },
+        startPos: { x: 0, y: 0 },
     };
     confirmCallback = null;
     tempLinkLine = null; // Added: Managed by UIManager now
 
     constructor(space, contextMenuEl, confirmDialogEl) {
-        if (!space || !contextMenuEl || !confirmDialogEl) throw new Error("UIManager requires SpaceGraph instance and UI elements.");
+        if (!space || !contextMenuEl || !confirmDialogEl)
+            throw new Error('UIManager requires SpaceGraph instance and UI elements.');
         this.space = space;
         this.container = space.container;
         this.contextMenuElement = contextMenuEl;
@@ -42,7 +43,7 @@ export class UIManager {
     }
 
     _bindEvents() {
-        const passiveOpts = {passive: false}; // Define once
+        const passiveOpts = { passive: false }; // Define once
         this.container.addEventListener('pointerdown', this._onPointerDown, passiveOpts);
         window.addEventListener('pointermove', this._onPointerMove, passiveOpts);
         window.addEventListener('pointerup', this._onPointerUp, passiveOpts);
@@ -76,8 +77,8 @@ export class UIManager {
         this.pointerState.middle = isDown && e.button === 1;
         if (isDown) {
             this.pointerState.potentialClick = true;
-            this.pointerState.startPos = {x: e.clientX, y: e.clientY};
-            this.pointerState.lastPos = {x: e.clientX, y: e.clientY};
+            this.pointerState.startPos = { x: e.clientX, y: e.clientY };
+            this.pointerState.lastPos = { x: e.clientX, y: e.clientY };
         }
     }
 
@@ -102,7 +103,7 @@ export class UIManager {
         if (this.pointerState.middle) {
             e.preventDefault();
         }
-    }
+    };
 
     _onPointerMove = (e) => {
         if (!this.pointerState.down) {
@@ -114,7 +115,7 @@ export class UIManager {
         const totalDy = e.clientY - this.pointerState.startPos.y;
 
         if (Math.sqrt(totalDx ** 2 + totalDy ** 2) > 3) this.pointerState.potentialClick = false;
-        this.pointerState.lastPos = {x: e.clientX, y: e.clientY};
+        this.pointerState.lastPos = { x: e.clientX, y: e.clientY };
 
         if (this.resizedNode) {
             e.preventDefault();
@@ -141,7 +142,7 @@ export class UIManager {
             this._updateTempLinkLine(e.clientX, e.clientY);
             const targetInfo = this._getTargetInfo(e);
             // Use common class for highlighting potential targets
-            $$('.node-common.linking-target').forEach(el => el.classList.remove('linking-target'));
+            $$('.node-common.linking-target').forEach((el) => el.classList.remove('linking-target'));
             const targetElement = targetInfo.node?.htmlElement ?? targetInfo.node?.labelObject?.element;
             if (targetInfo.node && targetInfo.node !== this.space.linkSourceNode && targetElement) {
                 targetElement.classList.add('linking-target');
@@ -155,7 +156,7 @@ export class UIManager {
             // MODIFIED: Use CameraPlugin
             this.space.pluginManager.getPlugin('CameraPlugin')?.pan(dx, dy);
         }
-    }
+    };
 
     _onPointerUp = (e) => {
         if (this.resizedNode) {
@@ -167,7 +168,7 @@ export class UIManager {
         } else if (this.space.isLinking && e.button === 0) {
             this.space.emit('ui:request:completeLinking', e.clientX, e.clientY);
         } else if (e.button === 1 && this.pointerState.potentialClick) {
-            const {node} = this._getTargetInfo(e);
+            const { node } = this._getTargetInfo(e);
             if (node) {
                 this.space.emit('ui:request:autoZoomNode', node);
                 e.preventDefault();
@@ -177,8 +178,8 @@ export class UIManager {
         // MODIFIED: Use CameraPlugin
         this.space.pluginManager.getPlugin('CameraPlugin')?.endPan();
         this._updatePointerState(e, false);
-        $$('.node-common.linking-target').forEach(el => el.classList.remove('linking-target'));
-    }
+        $$('.node-common.linking-target').forEach((el) => el.classList.remove('linking-target'));
+    };
 
     _onContextMenu = (e) => {
         e.preventDefault();
@@ -192,18 +193,20 @@ export class UIManager {
             target = targetInfo.node;
             this.space.emit('ui:request:setSelectedNode', target);
             menuItems = this._getContextMenuItemsNode(target);
-        } else if (targetInfo.intersectedEdge) { // Check edge only if no node hit
+        } else if (targetInfo.intersectedEdge) {
+            // Check edge only if no node hit
             target = targetInfo.intersectedEdge;
             this.space.emit('ui:request:setSelectedEdge', target);
             menuItems = this._getContextMenuItemsEdge(target);
-        } else { // Background
+        } else {
+            // Background
             this.space.emit('ui:request:setSelectedNode', null);
             this.space.emit('ui:request:setSelectedEdge', null);
             const worldPos = this.space.screenToWorld(e.clientX, e.clientY, 0);
             menuItems = this._getContextMenuItemsBackground(worldPos);
         }
         if (menuItems.length > 0) this._showContextMenu(e.clientX, e.clientY, menuItems);
-    }
+    };
 
     _onDocumentClick = (e) => {
         const clickedContextMenu = this.contextMenuElement.contains(e.target);
@@ -227,21 +230,30 @@ export class UIManager {
         // MODIFIED: Use CameraPlugin for isPanning
         const cameraPlugin = this.space.pluginManager.getPlugin('CameraPlugin');
         const cameraControls = cameraPlugin?.getControls(); // CameraControls instance
-        if (!clickedContextMenu && !clickedEdgeMenu && !clickedConfirmDialog &&
-            this.pointerState.potentialClick && !(cameraControls?.isPanning) && !this.space.isLinking) {
+        if (
+            !clickedContextMenu &&
+            !clickedEdgeMenu &&
+            !clickedConfirmDialog &&
+            this.pointerState.potentialClick &&
+            !cameraControls?.isPanning &&
+            !this.space.isLinking
+        ) {
             const targetInfo = this._getTargetInfo(e);
-            const clickedOnGraphElement = targetInfo.nodeElement || targetInfo.intersectedObjectResult?.node || targetInfo.intersectedObjectResult?.edge;
+            const clickedOnGraphElement =
+                targetInfo.nodeElement ||
+                targetInfo.intersectedObjectResult?.node ||
+                targetInfo.intersectedObjectResult?.edge;
             if (!clickedOnGraphElement) {
                 this.space.emit('ui:request:setSelectedNode', null);
                 this.space.emit('ui:request:setSelectedEdge', null);
             }
         }
-    }
+    };
 
     _onContextMenuClick = (e) => {
         const li = e.target.closest('li[data-action]');
         if (!li) return;
-        const {action, nodeId, edgeId, position: positionData} = li.dataset;
+        const { action, nodeId, edgeId, position: positionData } = li.dataset;
         this._hideContextMenu();
 
         const actions = {
@@ -252,41 +264,86 @@ export class UIManager {
                     node.htmlElement?.querySelector('.node-content')?.focus();
                 }
             },
-            'delete-node': () => this._showConfirm(`Delete node "${nodeId?.substring(0, 10)}..."?`, () => this.space.emit('ui:request:removeNode', nodeId)),
-            'delete-edge': () => this._showConfirm(`Delete edge "${edgeId?.substring(0, 10)}..."?`, () => this.space.emit('ui:request:removeEdge', edgeId)),
+            'delete-node': () =>
+                this._showConfirm(`Delete node "${nodeId?.substring(0, 10)}..."?`, () =>
+                    this.space.emit('ui:request:removeNode', nodeId)
+                ),
+            'delete-edge': () =>
+                this._showConfirm(`Delete edge "${edgeId?.substring(0, 10)}..."?`, () =>
+                    this.space.emit('ui:request:removeEdge', edgeId)
+                ),
             // MODIFIED: Use NodePlugin
-            'autozoom-node': () => this.space.emit('ui:request:autoZoomNode', this.space.pluginManager.getPlugin('NodePlugin')?.getNodeById(nodeId)),
-            'create-note': () => this.space.emit('ui:request:addNode', new NoteNode(null, JSON.parse(positionData), {content: 'New Note ✨'})),
-            'create-box': () => this.space.emit('ui:request:addNode', new ShapeNode(null, JSON.parse(positionData), {label: "Box Node 📦", shape: 'box', size: 60, color: Math.random() * 0xffffff})),
-            'create-sphere': () => this.space.emit('ui:request:addNode', new ShapeNode(null, JSON.parse(positionData), {label: "Sphere Node 🌐", shape: 'sphere', size: 60, color: Math.random() * 0xffffff})),
+            'autozoom-node': () =>
+                this.space.emit(
+                    'ui:request:autoZoomNode',
+                    this.space.pluginManager.getPlugin('NodePlugin')?.getNodeById(nodeId)
+                ),
+            'create-note': () =>
+                this.space.emit(
+                    'ui:request:addNode',
+                    new NoteNode(null, JSON.parse(positionData), { content: 'New Note ✨' })
+                ),
+            'create-box': () =>
+                this.space.emit(
+                    'ui:request:addNode',
+                    new ShapeNode(null, JSON.parse(positionData), {
+                        label: 'Box Node 📦',
+                        shape: 'box',
+                        size: 60,
+                        color: Math.random() * 0xffffff,
+                    })
+                ),
+            'create-sphere': () =>
+                this.space.emit(
+                    'ui:request:addNode',
+                    new ShapeNode(null, JSON.parse(positionData), {
+                        label: 'Sphere Node 🌐',
+                        shape: 'sphere',
+                        size: 60,
+                        color: Math.random() * 0xffffff,
+                    })
+                ),
             'center-view': () => this.space.emit('ui:request:centerView'),
             'reset-view': () => this.space.emit('ui:request:resetView'),
             // MODIFIED: Use NodePlugin
-            'start-link': () => this.space.emit('ui:request:startLinking', this.space.pluginManager.getPlugin('NodePlugin')?.getNodeById(nodeId)),
+            'start-link': () =>
+                this.space.emit(
+                    'ui:request:startLinking',
+                    this.space.pluginManager.getPlugin('NodePlugin')?.getNodeById(nodeId)
+                ),
             'reverse-edge': () => this.space.emit('ui:request:reverseEdge', edgeId),
             // MODIFIED: Use EdgePlugin
-            'edit-edge': () => this.space.emit('ui:request:setSelectedEdge', this.space.pluginManager.getPlugin('EdgePlugin')?.getEdgeById(edgeId)),
+            'edit-edge': () =>
+                this.space.emit(
+                    'ui:request:setSelectedEdge',
+                    this.space.pluginManager.getPlugin('EdgePlugin')?.getEdgeById(edgeId)
+                ),
             // MODIFIED: Use RenderingPlugin for background info
             'toggle-background': () => {
                 const renderingPlugin = this.space.pluginManager.getPlugin('RenderingPlugin');
                 if (renderingPlugin) {
-                    this.space.emit('ui:request:toggleBackground', renderingPlugin.background.alpha === 0 ? 0x1a1a1d : 0x000000, renderingPlugin.background.alpha === 0 ? 1.0 : 0);
+                    this.space.emit(
+                        'ui:request:toggleBackground',
+                        renderingPlugin.background.alpha === 0 ? 0x1a1a1d : 0x000000,
+                        renderingPlugin.background.alpha === 0 ? 1.0 : 0
+                    );
                 }
             },
         };
 
-        actions[action]?.() ?? console.warn("Unknown context menu action:", action);
-    }
+        actions[action]?.() ?? console.warn('Unknown context menu action:', action);
+    };
 
     _onConfirmYes = () => {
         this.confirmCallback?.();
         this._hideConfirm();
-    }
+    };
     _onConfirmNo = () => this._hideConfirm();
 
     _onKeyDown = (e) => {
         const activeEl = document.activeElement;
-        const isEditing = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable);
+        const isEditing =
+            activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable);
         if (isEditing && e.key !== 'Escape') return;
 
         const selectedNode = this.space.nodeSelected;
@@ -298,10 +355,14 @@ export class UIManager {
             case 'Backspace':
                 if (selectedNode) {
                     const nodeIdPreview = selectedNode.id.substring(0, 10);
-                    this._showConfirm(`Delete node "${nodeIdPreview}..."?`, () => this.space.emit('ui:request:removeNode', selectedNode.id));
+                    this._showConfirm(`Delete node "${nodeIdPreview}..."?`, () =>
+                        this.space.emit('ui:request:removeNode', selectedNode.id)
+                    );
                 } else if (selectedEdge) {
                     const edgeIdPreview = selectedEdge.id.substring(0, 10);
-                    this._showConfirm(`Delete edge "${edgeIdPreview}..."?`, () => this.space.emit('ui:request:removeEdge', selectedEdge.id));
+                    this._showConfirm(`Delete edge "${edgeIdPreview}..."?`, () =>
+                        this.space.emit('ui:request:removeEdge', selectedEdge.id)
+                    );
                 } else {
                     handled = false;
                 }
@@ -317,25 +378,34 @@ export class UIManager {
                 } else handled = false;
                 break;
             case 'Enter':
-                if (selectedNode instanceof HtmlNode && selectedNode.data.editable) selectedNode.htmlElement?.querySelector('.node-content')?.focus();
+                if (selectedNode instanceof HtmlNode && selectedNode.data.editable)
+                    selectedNode.htmlElement?.querySelector('.node-content')?.focus();
                 else handled = false;
                 break;
             case '+':
             case '=':
                 if (selectedNode instanceof HtmlNode) {
-                    (e.ctrlKey || e.metaKey) ? this.space.emit('ui:request:adjustNodeSize', selectedNode, 1.2) : this.space.emit('ui:request:adjustContentScale', selectedNode, 1.15);
+                    e.ctrlKey || e.metaKey
+                        ? this.space.emit('ui:request:adjustNodeSize', selectedNode, 1.2)
+                        : this.space.emit('ui:request:adjustContentScale', selectedNode, 1.15);
                 } else handled = false;
                 break;
             case '-':
             case '_':
                 if (selectedNode instanceof HtmlNode) {
-                    (e.ctrlKey || e.metaKey) ? this.space.emit('ui:request:adjustNodeSize', selectedNode, 1 / 1.2) : this.space.emit('ui:request:adjustContentScale', selectedNode, 1 / 1.15);
+                    e.ctrlKey || e.metaKey
+                        ? this.space.emit('ui:request:adjustNodeSize', selectedNode, 1 / 1.2)
+                        : this.space.emit('ui:request:adjustContentScale', selectedNode, 1 / 1.15);
                 } else handled = false;
                 break;
             case ' ':
                 if (selectedNode) this.space.emit('ui:request:focusOnNode', selectedNode, 0.5, true);
                 else if (selectedEdge) {
-                    const midPoint = new THREE.Vector3().lerpVectors(selectedEdge.source.position, selectedEdge.target.position, 0.5);
+                    const midPoint = new THREE.Vector3().lerpVectors(
+                        selectedEdge.source.position,
+                        selectedEdge.target.position,
+                        0.5
+                    );
                     const dist = selectedEdge.source.position.distanceTo(selectedEdge.target.position);
                     // MODIFIED: Use CameraPlugin
                     const cameraPlugin = this.space.pluginManager.getPlugin('CameraPlugin');
@@ -347,7 +417,7 @@ export class UIManager {
                 handled = false;
         }
         if (handled) e.preventDefault();
-    }
+    };
 
     _onWheel = (e) => {
         const targetInfo = this._getTargetInfo(e);
@@ -358,13 +428,13 @@ export class UIManager {
             if (targetInfo.node instanceof HtmlNode) {
                 e.preventDefault();
                 e.stopPropagation();
-                this.space.emit('ui:request:adjustContentScale', targetInfo.node, e.deltaY < 0 ? 1.1 : (1 / 1.1));
+                this.space.emit('ui:request:adjustContentScale', targetInfo.node, e.deltaY < 0 ? 1.1 : 1 / 1.1);
             } // Allow browser zoom otherwise
         } else {
             e.preventDefault();
             this.space.emit('ui:request:zoomCamera', e.deltaY);
         }
-    }
+    };
 
     _getTargetInfo(event) {
         const element = document.elementFromPoint(event.clientX, event.clientY);
@@ -376,11 +446,13 @@ export class UIManager {
         const interactiveElement = element?.closest('button, input, textarea, select, a'); // Inside node content
 
         // MODIFIED: Use NodePlugin
-        let node = nodeElement ? this.space.pluginManager.getPlugin('NodePlugin')?.getNodeById(nodeElement.dataset.nodeId) : null;
+        let node = nodeElement
+            ? this.space.pluginManager.getPlugin('NodePlugin')?.getNodeById(nodeElement.dataset.nodeId)
+            : null;
         let intersectedObjectResult = null;
 
         // Raycast if not interacting with specific HTML node parts or if clicking background/label
-        const needsRaycast = !element || !resizeHandle && !nodeControls && !contentEditable && !interactiveElement;
+        const needsRaycast = !element || (!resizeHandle && !nodeControls && !contentEditable && !interactiveElement);
         if (needsRaycast) {
             intersectedObjectResult = this.space.intersectedObjects(event.clientX, event.clientY);
             // Prioritize raycast result for node if no element-based node found or if raycast hit mesh
@@ -390,13 +462,17 @@ export class UIManager {
         }
 
         return {
-            element, nodeElement, resizeHandle, nodeControls, contentEditable, interactiveElement,
+            element,
+            nodeElement,
+            resizeHandle,
+            nodeControls,
+            contentEditable,
+            interactiveElement,
             node, // The determined node (from element or raycast)
             intersectedEdge: intersectedObjectResult?.edge ?? null,
-            intersectedObjectResult // Full raycast result
+            intersectedObjectResult, // Full raycast result
         };
     }
-
 
     _handleHover(e) {
         if (this.pointerState.down || this.draggedNode || this.resizedNode || this.space.isLinking) {
@@ -421,15 +497,18 @@ export class UIManager {
             return;
         }
 
-        const vec = new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
+        const vec = new THREE.Vector2(
+            (e.clientX / window.innerWidth) * 2 - 1,
+            -(e.clientY / window.innerHeight) * 2 + 1
+        );
         const raycaster = new THREE.Raycaster();
         raycaster.setFromCamera(vec, camInstance);
         raycaster.params.Line.threshold = 5;
         const currentEdges = edgePlugin.getEdges();
-        const edgeLines = [...currentEdges.values()].map(edge => edge.line).filter(Boolean);
+        const edgeLines = [...currentEdges.values()].map((edge) => edge.line).filter(Boolean);
         const intersects = edgeLines.length > 0 ? raycaster.intersectObjects(edgeLines, false) : [];
-        const intersectedEdge = intersects.length > 0 ? edgePlugin.getEdgeById(intersects[0].object.userData.edgeId) : null;
-
+        const intersectedEdge =
+            intersects.length > 0 ? edgePlugin.getEdgeById(intersects[0].object.userData.edgeId) : null;
 
         if (this.hoveredEdge !== intersectedEdge) {
             if (this.hoveredEdge && this.hoveredEdge !== this.space.edgeSelected) this.hoveredEdge.setHighlight(false);
@@ -444,15 +523,18 @@ export class UIManager {
             e.stopPropagation();
             const button = targetInfo.nodeControls;
             // Extract action from class list more robustly
-            const actionClass = [...button.classList].find(cls => cls.startsWith('node-') && !cls.includes('button'));
+            const actionClass = [...button.classList].find((cls) => cls.startsWith('node-') && !cls.includes('button'));
             const action = actionClass?.substring('node-'.length);
 
             const actions = {
-                'delete': () => this._showConfirm(`Delete node "${targetInfo.node.id.substring(0, 10)}..."?`, () => this.space.emit('ui:request:removeNode', targetInfo.node.id)),
+                delete: () =>
+                    this._showConfirm(`Delete node "${targetInfo.node.id.substring(0, 10)}..."?`, () =>
+                        this.space.emit('ui:request:removeNode', targetInfo.node.id)
+                    ),
                 'content-zoom-in': () => this.space.emit('ui:request:adjustContentScale', targetInfo.node, 1.15),
                 'content-zoom-out': () => this.space.emit('ui:request:adjustContentScale', targetInfo.node, 1 / 1.15),
-                'grow': () => this.space.emit('ui:request:adjustNodeSize', targetInfo.node, 1.2),
-                'shrink': () => this.space.emit('ui:request:adjustNodeSize', targetInfo.node, 1 / 1.2),
+                grow: () => this.space.emit('ui:request:adjustNodeSize', targetInfo.node, 1.2),
+                shrink: () => this.space.emit('ui:request:adjustNodeSize', targetInfo.node, 1 / 1.2),
             };
             if (action && actions[action]) actions[action]();
             this._hideContextMenu();
@@ -467,8 +549,8 @@ export class UIManager {
             e.stopPropagation();
             this.resizedNode = targetInfo.node;
             this.resizedNode.startResize();
-            this.resizeStartPos = {x: e.clientX, y: e.clientY}; // Store initial mouse pos
-            this.resizeStartSize = {...this.resizedNode.size}; // Store initial node size
+            this.resizeStartPos = { x: e.clientX, y: e.clientY }; // Store initial mouse pos
+            this.resizeStartSize = { ...this.resizedNode.size }; // Store initial node size
             this.container.style.cursor = 'nwse-resize';
             this._hideContextMenu();
             return true;
@@ -478,7 +560,12 @@ export class UIManager {
 
     _handlePointerDownNode(e, targetInfo) {
         // Can drag if node exists and not clicking specific interactive sub-elements
-        const canDrag = targetInfo.node && !targetInfo.nodeControls && !targetInfo.resizeHandle && !targetInfo.interactiveElement && !targetInfo.contentEditable;
+        const canDrag =
+            targetInfo.node &&
+            !targetInfo.nodeControls &&
+            !targetInfo.resizeHandle &&
+            !targetInfo.interactiveElement &&
+            !targetInfo.contentEditable;
 
         if (canDrag) {
             e.preventDefault();
@@ -526,44 +613,45 @@ export class UIManager {
 
     _getContextMenuItemsNode(node) {
         const items = [];
-        if (node instanceof HtmlNode && node.data.editable) items.push({
-            label: "Edit Content 📝",
-            action: "edit-node",
-            nodeId: node.id
-        });
-        items.push({label: "Start Link ✨", action: "start-link", nodeId: node.id});
-        items.push({label: "Auto Zoom / Back 🖱️", action: "autozoom-node", nodeId: node.id});
-        items.push({type: 'separator'});
-        items.push({label: "Delete Node 🗑️", action: "delete-node", nodeId: node.id});
+        if (node instanceof HtmlNode && node.data.editable)
+            items.push({
+                label: 'Edit Content 📝',
+                action: 'edit-node',
+                nodeId: node.id,
+            });
+        items.push({ label: 'Start Link ✨', action: 'start-link', nodeId: node.id });
+        items.push({ label: 'Auto Zoom / Back 🖱️', action: 'autozoom-node', nodeId: node.id });
+        items.push({ type: 'separator' });
+        items.push({ label: 'Delete Node 🗑️', action: 'delete-node', nodeId: node.id });
         return items;
     }
 
     _getContextMenuItemsEdge(edge) {
         return [
-            {label: "Edit Style...", action: "edit-edge", edgeId: edge.id},
-            {label: "Reverse Direction", action: "reverse-edge", edgeId: edge.id},
-            {type: 'separator'},
-            {label: "Delete Edge 🗑️", action: "delete-edge", edgeId: edge.id},
+            { label: 'Edit Style...', action: 'edit-edge', edgeId: edge.id },
+            { label: 'Reverse Direction', action: 'reverse-edge', edgeId: edge.id },
+            { type: 'separator' },
+            { label: 'Delete Edge 🗑️', action: 'delete-edge', edgeId: edge.id },
         ];
     }
 
     _getContextMenuItemsBackground(worldPos) {
         const items = [];
         if (worldPos) {
-            const posStr = JSON.stringify({x: worldPos.x, y: worldPos.y, z: worldPos.z});
-            items.push({label: "Create Note Here 📝", action: "create-note", position: posStr});
-            items.push({label: "Create Box Here 📦", action: "create-box", position: posStr});
-            items.push({label: "Create Sphere Here 🌐", action: "create-sphere", position: posStr});
+            const posStr = JSON.stringify({ x: worldPos.x, y: worldPos.y, z: worldPos.z });
+            items.push({ label: 'Create Note Here 📝', action: 'create-note', position: posStr });
+            items.push({ label: 'Create Box Here 📦', action: 'create-box', position: posStr });
+            items.push({ label: 'Create Sphere Here 🌐', action: 'create-sphere', position: posStr });
         }
-        items.push({type: 'separator'});
-        items.push({label: "Center View 🧭", action: "center-view"});
-        items.push({label: "Reset Zoom & Pan", action: "reset-view"});
+        items.push({ type: 'separator' });
+        items.push({ label: 'Center View 🧭', action: 'center-view' });
+        items.push({ label: 'Reset Zoom & Pan', action: 'reset-view' });
         // MODIFIED: Use RenderingPlugin for background info
         const renderingPlugin = this.space.pluginManager.getPlugin('RenderingPlugin');
         if (renderingPlugin) {
             items.push({
-                label: renderingPlugin.background.alpha === 0 ? "Set Dark Background" : "Set Transparent BG",
-                action: "toggle-background"
+                label: renderingPlugin.background.alpha === 0 ? 'Set Dark Background' : 'Set Transparent BG',
+                action: 'toggle-background',
             });
         }
         return items;
@@ -573,7 +661,7 @@ export class UIManager {
         const cm = this.contextMenuElement;
         cm.innerHTML = '';
         const ul = document.createElement('ul');
-        items.forEach(itemData => {
+        items.forEach((itemData) => {
             const li = document.createElement('li');
             if (itemData.type === 'separator') {
                 li.className = 'separator';
@@ -588,10 +676,10 @@ export class UIManager {
         });
         cm.appendChild(ul);
 
-        const {offsetWidth: menuWidth, offsetHeight: menuHeight} = cm;
+        const { offsetWidth: menuWidth, offsetHeight: menuHeight } = cm;
         const margin = 5;
-        let finalX = (x + margin + menuWidth > window.innerWidth - margin) ? x - menuWidth - margin : x + margin;
-        let finalY = (y + margin + menuHeight > window.innerHeight - margin) ? y - menuHeight - margin : y + margin;
+        let finalX = x + margin + menuWidth > window.innerWidth - margin ? x - menuWidth - margin : x + margin;
+        let finalY = y + margin + menuHeight > window.innerHeight - margin ? y - menuHeight - margin : y + margin;
         cm.style.left = `${Math.max(margin, finalX)}px`;
         cm.style.top = `${Math.max(margin, finalY)}px`;
         cm.style.display = 'block';
@@ -600,7 +688,7 @@ export class UIManager {
     _hideContextMenu = () => {
         this.contextMenuElement.style.display = 'none';
         this.contextMenuElement.innerHTML = '';
-    }
+    };
 
     _showConfirm(message, onConfirm) {
         const messageEl = $('#confirm-message', this.confirmDialogElement);
@@ -612,7 +700,7 @@ export class UIManager {
     _hideConfirm = () => {
         this.confirmDialogElement.style.display = 'none';
         this.confirmCallback = null;
-    }
+    };
 
     _createTempLinkLine(sourceNode) {
         this._removeTempLinkLine();
@@ -623,7 +711,7 @@ export class UIManager {
             gapSize: 4,
             transparent: true,
             opacity: 0.9,
-            depthTest: false
+            depthTest: false,
         });
         const points = [sourceNode.position.clone(), sourceNode.position.clone()];
         const geometry = new THREE.BufferGeometry().setFromPoints(points);
@@ -647,7 +735,8 @@ export class UIManager {
     }
 
     _removeTempLinkLine() {
-        if (this.tempLinkLine) { // MODIFIED: Use this.tempLinkLine
+        if (this.tempLinkLine) {
+            // MODIFIED: Use this.tempLinkLine
             this.tempLinkLine.geometry?.dispose();
             this.tempLinkLine.material?.dispose();
             // MODIFIED: Use RenderingPlugin
@@ -674,14 +763,14 @@ export class UIManager {
             <input type="color" value="#${edge.data.color.toString(16).padStart(6, '0')}" title="Color" data-action="color">
             <input type="range" min="0.5" max="5" step="0.1" value="${edge.data.thickness}" title="Thickness" data-action="thickness">
             <select title="Constraint Type" data-action="constraintType">
-                ${["elastic","rigid","weld"].map(n=>`<option value="${n}" ${edge.data.constraintType===n?'selected':''}>${n}</option>`).join('')}
+                ${['elastic', 'rigid', 'weld'].map((n) => `<option value="${n}" ${edge.data.constraintType === n ? 'selected' : ''}>${n}</option>`).join('')}
             </select>
             <button title="Delete Edge" class="delete" data-action="delete">×</button>
         `;
 
         // Use pointerdown to stop propagation early and prevent pan/drag
-        menu.addEventListener('pointerdown', e => e.stopPropagation());
-        menu.addEventListener('wheel', e => e.stopPropagation()); // Prevent zoom
+        menu.addEventListener('pointerdown', (e) => e.stopPropagation());
+        menu.addEventListener('wheel', (e) => e.stopPropagation()); // Prevent zoom
 
         menu.addEventListener('input', (e) => {
             const target = e.target;
@@ -711,7 +800,9 @@ export class UIManager {
             const button = e.target.closest('button[data-action]');
             if (!button || button.dataset.action !== 'delete') return;
             const edgeId = menu.dataset.edgeId;
-            this._showConfirm(`Delete edge "${edgeId?.substring(0, 10)}..."?`, () => this.space.emit('ui:request:removeEdge', edgeId));
+            this._showConfirm(`Delete edge "${edgeId?.substring(0, 10)}..."?`, () =>
+                this.space.emit('ui:request:removeEdge', edgeId)
+            );
         });
 
         return menu;
@@ -723,7 +814,7 @@ export class UIManager {
             this.edgeMenuObject.parent?.remove(this.edgeMenuObject);
             this.edgeMenuObject = null;
         }
-    }
+    };
 
     updateEdgeMenuPosition = () => {
         if (!this.edgeMenuObject || !this.space.edgeSelected) return;
@@ -732,28 +823,29 @@ export class UIManager {
         this.edgeMenuObject.position.copy(midPoint);
         // MODIFIED: Use CameraPlugin
         const camInstance = this.space.pluginManager.getPlugin('CameraPlugin')?.getCameraInstance();
-        if (camInstance) { // Billboard effect
+        if (camInstance) {
+            // Billboard effect
             this.edgeMenuObject.quaternion.copy(camInstance.quaternion);
         }
-    }
+    };
 
     // --- Event Handlers for SpaceGraph Events ---
     _onNodeSelected = (node) => {
         // Deselect previously selected node if any
         // MODIFIED: Use NodePlugin
         const nodePlugin = this.space.pluginManager.getPlugin('NodePlugin');
-        nodePlugin?.getNodes().forEach(n => {
+        nodePlugin?.getNodes().forEach((n) => {
             if (n !== node) n.setSelectedStyle(false);
         });
         // Apply style to newly selected node
         node?.setSelectedStyle(true);
-    }
+    };
 
     _onEdgeSelected = (edge) => {
         // Deselect previously selected edge if any
         // MODIFIED: Use EdgePlugin
         const edgePlugin = this.space.pluginManager.getPlugin('EdgePlugin');
-        edgePlugin?.getEdges().forEach(e => {
+        edgePlugin?.getEdges().forEach((e) => {
             if (e !== edge) e.setHighlight(false);
         });
         // Apply highlight to newly selected edge
@@ -764,58 +856,58 @@ export class UIManager {
         } else {
             this.hideEdgeMenu();
         }
-    }
+    };
 
     _onNodeAdded = (node) => {
         // Potentially update UI lists, etc.
         // For now, just log or react if needed
         // console.log("UI: Node added:", node.id);
-    }
+    };
 
     _onNodeRemoved = (nodeId, node) => {
         // Potentially update UI lists, etc.
         // console.log("UI: Node removed:", nodeId);
-    }
+    };
 
     _onEdgeAdded = (edge) => {
         // console.log("UI: Edge added:", edge.id);
-    }
+    };
 
     _onEdgeRemoved = (edgeId, edge) => {
         // console.log("UI: Edge removed:", edgeId);
-    }
+    };
 
     _onLayoutStarted = () => {
         // console.log("UI: Layout started");
         // Potentially show a "layout running" indicator
-    }
+    };
 
     _onLayoutStopped = () => {
         // console.log("UI: Layout stopped");
         // Potentially hide the indicator
-    }
+    };
 
     _onLinkingStarted = (sourceNode) => {
         this.container.style.cursor = 'crosshair';
         this._createTempLinkLine(sourceNode);
         this._hideContextMenu();
-    }
+    };
 
     _onLinkingCancelled = () => {
         this._removeTempLinkLine();
         this.container.style.cursor = 'grab';
-        $$('.node-common.linking-target').forEach(el => el.classList.remove('linking-target'));
-    }
+        $$('.node-common.linking-target').forEach((el) => el.classList.remove('linking-target'));
+    };
 
     _onLinkingCompleted = () => {
         this._removeTempLinkLine();
         this.container.style.cursor = 'grab';
-        $$('.node-common.linking-target').forEach(el => el.classList.remove('linking-target'));
-    }
+        $$('.node-common.linking-target').forEach((el) => el.classList.remove('linking-target'));
+    };
 
     dispose() {
         // Remove event listeners (ensure correct options if used)
-        const passiveOpts = {passive: false}; // Define once
+        const passiveOpts = { passive: false }; // Define once
         this.container.removeEventListener('pointerdown', this._onPointerDown);
         window.removeEventListener('pointermove', this._onPointerMove);
         window.removeEventListener('pointerup', this._onPointerUp);
@@ -840,7 +932,6 @@ export class UIManager {
         this.space.off('ui:linking:cancelled', this._onLinkingCancelled);
         this.space.off('ui:linking:completed', this._onLinkingCompleted);
 
-
         this.hideEdgeMenu(); // Clean up edge menu object
         // Clear references
         this.space = null;
@@ -851,6 +942,6 @@ export class UIManager {
         this.resizedNode = null;
         this.hoveredEdge = null;
         this.confirmCallback = null;
-        console.log("UIManager disposed.");
+        console.log('UIManager disposed.');
     }
 }

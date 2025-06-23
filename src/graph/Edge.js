@@ -11,17 +11,19 @@ export class Edge {
         color: 0x00d0ff,
         thickness: 1.5,
         constraintType: 'elastic',
-        constraintParams: {stiffness: 0.001, idealLength: 200}
+        constraintParams: { stiffness: 0.001, idealLength: 200 },
     };
 
     constructor(id, sourceNode, targetNode, data = {}) {
-        if (!sourceNode || !targetNode) throw new Error("Edge requires valid source and target nodes.");
+        if (!sourceNode || !targetNode) throw new Error('Edge requires valid source and target nodes.');
         this.id = id;
         this.source = sourceNode;
         this.target = targetNode;
         const defaultData = {
-            color: 0x00d0ff, thickness: 1.5, constraintType: 'elastic',
-            constraintParams: {stiffness: 0.001, idealLength: 200}
+            color: 0x00d0ff,
+            thickness: 1.5,
+            constraintType: 'elastic',
+            constraintParams: { stiffness: 0.001, idealLength: 200 },
         };
         this.data = Utils.mergeDeep({}, defaultData, data);
         this.line = this._createLine();
@@ -39,7 +41,7 @@ export class Edge {
         const geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
         const line = new THREE.Line(geometry, material);
         line.renderOrder = -1;
-        line.userData = {edgeId: this.id}; // Link back
+        line.userData = { edgeId: this.id }; // Link back
         return line;
     }
 
