@@ -20,11 +20,18 @@ export class CurvedEdge extends Edge {
 
     constructor(id, sourceNode, targetNode, data = {}) {
         super(id, sourceNode, targetNode, data);
-        // Ensure numPoints is at least 1 to prevent issues with curve generation and color arrays.
-        // 0 segments (1 point) would lead to t = 0/0 = NaN in color interpolation.
-        // Negative segments would lead to errors in getPoints or empty point arrays.
-        this.numPoints = Math.max(1, this.data.numCurvePoints ?? 20);
-        this.curvature = this.data.curvature ?? 0.3;
+
+        let requestedNumPoints = this.data.numCurvePoints;
+        // Ensure numPoints (segments for the curve) is a positive integer.
+        // curve.getPoints(N) requires N >= 1 to produce at least 2 points.
+        if (typeof requestedNumPoints !== 'number' || isNaN(requestedNumPoints) || requestedNumPoints <= 0) {
+            requestedNumPoints = 20; // Default to 20 segments
+        }
+        this.numPoints = Math.max(1, Math.floor(requestedNumPoints)); // Ensure at least 1 segment, and integer
+
+        this.curvature = (typeof this.data.curvature === 'number' && isFinite(this.data.curvature))
+            ? this.data.curvature
+            : 0.3; // Default curvature
 
         // The line object created by super() is a straight line.
         // We need to replace its geometry or re-create the line if Line2 geometry cannot be easily updated.
@@ -68,7 +75,7 @@ export class CurvedEdge extends Edge {
         // Fix A3: Check for NaN positions in source/target nodes
         if (!isFinite(sourcePos.x) || !isFinite(sourcePos.y) || !isFinite(sourcePos.z) ||
             !isFinite(targetPos.x) || !isFinite(targetPos.y) || !isFinite(targetPos.z)) {
-            console.warn(`CurvedEdge ${this.id}: Source or target node has NaN position. Skipping update. Source: (${sourcePos.x},${sourcePos.y},${sourcePos.z}), Target: (${targetPos.x},${targetPos.y},${targetPos.z})`);
+            console.warn(`CurvedEdge ${this.id}: Source or target node has NaN/Infinite position. Skipping update. Source: (${sourcePos.x},${sourcePos.y},${sourcePos.z}), Target: (${targetPos.x},${targetPos.y},${targetPos.z})`);
             // Optionally hide the edge:
             // if (this.line) this.line.visible = false;
             return;
@@ -113,9 +120,9 @@ export class CurvedEdge extends Edge {
 
         const curve = new THREE.QuadraticBezierCurve3(sourcePos, controlPoint, targetPos);
 
-        // Ensure numPoints is valid for getPoints
-        const numSegments = Math.max(1, this.numPoints); // Ensure at least 1 segment (2 points)
-        const points = curve.getPoints(numSegments);
+        // this.numPoints is already validated in constructor to be an integer >= 1
+        const curveSegments = this.numPoints;
+        const points = curve.getPoints(curveSegments); // getPoints(N) returns N+1 points
 
         const positions = [];
         points.forEach((p) => {
@@ -129,10 +136,10 @@ export class CurvedEdge extends Edge {
         });
 
         // Logging added for debugging the main issue of point count mismatch
-        // console.log(`CurvedEdge ${this.id}: numPoints: ${this.numPoints} (segments: ${numSegments}), expected points: ${numSegments + 1}, positions length: ${positions.length / 3}`);
+        // console.log(`CurvedEdge ${this.id}: numPoints: ${this.numPoints} (segments: ${curveSegments}), expected points: ${curveSegments + 1}, positions length: ${positions.length / 3}`);
 
-        if (positions.length === 0 || positions.length / 3 !== numSegments + 1) {
-            console.error(`CurvedEdge ${this.id}: Incorrect number of points generated. Expected ${numSegments + 1}, got ${positions.length/3}. NumPoints was ${this.numPoints}. Source:`, sourcePos, "Target:", targetPos, "Control:", controlPoint);
+        if (positions.length === 0 || positions.length / 3 !== curveSegments + 1) {
+            console.error(`CurvedEdge ${this.id}: Incorrect number of points generated. Expected ${curveSegments + 1} points, got ${positions.length/3}. NumPoints (segments for curve) was ${this.numPoints}. Source:`, sourcePos, "Target:", targetPos, "Control:", controlPoint);
             // Fallback: create a straight line if curve generation failed catastrophically
             positions.length = 0; // Clear potentially bad positions
             positions.push(sourcePos.x, sourcePos.y, sourcePos.z);

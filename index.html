@@ -69,11 +69,16 @@
 
                     // Access layout via LayoutPlugin
                     const layoutPlugin = space.plugins.getPlugin('LayoutPlugin');
-                    if (layoutPlugin && layoutPlugin.activeLayout) {
-                        layoutPlugin.activeLayout.runOnce(250); // Initial settling steps
-                        layoutPlugin.activeLayout.start(); // Start continuous layout simulation
+                    const layoutManager = layoutPlugin?.layoutManager;
+                    const activeLayout = layoutManager?.getActiveLayout();
+
+                    if (activeLayout && layoutManager) {
+                        // The default layout (ForceLayout) is already started by LayoutManager.applyLayout.
+                        // An additional kick can help settle the graph after nodes from createExampleGraph are added.
+                        console.log('Kicking layout for initial settling after example graph creation.');
+                        layoutManager.kick?.(); // This calls activeLayout.kick()
                     } else {
-                        console.error('LayoutPlugin or activeLayout not available for initialization.');
+                        console.error('LayoutPlugin or activeLayout not available after SpaceGraph initialization. Cannot kick.');
                     }
 
                     space.centerView(null, 0.8); // Center view smoothly
