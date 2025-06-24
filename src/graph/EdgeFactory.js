@@ -32,7 +32,7 @@ export class EdgeFactory {
      */
     registerEdgeType(typeName, edgeClass) {
         if (this.edgeTypes.has(typeName)) {
-            console.warn(`EdgeFactory: Edge type "${typeName}" is already registered. Overwriting.`);
+            // console.warn(`EdgeFactory: Edge type "${typeName}" is already registered. Overwriting.`);
         }
         this.edgeTypes.set(typeName, edgeClass);
     }
@@ -59,11 +59,9 @@ export class EdgeFactory {
             // CurvedEdge uses this.space in its update() method. This needs to be set.
             edgeInstance.space = this.space;
 
-
             return edgeInstance;
-        } else {
-            console.error(`EdgeFactory: Unknown edge type "${type}". Cannot create edge.`);
-            return null;
         }
+        // console.error(`EdgeFactory: Unknown edge type "${type}". Cannot create edge.`);
+        return null;
     }
 }

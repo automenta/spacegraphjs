@@ -9,11 +9,16 @@ export class Edge {
     static DEFAULT_OPACITY = 0.8; // Adjusted for potentially thicker lines
     static HIGHLIGHT_OPACITY = 1.0;
     line = null;
-    arrowheadMesh = null; // For arrowhead
+    arrowheads = { source: null, target: null };
+    isInstanced = false; // Added for instanced rendering
+    instanceId = null; // Added for instanced rendering
+
     // Default constraint: elastic spring
     data = {
-        color: 0x00d0ff,
-        thickness: 3, // Adjusted for Line2, which uses pixel units
+        color: 0x00d0ff, // Default single color
+        gradientColors: null, // E.g., [0xff0000, 0x0000ff] or ['#ff0000', '#0000ff']
+        thickness: 3, // For Line2 (pixel units)
+        thicknessInstanced: 0.5, // For InstancedEdgeManager (world units, cylinder radius)
         constraintType: 'elastic',
         constraintParams: { stiffness: 0.001, idealLength: 200 },
         arrowhead: false, // Can be true, 'source', 'target', or 'both'
@@ -26,43 +31,126 @@ export class Edge {
         this.id = id;
         this.source = sourceNode;
         this.target = targetNode;
+
+        // The 'type' property from 'data' might be used by subclasses (e.g. CurvedEdge).
+        // If it's present in `data`, it will be merged into `this.data`.
+        // For the base Edge class, it's not directly used in the constructor logic here.
+
         const defaultData = {
             color: 0x00d0ff,
-            thickness: 3, // Default thickness for Line2
+            gradientColors: null,
+            thickness: 3,
+            thicknessInstanced: 0.5, // Default for instanced version
             constraintType: 'elastic',
             constraintParams: { stiffness: 0.001, idealLength: 200 },
+            arrowhead: false,
+            arrowheadSize: 10,
+            arrowheadColor: null,
+            // type: 'straight' // Default type if it were managed here
         };
+        // this.data = Utils.mergeDeep({}, defaultData, restData); // If 'type' was extracted
         this.data = Utils.mergeDeep({}, defaultData, data);
+        this.isInstanced = false; // Initialize instancing state
+        this.instanceId = null;
+
+        if (this.data.gradientColors && this.data.gradientColors.length === 2) {
+            this.data.color = null; // Prioritize gradient if valid
+        } else if (this.data.color === null) {
+            this.data.color = defaultData.color; // Fallback if no gradient and no color
+        }
+
         this.line = this._createLine();
-        this.update();
+        this._createArrowheads(); // Create arrowheads based on data
+        this.update(); // This will also set initial colors and position arrowheads
+    }
+
+    _createArrowheads() {
+        const arrowheadOpt = this.data.arrowhead;
+        if (arrowheadOpt === true || arrowheadOpt === 'target' || arrowheadOpt === 'both') {
+            this.arrowheads.target = this._createSingleArrowhead('target');
+            if (this.line?.parent) this.line.parent.add(this.arrowheads.target); // Add to scene if line is already there
+        }
+        if (arrowheadOpt === 'source' || arrowheadOpt === 'both') {
+            this.arrowheads.source = this._createSingleArrowhead('source');
+            if (this.line?.parent) this.line.parent.add(this.arrowheads.source);
+        }
     }
 
     _createLine() {
         const geometry = new LineGeometry();
-        // Positions will be set in update()
+        // Positions and colors will be set in update() or immediately after creation
 
-        const material = new LineMaterial({
-            color: this.data.color,
-            linewidth: this.data.thickness, // in pixels
+        const materialConfig = {
+            linewidth: this.data.thickness,
             transparent: true,
             opacity: Edge.DEFAULT_OPACITY,
-            depthTest: false, // Render edges slightly "on top"
-            resolution: new THREE.Vector2(window.innerWidth, window.innerHeight), // for correct thickness
-            // Dashed properties are now controlled by data
+            depthTest: false,
+            resolution: new THREE.Vector2(window.innerWidth, window.innerHeight),
             dashed: this.data.dashed || false,
             dashScale: this.data.dashScale ?? 1,
             dashSize: this.data.dashSize ?? 3,
             gapSize: this.data.gapSize ?? 1,
-        });
+        };
 
+        if (this.data.gradientColors && this.data.gradientColors.length === 2) {
+            materialConfig.vertexColors = true; // Enable vertex colors
+            // Note: `color` property on material is ignored if vertexColors is true
+        } else {
+            materialConfig.color = this.data.color;
+        }
+
+        const material = new LineMaterial(materialConfig);
         const line = new Line2(geometry, material);
-        if (line.material.dashed) {
+
+        if (material.dashed) {
             line.computeLineDistances(); // Required for dashed lines
         }
-        line.renderOrder = -1; // Render after nodes if nodes are at 0 or positive
-        line.userData = { edgeId: this.id }; // Link back
-        // line.computeLineDistances(); // Important for dashed lines, but also good practice
+        line.renderOrder = -1;
+        line.userData = { edgeId: this.id };
         return line;
+    }
+
+    _setGradientColors() {
+        if (!this.line || !this.data.gradientColors || this.data.gradientColors.length !== 2) {
+            // If switching from gradient to solid color, ensure vertexColors is off and material color is set
+            if (this.line && this.line.material.vertexColors) {
+                this.line.material.vertexColors = false;
+                this.line.material.color.set(this.data.color || 0x00d0ff); // Fallback color
+                this.line.material.needsUpdate = true;
+            }
+            // Clear any existing color attributes from geometry if necessary
+            // For LineGeometry, simply not calling setColors or providing an empty array might suffice,
+            // or ensure the material isn't expecting vertex colors.
+            // The above vertexColors = false should handle it.
+            return;
+        }
+
+        if (!this.line.material.vertexColors) {
+            this.line.material.vertexColors = true;
+            this.line.material.needsUpdate = true; // Crucial when changing material properties
+        }
+
+        const colorStart = new THREE.Color(this.data.gradientColors[0]);
+        const colorEnd = new THREE.Color(this.data.gradientColors[1]);
+
+        const colors = [];
+        // For a simple line (source to target), we provide two colors.
+        // LineGeometry expects colors for each *vertex* of the segments.
+        // A single line segment in LineGeometry is made of two points,
+        // and it interpolates colors between them if vertexColors is true.
+        // The setColors method for LineGeometry takes a flat array for all points.
+        // If the geometry has N points, it needs N*3 color values.
+        // For a line with just a start and end point (2 points), we need 6 color values.
+        colors.push(colorStart.r, colorStart.g, colorStart.b);
+        colors.push(colorEnd.r, colorEnd.g, colorEnd.b);
+
+        // If the line has more than 2 points (e.g. CurvedEdge), this needs adjustment.
+        // For base Edge.js, it's always 2 points.
+        // CurvedEdge will need to override this part if it wants a gradient over many segments.
+
+        this.line.geometry.setColors(colors);
+        this.line.geometry.attributes.instanceColorStart.needsUpdate = true;
+        this.line.geometry.attributes.instanceColorEnd.needsUpdate = true;
     }
 
     update() {
@@ -77,37 +165,62 @@ export class Edge {
             this.target.position.z,
         ];
         this.line.geometry.setPositions(positions);
-        // this.line.computeLineDistances(); // Recalculate for dashed lines if parameters change or on initial setup
-        this.line.geometry.attributes.position.needsUpdate = true; // May not be strictly necessary with setPositions
-        this.line.geometry.computeBoundingSphere(); // Important for raycasting and culling
 
-        if (this.arrowheadMesh) {
-            const targetPos = this.target.position;
-            const sourcePos = this.source.position; // Needed for direction
-
-            // Position arrowhead at the target node's position, or slightly offset along the edge
-            // For now, placing it directly at target. Offset might be needed if target node has a large radius.
-            this.arrowheadMesh.position.copy(targetPos);
-
-            // Orient arrowhead
-            const direction = new THREE.Vector3().subVectors(targetPos, sourcePos).normalize();
-            if (direction.lengthSq() > 0.0001) { // Ensure not zero vector
-                 // Point the arrowhead along the Z-axis of its local space, then align this Z-axis with the direction vector.
-                 // Default cone geometry points along its Y axis. We'll rotate it to point along Z.
-                const quaternion = new THREE.Quaternion();
-                // Arrowheads are typically modeled pointing along an axis (e.g. +Z or +Y).
-                // Let's assume our cone points along its local +Y axis.
-                // We want to align this +Y axis with 'direction'.
-                // The default THREE.ConeGeometry is oriented along the Y axis.
-                // We need to align the arrowhead's local Y-axis to the edge's direction.
-                const up = new THREE.Vector3(0, 1, 0); // Default orientation of ConeGeometry
-                quaternion.setFromUnitVectors(up, direction);
-                this.arrowheadMesh.quaternion.copy(quaternion);
+        if (this.data.gradientColors && this.data.gradientColors.length === 2) {
+            this._setGradientColors();
+        } else {
+            // Ensure no gradient if not specified (e.g., if it was previously a gradient)
+            // This might involve setting material.vertexColors = false and material.color if state changed.
+            // _setGradientColors() handles turning off vertexColors if gradientColors is invalid.
+            // We also need to ensure the single color is correctly applied if switching from gradient.
+            if (this.line.material.vertexColors) {
+                // Was gradient, now isn't
+                this.line.material.vertexColors = false;
+                this.line.material.needsUpdate = true;
             }
+            this.line.material.color.set(this.data.color); // Set solid color
+        }
+
+        if (this.line.material.dashed) {
+            // Recompute if dashed (might be needed if positions change significantly)
+            this.line.computeLineDistances();
+        }
+        // this.line.geometry.attributes.position.needsUpdate = true; // setPositions should handle this.
+        this.line.geometry.computeBoundingSphere();
+
+        this._updateArrowheads();
+    }
+
+    _updateArrowheads() {
+        const sourcePos = this.source.position;
+        const targetPos = this.target.position;
+
+        if (this.arrowheads.target) {
+            this.arrowheads.target.position.copy(targetPos);
+            const direction = new THREE.Vector3().subVectors(targetPos, sourcePos).normalize();
+            this._orientArrowhead(this.arrowheads.target, direction);
+        }
+
+        if (this.arrowheads.source) {
+            this.arrowheads.source.position.copy(sourcePos);
+            const direction = new THREE.Vector3().subVectors(sourcePos, targetPos).normalize(); // Reversed direction
+            this._orientArrowhead(this.arrowheads.source, direction);
         }
     }
 
-    _createArrowhead() {
+    _orientArrowhead(arrowheadMesh, direction) {
+        if (!arrowheadMesh) return;
+        if (direction.lengthSq() > 0.0001) {
+            // Ensure not zero vector
+            const quaternion = new THREE.Quaternion();
+            const up = new THREE.Vector3(0, 1, 0); // Default orientation of ConeGeometry is along Y axis
+            quaternion.setFromUnitVectors(up, direction);
+            arrowheadMesh.quaternion.copy(quaternion);
+        }
+    }
+
+    _createSingleArrowhead(_type) {
+        // _type is 'source' or 'target' for potential differentiation (currently unused for geometry/material)
         const size = this.data.arrowheadSize || 10;
         // A cone is a common choice for an arrowhead
         // ConeGeometry(radius, height, radialSegments)
@@ -127,22 +240,28 @@ export class Edge {
         return arrowhead;
     }
 
-
     setHighlight(highlight) {
         if (!this.line?.material) return;
         const mat = this.line.material;
         mat.opacity = highlight ? Edge.HIGHLIGHT_OPACITY : Edge.DEFAULT_OPACITY;
-        mat.color.set(highlight ? Edge.HIGHLIGHT_COLOR : this.data.color);
+        mat.color.set(highlight ? Edge.HIGHLIGHT_COLOR : this.data.color); // Note: This won't work for gradient edges as color is from vertexColors
         mat.linewidth = highlight ? this.data.thickness * 1.5 : this.data.thickness; // Adjust thickness on highlight
         mat.needsUpdate = true;
 
-        if (this.arrowheadMesh?.material) {
-            this.arrowheadMesh.material.color.set(highlight ? Edge.HIGHLIGHT_COLOR : (this.data.arrowheadColor || this.data.color) );
-            this.arrowheadMesh.material.opacity = highlight ? Edge.HIGHLIGHT_OPACITY : Edge.DEFAULT_OPACITY;
-            // Optionally scale arrowhead on highlight
-            // const scale = highlight ? 1.2 : 1;
-            // this.arrowheadMesh.scale.set(scale, scale, scale);
-        }
+        const highlightArrowhead = (arrowhead) => {
+            if (arrowhead?.material) {
+                arrowhead.material.color.set(
+                    highlight ? Edge.HIGHLIGHT_COLOR : this.data.arrowheadColor || this.data.color
+                );
+                arrowhead.material.opacity = highlight ? Edge.HIGHLIGHT_OPACITY : Edge.DEFAULT_OPACITY;
+                // Optionally scale arrowhead on highlight
+                // const scale = highlight ? 1.2 : 1;
+                // arrowhead.scale.set(scale, scale, scale);
+            }
+        };
+
+        highlightArrowhead(this.arrowheads.source);
+        highlightArrowhead(this.arrowheads.target);
     }
 
     // Call this if the window resizes, or ensure RenderingPlugin does.
@@ -162,11 +281,18 @@ export class Edge {
             this.line.parent?.remove(this.line);
             this.line = null;
         }
-        if (this.arrowheadMesh) {
-            this.arrowheadMesh.geometry?.dispose();
-            this.arrowheadMesh.material?.dispose();
-            this.arrowheadMesh.parent?.remove(this.arrowheadMesh);
-            this.arrowheadMesh = null;
-        }
+
+        const disposeArrowhead = (arrowhead) => {
+            if (arrowhead) {
+                arrowhead.geometry?.dispose();
+                arrowhead.material?.dispose();
+                arrowhead.parent?.remove(arrowhead);
+            }
+        };
+
+        disposeArrowhead(this.arrowheads.source);
+        this.arrowheads.source = null;
+        disposeArrowhead(this.arrowheads.target);
+        this.arrowheads.target = null;
     }
 }

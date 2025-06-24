@@ -74,26 +74,28 @@ export class UIPlugin extends Plugin {
 
             // If nodes are being selected, ensure edges are cleared (maintaining mutual exclusivity for now)
             if (this.selectedNodes.size > 0 && this.selectedEdges.size > 0) {
-                this.selectedEdges.forEach(edge => {
+                this.selectedEdges.forEach((edge) => {
                     edge.setHighlight(false);
                     changedItemsPayload.deselected.push({ item: edge, type: 'edge' });
                 });
                 this.selectedEdges.clear();
             }
-        } else { // Single selection logic
+        } else {
+            // Single selection logic
             const previouslySelectedNodes = new Set(this.selectedNodes);
             const previouslySelectedEdges = new Set(this.selectedEdges);
 
             // Clear all current selections from their respective sets and update styles
-            previouslySelectedNodes.forEach(node => {
-                if (node !== targetNode) { // Don't deselect if it's the target of the single select
+            previouslySelectedNodes.forEach((node) => {
+                if (node !== targetNode) {
+                    // Don't deselect if it's the target of the single select
                     node.setSelectedStyle(false);
                     changedItemsPayload.deselected.push({ item: node, type: 'node' });
                 }
             });
             this.selectedNodes.clear();
 
-            previouslySelectedEdges.forEach(edge => {
+            previouslySelectedEdges.forEach((edge) => {
                 edge.setHighlight(false);
                 changedItemsPayload.deselected.push({ item: edge, type: 'edge' });
             });
@@ -101,7 +103,8 @@ export class UIPlugin extends Plugin {
 
             if (targetNode) {
                 this.selectedNodes.add(targetNode);
-                if (!previouslySelectedNodes.has(targetNode) || !targetNode.isSelected) { // isSelected might be a direct prop or inferred
+                if (!previouslySelectedNodes.has(targetNode) || !targetNode.isSelected) {
+                    // isSelected might be a direct prop or inferred
                     targetNode.setSelectedStyle(true); // Ensure style is applied if it wasn't already
                 }
                 changedItemsPayload.selected.push({ item: targetNode, type: 'node' });
@@ -140,18 +143,19 @@ export class UIPlugin extends Plugin {
 
             // If edges are being selected, ensure nodes are cleared (maintaining mutual exclusivity for now)
             if (this.selectedEdges.size > 0 && this.selectedNodes.size > 0) {
-                this.selectedNodes.forEach(node => {
+                this.selectedNodes.forEach((node) => {
                     node.setSelectedStyle(false);
                     changedItemsPayload.deselected.push({ item: node, type: 'node' });
                 });
                 this.selectedNodes.clear();
             }
-        } else { // Single selection logic
+        } else {
+            // Single selection logic
             const previouslySelectedEdges = new Set(this.selectedEdges);
             const previouslySelectedNodes = new Set(this.selectedNodes);
 
             // Clear all current selections from their respective sets and update styles
-            previouslySelectedEdges.forEach(edge => {
+            previouslySelectedEdges.forEach((edge) => {
                 if (edge !== targetEdge) {
                     edge.setHighlight(false);
                     changedItemsPayload.deselected.push({ item: edge, type: 'edge' });
@@ -159,7 +163,7 @@ export class UIPlugin extends Plugin {
             });
             this.selectedEdges.clear();
 
-            previouslySelectedNodes.forEach(node => {
+            previouslySelectedNodes.forEach((node) => {
                 node.setSelectedStyle(false);
                 changedItemsPayload.deselected.push({ item: node, type: 'node' });
             });
@@ -167,7 +171,8 @@ export class UIPlugin extends Plugin {
 
             if (targetEdge) {
                 this.selectedEdges.add(targetEdge);
-                 if (!previouslySelectedEdges.has(targetEdge) || !targetEdge.isHighlighted) { // isHighlighted might be a direct prop or inferred
+                if (!previouslySelectedEdges.has(targetEdge) || !targetEdge.isHighlighted) {
+                    // isHighlighted might be a direct prop or inferred
                     targetEdge.setHighlight(true); // Ensure style is applied
                 }
                 changedItemsPayload.selected.push({ item: targetEdge, type: 'edge' });

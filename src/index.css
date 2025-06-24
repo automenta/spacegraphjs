@@ -3,14 +3,14 @@
     /* General App & Text */
     --sg-font-primary: sans-serif;
     --sg-font-mono: monospace;
-    --sg-text-primary: #e0e0f0;       /* Primary text color */
-    --sg-text-secondary: #a0a0b0;     /* Secondary/dimmed text color */
-    --sg-text-on-accent: #000000;     /* Text color on accent backgrounds */
-    --sg-accent-primary: #00d0ff;     /* Primary accent for highlights, interactive elements */
-    --sg-accent-secondary: #008ea8;   /* Darker accent or secondary interactive elements */
+    --sg-text-primary: #e0e0f0; /* Primary text color */
+    --sg-text-secondary: #a0a0b0; /* Secondary/dimmed text color */
+    --sg-text-on-accent: #000000; /* Text color on accent backgrounds */
+    --sg-accent-primary: #00d0ff; /* Primary accent for highlights, interactive elements */
+    --sg-accent-secondary: #008ea8; /* Darker accent or secondary interactive elements */
 
     /* Backgrounds */
-    --sg-bg-canvas: #000000;          /* Main graph canvas background */
+    --sg-bg-canvas: #000000; /* Main graph canvas background */
     --sg-bg-ui: rgba(20, 20, 40, 0.95); /* General UI panels (toolbar, context menu, dialogs) */
     --sg-bg-ui-hover: rgba(0, 208, 255, 0.15); /* Hover state for UI elements like menu items */
 
@@ -44,7 +44,9 @@
     --sg-dot-color: rgba(100, 100, 120, 0.2);
 }
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
     box-sizing: border-box;
 }
 
@@ -52,12 +54,12 @@ body {
     margin: 0;
     overflow: hidden;
     background-color: var(--sg-bg-canvas); /* USE NEW */
-    color: var(--sg-text-primary);      /* USE NEW */
+    color: var(--sg-text-primary); /* USE NEW */
     font-family: var(--sg-font-primary); /* USE NEW */
     overscroll-behavior: none;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    /*background-image: radial-gradient(var(--dot-color) 1px, transparent 1px);*//* Keep old or map if new exists */
+    /*background-image: radial-gradient(var(--dot-color) 1px, transparent 1px);*/ /* Keep old or map if new exists */
     /*background-size: 20px 20px;*/
 }
 
@@ -75,7 +77,8 @@ body {
     cursor: crosshair;
 }
 
-#webgl-canvas, #css3d-container {
+#webgl-canvas,
+#css3d-container {
     position: absolute;
     inset: 0;
     width: 100%;
@@ -94,14 +97,19 @@ body {
 
 .node-html {
     position: absolute;
-    background-color: var(--sg-node-bg); /* USE NEW - note: var(--node-bg, var(--node-bg-default)) implies --node-bg can be set inline. We'll keep this pattern if needed, or simplify to just --sg-node-bg. For now, assume --sg-node-bg is the primary source. */
+    background-color: var(
+        --sg-node-bg
+    ); /* USE NEW - note: var(--node-bg, var(--node-bg-default)) implies --node-bg can be set inline. We'll keep this pattern if needed, or simplify to just --sg-node-bg. For now, assume --sg-node-bg is the primary source. */
     border: 1px solid var(--sg-node-border); /* USE NEW */
     border-radius: 8px;
     padding: 0; /* Padding handled by inner container */
     color: var(--sg-node-text); /* USE NEW */
     pointer-events: auto;
     cursor: grab;
-    transition: transform var(--sg-transition-fast), box-shadow var(--sg-transition-medium), border-color var(--sg-transition-medium); /* USE NEW */
+    transition:
+        transform var(--sg-transition-fast),
+        box-shadow var(--sg-transition-medium),
+        border-color var(--sg-transition-medium); /* USE NEW */
     box-shadow: 0 2px 8px 1px var(--sg-node-shadow); /* USE NEW */
     min-width: 80px;
     min-height: 40px;
@@ -191,7 +199,9 @@ body {
     margin-bottom: 0;
 }
 
-.node-content h1, .node-content h2, .node-content h3 {
+.node-content h1,
+.node-content h2,
+.node-content h3 {
     margin: 0.5em 0;
     color: var(--sg-accent-primary); /* USE NEW */
     font-weight: 600;
@@ -213,7 +223,8 @@ body {
     margin: 0.5em 0;
 }
 
-.node-content ul, .node-content ol {
+.node-content ul,
+.node-content ol {
     margin: 0.5em 0;
     padding-left: 1em;
 }
@@ -255,18 +266,20 @@ body {
     text-decoration: underline;
 }
 
-.node-content button, .node-content input { /* Styles for form elements *inside* node content */
+.node-content button,
+.node-content input {
+    /* Styles for form elements *inside* node content */
     pointer-events: auto;
     margin: 5px;
     padding: 5px 10px;
     background-color: var(--sg-button-secondary-bg); /* USE NEW */
-    color: var(--sg-button-secondary-text);         /* USE NEW */
+    color: var(--sg-button-secondary-text); /* USE NEW */
     border: none;
     border-radius: 4px;
     cursor: pointer;
 }
 
-.node-content input[type="range"] {
+.node-content input[type='range'] {
     padding: 0;
 }
 
@@ -276,7 +289,9 @@ body {
 }
 
 /* Styles for 3D Labels on ShapeNodes and Edges */
-.node-label-3d, .edge-label { /* Common base for labels */
+.node-label-3d,
+.edge-label {
+    /* Common base for labels */
     pointer-events: none;
     padding: 3px 7px;
     border-radius: 4px;
@@ -286,13 +301,15 @@ body {
     border: 1px solid var(--sg-accent-secondary); /* Default border */
 }
 
-.node-label-3d { /* Specifics for ShapeNode labels */
+.node-label-3d {
+    /* Specifics for ShapeNode labels */
     color: var(--sg-node-text);
     background-color: var(--sg-label-bg, rgba(10, 10, 20, 0.75)); /* Fallback if --sg-label-bg not set */
     font-size: 14px;
 }
 
-.edge-label { /* Specifics for Edge labels */
+.edge-label {
+    /* Specifics for Edge labels */
     color: var(--sg-edge-label-text, var(--sg-text-primary));
     background-color: var(--sg-edge-label-bg, var(--sg-bg-ui));
     font-size: 12px;
@@ -376,7 +393,9 @@ body {
     line-height: 22px;
     text-align: center;
     cursor: pointer;
-    transition: background-color var(--sg-transition-fast), transform var(--sg-transition-fast); /* USE NEW */
+    transition:
+        background-color var(--sg-transition-fast),
+        transform var(--sg-transition-fast); /* USE NEW */
 }
 
 .node-quick-button:hover {
@@ -401,12 +420,14 @@ body {
     width: 16px;
     height: 16px;
     background-color: var(--sg-accent-primary); /* USE NEW */
-    border-top: 1px solid var(--sg-bg-canvas);    /* USE NEW for border against background */
-    border-left: 1px solid var(--sg-bg-canvas);   /* USE NEW */
+    border-top: 1px solid var(--sg-bg-canvas); /* USE NEW for border against background */
+    border-left: 1px solid var(--sg-bg-canvas); /* USE NEW */
     border-bottom-right-radius: 7px; /* Match node radius */
     cursor: nwse-resize;
     opacity: 0;
-    transition: opacity var(--sg-transition-fast), transform var(--sg-transition-fast); /* USE NEW */
+    transition:
+        opacity var(--sg-transition-fast),
+        transform var(--sg-transition-fast); /* USE NEW */
     pointer-events: auto;
     z-index: 10;
 }
@@ -422,7 +443,8 @@ body {
     transform: scale(1.15);
 }
 
-.context-menu, .dialog {
+.context-menu,
+.dialog {
     position: fixed;
     background-color: var(--sg-bg-ui); /* USE NEW */
     border: 1px solid var(--sg-accent-primary); /* USE NEW for menu-border */
@@ -459,7 +481,9 @@ body {
 .context-menu li {
     padding: 8px 18px;
     cursor: pointer;
-    transition: background-color var(--sg-transition-fast), color var(--sg-transition-fast); /* USE NEW */
+    transition:
+        background-color var(--sg-transition-fast),
+        color var(--sg-transition-fast); /* USE NEW */
     color: var(--sg-text-primary); /* USE NEW */
     white-space: nowrap;
 }
@@ -481,11 +505,11 @@ body {
     background-color: var(--sg-accent-secondary); /* USE NEW */
 }
 
-.context-menu li[data-action^="delete"] {
+.context-menu li[data-action^='delete'] {
     color: var(--sg-delete-button-bg); /* USE NEW */
 }
 
-.context-menu li[data-action^="delete"]:hover {
+.context-menu li[data-action^='delete']:hover {
     background-color: rgba(208, 48, 48, 0.2); /* Specific color, could be themed */
 }
 
@@ -505,16 +529,19 @@ body {
     font-size: 1.1em;
 }
 
-.dialog button { /* Yes button */
+.dialog button {
+    /* Yes button */
     background-color: var(--sg-button-primary-bg); /* USE NEW */
-    color: var(--sg-button-primary-text);       /* USE NEW */
+    color: var(--sg-button-primary-text); /* USE NEW */
     border: none;
     padding: 10px 22px;
     margin: 0 10px;
     border-radius: 5px;
     cursor: pointer;
     font-weight: 600;
-    transition: background-color var(--sg-transition-fast), box-shadow var(--sg-transition-fast); /* USE NEW */
+    transition:
+        background-color var(--sg-transition-fast),
+        box-shadow var(--sg-transition-fast); /* USE NEW */
     min-width: 80px;
 }
 
@@ -524,9 +551,10 @@ body {
     box-shadow: 0 0 12px var(--sg-accent-primary); /* USE NEW */
 }
 
-.dialog button#confirm-no { /* No button */
+.dialog button#confirm-no {
+    /* No button */
     background-color: var(--sg-button-secondary-bg); /* USE NEW */
-    color: var(--sg-button-secondary-text);      /* USE NEW */
+    color: var(--sg-button-secondary-text); /* USE NEW */
 }
 
 .dialog button#confirm-no:hover {
@@ -553,7 +581,8 @@ body {
     opacity: 0;
 }
 
-.edge-menu-frame { /* Style for edge menu if implemented as HTML */
+.edge-menu-frame {
+    /* Style for edge menu if implemented as HTML */
     position: absolute;
     background: var(--menu-bg);
     border: 1px solid var(--accent-color);
@@ -602,7 +631,7 @@ body {
     z-index: 1000;
     display: flex;
     gap: 8px;
-    box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(8px);
 }
 
@@ -615,7 +644,9 @@ body {
     cursor: pointer;
     font-size: 13px;
     font-weight: 500;
-    transition: background-color var(--sg-transition-fast), border-color var(--sg-transition-fast); /* USE NEW */
+    transition:
+        background-color var(--sg-transition-fast),
+        border-color var(--sg-transition-fast); /* USE NEW */
 }
 
 #toolbar button:hover {

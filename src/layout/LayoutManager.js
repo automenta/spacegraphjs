@@ -71,13 +71,13 @@ export class LayoutManager {
 
             // Store current positions before layout.init potentially changes them
             const oldPositions = new Map();
-            nodes.forEach(node => oldPositions.set(node.id, node.position.clone()));
+            nodes.forEach((node) => oldPositions.set(node.id, node.position.clone()));
 
             await this.activeLayout.init(nodes, edges, config); // This should set final node.positions
 
             // Animate nodes from their old positions to the new ones set by layout.init()
             const animationPromises = [];
-            nodes.forEach(node => {
+            nodes.forEach((node) => {
                 const currentPos = oldPositions.get(node.id); // The position *before* layout.init
                 const targetPos = node.position; // The position *after* layout.init (the target)
 
@@ -89,7 +89,7 @@ export class LayoutManager {
                 const tempOldPos = currentPos.clone(); // GSAP will animate from this
                 node.position.copy(tempOldPos); // Set visual to old position before animation starts
 
-                const promise = new Promise(resolve => {
+                const promise = new Promise((resolve) => {
                     gsap.to(node.position, {
                         x: targetPos.x,
                         y: targetPos.y,
@@ -102,7 +102,7 @@ export class LayoutManager {
                             // However, if any other system relies on events for position changes:
                             // this.space.emit('node:position:updated', { node });
                         },
-                        onComplete: resolve
+                        onComplete: resolve,
                     });
                 });
                 animationPromises.push(promise);
@@ -157,7 +157,7 @@ export class LayoutManager {
      * @param {import('../graph/nodes/BaseNode.js').BaseNode} node
      */
     removeNodeFromLayout(node) {
-         if (this.activeLayout && typeof this.activeLayout.removeNode === 'function') {
+        if (this.activeLayout && typeof this.activeLayout.removeNode === 'function') {
             this.activeLayout.removeNode(node);
         }
     }
@@ -188,7 +188,11 @@ export class LayoutManager {
     kick() {
         if (this.activeLayout && typeof this.activeLayout.kick === 'function') {
             this.activeLayout.kick();
-        } else if (this.activeLayout && typeof this.activeLayout.run === 'function' && !this.activeLayout.isRunning?.()) {
+        } else if (
+            this.activeLayout &&
+            typeof this.activeLayout.run === 'function' &&
+            !this.activeLayout.isRunning?.()
+        ) {
             // If layout is not continuous and has a run method, re-run it.
             // This assumes layout.isRunning() method exists or similar check.
             // For simplicity, this might need more robust state checking on the layout itself.
@@ -215,7 +219,7 @@ export class LayoutManager {
 
     dispose() {
         this.stopLayout();
-        this.layouts.forEach(layout => {
+        this.layouts.forEach((layout) => {
             if (typeof layout.dispose === 'function') {
                 layout.dispose();
             }

@@ -5,8 +5,11 @@
 
 import { HtmlNode } from './HtmlNode.js';
 import { ShapeNode } from './ShapeNode.js';
-// Import other node types here as they are created
-// e.g. import { ImageNode } from './ImageNode.js';
+import { ImageNode } from './ImageNode.js';
+import { VideoNode } from './VideoNode.js';
+import { IFrameNode } from './IFrameNode.js';
+import { GroupNode } from './GroupNode.js';
+import { DataNode } from './DataNode.js'; // Import DataNode
 
 export class NodeFactory {
     constructor(space) {
@@ -18,8 +21,11 @@ export class NodeFactory {
     _registerDefaultNodeTypes() {
         this.registerNodeType('html', HtmlNode);
         this.registerNodeType('shape', ShapeNode);
-        // Register other default types here
-        // this.registerNodeType('image', ImageNode);
+        this.registerNodeType('image', ImageNode);
+        this.registerNodeType('video', VideoNode);
+        this.registerNodeType('iframe', IFrameNode);
+        this.registerNodeType('group', GroupNode);
+        this.registerNodeType('data', DataNode); // Register DataNode
 
         // Fallback/generic type if specific type is not found or not specified
         // For now, ShapeNode can be a reasonable default if no type is given.
@@ -33,7 +39,7 @@ export class NodeFactory {
      */
     registerNodeType(typeName, nodeClass) {
         if (this.nodeTypes.has(typeName)) {
-            console.warn(`NodeFactory: Node type "${typeName}" is already registered. Overwriting.`);
+            // console.warn(`NodeFactory: Node type "${typeName}" is already registered. Overwriting.`);
         }
         this.nodeTypes.set(typeName, nodeClass);
     }
@@ -63,9 +69,8 @@ export class NodeFactory {
             // For now, NodePlugin will set node.space after creation.
 
             return nodeInstance;
-        } else {
-            console.error(`NodeFactory: Unknown node type "${type}". Cannot create node.`);
-            return null;
         }
+        // console.error(`NodeFactory: Unknown node type "${type}". Cannot create node.`);
+        return null;
     }
 }

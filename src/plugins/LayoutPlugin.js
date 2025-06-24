@@ -5,6 +5,10 @@
 
 import { Plugin } from '../core/Plugin.js';
 import { ForceLayout } from '../layout/ForceLayout.js';
+import { GridLayout } from '../layout/GridLayout.js';
+import { CircularLayout } from '../layout/CircularLayout.js';
+import { SphericalLayout } from '../layout/SphericalLayout.js';
+import { HierarchicalLayout } from '../layout/HierarchicalLayout.js'; // Import HierarchicalLayout
 import { LayoutManager } from '../layout/LayoutManager.js';
 
 export class LayoutPlugin extends Plugin {
@@ -20,16 +24,25 @@ export class LayoutPlugin extends Plugin {
         return 'LayoutPlugin';
     }
 
-    async init() { // init can be async due to applyLayout
+    async init() {
+        // init can be async due to applyLayout
         super.init();
 
         // Create and register layout instances
         const forceLayout = new ForceLayout(this.space); // ForceLayout constructor takes space
         this.layoutManager.registerLayout('force', forceLayout);
 
-        // TODO: Register other layouts here, e.g. GridLayout, CircularLayout
-        // const gridLayout = new GridLayout(this.space, this.pluginManager); // Assuming GridLayout structure
-        // this.layoutManager.registerLayout('grid', gridLayout);
+        const gridLayout = new GridLayout(); // GridLayout constructor is empty, context set by LayoutManager
+        this.layoutManager.registerLayout('grid', gridLayout);
+
+        const circularLayout = new CircularLayout();
+        this.layoutManager.registerLayout('circular', circularLayout);
+
+        const sphericalLayout = new SphericalLayout();
+        this.layoutManager.registerLayout('spherical', sphericalLayout);
+
+        const hierarchicalLayout = new HierarchicalLayout();
+        this.layoutManager.registerLayout('hierarchical', hierarchicalLayout);
 
         // Set a default layout
         // applyLayout will call init() on the layout, which might populate it.
@@ -60,7 +73,7 @@ export class LayoutPlugin extends Plugin {
             if (currentLayout && typeof currentLayout.fixNode === 'function') {
                 const selectedNodes = uiPlugin?.getSelectedNodes();
                 if (selectedNodes && selectedNodes.has(draggedNodeInstance)) {
-                    selectedNodes.forEach(sNode => currentLayout.fixNode(sNode));
+                    selectedNodes.forEach((sNode) => currentLayout.fixNode(sNode));
                 } else {
                     currentLayout.fixNode(draggedNodeInstance);
                 }
@@ -79,7 +92,7 @@ export class LayoutPlugin extends Plugin {
             if (currentLayout && typeof currentLayout.releaseNode === 'function') {
                 const selectedNodes = uiPlugin?.getSelectedNodes();
                 if (selectedNodes && selectedNodes.has(draggedNodeInstance)) {
-                    selectedNodes.forEach(sNode => currentLayout.releaseNode(sNode));
+                    selectedNodes.forEach((sNode) => currentLayout.releaseNode(sNode));
                 } else {
                     currentLayout.releaseNode(draggedNodeInstance);
                 }
@@ -163,7 +176,7 @@ export class LayoutPlugin extends Plugin {
         if (this.layoutManager) {
             return await this.layoutManager.applyLayout(name, config);
         }
-        console.error("LayoutPlugin: LayoutManager not available to apply layout.");
+        console.error('LayoutPlugin: LayoutManager not available to apply layout.');
         return false;
     }
 
