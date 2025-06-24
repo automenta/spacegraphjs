@@ -8,10 +8,15 @@ export class Edge {
     static HIGHLIGHT_COLOR = 0x00ffff;
     static DEFAULT_OPACITY = 0.8; // Adjusted for potentially thicker lines
     static HIGHLIGHT_OPACITY = 1.0;
+    static DEFAULT_HOVER_OPACITY_BOOST = 0.1; // How much to increase opacity for hover
+    static DEFAULT_HOVER_THICKNESS_MULTIPLIER = 1.1; // How much to scale thickness for hover
+
     line = null;
     arrowheads = { source: null, target: null };
     isInstanced = false; // Added for instanced rendering
     instanceId = null; // Added for instanced rendering
+    isHighlighted = false; // For selection state
+    isHovered = false; // For hover state
 
     // Default constraint: elastic spring
     data = {
@@ -286,11 +291,25 @@ export class Edge {
     }
 
     setHighlight(highlight) {
+        this.isHighlighted = highlight; // Set the state
         if (!this.line?.material) return;
         const mat = this.line.material;
         mat.opacity = highlight ? Edge.HIGHLIGHT_OPACITY : Edge.DEFAULT_OPACITY;
-        mat.color.set(highlight ? Edge.HIGHLIGHT_COLOR : this.data.color); // Note: This won't work for gradient edges as color is from vertexColors
-        mat.linewidth = highlight ? this.data.thickness * 1.5 : this.data.thickness; // Adjust thickness on highlight
+
+        let thicknessMultiplier = 1.5;
+        // For gradient edges, since color doesn't change, make thickness more pronounced.
+        if (this.data.gradientColors && this.data.gradientColors.length === 2 && mat.vertexColors) {
+            thicknessMultiplier = 2.0;
+        }
+        mat.linewidth = highlight ? this.data.thickness * thicknessMultiplier : this.data.thickness;
+
+        // Only set mat.color directly if not using vertexColors (i.e., not a gradient edge)
+        if (!mat.vertexColors) {
+            mat.color.set(highlight ? Edge.HIGHLIGHT_COLOR : this.data.color);
+        }
+        // For gradient edges, the color aspect of highlight is handled by arrowheads changing color,
+        // and the line itself becoming more prominent through opacity and thickness.
+
         mat.needsUpdate = true;
 
         const highlightArrowhead = (arrowhead) => {
@@ -307,6 +326,52 @@ export class Edge {
 
         highlightArrowhead(this.arrowheads.source);
         highlightArrowhead(this.arrowheads.target);
+
+        // If highlighted, ensure hover effect is off or overridden
+        if (highlight && this.isHovered) {
+            this.setHoverStyle(false, true); // Force remove hover style
+        }
+    }
+
+    setHoverStyle(hovered, force = false) {
+        if (!force && this.isHighlighted) return; // Don't apply hover if already highlighted, unless forced
+        if (!this.line?.material) return;
+
+        this.isHovered = hovered;
+
+        const mat = this.line.material;
+        const baseOpacity = Edge.DEFAULT_OPACITY; // Could also be this.data.opacity if edges have individual base opacities
+        const baseThickness = this.data.thickness;
+
+        if (hovered) {
+            mat.opacity = Math.min(1.0, baseOpacity + Edge.DEFAULT_HOVER_OPACITY_BOOST);
+            mat.linewidth = baseThickness * Edge.DEFAULT_HOVER_THICKNESS_MULTIPLIER;
+        } else {
+            // Revert to non-hovered state (which is default, unless it's selected)
+            // If selected, setHighlight would have set the correct values.
+            // This path is primarily for un-hovering an unselected item.
+            mat.opacity = baseOpacity;
+            mat.linewidth = baseThickness;
+        }
+
+        mat.needsUpdate = true;
+
+        const hoverArrowhead = (arrowhead) => {
+            if (arrowhead?.material) {
+                const arrowBaseOpacity = Edge.DEFAULT_OPACITY; // Assuming arrowheads share base opacity
+                arrowhead.material.opacity = hovered
+                    ? Math.min(1.0, arrowBaseOpacity + Edge.DEFAULT_HOVER_OPACITY_BOOST)
+                    : arrowBaseOpacity;
+                // Optionally, slightly scale arrowheads on hover if desired:
+                // const scale = hovered ? 1.05 : 1;
+                // arrowhead.scale.set(scale, scale, scale);
+            }
+        };
+
+        if (!this.isHighlighted) { // Only apply hover visual changes if not selected
+            hoverArrowhead(this.arrowheads.source);
+            hoverArrowhead(this.arrowheads.target);
+        }
     }
 
     // Call this if the window resizes, or ensure RenderingPlugin does.

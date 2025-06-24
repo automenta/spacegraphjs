@@ -21,6 +21,8 @@ export class ShapeNode extends BaseNode {
      * Each object: `{ distance: number, shape?: string, gltfUrl?: string, gltfScale?: number, size?: number, color?: number }`
      */
     lodData = [];
+    isSelected = false; // To manage hover vs. selected styles
+    isHovered = false;  // To manage hover state
 
     /**
      * Creates an instance of ShapeNode.
@@ -424,10 +426,16 @@ export class ShapeNode extends BaseNode {
                             // Ensure material is unique before modifying, or this will affect other nodes if material is shared.
                             // For simplicity, assuming materials are not shared between distinct interactive elements after initial creation.
                             // If they could be, child.material.clone() would be needed here before setHex.
-                            child.material.emissive?.setHex(selected ? 0x555500 : 0x000000);
-                            if (child.material.emissiveMap) {
+                            // Use a brighter yellow for emissive highlight.
+                            child.material.emissive?.setHex(selected ? 0xFFFF00 : 0x000000);
+                            if (child.material.emissiveMap && child.material.emissive) { // Check emissive exists
                                 // If there's an emissive map, toggling emissive color might not be visible.
-                                child.material.emissiveIntensity = selected ? 1.0 : 0.0;
+                                // Instead, ensure emissiveIntensity is used if emissive color is not black.
+                                child.material.emissiveIntensity = (selected && child.material.emissive.getHex() !== 0x000000) ? 1.0 : 0.0;
+                            } else if (child.material.emissive) { // No emissiveMap, but has emissive property
+                                // For materials without emissiveMap, setting emissive color is enough.
+                                // Some setups might still require emissiveIntensity to be > 0 for the emissive color to show.
+                                child.material.emissiveIntensity = selected ? 1.0 : 0.0; // Ensure intensity allows emissive to show
                             }
                         }
                     });
@@ -437,5 +445,44 @@ export class ShapeNode extends BaseNode {
 
         // Visual feedback on the label
         this.labelObject?.element?.classList.toggle('selected', selected);
+
+        // If selected, remove any hover style class from label and ensure hover effect is off
+        if (selected) {
+            this.labelObject?.element?.classList.remove('hovered');
+            if (this.isHovered) { // Requires isHovered property if we track it
+                 this.setHoverStyle(false, true); // Force remove hover style
+            }
+        }
+    }
+
+    setHoverStyle(hovered, force = false) {
+        // If 'force' is true, apply style even if selected (used to remove hover when selecting)
+        if (!force && this.isSelected) return; // Don't apply hover style if selected, unless forced
+
+        this.isHovered = hovered; // Track hover state
+
+        if (this.mesh instanceof THREE.LOD) {
+            this.mesh.levels.forEach((level) => {
+                const object = level.object;
+                if (object) {
+                    object.traverse((child) => {
+                        if (child.isMesh && child.material) {
+                            const targetEmissive = hovered && !this.isSelected ? 0x222200 : 0x000000; // Very subtle yellow/gray for hover
+                            const targetIntensity = hovered && !this.isSelected ? 0.4 : 0.0;
+
+                            child.material.emissive?.setHex(targetEmissive);
+                            if (child.material.emissiveMap && child.material.emissive) {
+                                child.material.emissiveIntensity = (targetEmissive !== 0x000000) ? targetIntensity : 0.0;
+                            } else if (child.material.emissive) {
+                                child.material.emissiveIntensity = targetIntensity;
+                            }
+                        }
+                    });
+                }
+            });
+        }
+        if (!this.isSelected) { // Only toggle hover class if not selected
+            this.labelObject?.element?.classList.toggle('hovered', hovered);
+        }
     }
 }
