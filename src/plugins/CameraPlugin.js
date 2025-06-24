@@ -181,7 +181,22 @@ export class CameraPlugin extends Plugin {
         return this.cameraControls?.getCameraMode();
     }
 
+    // --- AutoCamera (Follow Mode) Delegation ---
+    startFollowing(target, options = {}) {
+        this.cameraControls?.startFollowing(target, options);
+    }
+
+    stopFollowing() {
+        this.cameraControls?.stopFollowing();
+    }
+
+    isFollowing() {
+        return this.cameraControls?.isFollowing || false;
+    }
+
     // --- Free Camera Control Delegation ---
+    // Note: PointerLockControls are now largely self-contained for movement/rotation via its own listeners in Camera.js
+    // These might be kept for programmatic control if needed, but direct user input for free cam is via Camera.js listeners.
     moveFreeCamera(direction, deltaTime) {
         this.cameraControls?.moveFreeCamera(direction, deltaTime);
     }
@@ -189,6 +204,17 @@ export class CameraPlugin extends Plugin {
     rotateFreeCamera(deltaYaw, deltaPitch, deltaTime) {
         this.cameraControls?.rotateFreeCamera(deltaYaw, deltaPitch, deltaTime);
     }
+
+    // Method to request pointer lock, to be called by UI (e.g. on a button click or canvas click in free mode)
+    requestPointerLock() {
+        this.cameraControls?.pointerLockControls?.lock();
+    }
+
+    // Method to exit pointer lock
+    exitPointerLock() {
+        this.cameraControls?.pointerLockControls?.unlock();
+    }
+
 
     dispose() {
         super.dispose();

@@ -392,17 +392,18 @@ export class SpaceGraph {
         const nodePlugin = this.plugins.getPlugin('NodePlugin');
         const edgePlugin = this.plugins.getPlugin('EdgePlugin');
         const renderingPlugin = this.plugins.getPlugin('RenderingPlugin');
-        const instancedMeshManager = renderingPlugin?.getInstancedMeshManager();
+        const instancedNodeManager = renderingPlugin?.getInstancedMeshManager(); // Renamed for clarity
+        const instancedEdgeManager = edgePlugin?.instancedEdgeManager; // Get from EdgePlugin
 
         let closestIntersect = null;
 
-        // 1. Raycast against instanced meshes
-        if (instancedMeshManager) {
-            const instancedIntersection = instancedMeshManager.raycast(raycaster);
-            if (instancedIntersection) {
-                const node = nodePlugin?.getNodeById(instancedIntersection.nodeId);
+        // 1. Raycast against instanced nodes
+        if (instancedNodeManager) {
+            const instancedNodeIntersection = instancedNodeManager.raycast(raycaster);
+            if (instancedNodeIntersection) {
+                const node = nodePlugin?.getNodeById(instancedNodeIntersection.nodeId);
                 if (node) {
-                    closestIntersect = { node, distance: instancedIntersection.distance, type: 'node' };
+                    closestIntersect = { node, distance: instancedNodeIntersection.distance, type: 'node' };
                 }
             }
         }
@@ -428,12 +429,29 @@ export class SpaceGraph {
             }
         }
 
-        // 3. Raycast against edges (only if no node was hit closer or at all)
+        // 3. Raycast against instanced edges (if no node was hit closer or at all)
+        if (instancedEdgeManager) {
+            const instancedEdgeIntersection = instancedEdgeManager.raycast(raycaster);
+            if (instancedEdgeIntersection) {
+                if (!closestIntersect || instancedEdgeIntersection.distance < closestIntersect.distance) {
+                    const edge = edgePlugin?.getEdgeById(instancedEdgeIntersection.edgeId);
+                    if (edge) {
+                        closestIntersect = { edge, distance: instancedEdgeIntersection.distance, type: 'edge' };
+                    }
+                }
+            }
+        }
+
+        // 4. Raycast against non-instanced edges (Line2) (only if no node/instanced_edge was hit closer or at all)
         const currentEdges = edgePlugin?.getEdges();
         if (currentEdges) {
-            const edgeLines = [...currentEdges.values()].map((e) => e.line).filter(Boolean);
-            if (edgeLines.length > 0) {
-                const edgeIntersects = raycaster.intersectObjects(edgeLines, false);
+            // Filter out already instanced edges from this check
+            const nonInstancedEdgeLines = [...currentEdges.values()]
+                .filter(e => !e.isInstanced && e.line && e.line.visible)
+                .map((e) => e.line);
+
+            if (nonInstancedEdgeLines.length > 0) {
+                const edgeIntersects = raycaster.intersectObjects(nonInstancedEdgeLines, false);
                 if (edgeIntersects.length > 0) {
                     if (!closestIntersect || edgeIntersects[0].distance < closestIntersect.distance) {
                         const intersectedLine = edgeIntersects[0].object;

@@ -6,7 +6,9 @@
 import { Plugin } from '../core/Plugin.js';
 import { ForceLayout } from '../layout/ForceLayout.js';
 import { GridLayout } from '../layout/GridLayout.js';
-import { CircularLayout } from '../layout/CircularLayout.js'; // Import CircularLayout
+import { CircularLayout } from '../layout/CircularLayout.js';
+import { SphericalLayout } from '../layout/SphericalLayout.js';
+import { HierarchicalLayout } from '../layout/HierarchicalLayout.js'; // Import HierarchicalLayout
 import { LayoutManager } from '../layout/LayoutManager.js';
 
 export class LayoutPlugin extends Plugin {
@@ -32,10 +34,14 @@ export class LayoutPlugin extends Plugin {
         const gridLayout = new GridLayout(); // GridLayout constructor is empty, context set by LayoutManager
         this.layoutManager.registerLayout('grid', gridLayout);
 
-        const circularLayout = new CircularLayout(); // CircularLayout constructor is empty
+        const circularLayout = new CircularLayout();
         this.layoutManager.registerLayout('circular', circularLayout);
 
-        // TODO: Register SphericalLayout, HierarchicalLayout
+        const sphericalLayout = new SphericalLayout();
+        this.layoutManager.registerLayout('spherical', sphericalLayout);
+
+        const hierarchicalLayout = new HierarchicalLayout();
+        this.layoutManager.registerLayout('hierarchical', hierarchicalLayout);
 
         // Set a default layout
         // applyLayout will call init() on the layout, which might populate it.

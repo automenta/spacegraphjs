@@ -9,18 +9,21 @@ export class Edge {
     static DEFAULT_OPACITY = 0.8; // Adjusted for potentially thicker lines
     static HIGHLIGHT_OPACITY = 1.0;
     line = null;
-    // arrowheadMesh = null; // Old: single arrowhead
-    arrowheads = { source: null, target: null }; // New: multiple arrowheads
+    arrowheads = { source: null, target: null };
+    isInstanced = false; // Added for instanced rendering
+    instanceId = null; // Added for instanced rendering
+
     // Default constraint: elastic spring
     data = {
         color: 0x00d0ff, // Default single color
         gradientColors: null, // E.g., [0xff0000, 0x0000ff] or ['#ff0000', '#0000ff']
-        thickness: 3, // Adjusted for Line2, which uses pixel units
+        thickness: 3, // For Line2 (pixel units)
+        thicknessInstanced: 0.5, // For InstancedEdgeManager (world units, cylinder radius)
         constraintType: 'elastic',
         constraintParams: { stiffness: 0.001, idealLength: 200 },
         arrowhead: false, // Can be true, 'source', 'target', or 'both'
         arrowheadSize: 10,
-        arrowheadColor: null, // null means use edge color (or gradient average/start)
+        arrowheadColor: null, // null means use edge color
     };
 
     constructor(id, sourceNode, targetNode, data = {}) {
@@ -28,11 +31,12 @@ export class Edge {
         this.id = id;
         this.source = sourceNode;
         this.target = targetNode;
-        // Default data setup carefully merges, ensuring data from instance takes precedence
+
         const defaultData = {
             color: 0x00d0ff,
             gradientColors: null,
             thickness: 3,
+            thicknessInstanced: 0.5, // Default for instanced version
             constraintType: 'elastic',
             constraintParams: { stiffness: 0.001, idealLength: 200 },
             arrowhead: false,
@@ -40,8 +44,9 @@ export class Edge {
             arrowheadColor: null,
         };
         this.data = Utils.mergeDeep({}, defaultData, data);
+        this.isInstanced = false; // Initialize instancing state
+        this.instanceId = null;
 
-        // Ensure color is set if gradientColors is not provided, and vice-versa
         if (this.data.gradientColors && this.data.gradientColors.length === 2) {
             this.data.color = null; // Prioritize gradient if valid
         } else if (this.data.color === null) {
