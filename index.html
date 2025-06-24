@@ -53,7 +53,12 @@
                 }
 
                 try {
-                    const space = new S.SpaceGraph(container, contextMenuEl, confirmDialogEl);
+                    const space = new S.SpaceGraph(container, {
+                        ui: {
+                            contextMenuElement: contextMenuEl,
+                            confirmDialogElement: confirmDialogEl,
+                        },
+                    });
                     await space.init();
 
                     createExampleGraph(space);

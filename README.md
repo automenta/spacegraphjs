@@ -91,59 +91,69 @@ SpaceGraphJS relies on ES modules and modern browser features. You'll need to im
     ```javascript
     import {
         SpaceGraph,
-        UIManager,
-        ForceLayout,
-        NoteNode,
-        ShapeNode,
+        NoteNode, // Still useful if users want to create node instances directly
+        ShapeNode, // Still useful if users want to create node instances directly
         $,
-    } from './path/to/src/spacegraph.js';
+    } from './path/to/src/index.js'; // Main library entry point
 
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => { // Added async for space.init()
         const graphContainer = $('#graph-container');
         const contextMenuEl = $('#context-menu');
         const confirmDialogEl = $('#confirm-dialog');
 
         if (!graphContainer || !contextMenuEl || !confirmDialogEl) {
-            console.error('Missing required DOM elements for SpaceGraphJS.');
+            console.error('Missing required DOM elements for SpaceGraphJS UI.');
             return;
         }
 
-        const space = new SpaceGraph(graphContainer);
-        space.ui = new UIManager(space, contextMenuEl, confirmDialogEl);
-        space.layout = new ForceLayout(space);
+        // Initialize SpaceGraph with options for UI elements
+        const space = new SpaceGraph(graphContainer, {
+            ui: {
+                contextMenuElement: contextMenuEl,
+                confirmDialogElement: confirmDialogEl,
+            },
+        });
 
-        const node1 = space.addNode(
-            new NoteNode(
-                'node1',
-                { x: 0, y: 0, z: 0 },
-                {
-                    content: 'Hello World!',
-                    width: 150,
-                    height: 50,
-                }
-            )
-        );
-        const node2 = space.addNode(
-            new ShapeNode(
-                'node2',
-                { x: 100, y: 50, z: 10 },
-                {
-                    label: '3D Sphere',
-                    shape: 'sphere',
-                    size: 40,
-                    color: 0xff00ff,
-                }
-            )
-        );
+        // Initialize SpaceGraph and its plugins
+        await space.init();
 
-        space.addEdge(node1, node2);
+        // Create nodes using space.createNode for a cleaner API
+        // (Assumes 'note' and 'shape' types are registered in NodeFactory by default)
+        const node1 = space.createNode({
+            id: 'node1',
+            type: 'note',
+            position: { x: 0, y: 0, z: 0 },
+            data: {
+                content: 'Hello World!',
+                width: 150,
+                height: 50,
+            }
+        });
 
-        space.layout.runOnce(100);
+        const node2 = space.createNode({
+            id: 'node2',
+            type: 'shape',
+            position: { x: 100, y: 50, z: 10 },
+            data: {
+                label: '3D Sphere',
+                shape: 'sphere',
+                size: 40,
+                color: 0xff00ff,
+            }
+        });
+
+        // Add an edge if both nodes were created successfully
+        if (node1 && node2) {
+            space.addEdge(node1, node2);
+        }
+
+        // The layout is managed internally by LayoutPlugin and runs via the animation loop.
+        // Call centerView to position the camera appropriately.
         space.centerView();
-        space.layout.start();
+        // Start the animation loop which also updates layouts.
         space.animate();
 
-        window.mySpaceGraph = space;
+        window.mySpaceGraph = space; // Expose for easy debugging
     });
     ```
 
