@@ -451,6 +451,10 @@ export class RenderingPlugin extends Plugin {
         return this.instancedMeshManager;
     }
 
+    getCSS3DRenderer() {
+        return this.renderCSS3D;
+    }
+
     dispose() {
         super.dispose();
         window.removeEventListener('resize', this._onWindowResize);

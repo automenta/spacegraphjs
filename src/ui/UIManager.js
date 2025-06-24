@@ -483,6 +483,51 @@ export class UIManager {
                 this.resizeStartNodeSize = { ...this.resizedNode.size };
                 this.resizeStartPointerPos = { x: this.pointerState.clientX, y: this.pointerState.clientY };
                 this.container.style.cursor = 'nwse-resize';
+
+                // Calculate initial screen scale for resizing:
+                const node = this.resizedNode;
+                const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
+                const cam = cameraPlugin?.getCameraInstance();
+
+                if (node && cam && node.cssObject) {
+                    const localOrigin = new THREE.Vector3(0, 0, 0);
+                    const localOffsetX = new THREE.Vector3(1, 0, 0); // For width scaling
+                    const localOffsetY = new THREE.Vector3(0, 1, 0); // For height scaling
+
+                    const worldOrigin = localOrigin.clone().applyMatrix4(node.cssObject.matrixWorld);
+                    const worldOffsetX = localOffsetX.clone().applyMatrix4(node.cssObject.matrixWorld);
+                    const worldOffsetY = localOffsetY.clone().applyMatrix4(node.cssObject.matrixWorld);
+
+                    const screenOriginNDC = worldOrigin.clone().project(cam);
+                    const screenOffsetXNDC = worldOffsetX.clone().project(cam);
+                    const screenOffsetYNDC = worldOffsetY.clone().project(cam);
+
+                    const halfW = window.innerWidth / 2;
+                    const halfH = window.innerHeight / 2;
+
+                    const screenOriginPx = {
+                        x: screenOriginNDC.x * halfW + halfW,
+                        y: -screenOriginNDC.y * halfH + halfH,
+                    };
+                    const screenOffsetXPx = {
+                        x: screenOffsetXNDC.x * halfW + halfW,
+                        y: -screenOffsetXNDC.y * halfH + halfH,
+                    };
+                    const screenOffsetYPx = {
+                        x: screenOffsetYNDC.x * halfW + halfW,
+                        y: -screenOffsetYNDC.y * halfH + halfH,
+                    };
+
+                    this.resizeNodeScreenScaleX = Math.abs(screenOffsetXPx.x - screenOriginPx.x);
+                    this.resizeNodeScreenScaleY = Math.abs(screenOffsetYPx.y - screenOriginPx.y);
+
+                    if (this.resizeNodeScreenScaleX < 0.001) this.resizeNodeScreenScaleX = 0.001;
+                    if (this.resizeNodeScreenScaleY < 0.001) this.resizeNodeScreenScaleY = 0.001;
+                } else {
+                    // Fallback to direct scaling if camera or node info is missing
+                    this.resizeNodeScreenScaleX = 1;
+                    this.resizeNodeScreenScaleY = 1;
+                }
                 break;
 
             case InteractionState.PANNING:
@@ -622,12 +667,21 @@ export class UIManager {
             case InteractionState.RESIZING_NODE:
                 e.preventDefault();
                 if (this.resizedNode) {
-                    const totalDx = this.pointerState.clientX - this.resizeStartPointerPos.x;
-                    const totalDy = this.pointerState.clientY - this.resizeStartPointerPos.y;
-                    const newWidth = Math.max(50, this.resizeStartNodeSize.width + totalDx);
-                    const newHeight = Math.max(30, this.resizeStartNodeSize.height + totalDy);
-                    this.resizedNode.resize(newWidth, newHeight);
-                    this.space.emit('graph:node:resized', {node: this.resizedNode, size: {newWidth, newHeight}});
+                    const totalDx_screen = this.pointerState.clientX - this.resizeStartPointerPos.x;
+                    const totalDy_screen = this.pointerState.clientY - this.resizeStartPointerPos.y;
+
+                    const deltaWidth_local = totalDx_screen / (this.resizeNodeScreenScaleX || 1);
+                    const deltaHeight_local = totalDy_screen / (this.resizeNodeScreenScaleY || 1);
+
+                    const newWidth = this.resizeStartNodeSize.width + deltaWidth_local;
+                    const newHeight = this.resizeStartNodeSize.height + deltaHeight_local;
+
+                    // Use MIN_SIZE from HtmlNode static property for consistency
+                    this.resizedNode.resize(
+                        Math.max(HtmlNode.MIN_SIZE.width, newWidth),
+                        Math.max(HtmlNode.MIN_SIZE.height, newHeight)
+                    );
+                    this.space.emit('graph:node:resized', {node: this.resizedNode, size: { ...this.resizedNode.size }});
                 }
                 break;
 
