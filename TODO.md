@@ -77,7 +77,6 @@ SpaceGraph.js aims to be the premier open-source library for interactive 2D/3D z
     *   **Node Pinning:** Allow users to pin nodes to fix their position during layout calculations.
 
 5.  **UI Framework & Theming**
-    *   **UI Integration:** Integrate React for building UI components.
     *   **Core UI Elements:** A `Toolbar` for common actions and `Context Menus` for node, edge, and canvas interactions.
     *   **Advanced Theming System:** Implement a theming system based on CSS Custom Properties for deep, non-intrusive customization (e.g., `--spacegraph-node-bg`, `--spacegraph-accent-color`).
 
