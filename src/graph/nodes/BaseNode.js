@@ -64,19 +64,23 @@ export class BaseNode {
     }
 
     startDrag() {
-        // Emits an event that LayoutPlugin (or InteractionPlugin) will listen to.
-        this.space?.emit('node:dragstart', this);
+        this.space?.emit('graph:node:dragstart', { node: this });
+        // Optionally, if LayoutPlugin needs to know directly:
+        // this.space?.plugins.getPlugin('LayoutPlugin')?.fixNode(this);
     }
 
     drag(newPosition) {
-        const oldPosition = this.position.clone();
+        // The UIManager already emits 'graph:node:dragged' with new position.
+        // This internal drag method is primarily for updating the node's own state.
         this.setPosition(newPosition.x, newPosition.y, newPosition.z);
-        // Emits an event with the node and its new/old positions.
-        this.space?.emit('node:drag', { node: this, newPosition: this.position, oldPosition });
+        // Note: 'graph:node:dragged' is emitted by UIManager with {node, position}
+        // If a simpler 'node:drag' for internal use is needed by other systems, it could be added here.
+        // For now, UIManager's event is the primary one for external listeners.
     }
 
     endDrag() {
-        // Emits an event that LayoutPlugin (or InteractionPlugin) will listen to.
-        this.space?.emit('node:dragend', this);
+        this.space?.emit('graph:node:dragend', { node: this });
+        // Optionally, if LayoutPlugin needs to know directly:
+        // this.space?.plugins.getPlugin('LayoutPlugin')?.releaseNode(this);
     }
 }

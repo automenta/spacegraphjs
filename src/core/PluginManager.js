@@ -47,6 +47,7 @@ export class PluginManager {
 
         const name = pluginInstance.getName();
         if (this.pluginMap.has(name)) {
+            console.warn(`PluginManager: Plugin with name "${name}" is already registered. Skipping.`);
             return;
         }
 

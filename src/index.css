@@ -23,6 +23,7 @@
     --sg-node-shadow-selected: rgba(0, 208, 255, 0.5);
     --sg-node-button-bg: rgba(255, 255, 255, 0.1);
     --sg-node-button-bg-hover: rgba(0, 208, 255, 0.3);
+    --sg-node-button-bg-active: rgba(0, 208, 255, 0.5); /* Added for active/pressed state */
 
     /* Edges */
     --sg-edge-color: rgba(0, 208, 255, 0.5);
@@ -288,6 +289,45 @@ body {
     color: var(--sg-text-on-accent); /* USE NEW */
 }
 
+/* HUD Styles */
+#hud-layer {
+    position: fixed;
+    bottom: 0px; /* Position at the bottom */
+    left: 0px;
+    right: 0px;
+    display: flex;
+    justify-content: space-between; /* Space out elements */
+    align-items: center;
+    padding: 8px 12px; /* Slightly more padding */
+    color: var(--sg-text-secondary);
+    font-size: 13px; /* Slightly larger for readability */
+    z-index: 100; /* Below menus/dialogs but above graph */
+    pointer-events: none; /* Allow clicks through to graph by default */
+    gap: 15px;
+    background: linear-gradient(to top, rgba(0,0,0,0.3), transparent); /* Subtle gradient for depth */
+}
+
+#hud-mode-indicator,
+#hud-selection-info {
+    background-color: var(--sg-bg-ui);
+    padding: 6px 12px; /* Adjusted padding */
+    border-radius: 5px; /* Slightly more rounded */
+    border: 1px solid var(--sg-accent-secondary);
+    opacity: 0.9; /* Slightly more opaque */
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25); /* Softer shadow */
+    pointer-events: auto; /* Allow interaction if these become buttons later */
+    white-space: nowrap; /* Prevent wrapping */
+}
+
+.theme-light #hud-layer {
+    background: linear-gradient(to top, rgba(255,255,255,0.3), transparent);
+}
+.theme-light #hud-mode-indicator,
+.theme-light #hud-selection-info {
+     border: 1px solid var(--sg-node-border); /* Match node border in light theme */
+     box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
 /* Styles for 3D Labels on ShapeNodes and Edges */
 .node-label-3d,
 .edge-label {
@@ -403,6 +443,11 @@ body {
     transform: scale(1.1);
 }
 
+.node-quick-button:active {
+    background-color: var(--sg-node-button-bg-active); /* USE NEW */
+    transform: scale(0.95);
+}
+
 .node-quick-button.delete-button {
     background-color: var(--sg-delete-button-bg); /* USE NEW */
     color: var(--sg-delete-button-text); /* USE NEW */
@@ -493,6 +538,16 @@ body {
     color: var(--sg-accent-primary); /* USE NEW */
 }
 
+.context-menu li.disabled {
+    color: var(--sg-text-secondary);
+    cursor: not-allowed;
+    background-color: transparent !important; /* Ensure no hover/active bg */
+}
+.context-menu li.disabled:hover { /* Keep consistent with non-hover disabled */
+    color: var(--sg-text-secondary);
+}
+
+
 .context-menu li.separator {
     height: 1px;
     background-color: var(--sg-accent-secondary); /* USE NEW */
@@ -550,6 +605,10 @@ body {
     filter: brightness(1.2); /* Example hover effect */
     box-shadow: 0 0 12px var(--sg-accent-primary); /* USE NEW */
 }
+.dialog button:active {
+    transform: scale(0.98);
+    filter: brightness(0.9);
+}
 
 .dialog button#confirm-no {
     /* No button */
@@ -582,40 +641,77 @@ body {
 }
 
 .edge-menu-frame {
-    /* Style for edge menu if implemented as HTML */
-    position: absolute;
-    background: var(--menu-bg);
-    border: 1px solid var(--accent-color);
-    border-radius: 4px;
-    padding: 4px;
+    position: absolute; /* Positioned by CSS3DRenderer */
+    background-color: var(--sg-bg-ui);
+    border: 1px solid var(--sg-accent-secondary);
+    border-radius: 6px;
+    padding: 6px;
     display: flex;
-    gap: 3px;
-    pointer-events: auto;
-    z-index: 100;
-    opacity: 0.9;
-    transition: opacity 0.1s;
+    align-items: center;
+    gap: 5px;
+    pointer-events: auto; /* Allow interaction with the menu itself */
+    z-index: 100; /* Ensure it's above other elements if needed, though CSS3D layers handle this too */
+    opacity: 0.95;
+    transition: opacity var(--sg-transition-fast);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
 
-.edge-menu-frame button {
-    background: var(--node-button-bg);
-    color: var(--primary-color);
-    border: none;
+.edge-menu-frame input[type="color"],
+.edge-menu-frame input[type="range"],
+.edge-menu-frame select {
+    border: 1px solid var(--sg-accent-secondary);
     border-radius: 3px;
-    width: 20px;
-    height: 20px;
-    font-size: 12px;
-    line-height: 20px;
+    background-color: var(--sg-node-button-bg); /* Consistent with other controls */
+    color: var(--sg-text-primary);
+    padding: 3px 5px;
+    margin: 1px;
+    transition: border-color var(--sg-transition-fast);
+    font-size: 12px; /* Smaller font for compact menu */
+}
+.edge-menu-frame input[type="color"]{
+    min-width: 25px; /* Ensure color picker is usable */
+    height: 22px;
+    padding: 1px 2px;
+}
+.edge-menu-frame input[type="range"]{
+    height: 22px;
+    flex-grow: 1; /* Allow range to take available space */
+    min-width: 60px;
+}
+.edge-menu-frame select {
+    height: 22px;
+}
+
+.edge-menu-frame input[type="color"]:hover,
+.edge-menu-frame input[type="range"]:hover,
+.edge-menu-frame select:hover,
+.edge-menu-frame input[type="color"]:focus,
+.edge-menu-frame input[type="range"]:focus,
+.edge-menu-frame select:focus {
+    border-color: var(--sg-accent-primary);
+    outline: none; /* Remove default browser outline if custom border is sufficient */
+}
+
+.edge-menu-frame button.delete-button { /* Adjusted selector */
+    background-color: var(--sg-delete-button-bg);
+    color: var(--sg-delete-button-text);
+    border: none;
+    border-radius: 4px;
+    width: 22px;
+    height: 22px;
+    font-size: 14px;
+    line-height: 22px;
     text-align: center;
     cursor: pointer;
+    transition: background-color var(--sg-transition-fast), transform var(--sg-transition-fast);
 }
 
-.edge-menu-frame button:hover {
-    background: var(--node-button-hover-bg);
+.edge-menu-frame button.delete-button:hover {
+    background-color: #ff5555; /* Consider var(--sg-delete-button-bg-hover) */
+    transform: scale(1.1);
 }
-
-.edge-menu-frame button.delete {
-    background-color: var(--sg-delete-button-bg); /* USE NEW */
-    color: var(--sg-delete-button-text); /* USE NEW */
+.edge-menu-frame button.delete-button:active {
+    transform: scale(0.95);
 }
 
 /* Toolbar Styles */

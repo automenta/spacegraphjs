@@ -77,6 +77,7 @@ export class HtmlNode extends BaseNode {
                 clearTimeout(debounceTimer);
                 debounceTimer = setTimeout(() => {
                     this.data.content = contentDiv.innerHTML;
+                     this.space?.emit('graph:node:dataChanged', { node: this, property: 'content', value: this.data.content });
                 }, 300);
             });
             // Prevent interactions within content from triggering pan/drag
@@ -105,29 +106,38 @@ export class HtmlNode extends BaseNode {
     }
 
     setSize(width, height, scaleContent = false) {
-        const oldArea = this.size.width * this.size.height;
+        const oldSize = { ...this.size };
+        const oldArea = oldSize.width * oldSize.height;
+
         this.size.width = Math.max(HtmlNode.MIN_SIZE.width, width);
         this.size.height = Math.max(HtmlNode.MIN_SIZE.height, height);
+
         if (this.htmlElement) {
             this.htmlElement.style.width = `${this.size.width}px`;
             this.htmlElement.style.height = `${this.size.height}px`;
         }
+
         if (scaleContent && oldArea > 0) {
             const scaleFactor = Math.sqrt((this.size.width * this.size.height) / oldArea);
             this.setContentScale(this.data.contentScale * scaleFactor);
         }
-        this.space?.layout?.kick();
+        // Note: 'graph:node:resized' is emitted by UIManager during the resize operation.
+        // This setSize is the final application. If an event is needed here for internal logic:
+        // this.space?.emit('node:size:changed', { node: this, oldSize, newSize: this.size });
+        this.space?.layout?.kick(); // Kick layout if size changed
     }
 
     setContentScale(scale) {
         this.data.contentScale = Utils.clamp(scale, HtmlNode.CONTENT_SCALE_RANGE.min, HtmlNode.CONTENT_SCALE_RANGE.max);
         const contentEl = $('.node-content', this.htmlElement); // Changed to use $ utility
         if (contentEl) contentEl.style.transform = `scale(${this.data.contentScale})`;
+        this.space?.emit('graph:node:dataChanged', { node: this, property: 'contentScale', value: this.data.contentScale });
     }
 
     setBackgroundColor(color) {
         this.data.backgroundColor = color;
         this.htmlElement?.style.setProperty('--node-bg', this.data.backgroundColor);
+        this.space?.emit('graph:node:dataChanged', { node: this, property: 'backgroundColor', value: this.data.backgroundColor });
     }
 
     adjustContentScale = (deltaFactor) => this.setContentScale(this.data.contentScale * deltaFactor);
@@ -218,15 +228,19 @@ export class HtmlNode extends BaseNode {
 
     startResize() {
         this.htmlElement?.classList.add('resizing');
-        this.space?.layout?.fixNode(this);
+        this.space?.plugins.getPlugin('LayoutPlugin')?.fixNode(this); // Inform layout plugin
+        this.space?.emit('graph:node:resizestart', { node: this });
     }
 
     resize(newWidth, newHeight) {
+        // UIManager emits 'graph:node:resized' with new dimensions during interaction.
+        // This method applies the final size.
         this.setSize(newWidth, newHeight);
     }
 
     endResize() {
         this.htmlElement?.classList.remove('resizing');
-        this.space?.layout?.releaseNode(this);
+        this.space?.plugins.getPlugin('LayoutPlugin')?.releaseNode(this); // Inform layout plugin
+        this.space?.emit('graph:node:resizeend', { node: this, finalSize: { ...this.size } });
     }
 }
