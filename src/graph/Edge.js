@@ -78,6 +78,22 @@ export class Edge {
 
     _createLine() {
         const geometry = new LineGeometry();
+        // Fix B2: Initialize with placeholder positions to ensure attributes exist and are valid.
+        // Use slightly offset points to ensure non-zero length for initial bounding sphere.
+        const placeholderPositions = [0,0,0, 0,0,0.001];
+        geometry.setPositions(placeholderPositions);
+
+        // Fix B2: If default is gradient and material expects vertex colors, set placeholder colors.
+        // This requires materialConfig.vertexColors to be true for this to be effective.
+        if (this.data.gradientColors && this.data.gradientColors.length === 2) {
+            const colorStart = new THREE.Color(this.data.gradientColors[0]);
+            const colorEnd = new THREE.Color(this.data.gradientColors[1]);
+            const placeholderColors = [colorStart.r, colorStart.g, colorStart.b, colorEnd.r, colorEnd.g, colorEnd.b];
+            // Note: Material must also have vertexColors = true for LineGeometry.setColors to work as expected.
+            // We'll ensure this when creating the material.
+            geometry.setColors(placeholderColors); // This should be safe now.
+        }
+
         // Positions and colors will be set in update() or immediately after creation
 
         const materialConfig = {
@@ -94,12 +110,17 @@ export class Edge {
 
         if (this.data.gradientColors && this.data.gradientColors.length === 2) {
             materialConfig.vertexColors = true; // Enable vertex colors
+            // Ensure placeholder colors were set if this path is taken.
             // Note: `color` property on material is ignored if vertexColors is true
         } else {
-            materialConfig.color = this.data.color;
+            materialConfig.vertexColors = false; // Explicitly false if not gradient
+            materialConfig.color = this.data.color || 0x00d0ff; // Ensure color is set
         }
 
         const material = new LineMaterial(materialConfig);
+        // If we set placeholder colors, ensure material's vertexColors is true.
+        // The materialConfig should handle this. If geometry.setColors was called, material.vertexColors must be true.
+
         const line = new Line2(geometry, material);
 
         if (material.dashed) {
@@ -148,27 +169,47 @@ export class Edge {
         // For base Edge.js, it's always 2 points.
         // CurvedEdge will need to override this part if it wants a gradient over many segments.
 
-        if (this.line.geometry.attributes.position && this.line.geometry.attributes.position.count > 0) {
+        // Fix B1: Strengthen guard for setColors
+        const posAttribute = this.line.geometry.attributes.position;
+        const expectedMinLength = 6; // For Edge.js: 1 segment, 2 points, 3 floats/point
+
+        if (posAttribute && typeof posAttribute.count === 'number' && posAttribute.count >= 2 && // Need at least 2 points for a line
+            posAttribute.array && typeof posAttribute.array.length === 'number' &&
+            posAttribute.array.length >= expectedMinLength && posAttribute.array.length % 3 === 0) {
+
             this.line.geometry.setColors(colors);
             if (this.line.geometry.attributes.instanceColorStart) this.line.geometry.attributes.instanceColorStart.needsUpdate = true;
             if (this.line.geometry.attributes.instanceColorEnd) this.line.geometry.attributes.instanceColorEnd.needsUpdate = true;
         } else {
-            console.warn(`Edge ${this.id}: Skipping setColors in _setGradientColors due to empty geometry positions.`);
+            console.warn(`Edge ${this.id} (${this.constructor.name}): Skipping setColors in _setGradientColors due to missing/empty/invalid geometry positions.
+                Count: ${posAttribute?.count}, Array Length: ${posAttribute?.array?.length}, Expected Min Length: ${expectedMinLength}`);
         }
     }
 
     update() {
         if (!this.line || !this.source || !this.target) return;
 
+        // Fix A3: Check for NaN positions in source/target nodes
+        const sourcePos = this.source.position;
+        const targetPos = this.target.position;
+
+        if (!isFinite(sourcePos.x) || !isFinite(sourcePos.y) || !isFinite(sourcePos.z) ||
+            !isFinite(targetPos.x) || !isFinite(targetPos.y) || !isFinite(targetPos.z)) {
+            console.warn(`Edge ${this.id}: Source or target node has NaN position. Skipping update. Source: (${sourcePos.x},${sourcePos.y},${sourcePos.z}), Target: (${targetPos.x},${targetPos.y},${targetPos.z})`);
+            // Optionally hide the edge or set to a degenerate state to avoid rendering stale info
+            // this.line.visible = false; // Or set positions to [0,0,0,0,0,0]
+            return;
+        }
+        // this.line.visible = true; // Ensure visible if previously hidden due to NaN
+
         const positions = [
-            this.source.position.x,
-            this.source.position.y,
-            this.source.position.z,
-            this.target.position.x,
-            this.target.position.y,
-            this.target.position.z,
+            sourcePos.x, sourcePos.y, sourcePos.z,
+            targetPos.x, targetPos.y, targetPos.z,
         ];
         this.line.geometry.setPositions(positions);
+
+        // Ensure the geometry is valid before proceeding to color or bounding sphere computation
+        if (this.line.geometry.attributes.position.count === 0) return; // Should not happen if positions were just set with valid data
 
         if (this.data.gradientColors && this.data.gradientColors.length === 2) {
             this._setGradientColors();
