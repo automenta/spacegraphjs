@@ -101,7 +101,8 @@ export class SpaceGraph {
                 try {
                     callback(...args);
                 } catch (error) {
-                    console.error(`Error in event listener for "${eventName}":`, error);
+                    // console.error(`Error in event listener for "${eventName}":`, error);
+                    // Minimal logging in core, let plugins handle specific errors or use a dedicated logger plugin
                 }
             });
         }
@@ -119,19 +120,11 @@ export class SpaceGraph {
         this.on('ui:request:createNode', (nodeConfig) => {
             // NodePlugin.createAndAddNode will internally call addNode, which emits 'node:added'
             this.plugins.getPlugin('NodePlugin')?.createAndAddNode(nodeConfig);
-            // If LayoutPlugin doesn't listen to node:added to kick, we might need to kick here.
-            // For now, assuming NodePlugin's addNode or LayoutPlugin's addNodeToLayout handles kicking or LayoutPlugin listens.
-            // const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin');
-            // layoutPlugin?.kick(); // Or this is handled by LayoutPlugin reacting to node:added
         });
 
         // Listener for when a node is actually added and confirmed by NodePlugin
         this.on('node:added', (addedNode) => {
             if (addedNode) {
-                // LayoutPlugin now listens to node:added and kicks itself.
-                // const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin');
-                // layoutPlugin?.kick();
-
                 setTimeout(() => {
                     // Allow node to be added to scene before focusing
                     this.focusOnNode(addedNode, 0.6, true); // focusOnNode delegates to CameraPlugin
@@ -149,30 +142,22 @@ export class SpaceGraph {
         this.on('ui:request:addEdge', (sourceNode, targetNode, data) => {
             // EdgePlugin.addEdge will emit 'edge:added'
             this.plugins.getPlugin('EdgePlugin')?.addEdge(sourceNode, targetNode, data);
-            // Assuming LayoutPlugin listens to 'edge:added' to kick, or its addEdgeToLayout handles it.
-            // const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin');
-            // layoutPlugin?.kick();
         });
 
         // Listener for when an edge is actually added
-        this.on('edge:added', (addedEdge) => {
-            if (addedEdge) {
-                // LayoutPlugin now listens to edge:added and kicks itself.
-                // const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin');
-                // layoutPlugin?.kick();
-                // Any other actions upon edge addition can go here (e.g., selection)
-            }
+        this.on('edge:added', (_addedEdge) => {
+            // if (addedEdge) {
+            // Actions upon edge addition can go here (e.g., selection, if not handled by UIPlugin)
+            // }
         });
 
         this.on('ui:request:removeEdge', (edgeId) => {
             // EdgePlugin.removeEdge calls LayoutPlugin.removeEdgeFromLayout
             this.plugins.getPlugin('EdgePlugin')?.removeEdge(edgeId);
         });
-        // UIPlugin now listens to these events directly. SpaceGraph doesn't need to handle them here.
-        // this.on('ui:request:setSelectedNode', (node) => this.pluginManager.getPlugin('UIPlugin')?.setSelectedNode(node));
-        // this.on('ui:request:setSelectedEdge', (edge) => this.pluginManager.getPlugin('UIPlugin')?.setSelectedEdge(edge));
-        this.on('ui:request:autoZoomNode', (node) => this.autoZoom(node)); // Uses methods now on CameraPlugin
-        this.on('ui:request:centerView', () => this.centerView()); // Uses methods now on CameraPlugin
+
+        this.on('ui:request:autoZoomNode', (node) => this.autoZoom(node));
+        this.on('ui:request:centerView', () => this.centerView());
         this.on('ui:request:resetView', () => {
             this.plugins.getPlugin('CameraPlugin')?.resetView();
         });
@@ -180,13 +165,10 @@ export class SpaceGraph {
             const renderingPlugin = this.plugins.getPlugin('RenderingPlugin');
             renderingPlugin?.setBackground(color, alpha);
         });
-        // UIPlugin now listens to these events directly.
-        // this.on('ui:request:startLinking', (sourceNode) => this.pluginManager.getPlugin('UIPlugin')?.startLinking(sourceNode));
-        // this.on('ui:request:cancelLinking', () => this.pluginManager.getPlugin('UIPlugin')?.cancelLinking());
-        // this.on('ui:request:completeLinking', (screenX, screenY) => this.pluginManager.getPlugin('UIPlugin')?.completeLinking(screenX, screenY));
+
         this.on('ui:request:reverseEdge', (edgeId) => {
             const edgePlugin = this.plugins.getPlugin('EdgePlugin');
-            const uiPlugin = this.plugins.getPlugin('UIPlugin');
+            // const uiPlugin = this.plugins.getPlugin('UIPlugin'); // uiPlugin not used here
             const edge = edgePlugin?.getEdgeById(edgeId);
             if (edge) {
                 [edge.source, edge.target] = [edge.target, edge.source];
@@ -205,25 +187,23 @@ export class SpaceGraph {
         });
         this.on('ui:request:focusOnNode', (node, duration, pushHistory) =>
             this.focusOnNode(node, duration, pushHistory)
-        ); // Uses methods now on CameraPlugin
+        );
         this.on('ui:request:updateEdge', (edgeId, property, value) => {
             const edgePlugin = this.plugins.getPlugin('EdgePlugin');
-            const _uiPlugin = this.plugins.getPlugin('UIPlugin'); // Prefixed with underscore
+            // const _uiPlugin = this.plugins.getPlugin('UIPlugin'); // _uiPlugin not used
             const edge = edgePlugin?.getEdgeById(edgeId);
             if (!edge) return;
             switch (property) {
                 case 'color':
                     edge.data.color = value;
-                    // setHighlight might need to be a method on Edge or EdgePlugin
-                    edge.setHighlight(this.plugins.getPlugin('UIPlugin')?.getSelectedEdge() === edge); // Direct call
+                    edge.setHighlight(this.plugins.getPlugin('UIPlugin')?.getSelectedEdges().has(edge));
                     break;
                 case 'thickness':
                     edge.data.thickness = value;
-                    if (edge.line?.material) edge.line.material.linewidth = edge.data.thickness; // Direct material access
+                    if (edge.line?.material) edge.line.material.linewidth = edge.data.thickness;
                     break;
-                case 'constraintType': // This implies interaction with a layout system
+                case 'constraintType':
                     edge.data.constraintType = value;
-                    // Default params logic...
                     if (value === 'rigid' && !edge.data.constraintParams?.distance) {
                         edge.data.constraintParams = {
                             distance: edge.source.position.distanceTo(edge.target.position),
@@ -260,7 +240,7 @@ export class SpaceGraph {
             }
             return addedNode;
         }
-        console.error('SpaceGraph: NodePlugin not available to add node.');
+        // console.error('SpaceGraph: NodePlugin not available to add node.');
         return undefined;
     }
 
@@ -274,7 +254,7 @@ export class SpaceGraph {
             }
             return addedEdge;
         }
-        console.error('SpaceGraph: EdgePlugin not available to add edge.');
+        // console.error('SpaceGraph: EdgePlugin not available to add edge.');
         return undefined;
     }
 
@@ -295,7 +275,7 @@ export class SpaceGraph {
             // createAndAddNode in NodePlugin will emit 'node:added', triggering layout kicks etc.
             return nodePlugin.createAndAddNode(nodeConfig);
         }
-        console.error('SpaceGraph: NodePlugin not available to create node.');
+        // console.error('SpaceGraph: NodePlugin not available to create node.');
         return undefined;
     }
 
@@ -495,7 +475,6 @@ export class SpaceGraph {
 
         // this.ui?.dispose(); // Handled by UIPlugin
         this._listeners.clear(); // Clear all event listeners on SpaceGraph itself
-        // console.log('SpaceGraph disposed.');
     }
 
     // --- Data Import/Export Methods ---
@@ -509,7 +488,7 @@ export class SpaceGraph {
         if (dataPlugin) {
             return dataPlugin.exportGraphToJSON(options);
         }
-        console.error('SpaceGraph: DataPlugin not available for export.');
+        // console.error('SpaceGraph: DataPlugin not available for export.');
         return null;
     }
 
@@ -524,7 +503,7 @@ export class SpaceGraph {
         if (dataPlugin) {
             return await dataPlugin.importGraphFromJSON(jsonData, options);
         }
-        console.error('SpaceGraph: DataPlugin not available for import.');
+        // console.error('SpaceGraph: DataPlugin not available for import.');
         return false;
     }
 }

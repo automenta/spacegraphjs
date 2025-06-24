@@ -39,7 +39,7 @@ export class NodeFactory {
      */
     registerNodeType(typeName, nodeClass) {
         if (this.nodeTypes.has(typeName)) {
-            console.warn(`NodeFactory: Node type "${typeName}" is already registered. Overwriting.`);
+            // console.warn(`NodeFactory: Node type "${typeName}" is already registered. Overwriting.`);
         }
         this.nodeTypes.set(typeName, nodeClass);
     }
@@ -69,9 +69,8 @@ export class NodeFactory {
             // For now, NodePlugin will set node.space after creation.
 
             return nodeInstance;
-        } else {
-            console.error(`NodeFactory: Unknown node type "${type}". Cannot create node.`);
-            return null;
         }
+        // console.error(`NodeFactory: Unknown node type "${type}". Cannot create node.`);
+        return null;
     }
 }

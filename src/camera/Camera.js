@@ -456,7 +456,6 @@ export class Camera {
         this.domElement = null;
         this.viewHistory = [];
         this.namedViews.clear();
-        // console.log('Camera disposed.');
     }
 
     // --- Named Views Methods ---
@@ -473,7 +472,6 @@ export class Camera {
                         targetNodeId: viewData.targetNodeId,
                     });
                 });
-                // console.log('Camera: Named views loaded from localStorage.');
             }
         } catch (e) {
             console.error('Camera: Error loading named views from localStorage:', e);
@@ -508,7 +506,6 @@ export class Camera {
             targetNodeId: this.currentTargetNodeId,
         });
         this._saveNamedViewsToStorage(); // Persist
-        // console.log(`Camera: View '${name}' saved.`);
         this.space.emit('camera:namedViewSaved', { name, view: this.namedViews.get(name) });
         return true;
     }
@@ -518,11 +515,9 @@ export class Camera {
         if (view) {
             this.moveTo(view.position.x, view.position.y, view.position.z, duration, view.lookAt);
             this.setCurrentTargetNodeId(view.targetNodeId);
-            // console.log(`Camera: View '${name}' restored.`);
             this.space.emit('camera:namedViewRestored', { name, view });
             return true;
         }
-        // console.warn(`Camera: View '${name}' not found.`);
         return false;
     }
 
@@ -530,11 +525,9 @@ export class Camera {
         if (this.namedViews.has(name)) {
             this.namedViews.delete(name);
             this._saveNamedViewsToStorage(); // Persist
-            // console.log(`Camera: View '${name}' deleted.`);
             this.space.emit('camera:namedViewDeleted', { name });
             return true;
         }
-        // console.warn(`Camera: View '${name}' not found for deletion.`);
         return false;
     }
 
@@ -552,7 +545,6 @@ export class Camera {
             if (this.cameraMode === mode) return; // No change
 
             this.cameraMode = mode;
-            // console.log(`Camera mode set to: ${this.cameraMode}`);
             this.space.emit('camera:modeChanged', { mode: this.cameraMode });
 
             if (this.cameraMode === 'orbit') {

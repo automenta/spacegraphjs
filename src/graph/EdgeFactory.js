@@ -60,9 +60,8 @@ export class EdgeFactory {
             edgeInstance.space = this.space;
 
             return edgeInstance;
-        } else {
-            console.error(`EdgeFactory: Unknown edge type "${type}". Cannot create edge.`);
-            return null;
         }
+        // console.error(`EdgeFactory: Unknown edge type "${type}". Cannot create edge.`);
+        return null;
     }
 }

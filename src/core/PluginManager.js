@@ -47,13 +47,11 @@ export class PluginManager {
 
         const name = pluginInstance.getName();
         if (this.pluginMap.has(name)) {
-            // console.warn(`PluginManager: Plugin with name "${name}" is already registered. Skipping.`);
             return;
         }
 
         this.plugins.push(pluginInstance);
         this.pluginMap.set(name, pluginInstance);
-        // console.log(`PluginManager: Registered plugin "${name}".`);
     }
 
     /**
@@ -61,7 +59,6 @@ export class PluginManager {
      * This is typically called by SpaceGraph after its own core setup is complete.
      */
     initPlugins() {
-        // console.log('PluginManager: Initializing all plugins...');
         for (const plugin of this.plugins) {
             try {
                 plugin.init();
@@ -69,7 +66,6 @@ export class PluginManager {
                 console.error(`PluginManager: Error initializing plugin "${plugin.getName()}":`, error);
             }
         }
-        // console.log('PluginManager: All plugins initialized.');
     }
 
     /**
@@ -93,7 +89,6 @@ export class PluginManager {
      * This is typically called when the SpaceGraph instance is being destroyed.
      */
     disposePlugins() {
-        // console.log('PluginManager: Disposing all plugins...');
         // Dispose in reverse order of registration
         for (let i = this.plugins.length - 1; i >= 0; i--) {
             const plugin = this.plugins[i];
@@ -106,7 +101,6 @@ export class PluginManager {
         this.plugins = [];
         this.pluginMap.clear();
         this.space = null;
-        // console.log('PluginManager: All plugins disposed.');
     }
 
     /**

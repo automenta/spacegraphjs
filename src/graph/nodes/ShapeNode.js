@@ -184,7 +184,7 @@ export class ShapeNode extends BaseNode {
         // levelConfig: { gltfUrl, gltfScale, size (fallback for scale) }
         // targetGroup is the THREE.Group already added to an LOD level
         if (!levelConfig.gltfUrl || !targetGroup) {
-            console.error('ShapeNode: GLTF URL or target group not provided for LOD GLTF loading.');
+            // console.error('ShapeNode: GLTF URL or target group not provided for LOD GLTF loading.');
             return;
         }
 
@@ -232,8 +232,8 @@ export class ShapeNode extends BaseNode {
                 });
             },
             undefined,
-            (error) => {
-                console.error(`ShapeNode (${this.id}): Error loading GLTF for LOD from ${levelConfig.gltfUrl}:`, error);
+            (_error) => {
+                // console.error(`ShapeNode (${this.id}): Error loading GLTF for LOD from ${levelConfig.gltfUrl}:`, error);
                 // Optionally add a fallback placeholder to targetGroup on error
                 const fallbackSize = levelConfig.size || this.size || 20;
                 const fallbackColor = levelConfig.color || this.color || 0xff0000;

@@ -27,7 +27,7 @@ export class ImageNode extends BaseNode {
         if (this.imageUrl) {
             this._loadImageTexture();
         } else {
-            console.warn(`ImageNode (${this.id}): No imageUrl provided.`);
+            // console.warn(`ImageNode (${this.id}): No imageUrl provided.`);
             // Create a placeholder material/color if no image
             this.mesh.material = new THREE.MeshStandardMaterial({ color: 0x555555, side: THREE.DoubleSide });
         }
@@ -122,8 +122,8 @@ export class ImageNode extends BaseNode {
                 this.space?.emit('node:updated', { node: this, property: 'mesh' });
             },
             undefined, // onProgress callback
-            (error) => {
-                console.error(`ImageNode (${this.id}): Error loading image from ${this.imageUrl}:`, error);
+            (_error) => {
+                // console.error(`ImageNode (${this.id}): Error loading image from ${this.imageUrl}:`, error);
                 this.mesh.material.color.set(0xff0000); // Error indicator
             }
         );

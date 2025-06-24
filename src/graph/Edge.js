@@ -32,11 +32,9 @@ export class Edge {
         this.source = sourceNode;
         this.target = targetNode;
 
-        // The 'type' property from 'data' was unused. If it's needed by subclasses,
-        // they should handle it. For Edge itself, it's not used.
-        // const { type: _type, ...restData } = data; // Example if 'type' was top-level in data
-        // For now, assuming 'type' if present in data is for specific edge types like 'curved'
-        // and handled by EdgeFactory or subclasses, not directly by Edge constructor.
+        // The 'type' property from 'data' might be used by subclasses (e.g. CurvedEdge).
+        // If it's present in `data`, it will be merged into `this.data`.
+        // For the base Edge class, it's not directly used in the constructor logic here.
 
         const defaultData = {
             color: 0x00d0ff,
@@ -221,8 +219,8 @@ export class Edge {
         }
     }
 
-    _createSingleArrowhead(type) {
-        // type is 'source' or 'target' for potential differentiation
+    _createSingleArrowhead(_type) {
+        // _type is 'source' or 'target' for potential differentiation (currently unused for geometry/material)
         const size = this.data.arrowheadSize || 10;
         // A cone is a common choice for an arrowhead
         // ConeGeometry(radius, height, radialSegments)

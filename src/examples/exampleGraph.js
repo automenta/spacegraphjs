@@ -266,10 +266,10 @@ export function createExampleGraph(space) {
         });
     }
 
-    const nodePlugin = space.plugins?.getPlugin('NodePlugin');
-    const edgePlugin = space.plugins?.getPlugin('EdgePlugin');
-    const nodeCount = nodePlugin?.getNodes()?.size || 0;
-    const edgeCount = edgePlugin?.getEdges()?.size || 0;
+    // const nodePlugin = space.plugins?.getPlugin('NodePlugin');
+    // const edgePlugin = space.plugins?.getPlugin('EdgePlugin');
+    // const nodeCount = nodePlugin?.getNodes()?.size || 0;
+    // const edgeCount = edgePlugin?.getEdges()?.size || 0;
 
     // console.log(`Example graph created: ${nodeCount} nodes, ${edgeCount} edges.`);
 

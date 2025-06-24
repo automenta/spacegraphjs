@@ -1,5 +1,5 @@
 import { HtmlNode } from './HtmlNode.js';
-import { Utils, $ } from '../../utils.js';
+import { $ } from '../../utils.js';
 
 /**
  * Represents a group node that can contain other nodes and be collapsed or expanded.

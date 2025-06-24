@@ -110,13 +110,15 @@ export class UIManager {
                 });
                 break;
             }
-            case 'centerView':
+            case 'centerView': {
                 this.space.emit('ui:request:centerView');
                 break;
-            case 'resetView':
+            }
+            case 'resetView': {
                 this.space.emit('ui:request:resetView');
                 break;
-            case 'toggleTheme':
+            }
+            case 'toggleTheme': {
                 document.body.classList.toggle('theme-light');
                 const currentTheme = document.body.classList.contains('theme-light') ? 'light' : 'dark';
                 localStorage.setItem('spacegraph-theme', currentTheme);
@@ -125,6 +127,7 @@ export class UIManager {
                 // }
                 this.space.emit('theme:changed', { theme: currentTheme });
                 break;
+            }
             default:
                 console.warn('UIManager: Unknown toolbar action:', action);
         }

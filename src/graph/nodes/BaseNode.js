@@ -24,7 +24,7 @@ export class BaseNode {
         return { label: '' };
     }
 
-    update(space) {
+    update(_space) {
         /* Base update logic */
     }
 
@@ -46,7 +46,7 @@ export class BaseNode {
         return 50;
     }
 
-    setSelectedStyle(selected) {
+    setSelectedStyle(_selected) {
         /* Base selection style logic */
     }
 
