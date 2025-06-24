@@ -24,7 +24,8 @@ export class LayoutPlugin extends Plugin {
         return 'LayoutPlugin';
     }
 
-    async init() { // init can be async due to applyLayout
+    async init() {
+        // init can be async due to applyLayout
         super.init();
 
         // Create and register layout instances
@@ -72,7 +73,7 @@ export class LayoutPlugin extends Plugin {
             if (currentLayout && typeof currentLayout.fixNode === 'function') {
                 const selectedNodes = uiPlugin?.getSelectedNodes();
                 if (selectedNodes && selectedNodes.has(draggedNodeInstance)) {
-                    selectedNodes.forEach(sNode => currentLayout.fixNode(sNode));
+                    selectedNodes.forEach((sNode) => currentLayout.fixNode(sNode));
                 } else {
                     currentLayout.fixNode(draggedNodeInstance);
                 }
@@ -91,7 +92,7 @@ export class LayoutPlugin extends Plugin {
             if (currentLayout && typeof currentLayout.releaseNode === 'function') {
                 const selectedNodes = uiPlugin?.getSelectedNodes();
                 if (selectedNodes && selectedNodes.has(draggedNodeInstance)) {
-                    selectedNodes.forEach(sNode => currentLayout.releaseNode(sNode));
+                    selectedNodes.forEach((sNode) => currentLayout.releaseNode(sNode));
                 } else {
                     currentLayout.releaseNode(draggedNodeInstance);
                 }
@@ -175,7 +176,7 @@ export class LayoutPlugin extends Plugin {
         if (this.layoutManager) {
             return await this.layoutManager.applyLayout(name, config);
         }
-        console.error("LayoutPlugin: LayoutManager not available to apply layout.");
+        console.error('LayoutPlugin: LayoutManager not available to apply layout.');
         return false;
     }
 

@@ -35,7 +35,8 @@ export class DataNode extends BaseNode {
             type: 'data',
             size: DEFAULT_NODE_SIZE,
             chartType: 'bar', // 'bar', 'line', 'pie'
-            chartData: [ // Example data structure
+            chartData: [
+                // Example data structure
                 { label: 'A', value: 10, color: '#ff6384' },
                 { label: 'B', value: 20, color: '#36a2eb' },
                 { label: 'C', value: 15, color: '#ffce56' },
@@ -120,7 +121,7 @@ export class DataNode extends BaseNode {
         const chartWidth = canvasWidth - 2 * padding;
         const chartHeight = canvasHeight - 2 * padding - 20; // Extra padding for labels at bottom
         const barWidth = chartWidth / numBars - 5; // 5px spacing between bars
-        const maxValue = Math.max(...data.map(d => d.value), 0);
+        const maxValue = Math.max(...data.map((d) => d.value), 0);
 
         if (maxValue === 0) {
             this.ctx.fillText('All values are 0', canvasWidth / 2, canvasHeight / 2);
@@ -146,7 +147,8 @@ export class DataNode extends BaseNode {
         this._drawChart();
     }
 
-    _createLabel() { // Basic CSS3D Label, similar to ShapeNode
+    _createLabel() {
+        // Basic CSS3D Label, similar to ShapeNode
         const div = document.createElement('div');
         div.className = 'node-label-3d node-common'; // Use common styling
         div.textContent = this.data.label || '';
@@ -161,7 +163,8 @@ export class DataNode extends BaseNode {
         if (this.labelObject) {
             const offset = this.getBoundingSphereRadius() * 1.1 + 15; // Position above the plane
             this.labelObject.position.copy(this.position).y += offset;
-            if (space?.camera?._cam) { // Billboard effect
+            if (space?.camera?._cam) {
+                // Billboard effect
                 this.labelObject.quaternion.copy(space.camera._cam.quaternion);
             }
             // TODO: _applyLabelLOD if labelLod data is provided
@@ -179,7 +182,6 @@ export class DataNode extends BaseNode {
         // For a square plane of size `this.size`, radius is sqrt(2 * (this.size/2)^2) = (this.size/2)*sqrt(2)
         this._boundingSphere.radius = (this.size / 2) * Math.sqrt(2);
     }
-
 
     getBoundingSphereRadius() {
         if (!this._boundingSphere) this.updateBoundingSphere();

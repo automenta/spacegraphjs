@@ -47,16 +47,16 @@ export class CircularLayout {
         }
 
         let dynamicRadius = radius;
-        if (radius <= 0) { // Auto-calculate radius based on node sizes and count
+        if (radius <= 0) {
+            // Auto-calculate radius based on node sizes and count
             let totalCircumference = 0;
-            this.nodes.forEach(node => {
+            this.nodes.forEach((node) => {
                 // Approximate node size for circumference calculation
                 const nodeRadius = node.getBoundingSphereRadius ? node.getBoundingSphereRadius() : 25;
                 totalCircumference += nodeRadius * 2 * 1.5; // Diameter + 50% padding
             });
             dynamicRadius = Math.max(100, totalCircumference / (2 * Math.PI));
         }
-
 
         this.nodes.forEach((node, index) => {
             const angle = startAngle + index * angularSpacing;
@@ -68,7 +68,8 @@ export class CircularLayout {
                 node.position.set(x, y, center.z);
             } else if (plane === 'xz') {
                 node.position.set(x, center.y, y); // y from calculation becomes z
-            } else { // 'yz'
+            } else {
+                // 'yz'
                 node.position.set(center.x, x, y); // x from calculation becomes y, y becomes z
             }
         });

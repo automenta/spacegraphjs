@@ -215,7 +215,6 @@ export class CameraPlugin extends Plugin {
         this.cameraControls?.pointerLockControls?.unlock();
     }
 
-
     dispose() {
         super.dispose();
         this.cameraControls?.dispose();

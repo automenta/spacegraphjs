@@ -16,7 +16,6 @@ export class NodePlugin extends Plugin {
     /** @type {import('../rendering/InstancedMeshManager.js').InstancedMeshManager | null} */
     instancedMeshManager = null;
 
-
     constructor(spaceGraph, pluginManager) {
         super(spaceGraph, pluginManager);
         this.nodeFactory = new NodeFactory(spaceGraph); // Pass space instance if factory needs it
@@ -74,13 +73,12 @@ export class NodePlugin extends Plugin {
                 if (webglScene) {
                     webglScene.add(nodeInstance.mesh);
                 } else {
-                     console.warn('NodePlugin: WebGLScene not available for non-instanced mesh.');
+                    console.warn('NodePlugin: WebGLScene not available for non-instanced mesh.');
                 }
             }
         } else {
             console.warn('NodePlugin: RenderingPlugin not available to add node to scenes.');
         }
-
 
         // const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin'); // LayoutPlugin now listens to node:added
         // layoutPlugin?.addNodeToLayout(nodeInstance);

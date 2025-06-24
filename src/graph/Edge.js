@@ -32,6 +32,12 @@ export class Edge {
         this.source = sourceNode;
         this.target = targetNode;
 
+        // The 'type' property from 'data' was unused. If it's needed by subclasses,
+        // they should handle it. For Edge itself, it's not used.
+        // const { type: _type, ...restData } = data; // Example if 'type' was top-level in data
+        // For now, assuming 'type' if present in data is for specific edge types like 'curved'
+        // and handled by EdgeFactory or subclasses, not directly by Edge constructor.
+
         const defaultData = {
             color: 0x00d0ff,
             gradientColors: null,
@@ -42,7 +48,9 @@ export class Edge {
             arrowhead: false,
             arrowheadSize: 10,
             arrowheadColor: null,
+            // type: 'straight' // Default type if it were managed here
         };
+        // this.data = Utils.mergeDeep({}, defaultData, restData); // If 'type' was extracted
         this.data = Utils.mergeDeep({}, defaultData, data);
         this.isInstanced = false; // Initialize instancing state
         this.instanceId = null;
@@ -167,14 +175,16 @@ export class Edge {
             // This might involve setting material.vertexColors = false and material.color if state changed.
             // _setGradientColors() handles turning off vertexColors if gradientColors is invalid.
             // We also need to ensure the single color is correctly applied if switching from gradient.
-            if (this.line.material.vertexColors) { // Was gradient, now isn't
+            if (this.line.material.vertexColors) {
+                // Was gradient, now isn't
                 this.line.material.vertexColors = false;
                 this.line.material.needsUpdate = true;
             }
             this.line.material.color.set(this.data.color); // Set solid color
         }
 
-        if (this.line.material.dashed) { // Recompute if dashed (might be needed if positions change significantly)
+        if (this.line.material.dashed) {
+            // Recompute if dashed (might be needed if positions change significantly)
             this.line.computeLineDistances();
         }
         // this.line.geometry.attributes.position.needsUpdate = true; // setPositions should handle this.
@@ -202,7 +212,8 @@ export class Edge {
 
     _orientArrowhead(arrowheadMesh, direction) {
         if (!arrowheadMesh) return;
-        if (direction.lengthSq() > 0.0001) { // Ensure not zero vector
+        if (direction.lengthSq() > 0.0001) {
+            // Ensure not zero vector
             const quaternion = new THREE.Quaternion();
             const up = new THREE.Vector3(0, 1, 0); // Default orientation of ConeGeometry is along Y axis
             quaternion.setFromUnitVectors(up, direction);
@@ -210,7 +221,8 @@ export class Edge {
         }
     }
 
-    _createSingleArrowhead(type) { // type is 'source' or 'target' for potential differentiation
+    _createSingleArrowhead(type) {
+        // type is 'source' or 'target' for potential differentiation
         const size = this.data.arrowheadSize || 10;
         // A cone is a common choice for an arrowhead
         // ConeGeometry(radius, height, radialSegments)
@@ -230,7 +242,6 @@ export class Edge {
         return arrowhead;
     }
 
-
     setHighlight(highlight) {
         if (!this.line?.material) return;
         const mat = this.line.material;
@@ -241,7 +252,9 @@ export class Edge {
 
         const highlightArrowhead = (arrowhead) => {
             if (arrowhead?.material) {
-                arrowhead.material.color.set(highlight ? Edge.HIGHLIGHT_COLOR : (this.data.arrowheadColor || this.data.color));
+                arrowhead.material.color.set(
+                    highlight ? Edge.HIGHLIGHT_COLOR : this.data.arrowheadColor || this.data.color
+                );
                 arrowhead.material.opacity = highlight ? Edge.HIGHLIGHT_OPACITY : Edge.DEFAULT_OPACITY;
                 // Optionally scale arrowhead on highlight
                 // const scale = highlight ? 1.2 : 1;

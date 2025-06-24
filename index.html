@@ -1,93 +1,97 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
-    <link href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>"
-          rel="icon">
-    <link href="src/index.css" rel="stylesheet"/>
-</head>
-<body>
+    <head>
+        <meta charset="UTF-8" />
+        <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
+        <link
+            href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>"
+            rel="icon"
+        />
+        <link href="src/index.css" rel="stylesheet" />
+    </head>
+    <body>
+        <div id="toolbar">
+            <!-- Toolbar buttons will be added here -->
+        </div>
 
-<div id="toolbar">
-    <!-- Toolbar buttons will be added here -->
-</div>
+        <div id="mindmap-container">
+            <!-- Changed ID from 'space' to 'mindmap-container' -->
+            <canvas id="webgl-canvas"></canvas>
+            <div id="css3d-container"></div>
+        </div>
 
-<div id="mindmap-container"> <!-- Changed ID from 'space' to 'mindmap-container' -->
-    <canvas id="webgl-canvas"></canvas>
-    <div id="css3d-container"></div>
-</div>
+        <div class="context-menu" id="context-menu"></div>
 
-<div class="context-menu" id="context-menu"></div>
+        <div class="dialog" id="confirm-dialog">
+            <p id="confirm-message">Are you sure?</p>
+            <button id="confirm-yes">Yes</button>
+            <button id="confirm-no">No</button>
+        </div>
 
-<div class="dialog" id="confirm-dialog">
-    <p id="confirm-message">Are you sure?</p>
-    <button id="confirm-yes">Yes</button>
-    <button id="confirm-no">No</button>
-</div>
+        <script type="importmap">
+            {
+                "imports": {
+                    "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
+                    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
+                    "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
+                }
+            }
+        </script>
+        <script type="module">
+            import * as S from './src/index.js';
+            import { createExampleGraph } from './src/examples/exampleGraph.js'; // New import
 
-<script type="importmap">
-    {
-        "imports": {
-            "three":         "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
-            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
-            "gsap":          "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
-        }
-    }
-</script>
-<script type="module">
-    import * as S from './src/index.js';
-    import { createExampleGraph } from './src/examples/exampleGraph.js'; // New import
+            function init() {
+                const container = S.$('#mindmap-container'); // Updated selector
+                const contextMenuEl = S.$('#context-menu');
+                const confirmDialogEl = S.$('#confirm-dialog');
 
-    function init() {
-        const container = S.$('#mindmap-container'); // Updated selector
-        const contextMenuEl = S.$('#context-menu');
-        const confirmDialogEl = S.$('#confirm-dialog');
+                if (!container || !contextMenuEl || !confirmDialogEl) {
+                    console.error(
+                        'Initialization Failed: Missing required DOM elements (#mindmap-container, #context-menu, #confirm-dialog).'
+                    );
+                    container.innerHTML =
+                        "<p style='color:red; padding: 20px;'>Error: Missing required HTML elements.</p>";
+                    return;
+                }
 
-        if (!container || !contextMenuEl || !confirmDialogEl) {
-            console.error("Initialization Failed: Missing required DOM elements (#mindmap-container, #context-menu, #confirm-dialog).");
-            container.innerHTML = "<p style='color:red; padding: 20px;'>Error: Missing required HTML elements.</p>";
-            return;
-        }
+                try {
+                    // Pass contextMenuEl and confirmDialogEl to SpaceGraph constructor
+                    const space = new S.SpaceGraph(container, contextMenuEl, confirmDialogEl);
 
-        try {
-            // Pass contextMenuEl and confirmDialogEl to SpaceGraph constructor
-            const space = new S.SpaceGraph(container, contextMenuEl, confirmDialogEl);
+                    // UIManager and ForceLayout are now created and managed by plugins internally.
+                    // space.ui = new S.UIManager(space, contextMenuEl, confirmDialogEl); // REMOVED
+                    // const layout = new S.ForceLayout(space); // REMOVED
+                    // space.layout = layout; // REMOVED
 
-            // UIManager and ForceLayout are now created and managed by plugins internally.
-            // space.ui = new S.UIManager(space, contextMenuEl, confirmDialogEl); // REMOVED
-            // const layout = new S.ForceLayout(space); // REMOVED
-            // space.layout = layout; // REMOVED
+                    createExampleGraph(space); // Call the imported function
 
-            createExampleGraph(space); // Call the imported function
+                    // Access layout via LayoutPlugin
+                    const layoutPlugin = space.plugins.getPlugin('LayoutPlugin');
+                    if (layoutPlugin && layoutPlugin.activeLayout) {
+                        layoutPlugin.activeLayout.runOnce(250); // Initial settling steps
+                        layoutPlugin.activeLayout.start(); // Start continuous layout simulation
+                    } else {
+                        console.error('LayoutPlugin or activeLayout not available for initialization.');
+                    }
 
-            // Access layout via LayoutPlugin
-            const layoutPlugin = space.plugins.getPlugin('LayoutPlugin');
-            if (layoutPlugin && layoutPlugin.activeLayout) {
-                layoutPlugin.activeLayout.runOnce(250); // Initial settling steps
-                layoutPlugin.activeLayout.start(); // Start continuous layout simulation
-            } else {
-                console.error("LayoutPlugin or activeLayout not available for initialization.");
+                    space.centerView(null, 0.8); // Center view smoothly
+                    space.animate(); // Start render loop
+
+                    window.space = space; // Expose for debugging
+                    console.log('Mind Map Initialized Successfully.');
+                } catch (error) {
+                    console.error('Initialization Failed:', error);
+                    container.innerHTML = `<div style="color: red; padding: 20px;">Error initializing Mind Map: ${error.message}<br><pre>${error.stack}</pre></div>`;
+                }
             }
 
-            space.centerView(null, 0.8); // Center view smoothly
-            space.animate(); // Start render loop
-
-            window.space = space; // Expose for debugging
-            console.log("Mind Map Initialized Successfully.");
-
-        } catch (error) {
-            console.error("Initialization Failed:", error);
-            container.innerHTML = `<div style="color: red; padding: 20px;">Error initializing Mind Map: ${error.message}<br><pre>${error.stack}</pre></div>`;
-        }
-    }
-
-    // --- Start the application ---
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init(); // DOMContentLoaded has already fired
-    }
-</script>
-</body>
+            // --- Start the application ---
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init(); // DOMContentLoaded has already fired
+            }
+        </script>
+    </body>
 </html>

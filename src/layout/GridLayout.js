@@ -30,7 +30,8 @@ export class GridLayout {
     // init is called by LayoutManager when switching to this layout
     // It should calculate and set the final positions on the node objects.
     // LayoutManager will then handle animation using GSAP.
-    init(nodes, edges, config = {}) { // edges are passed but not used by basic grid
+    init(nodes, edges, config = {}) {
+        // edges are passed but not used by basic grid
         if (config) {
             this.updateConfig(config);
         }
@@ -46,7 +47,8 @@ export class GridLayout {
         }
 
         let cols = columns;
-        if (plane === 'xyz' && depthCount > 0) { // 3D Grid
+        if (plane === 'xyz' && depthCount > 0) {
+            // 3D Grid
             if (cols <= 0) {
                 // Calculate cols and rows for each layer to be roughly square
                 const nodesPerLayer = Math.ceil(numNodes / depthCount);
@@ -60,11 +62,7 @@ export class GridLayout {
                     for (let c = 0; c < cols; c++) {
                         if (nodeIndex >= numNodes) break;
                         const node = this.nodes[nodeIndex++];
-                        node.position.set(
-                            c * padding.x,
-                            r * padding.y,
-                            d * padding.z
-                        );
+                        node.position.set(c * padding.x, r * padding.y, d * padding.z);
                     }
                     if (nodeIndex >= numNodes) break;
                 }
@@ -72,17 +70,17 @@ export class GridLayout {
             }
 
             if (centerOrigin) {
-                const gridWidth = (cols -1) * padding.x;
-                const gridHeight = (rows -1) * padding.y;
-                const gridDepth = (depthCount -1) * padding.z;
-                this.nodes.forEach(node => {
+                const gridWidth = (cols - 1) * padding.x;
+                const gridHeight = (rows - 1) * padding.y;
+                const gridDepth = (depthCount - 1) * padding.z;
+                this.nodes.forEach((node) => {
                     node.position.x -= gridWidth / 2;
                     node.position.y -= gridHeight / 2;
                     node.position.z -= gridDepth / 2;
                 });
             }
-
-        } else { // 2D Grid on a specified plane
+        } else {
+            // 2D Grid on a specified plane
             if (cols <= 0) {
                 cols = Math.ceil(Math.sqrt(numNodes));
             }
@@ -98,7 +96,8 @@ export class GridLayout {
                         node.position.set(c * padding.x, r * padding.y, 0);
                     } else if (plane === 'xz') {
                         node.position.set(c * padding.x, 0, r * padding.z);
-                    } else { // 'yz'
+                    } else {
+                        // 'yz'
                         node.position.set(0, r * padding.y, c * padding.z);
                     }
                 }
@@ -109,16 +108,17 @@ export class GridLayout {
                 let gridWidth = (cols - 1) * (plane === 'yz' ? padding.z : padding.x);
                 let gridHeight = (rows - 1) * (plane === 'xz' ? padding.z : padding.y);
 
-                this.nodes.forEach(node => {
+                this.nodes.forEach((node) => {
                     if (plane === 'xy') {
                         node.position.x -= gridWidth / 2;
                         node.position.y -= gridHeight / 2;
                     } else if (plane === 'xz') {
                         node.position.x -= gridWidth / 2;
                         node.position.z -= gridHeight / 2; // gridHeight here corresponds to Z extent
-                    } else { // 'yz'
+                    } else {
+                        // 'yz'
                         node.position.y -= gridHeight / 2;
-                        node.position.z -= gridWidth / 2;  // gridWidth here corresponds to Z extent
+                        node.position.z -= gridWidth / 2; // gridWidth here corresponds to Z extent
                     }
                 });
             }

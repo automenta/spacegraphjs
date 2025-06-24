@@ -78,29 +78,41 @@ export class ImageNode extends BaseNode {
                 const imgAspect = texture.image.width / texture.image.height;
                 let planeWidth, planeHeight;
 
-                if (typeof this.data.size === 'number') { // data.size is max dimension
+                if (typeof this.data.size === 'number') {
+                    // data.size is max dimension
                     const maxDim = this.data.size;
-                    if (imgAspect >= 1) { // Wider or square
+                    if (imgAspect >= 1) {
+                        // Wider or square
                         planeWidth = maxDim;
                         planeHeight = maxDim / imgAspect;
-                    } else { // Taller
+                    } else {
+                        // Taller
                         planeHeight = maxDim;
                         planeWidth = maxDim * imgAspect;
                     }
-                } else { // data.size is {width, height}
+                } else {
+                    // data.size is {width, height}
                     planeWidth = this.imageSize.width;
                     planeHeight = this.imageSize.height;
                     // If one dimension of this.imageSize was based on a numeric this.data.size,
                     // it might need adjustment here based on aspect ratio.
                     // For now, assume if this.imageSize was set from object, it's explicit.
                     // If it was from number, we recalculate here.
-                     if (imgAspect >=1 && this.imageSize.width === this.imageSize.height && this.imageSize.width === (this.data.size || 100) ) {
-                         planeWidth = this.imageSize.width;
-                         planeHeight = this.imageSize.width / imgAspect;
-                     } else if (imgAspect < 1 && this.imageSize.width === this.imageSize.height && this.imageSize.width === (this.data.size || 100)) {
-                         planeHeight = this.imageSize.height;
-                         planeWidth = this.imageSize.height * imgAspect;
-                     }
+                    if (
+                        imgAspect >= 1 &&
+                        this.imageSize.width === this.imageSize.height &&
+                        this.imageSize.width === (this.data.size || 100)
+                    ) {
+                        planeWidth = this.imageSize.width;
+                        planeHeight = this.imageSize.width / imgAspect;
+                    } else if (
+                        imgAspect < 1 &&
+                        this.imageSize.width === this.imageSize.height &&
+                        this.imageSize.width === (this.data.size || 100)
+                    ) {
+                        planeHeight = this.imageSize.height;
+                        planeWidth = this.imageSize.height * imgAspect;
+                    }
                 }
 
                 this.mesh.scale.set(planeWidth, planeHeight, 1);
@@ -126,7 +138,7 @@ export class ImageNode extends BaseNode {
             // The bounding sphere should encompass the scaled plane.
             const width = this.mesh.scale.x;
             const height = this.mesh.scale.y;
-            this._boundingSphere.radius = Math.sqrt(width*width + height*height) / 2;
+            this._boundingSphere.radius = Math.sqrt(width * width + height * height) / 2;
             this._boundingSphere.center.copy(this.position);
         }
     }
@@ -146,7 +158,7 @@ export class ImageNode extends BaseNode {
         // ImageNode specific updates can go here if any.
         // For example, if label needs to be positioned differently relative to image:
         if (this.labelObject && this.mesh) {
-            const labelOffset = (this.mesh.scale.y / 2) + 20; // Position label above the image plane
+            const labelOffset = this.mesh.scale.y / 2 + 20; // Position label above the image plane
             this.labelObject.position.copy(this.position);
             this.labelObject.position.y += labelOffset;
             if (space?.camera?._cam) {

@@ -38,7 +38,7 @@ export class GroupNode extends HtmlNode {
         super(id, position, groupData, mass);
 
         this.isCollapsed = groupData.defaultCollapsed;
-        (groupData.children || []).forEach(childId => this.childNodeIds.add(childId));
+        (groupData.children || []).forEach((childId) => this.childNodeIds.add(childId));
 
         this._setupGroupElement();
         this.updateGroupAppearance();
@@ -107,8 +107,12 @@ export class GroupNode extends HtmlNode {
             collapseButton.className = 'group-node-collapse-button';
             // Style it simply for now
             Object.assign(collapseButton.style, {
-                background: 'transparent', border: '1px solid #fff', color:'#fff',
-                borderRadius:'3px', cursor:'pointer', padding: '2px 5px'
+                background: 'transparent',
+                border: '1px solid #fff',
+                color: '#fff',
+                borderRadius: '3px',
+                cursor: 'pointer',
+                padding: '2px 5px',
             });
             collapseButton.textContent = this.isCollapsed ? '⊕' : '⊖';
             collapseButton.title = this.isCollapsed ? 'Expand' : 'Collapse';
@@ -162,57 +166,7 @@ export class GroupNode extends HtmlNode {
         const nodePlugin = this.space?.plugins.getPlugin('NodePlugin');
         if (!nodePlugin) return;
 
-        this.childNodeIds.forEach(childId => {
-            const childNode = nodePlugin.getNodeById(childId);
-            if (childNode) {
-                const newVisibility = !this.isCollapsed;
-                if (childNode.mesh) childNode.mesh.visible = newVisibility;
-                if (childNode.cssObject) childNode.cssObject.visible = newVisibility;
-                if (childNode.labelObject) childNode.labelObject.visible = newVisibility;
-
-                // Inform layout about visibility change for children.
-                // LayoutPlugin should ideally listen to node:visibilityChanged or similar.
-                // For now, kicking the main layout is done by toggleCollapse.
-                // Individual nodes' fixed/pinned state might need to be handled by layout
-                // if they are part of a collapsed group.
-                if (this.isCollapsed) {
-                    // When collapsing, we might want to "absorb" children's velocities or fix them relative to group.
-                    // For now, they just become invisible to the main layout.
-                } else {
-                    // When expanding, children are re-introduced.
-                }
-            }
-        });
-    }
-
-    /**
-     * Updates the visual appearance of the group, typically the collapse/expand button.
-     * @protected
-     */
-    updateGroupAppearance() {
-        const button = $('.group-node-collapse-button', this.htmlElement);
-        if (button) {
-            button.textContent = this.isCollapsed ? '⊕' : '⊖';
-            button.title = this.isCollapsed ? 'Expand' : 'Collapse';
-        }
-        // Optionally, change size or style when collapsed
-        if (this.isCollapsed) {
-            // Example: might shrink or change style
-            // this.htmlElement.style.height = 'auto'; // Or a fixed collapsed height
-        } else {
-            // this.htmlElement.style.height = `${this.size.height}px`;
-        }
-    }
-
-    /**
-     * Updates the visibility of child nodes based on the group's collapsed state.
-     * @protected
-     */
-    _updateChildNodeVisibility() {
-        const nodePlugin = this.space?.plugins.getPlugin('NodePlugin');
-        if (!nodePlugin) return;
-
-        this.childNodeIds.forEach(childId => {
+        this.childNodeIds.forEach((childId) => {
             const childNode = nodePlugin.getNodeById(childId);
             if (childNode) {
                 const newVisibility = !this.isCollapsed;
@@ -274,8 +228,8 @@ export class GroupNode extends HtmlNode {
         const nodePlugin = this.space?.plugins.getPlugin('NodePlugin');
         if (!nodePlugin) return [];
         return Array.from(this.childNodeIds)
-            .map(id => nodePlugin.getNodeById(id))
-            .filter(node => node != null);
+            .map((id) => nodePlugin.getNodeById(id))
+            .filter((node) => node != null);
     }
 
     /**

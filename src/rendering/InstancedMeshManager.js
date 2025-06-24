@@ -53,10 +53,10 @@ class InstancedMeshGroup {
         // For box, geometry is size 1, so scale by size.
         // This needs to be geometry-specific. For PoC sphere (radius 0.5 for a 1-unit diameter sphere):
         const scaleValue = node.size / 2 / 0.5; // If base sphere geometry is radius 0.5 (diameter 1)
-                                            // Or node.size if base geometry is 1x1x1 cube.
-                                            // Let's assume ShapeNode's default sphere has radius `size/2`.
-                                            // If our base instanced sphere geometry has radius 1, then scale is `node.size / 2`.
-                                            // If our base instanced sphere geometry has radius 0.5, then scale is `node.size`.
+        // Or node.size if base geometry is 1x1x1 cube.
+        // Let's assume ShapeNode's default sphere has radius `size/2`.
+        // If our base instanced sphere geometry has radius 1, then scale is `node.size / 2`.
+        // If our base instanced sphere geometry has radius 0.5, then scale is `node.size`.
         // For this PoC, let's assume the base geometry for instancing is a unit sphere (radius 0.5, diameter 1).
         // Then, the scale factor will be node.size.
         // However, ShapeNode's SphereGeometry(effectiveSize / 2, ...), so its radius is node.size/2.
@@ -66,7 +66,6 @@ class InstancedMeshGroup {
         // ShapeNode creates SphereGeometry(effectiveSize / 2, ...). So its radius is this.size / 2.
         // Scale needed = (node.size / 2) / 0.5 = node.size.
         const scale = new THREE.Vector3(node.size, node.size, node.size);
-
 
         matrix.compose(position, rotation, scale);
         this.instancedMesh.setMatrixAt(instanceId, matrix);
@@ -116,13 +115,12 @@ class InstancedMeshGroup {
                     point: intersection[0].point,
                     distance: intersection[0].distance,
                     instanceId: instanceId,
-                    nodeId: nodeId // Custom: add nodeId here
+                    nodeId: nodeId, // Custom: add nodeId here
                 };
             }
         }
         return null;
     }
-
 
     dispose() {
         this.instancedMesh.parent?.remove(this.instancedMesh);
@@ -132,7 +130,6 @@ class InstancedMeshGroup {
         this.instanceIdToNodeId.clear();
     }
 }
-
 
 export class InstancedMeshManager {
     constructor(scene) {
@@ -172,7 +169,7 @@ export class InstancedMeshManager {
             if (instanceId !== null) {
                 node.isInstanced = true; // Mark the node as being instanced
                 node.instanceId = instanceId; // Store its instanceId
-                if(node.mesh) node.mesh.visible = false; // Hide original mesh if it exists
+                if (node.mesh) node.mesh.visible = false; // Hide original mesh if it exists
                 return true;
             }
         }
@@ -213,7 +210,7 @@ export class InstancedMeshManager {
     }
 
     dispose() {
-        this.meshGroups.forEach(group => group.dispose());
+        this.meshGroups.forEach((group) => group.dispose());
         this.meshGroups.clear();
     }
 }

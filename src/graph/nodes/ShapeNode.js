@@ -69,7 +69,7 @@ export class ShapeNode extends BaseNode {
 
     _setupLODLevels() {
         if (this.lodData && this.lodData.length > 0) {
-            this.lodData.forEach(levelConf => {
+            this.lodData.forEach((levelConf) => {
                 const levelMesh = this._createRepresentationForLevel(levelConf);
                 if (levelMesh) {
                     this.mesh.addLevel(levelMesh, levelConf.distance);
@@ -82,7 +82,7 @@ export class ShapeNode extends BaseNode {
                 shape: this.shape, // Original overall shape
                 gltfUrl: this.gltfUrl, // Original overall gltfUrl
                 gltfScale: this.data.gltfScale,
-                size: this.size,   // Original overall size
+                size: this.size, // Original overall size
                 color: this.color, // Original overall color
             });
             if (mainRepresentation) {
@@ -97,10 +97,10 @@ export class ShapeNode extends BaseNode {
                 color: this.color, // Can be a distinct LOD color
             });
             if (placeholder) {
-                this.mesh.addLevel(placeholder, (this.data.lodDistanceSimple ?? 700));
+                this.mesh.addLevel(placeholder, this.data.lodDistanceSimple ?? 700);
             }
-             // Level 2: Nothing (disappears)
-            this.mesh.addLevel(new THREE.Object3D(), (this.data.lodDistanceHide ?? 1500));
+            // Level 2: Nothing (disappears)
+            this.mesh.addLevel(new THREE.Object3D(), this.data.lodDistanceHide ?? 1500);
         }
         // After levels are set up, if the first level is a GLTF that needs loading,
         // it would have been initiated by _createRepresentationForLevel -> _loadGltfModelForLevel.
@@ -221,11 +221,15 @@ export class ShapeNode extends BaseNode {
                 targetGroup.add(modelScene);
 
                 // If this is the primary LOD level (distance 0), update the overall bounding sphere.
-                const lodLevelEntry = this.mesh.levels.find(l => l.object === targetGroup);
+                const lodLevelEntry = this.mesh.levels.find((l) => l.object === targetGroup);
                 if (lodLevelEntry && lodLevelEntry.distance === 0) {
                     this.updateBoundingSphere(); // Crucial for layout and interaction
                 }
-                this.space?.emit('node:updated', { node: this, property: 'mesh_lod_level_loaded', levelDetail: levelConfig });
+                this.space?.emit('node:updated', {
+                    node: this,
+                    property: 'mesh_lod_level_loaded',
+                    levelDetail: levelConfig,
+                });
             },
             undefined,
             (error) => {
@@ -233,17 +237,19 @@ export class ShapeNode extends BaseNode {
                 // Optionally add a fallback placeholder to targetGroup on error
                 const fallbackSize = levelConfig.size || this.size || 20;
                 const fallbackColor = levelConfig.color || this.color || 0xff0000;
-                const fallbackMesh = this._createMeshForLevel({shape: 'box', size: fallbackSize, color: fallbackColor });
+                const fallbackMesh = this._createMeshForLevel({
+                    shape: 'box',
+                    size: fallbackSize,
+                    color: fallbackColor,
+                });
                 targetGroup.add(fallbackMesh);
-                const lodLevelEntry = this.mesh.levels.find(l => l.object === targetGroup);
+                const lodLevelEntry = this.mesh.levels.find((l) => l.object === targetGroup);
                 if (lodLevelEntry && lodLevelEntry.distance === 0) {
                     this.updateBoundingSphere();
                 }
-
             }
         );
     }
-
 
     updateBoundingSphere() {
         // The bounding sphere should be based on the highest detail level (level 0)
@@ -262,22 +268,29 @@ export class ShapeNode extends BaseNode {
                 // expand the box to include all children.
                 if (primaryRepresentation.children.length > 0) {
                     box.setFromObject(primaryRepresentation, true); // true to traverse children precisely
-                } else if (primaryRepresentation.geometry) { // For simple THREE.Mesh
+                } else if (primaryRepresentation.geometry) {
+                    // For simple THREE.Mesh
                     // Ensure geometry is available and has a boundingBox/Sphere
                     if (!primaryRepresentation.geometry.boundingBox) {
                         primaryRepresentation.geometry.computeBoundingBox();
                     }
                     if (primaryRepresentation.geometry.boundingBox) {
-                         box.copy(primaryRepresentation.geometry.boundingBox).applyMatrix4(primaryRepresentation.matrixWorld);
-                    } else { // Fallback if no boundingBox (should be rare for valid geometry)
-                         box.setFromCenterAndSize(primaryRepresentation.position, new THREE.Vector3(this.size, this.size, this.size));
+                        box.copy(primaryRepresentation.geometry.boundingBox).applyMatrix4(
+                            primaryRepresentation.matrixWorld
+                        );
+                    } else {
+                        // Fallback if no boundingBox (should be rare for valid geometry)
+                        box.setFromCenterAndSize(
+                            primaryRepresentation.position,
+                            new THREE.Vector3(this.size, this.size, this.size)
+                        );
                     }
-                } else { // Fallback for empty groups or unknown objects at level 0
+                } else {
+                    // Fallback for empty groups or unknown objects at level 0
                     // Use node's overall size as a rough estimate centered at the LOD's position
                     const lodPosition = this.mesh.getWorldPosition(new THREE.Vector3());
                     box.setFromCenterAndSize(lodPosition, new THREE.Vector3(this.size, this.size, this.size));
                 }
-
 
                 if (!this._boundingSphere) this._boundingSphere = new THREE.Sphere();
 
@@ -292,7 +305,7 @@ export class ShapeNode extends BaseNode {
                     this._boundingSphere.radius = (this.size || 50) / 2;
                 }
             } else {
-                 // Default if primaryRepresentation is null (e.g. LOD setup failed or level 0 is empty)
+                // Default if primaryRepresentation is null (e.g. LOD setup failed or level 0 is empty)
                 if (!this._boundingSphere) this._boundingSphere = new THREE.Sphere();
                 this._boundingSphere.center.copy(this.position);
                 this._boundingSphere.radius = (this.size || 50) / 2;
@@ -311,7 +324,6 @@ export class ShapeNode extends BaseNode {
             this._boundingSphere.center.copy(this.position);
         }
     }
-
 
     _createLabel() {
         const div = document.createElement('div');
@@ -349,7 +361,8 @@ export class ShapeNode extends BaseNode {
         }
     }
 
-    _applyLabelLOD(space) { // Adapted from HtmlNode
+    _applyLabelLOD(space) {
+        // Adapted from HtmlNode
         if (!this.labelObject?.element || !this.data.labelLod || this.data.labelLod.length === 0) {
             if (this.labelObject?.element) this.labelObject.element.style.visibility = '';
             return;
@@ -391,28 +404,29 @@ export class ShapeNode extends BaseNode {
             // Or trigger updateBoundingSphere if appropriate, but be careful of performance.
             // For now, a default based on 'size' for unloaded GLTFs is a fallback.
             if (this.shape === 'gltf' && (!this._boundingSphere || this._boundingSphere.radius === 0)) {
-                 return this.size / 2; // Fallback for unloaded GLTF
+                return this.size / 2; // Fallback for unloaded GLTF
             }
             // If not GLTF or already calculated, this._boundingSphere should be valid.
             // If _boundingSphere is still not set, calculate it once.
-            if(!this._boundingSphere) this.updateBoundingSphere();
+            if (!this._boundingSphere) this.updateBoundingSphere();
         }
-        return this._boundingSphere?.radius ?? (this.size / 2);
+        return this._boundingSphere?.radius ?? this.size / 2;
     }
 
     setSelectedStyle(selected) {
         // Apply selection style to all objects in all LOD levels
         if (this.mesh instanceof THREE.LOD) {
-            this.mesh.levels.forEach(level => {
+            this.mesh.levels.forEach((level) => {
                 const object = level.object;
                 if (object) {
-                    object.traverse(child => {
+                    object.traverse((child) => {
                         if (child.isMesh && child.material) {
                             // Ensure material is unique before modifying, or this will affect other nodes if material is shared.
                             // For simplicity, assuming materials are not shared between distinct interactive elements after initial creation.
                             // If they could be, child.material.clone() would be needed here before setHex.
                             child.material.emissive?.setHex(selected ? 0x555500 : 0x000000);
-                            if (child.material.emissiveMap) { // If there's an emissive map, toggling emissive color might not be visible.
+                            if (child.material.emissiveMap) {
+                                // If there's an emissive map, toggling emissive color might not be visible.
                                 child.material.emissiveIntensity = selected ? 1.0 : 0.0;
                             }
                         }

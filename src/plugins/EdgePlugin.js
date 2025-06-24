@@ -37,12 +37,12 @@ export class EdgePlugin extends Plugin {
         if (renderingPlugin && renderingPlugin.getWebGLScene()) {
             this.instancedEdgeManager = new InstancedEdgeManager(renderingPlugin.getWebGLScene());
         } else {
-            console.error("EdgePlugin: RenderingPlugin or its scene not available for InstancedEdgeManager setup.");
+            console.error('EdgePlugin: RenderingPlugin or its scene not available for InstancedEdgeManager setup.');
         }
     }
 
     handleRendererResize({ width, height }) {
-        this.edges.forEach(edge => {
+        this.edges.forEach((edge) => {
             if (!edge.isInstanced && edge.updateResolution) {
                 edge.updateResolution(width, height);
             }
@@ -65,7 +65,7 @@ export class EdgePlugin extends Plugin {
         const webglScene = renderingPlugin.getWebGLScene();
         const cssScene = renderingPlugin.getCSS3DScene();
 
-        this.edges.forEach(edge => {
+        this.edges.forEach((edge) => {
             // Remove current representation
             if (edge.isInstanced) {
                 // This case (switching from instanced to non-instanced) means this.instancedEdgeManager.removeEdge was called
@@ -110,15 +110,16 @@ export class EdgePlugin extends Plugin {
         });
     }
 
-
     addEdge(sourceNode, targetNode, data = {}) {
         if (!sourceNode || !targetNode || sourceNode === targetNode) {
             console.warn('EdgePlugin: Attempted to add edge with invalid source or target.');
             return null;
         }
         for (const existingEdge of this.edges.values()) {
-            if ((existingEdge.source === sourceNode && existingEdge.target === targetNode) ||
-                (existingEdge.source === targetNode && existingEdge.target === sourceNode)) {
+            if (
+                (existingEdge.source === sourceNode && existingEdge.target === targetNode) ||
+                (existingEdge.source === targetNode && existingEdge.target === sourceNode)
+            ) {
                 console.warn(`EdgePlugin: Duplicate edge ignored between ${sourceNode.id} and ${targetNode.id}.`);
                 return existingEdge;
             }
@@ -136,7 +137,7 @@ export class EdgePlugin extends Plugin {
         // Decide rendering strategy
         // For simplicity, let's make the decision here. A full dynamic switch is more complex.
         // If instancing is active OR if adding this edge *crosses* the threshold.
-        const currentlyShouldUseInstancing = (this.edges.size >= INSTANCE_THRESHOLD);
+        const currentlyShouldUseInstancing = this.edges.size >= INSTANCE_THRESHOLD;
         if (this.useInstancedEdges !== currentlyShouldUseInstancing) {
             this.useInstancedEdges = currentlyShouldUseInstancing;
             // This implies a potential mode switch for ALL edges if the threshold is crossed.
@@ -145,13 +146,13 @@ export class EdgePlugin extends Plugin {
             console.log(`EdgePlugin: Instancing mode is now: ${this.useInstancedEdges} (checked at addEdge)`);
         }
 
-
         if (this.useInstancedEdges && this.instancedEdgeManager) {
             this.instancedEdgeManager.addEdge(edge);
             // Note: LabeledEdge's CSS3D label won't be handled by InstancedEdgeManager.
             // This needs consideration if instanced edges are also LabeledEdges.
             // For now, assume instanced edges are simple lines.
-             if (edge.labelObject) { // If a label object exists, ensure it's added to CSS scene
+            if (edge.labelObject) {
+                // If a label object exists, ensure it's added to CSS scene
                 const renderingPlugin = this.pluginManager.getPlugin('RenderingPlugin');
                 renderingPlugin?.getCSS3DScene()?.add(edge.labelObject);
             }
@@ -204,8 +205,12 @@ export class EdgePlugin extends Plugin {
         // }
     }
 
-    getEdgeById(id) { return this.edges.get(id); }
-    getEdges() { return this.edges; }
+    getEdgeById(id) {
+        return this.edges.get(id);
+    }
+    getEdges() {
+        return this.edges;
+    }
 
     getEdgesForNode(node) {
         const connectedEdges = [];
@@ -224,7 +229,7 @@ export class EdgePlugin extends Plugin {
             }
             // Common updates for all edges, e.g., label positioning for LabeledEdge
             if (edge.updateLabelPosition && typeof edge.updateLabelPosition === 'function') {
-                 edge.updateLabelPosition();
+                edge.updateLabelPosition();
             }
         });
     }

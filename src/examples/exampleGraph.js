@@ -1,7 +1,7 @@
 import * as S from '../index.js'; // Import the bundled library
 
 export function createExampleGraph(space) {
-    console.log('Creating example graph...');
+    // console.log('Creating example graph...');
     const colors = ['#2a2a50', '#2a402a', '#402a2a', '#40402a', '#2a4040', '#402a40', '#503030'];
     let colorIndex = 0;
     const nextColor = () => colors[colorIndex++ % colors.length];
@@ -33,9 +33,7 @@ export function createExampleGraph(space) {
                 height: 190,
                 backgroundColor: nextColor(),
                 // Label LOD for HtmlNode (hides entire node)
-                labelLod: [
-                    { distance: 1000, style: 'visibility:hidden;' }
-                ]
+                labelLod: [{ distance: 1000, style: 'visibility:hidden;' }],
             },
             1.5
         )
@@ -167,13 +165,13 @@ export function createExampleGraph(space) {
             imageUrl: 'https://via.placeholder.com/200x150.png?text=SpaceGraph.js',
             size: 150, // Max dimension for the image plane
         },
-        mass: 1.2
+        mass: 1.2,
     });
     if (n_image && n_tech) {
         space.addEdge(n_tech, n_image, {
             type: 'curved',
             curvature: -0.3,
-            label: 'Image Link'
+            label: 'Image Link',
         });
     }
 
@@ -187,21 +185,27 @@ export function createExampleGraph(space) {
             shape: 'gltf', // Specify shape as 'gltf'
             // Using a simple model from Khronos Group samples
             // https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/ToyCar
-            gltfUrl: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/ToyCar/glTF-Binary/ToyCar.glb',
+            gltfUrl:
+                'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/ToyCar/glTF-Binary/ToyCar.glb',
             gltfScale: 80,
             color: 0xeeeeee,
             // Mesh LOD Example:
             lodLevels: [
-                { distance: 0, gltfUrl: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/ToyCar/glTF-Binary/ToyCar.glb', gltfScale: 80 },
+                {
+                    distance: 0,
+                    gltfUrl:
+                        'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/ToyCar/glTF-Binary/ToyCar.glb',
+                    gltfScale: 80,
+                },
                 { distance: 600, shape: 'box', size: 40, color: 0xff8844 }, // Simpler box at distance
                 { distance: 1200, shape: 'sphere', size: 20, color: 0x88ff44 }, // Simplest sphere further away
             ],
             // Label LOD Example for ShapeNode:
             labelLod: [
-                 { distance: 500, style: 'visibility:hidden;' } // Hide label if camera is > 500 units away
-            ]
+                { distance: 500, style: 'visibility:hidden;' }, // Hide label if camera is > 500 units away
+            ],
         },
-        mass: 1.8
+        mass: 1.8,
     });
 
     if (n_gltf && n1) {
@@ -258,19 +262,16 @@ export function createExampleGraph(space) {
             gradientColors: [0xaa00ff, 0xffaa00],
             thickness: 3,
             // Label LOD for a CurvedEdge
-            labelLod: [
-                { distance: 700, style: 'visibility:hidden;' }
-            ]
+            labelLod: [{ distance: 700, style: 'visibility:hidden;' }],
         });
     }
-
 
     const nodePlugin = space.plugins?.getPlugin('NodePlugin');
     const edgePlugin = space.plugins?.getPlugin('EdgePlugin');
     const nodeCount = nodePlugin?.getNodes()?.size || 0;
     const edgeCount = edgePlugin?.getEdges()?.size || 0;
 
-    console.log(`Example graph created: ${nodeCount} nodes, ${edgeCount} edges.`);
+    // console.log(`Example graph created: ${nodeCount} nodes, ${edgeCount} edges.`);
 
     // Video Node Example
     const n_video = space.createNode({
@@ -290,7 +291,7 @@ export function createExampleGraph(space) {
             loop: true,
             controls: true,
         },
-        mass: 1.5
+        mass: 1.5,
     });
 
     if (n_video && n_tech) {
@@ -298,7 +299,7 @@ export function createExampleGraph(space) {
             type: 'curved',
             label: 'Video Link',
             curvature: 0.2,
-            arrowhead: 'target'
+            arrowhead: 'target',
         });
     }
 
@@ -315,31 +316,37 @@ export function createExampleGraph(space) {
             // Example sandbox policy - be careful with this for unknown URLs
             // sandbox: 'allow-scripts allow-same-origin allow-popups'
         },
-        mass: 1.4
+        mass: 1.4,
     });
 
-    if (n_iframe && n_video) { // Link it to the video node for variety
+    if (n_iframe && n_video) {
+        // Link it to the video node for variety
         space.addEdge(n_video, n_iframe, {
             type: 'curved',
             label: 'IFrame Link',
             curvature: -0.25,
             arrowhead: 'target',
-            color: 0xcc44cc
+            color: 0xcc44cc,
         });
     }
 
     // Group Node Example
     // First, create some nodes that will be children of the group
     const gc1 = space.createNode({
-        id: 'groupChild1', type: 'html', position: {x: 200, y: 300, z: 0},
-        data: { label: 'Child 1', content: 'Inside Group', width:100, height:50, backgroundColor:'#445566'}
+        id: 'groupChild1',
+        type: 'html',
+        position: { x: 200, y: 300, z: 0 },
+        data: { label: 'Child 1', content: 'Inside Group', width: 100, height: 50, backgroundColor: '#445566' },
     });
     const gc2 = space.createNode({
-        id: 'groupChild2', type: 'shape', position: {x: 300, y: 350, z: 10},
-        data: { label: 'Child 2 (Sphere)', shape: 'sphere', size: 40, color: 0x66ff99 }
+        id: 'groupChild2',
+        type: 'shape',
+        position: { x: 300, y: 350, z: 10 },
+        data: { label: 'Child 2 (Sphere)', shape: 'sphere', size: 40, color: 0x66ff99 },
     });
 
-    if (gc1 && gc2) { // Ensure children are created before group references them
+    if (gc1 && gc2) {
+        // Ensure children are created before group references them
         const n_group = space.createNode({
             id: 'groupNode1',
             type: 'group',
@@ -355,19 +362,20 @@ export function createExampleGraph(space) {
                 borderColor: 'rgba(200, 200, 220, 0.6)',
                 headerColor: 'rgba(30, 30, 50, 0.4)',
             },
-            mass: 2.0 // Group itself can have mass
+            mass: 2.0, // Group itself can have mass
         });
 
-        if (n_group && n1) { // Link group to the main core node
+        if (n_group && n1) {
+            // Link group to the main core node
             space.addEdge(n1, n_group, {
                 type: 'curved',
                 label: 'Group Link',
                 arrowhead: 'target',
                 color: 0xffdd88,
-                thickness: 2.5
+                thickness: 2.5,
             });
         }
         // Optionally, link children to each other (layout will handle them)
-        space.addEdge(gc1, gc2, {label: 'intra-group', color: 0xdddddd, thickness:1});
+        space.addEdge(gc1, gc2, { label: 'intra-group', color: 0xdddddd, thickness: 1 });
     }
 }

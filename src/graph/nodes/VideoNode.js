@@ -27,7 +27,7 @@ export class VideoNode extends BaseNode {
         super(id, position, data, mass);
         this.size = {
             width: this.data.width ?? VideoNode.DEFAULT_WIDTH,
-            height: this.data.height ?? VideoNode.DEFAULT_HEIGHT
+            height: this.data.height ?? VideoNode.DEFAULT_HEIGHT,
         };
         this.htmlElement = this._createElement();
         this.cssObject = new CSS3DObject(this.htmlElement);
@@ -75,10 +75,9 @@ export class VideoNode extends BaseNode {
         if (this.data.muted) this.videoElement.muted = true;
 
         // Stop propagation for video controls to prevent graph interactions
-        this.videoElement.addEventListener('pointerdown', e => e.stopPropagation());
-        this.videoElement.addEventListener('click', e => e.stopPropagation());
-        this.videoElement.addEventListener('dblclick', e => e.stopPropagation());
-
+        this.videoElement.addEventListener('pointerdown', (e) => e.stopPropagation());
+        this.videoElement.addEventListener('click', (e) => e.stopPropagation());
+        this.videoElement.addEventListener('dblclick', (e) => e.stopPropagation());
 
         const titleDiv = document.createElement('div');
         titleDiv.className = 'node-title';
@@ -88,7 +87,6 @@ export class VideoNode extends BaseNode {
         titleDiv.style.fontSize = '12px';
         titleDiv.style.color = 'var(--sg-node-text-light, #eee)';
         titleDiv.style.backgroundColor = 'rgba(0,0,0,0.3)';
-
 
         el.appendChild(titleDiv);
         el.appendChild(this.videoElement);

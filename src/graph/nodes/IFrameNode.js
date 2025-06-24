@@ -98,9 +98,8 @@ export class IFrameNode extends BaseNode {
         this.iframeElement.style.pointerEvents = 'auto';
 
         // Stop graph interactions when interacting with iframe scrollbars or content
-        this.iframeElement.addEventListener('pointerdown', e => e.stopPropagation());
-        this.iframeElement.addEventListener('wheel', e => e.stopPropagation(), { passive: false });
-
+        this.iframeElement.addEventListener('pointerdown', (e) => e.stopPropagation());
+        this.iframeElement.addEventListener('wheel', (e) => e.stopPropagation(), { passive: false });
 
         el.appendChild(titleDiv);
         el.appendChild(this.iframeElement);

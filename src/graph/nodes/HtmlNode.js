@@ -172,7 +172,7 @@ export class HtmlNode extends BaseNode {
                         // Example: this.htmlElement.style.opacity = level.opacity ?? '1';
                     }
                 } else {
-                     this.htmlElement.style.visibility = ''; // Ensure visible if no style rule for this level
+                    this.htmlElement.style.visibility = ''; // Ensure visible if no style rule for this level
                 }
 
                 if (level.scale !== undefined) {
@@ -183,11 +183,11 @@ export class HtmlNode extends BaseNode {
                         contentEl.style.transform = `scale(${baseScale * level.scale})`;
                     }
                 } else {
-                     // Reset to base scale if no LOD scale rule applies
+                    // Reset to base scale if no LOD scale rule applies
                     const contentEl = $('.node-content', this.htmlElement);
                     if (contentEl) {
-                         const baseScale = this.data.contentScale ?? 1.0;
-                         contentEl.style.transform = `scale(${baseScale})`;
+                        const baseScale = this.data.contentScale ?? 1.0;
+                        contentEl.style.transform = `scale(${baseScale})`;
                     }
                 }
                 // TODO: Handle level.html for simplified content
@@ -202,8 +202,8 @@ export class HtmlNode extends BaseNode {
             this.htmlElement.style.visibility = '';
             const contentEl = $('.node-content', this.htmlElement);
             if (contentEl) {
-                 const baseScale = this.data.contentScale ?? 1.0;
-                 contentEl.style.transform = `scale(${baseScale})`;
+                const baseScale = this.data.contentScale ?? 1.0;
+                contentEl.style.transform = `scale(${baseScale})`;
             }
         }
     }

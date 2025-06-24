@@ -57,14 +57,11 @@ export class SpaceGraph {
         // Register LayoutPlugin
         this.plugins.add(new LayoutPlugin(this, this.plugins));
         // Register UIPlugin
-        this.plugins.add(
-            new UIPlugin(this, this.plugins, this.contextMenuElement, this.confirmDialogElement)
-        ); // Modified
+        this.plugins.add(new UIPlugin(this, this.plugins, this.contextMenuElement, this.confirmDialogElement)); // Modified
         // Register MinimapPlugin (can be after UI or Rendering)
         this.plugins.add(new MinimapPlugin(this, this.plugins));
         // Register DataPlugin
         this.plugins.add(new DataPlugin(this, this.plugins));
-
 
         // _cam is now created by CameraPlugin and assigned to this.space._cam in CameraPlugin.init() for now.
         // Direct instantiation of THREE.PerspectiveCamera, CameraControls, Layout, and UIManager is removed from here.
@@ -211,14 +208,14 @@ export class SpaceGraph {
         ); // Uses methods now on CameraPlugin
         this.on('ui:request:updateEdge', (edgeId, property, value) => {
             const edgePlugin = this.plugins.getPlugin('EdgePlugin');
-            const uiPlugin = this.plugins.getPlugin('UIPlugin');
+            const _uiPlugin = this.plugins.getPlugin('UIPlugin'); // Prefixed with underscore
             const edge = edgePlugin?.getEdgeById(edgeId);
             if (!edge) return;
             switch (property) {
                 case 'color':
                     edge.data.color = value;
                     // setHighlight might need to be a method on Edge or EdgePlugin
-                    edge.setHighlight(uiPlugin?.getSelectedEdge() === edge);
+                    edge.setHighlight(this.plugins.getPlugin('UIPlugin')?.getSelectedEdge() === edge); // Direct call
                     break;
                 case 'thickness':
                     edge.data.thickness = value;
@@ -311,7 +308,7 @@ export class SpaceGraph {
         if (layoutPlugin && typeof layoutPlugin.togglePinNode === 'function') {
             layoutPlugin.togglePinNode(nodeId);
         } else {
-            console.warn('SpaceGraph: LayoutPlugin not available or does not support togglePinNode.');
+            // console.warn('SpaceGraph: LayoutPlugin not available or does not support togglePinNode.');
         }
     }
 
@@ -412,8 +409,8 @@ export class SpaceGraph {
         const currentNodes = nodePlugin?.getNodes();
         if (currentNodes) {
             const nonInstancedNodeMeshes = [...currentNodes.values()]
-                .filter(n => !n.isInstanced && n.mesh && n.mesh.visible) // Only check non-instanced, visible meshes
-                .map(n => n.mesh);
+                .filter((n) => !n.isInstanced && n.mesh && n.mesh.visible) // Only check non-instanced, visible meshes
+                .map((n) => n.mesh);
 
             if (nonInstancedNodeMeshes.length > 0) {
                 const nodeIntersects = raycaster.intersectObjects(nonInstancedNodeMeshes, false);
@@ -447,7 +444,7 @@ export class SpaceGraph {
         if (currentEdges) {
             // Filter out already instanced edges from this check
             const nonInstancedEdgeLines = [...currentEdges.values()]
-                .filter(e => !e.isInstanced && e.line && e.line.visible)
+                .filter((e) => !e.isInstanced && e.line && e.line.visible)
                 .map((e) => e.line);
 
             if (nonInstancedEdgeLines.length > 0) {
@@ -466,8 +463,10 @@ export class SpaceGraph {
 
         // Return only the relevant part (node or edge)
         if (closestIntersect) {
-            if (closestIntersect.type === 'node') return { node: closestIntersect.node, distance: closestIntersect.distance };
-            if (closestIntersect.type === 'edge') return { edge: closestIntersect.edge, distance: closestIntersect.distance };
+            if (closestIntersect.type === 'node')
+                return { node: closestIntersect.node, distance: closestIntersect.distance };
+            if (closestIntersect.type === 'edge')
+                return { edge: closestIntersect.edge, distance: closestIntersect.distance };
         }
 
         return null;
@@ -496,7 +495,7 @@ export class SpaceGraph {
 
         // this.ui?.dispose(); // Handled by UIPlugin
         this._listeners.clear(); // Clear all event listeners on SpaceGraph itself
-        console.log('SpaceGraph disposed.');
+        // console.log('SpaceGraph disposed.');
     }
 
     // --- Data Import/Export Methods ---

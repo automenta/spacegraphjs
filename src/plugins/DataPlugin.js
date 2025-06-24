@@ -43,7 +43,7 @@ export class DataPlugin extends Plugin {
         };
 
         // Serialize nodes
-        nodePlugin.getNodes().forEach(node => {
+        nodePlugin.getNodes().forEach((node) => {
             graphData.nodes.push({
                 id: node.id,
                 type: node.data.type || 'unknown', // Essential for NodeFactory
@@ -55,7 +55,7 @@ export class DataPlugin extends Plugin {
         });
 
         // Serialize edges
-        edgePlugin.getEdges().forEach(edge => {
+        edgePlugin.getEdges().forEach((edge) => {
             graphData.edges.push({
                 // id: edge.id, // Optional, can be auto-generated on import
                 sourceId: edge.source.id,
@@ -67,16 +67,23 @@ export class DataPlugin extends Plugin {
         if (options.includeCamera && cameraPlugin) {
             const camControls = cameraPlugin.getControls();
             if (camControls) {
-                 graphData.camera = {
-                    position: {x: camControls.targetPosition.x, y: camControls.targetPosition.y, z: camControls.targetPosition.z },
-                    lookAt: {x: camControls.targetLookAt.x, y: camControls.targetLookAt.y, z: camControls.targetLookAt.z },
+                graphData.camera = {
+                    position: {
+                        x: camControls.targetPosition.x,
+                        y: camControls.targetPosition.y,
+                        z: camControls.targetPosition.z,
+                    },
+                    lookAt: {
+                        x: camControls.targetLookAt.x,
+                        y: camControls.targetLookAt.y,
+                        z: camControls.targetLookAt.z,
+                    },
                     mode: camControls.getCameraMode ? camControls.getCameraMode() : 'orbit', // if getCameraMode exists
-                 };
+                };
             }
         } else {
             delete graphData.camera; // Remove if not included
         }
-
 
         try {
             return JSON.stringify(graphData, null, options.prettyPrint ? 2 : undefined);
@@ -99,7 +106,6 @@ export class DataPlugin extends Plugin {
         const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin');
         const cameraPlugin = this.pluginManager.getPlugin('CameraPlugin');
 
-
         if (!nodePlugin || !edgePlugin || !layoutPlugin) {
             console.error('DataPlugin: Required plugins (Node, Edge, Layout) not available for import.');
             return false;
@@ -119,7 +125,7 @@ export class DataPlugin extends Plugin {
         if (options.clearExistingGraph) {
             // Create arrays of IDs to avoid issues with modifying maps while iterating
             const currentNodeIds = Array.from(nodePlugin.getNodes().keys());
-            currentNodeIds.forEach(id => nodePlugin.removeNode(id));
+            currentNodeIds.forEach((id) => nodePlugin.removeNode(id));
 
             // Edges are typically removed when nodes are removed, but explicit clear can be added if needed
             // const currentEdgeIds = Array.from(edgePlugin.getEdges().keys());
@@ -155,7 +161,7 @@ export class DataPlugin extends Plugin {
 
         // Apply pinning after all nodes are created and potentially after first layout pass
         // For now, direct pinning if node.isPinned was true in data.
-         graphData.nodes.forEach(nodeData => {
+        graphData.nodes.forEach((nodeData) => {
             if (nodeData.isPinned) {
                 const nodeInstance = importedNodesMap.get(nodeData.id);
                 if (nodeInstance) {
@@ -168,7 +174,6 @@ export class DataPlugin extends Plugin {
                 }
             }
         });
-
 
         // Import edges
         for (const edgeData of graphData.edges) {
@@ -193,7 +198,6 @@ export class DataPlugin extends Plugin {
                 }
             }
         }
-
 
         // Optionally, trigger a layout update
         // await layoutPlugin.applyLayout(layoutPlugin.layoutManager?.getActiveLayoutName() || 'force');

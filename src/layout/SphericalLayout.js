@@ -41,7 +41,7 @@ export class SphericalLayout {
 
         // Golden Spiral algorithm (Fibonacci Sphere) for distributing points evenly on a sphere
         // https://stackoverflow.com/questions/9600801/evenly-distributing-n-points-on-a-sphere
-        const phi = Math.PI * (Math.sqrt(5.) - 1.); // Golden angle in radians
+        const phi = Math.PI * (Math.sqrt(5) - 1); // Golden angle in radians
 
         nodes.forEach((node, i) => {
             if (node.isPinned) return; // Skip pinned nodes
@@ -56,11 +56,7 @@ export class SphericalLayout {
 
             // Set the node's target position directly
             // LayoutManager will handle animation from current to this target.
-            node.position.set(
-                x * radius,
-                y * radius,
-                z * radius
-            );
+            node.position.set(x * radius, y * radius, z * radius);
         });
     }
 
@@ -76,14 +72,28 @@ export class SphericalLayout {
     // might not do much after initial `init` calculation.
     // LayoutManager handles animation to new positions set in `init`.
 
-    run() { /* Static layout, positions set in init */ }
-    stop() { /* No ongoing simulation to stop */ }
-    kick() { /* No simulation to re-energize, layout is recalculated on applyLayout */ }
+    run() {
+        /* Static layout, positions set in init */
+    }
+    stop() {
+        /* No ongoing simulation to stop */
+    }
+    kick() {
+        /* No simulation to re-energize, layout is recalculated on applyLayout */
+    }
 
-    addNode(node) { /* Could re-calculate, but typically full applyLayout is better for static */ }
-    removeNode(node) { /* Could re-calculate, but typically full applyLayout is better for static */ }
-    addEdge(edge) { /* Edges don't affect this layout */ }
-    removeEdge(edge) { /* Edges don't affect this layout */ }
+    addNode(node) {
+        /* Could re-calculate, but typically full applyLayout is better for static */
+    }
+    removeNode(node) {
+        /* Could re-calculate, but typically full applyLayout is better for static */
+    }
+    addEdge(edge) {
+        /* Edges don't affect this layout */
+    }
+    removeEdge(edge) {
+        /* Edges don't affect this layout */
+    }
 
     dispose() {
         this.space = null;

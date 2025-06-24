@@ -4,21 +4,21 @@ SpaceGraphJS is a JavaScript library for creating interactive 3D force-directed 
 
 ## Features
 
--   **3D Graph Visualization**: Renders nodes and edges in a 3D space.
--   **HTML Nodes**: Allows complex HTML content to be used as node visuals, enabling rich UIs within the graph.
--   **Shape Nodes**: Supports basic 3D shapes (spheres, boxes) for simpler node representations, with 3D text labels.
--   **Force-Directed Layout**: Implements a force simulation to automatically arrange nodes and edges.
-    -   Customizable forces (repulsion, spring-like edges with configurable stiffness and length).
-    -   Support for different edge constraint types (elastic, rigid, weld).
--   **Interactive UI**:
-    -   Drag & drop nodes.
-    -   Resize HTML nodes.
-    -   Context menus for creating nodes, linking, deleting, etc.
-    -   Interactive edge menu for adjusting properties like color and thickness.
-    -   Smooth camera controls (pan, zoom, focus on node) with GSAP animations.
-    -   History for camera movements (back/forward).
--   **Modular Design**: Core components like `SpaceGraph`, `UIManager`, `ForceLayout`, `Camera`, and Node types are organized into classes.
--   **ES Module Support**: Can be easily integrated into modern JavaScript projects.
+- **3D Graph Visualization**: Renders nodes and edges in a 3D space.
+- **HTML Nodes**: Allows complex HTML content to be used as node visuals, enabling rich UIs within the graph.
+- **Shape Nodes**: Supports basic 3D shapes (spheres, boxes) for simpler node representations, with 3D text labels.
+- **Force-Directed Layout**: Implements a force simulation to automatically arrange nodes and edges.
+    - Customizable forces (repulsion, spring-like edges with configurable stiffness and length).
+    - Support for different edge constraint types (elastic, rigid, weld).
+- **Interactive UI**:
+    - Drag & drop nodes.
+    - Resize HTML nodes.
+    - Context menus for creating nodes, linking, deleting, etc.
+    - Interactive edge menu for adjusting properties like color and thickness.
+    - Smooth camera controls (pan, zoom, focus on node) with GSAP animations.
+    - History for camera movements (back/forward).
+- **Modular Design**: Core components like `SpaceGraph`, `UIManager`, `ForceLayout`, `Camera`, and Node types are organized into classes.
+- **ES Module Support**: Can be easily integrated into modern JavaScript projects.
 
 ## Live Demo
 
@@ -40,41 +40,54 @@ SpaceGraphJS relies on ES modules and modern browser features. You'll need to im
     ```html
     <!DOCTYPE html>
     <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <title>My SpaceGraph App</title>
-        <link rel="stylesheet" href="path/to/your/spacegraph.css"> <!-- Or your custom styles -->
-        <style>
-            body { margin: 0; overflow: hidden; }
-            #graph-container { width: 100vw; height: 100vh; position: relative; }
-            /* Required hidden elements for UIManager, styled by spacegraph.css or your CSS */
-            .context-menu { display: none; }
-            .dialog { display: none; }
-        </style>
-    </head>
-    <body>
-        <div id="graph-container">
-            <canvas id="webgl-canvas"></canvas> <!-- Required by SpaceGraph -->
-            <!-- css3d-container will be added by SpaceGraph -->
-            <div class="context-menu" id="context-menu"></div>
-            <div class="dialog" id="confirm-dialog">
-                <p id="confirm-message">Are you sure?</p>
-                <button id="confirm-yes">Yes</button>
-                <button id="confirm-no">No</button>
+        <head>
+            <meta charset="UTF-8" />
+            <title>My SpaceGraph App</title>
+            <link rel="stylesheet" href="path/to/your/spacegraph.css" />
+            <!-- Or your custom styles -->
+            <style>
+                body {
+                    margin: 0;
+                    overflow: hidden;
+                }
+                #graph-container {
+                    width: 100vw;
+                    height: 100vh;
+                    position: relative;
+                }
+                /* Required hidden elements for UIManager, styled by spacegraph.css or your CSS */
+                .context-menu {
+                    display: none;
+                }
+                .dialog {
+                    display: none;
+                }
+            </style>
+        </head>
+        <body>
+            <div id="graph-container">
+                <canvas id="webgl-canvas"></canvas>
+                <!-- Required by SpaceGraph -->
+                <!-- css3d-container will be added by SpaceGraph -->
+                <div class="context-menu" id="context-menu"></div>
+                <div class="dialog" id="confirm-dialog">
+                    <p id="confirm-message">Are you sure?</p>
+                    <button id="confirm-yes">Yes</button>
+                    <button id="confirm-no">No</button>
+                </div>
             </div>
-        </div>
 
-        <script type="importmap">
-        {
-            "imports": {
-                "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
-                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
-                "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
-            }
-        }
-        </script>
-        <script type="module" src="my-app.js"></script>
-    </body>
+            <script type="importmap">
+                {
+                    "imports": {
+                        "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
+                        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
+                        "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
+                    }
+                }
+            </script>
+            <script type="module" src="my-app.js"></script>
+        </body>
     </html>
     ```
 
@@ -88,7 +101,7 @@ SpaceGraphJS relies on ES modules and modern browser features. You'll need to im
         ForceLayout,
         NoteNode,
         ShapeNode,
-        $ // Optional utility for querySelector
+        $, // Optional utility for querySelector
     } from './path/to/src/spacegraph.js';
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -97,7 +110,7 @@ SpaceGraphJS relies on ES modules and modern browser features. You'll need to im
         const confirmDialogEl = $('#confirm-dialog');
 
         if (!graphContainer || !contextMenuEl || !confirmDialogEl) {
-            console.error("Missing required DOM elements for SpaceGraphJS.");
+            console.error('Missing required DOM elements for SpaceGraphJS.');
             return;
         }
 
@@ -106,16 +119,29 @@ SpaceGraphJS relies on ES modules and modern browser features. You'll need to im
         space.layout = new ForceLayout(space);
 
         // Add some nodes
-        const node1 = space.addNode(new NoteNode('node1', { x: 0, y: 0, z: 0 }, {
-            content: 'Hello World!',
-            width: 150, height: 50
-        }));
-        const node2 = space.addNode(new ShapeNode('node2', { x: 100, y: 50, z: 10 }, {
-            label: '3D Sphere',
-            shape: 'sphere',
-            size: 40,
-            color: 0xff00ff
-        }));
+        const node1 = space.addNode(
+            new NoteNode(
+                'node1',
+                { x: 0, y: 0, z: 0 },
+                {
+                    content: 'Hello World!',
+                    width: 150,
+                    height: 50,
+                }
+            )
+        );
+        const node2 = space.addNode(
+            new ShapeNode(
+                'node2',
+                { x: 100, y: 50, z: 10 },
+                {
+                    label: '3D Sphere',
+                    shape: 'sphere',
+                    size: 40,
+                    color: 0xff00ff,
+                }
+            )
+        );
 
         // Add an edge
         space.addEdge(node1, node2);
@@ -123,8 +149,8 @@ SpaceGraphJS relies on ES modules and modern browser features. You'll need to im
         // Start layout and rendering
         space.layout.runOnce(100); // Settle layout
         space.centerView();
-        space.layout.start();      // Continuous layout updates
-        space.animate();           // Start render loop
+        space.layout.start(); // Continuous layout updates
+        space.animate(); // Start render loop
 
         window.mySpaceGraph = space; // For easy debugging
     });

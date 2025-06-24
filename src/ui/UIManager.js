@@ -60,7 +60,6 @@ export class UIManager {
         }
     }
 
-
     _setupToolbar() {
         if (!this.toolbarElement) {
             return;
@@ -74,7 +73,7 @@ export class UIManager {
             { id: 'tb-toggle-theme', text: '🎨 Theme', title: 'Toggle Light/Dark Theme', action: 'toggleTheme' },
         ];
 
-        buttons.forEach(btnData => {
+        buttons.forEach((btnData) => {
             const button = document.createElement('button');
             button.id = btnData.id;
             button.textContent = btnData.text;
@@ -84,7 +83,8 @@ export class UIManager {
         });
     }
 
-    _handleToolbarAction(action, buttonElement) { // Added buttonElement
+    _handleToolbarAction(action, buttonElement) {
+        // Added buttonElement
         switch (action) {
             case 'addNode': {
                 const camPlugin = this.space.plugins.getPlugin('CameraPlugin');
@@ -234,7 +234,7 @@ export class UIManager {
                 const selectedNodes = uiPlugin?.getSelectedNodes();
 
                 if (selectedNodes && selectedNodes.size > 0) {
-                    selectedNodes.forEach(sNode => {
+                    selectedNodes.forEach((sNode) => {
                         if (sNode === this.draggedNode) {
                             sNode.drag(primaryNodeNewCalculatedPos);
                         } else {
@@ -329,10 +329,20 @@ export class UIManager {
 
         const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
         const cameraControls = cameraPlugin?.getControls();
-        if ( !e.shiftKey && !clickedContextMenu && !clickedEdgeMenu && !clickedConfirmDialog &&
-            this.pointerState.potentialClick && !cameraControls?.isPanning && !this.space.isLinking ) {
+        if (
+            !e.shiftKey &&
+            !clickedContextMenu &&
+            !clickedEdgeMenu &&
+            !clickedConfirmDialog &&
+            this.pointerState.potentialClick &&
+            !cameraControls?.isPanning &&
+            !this.space.isLinking
+        ) {
             const targetInfo = this._getTargetInfo(e);
-            const clickedOnGraphElement = targetInfo.nodeElement || targetInfo.intersectedObjectResult?.node || targetInfo.intersectedObjectResult?.edge;
+            const clickedOnGraphElement =
+                targetInfo.nodeElement ||
+                targetInfo.intersectedObjectResult?.node ||
+                targetInfo.intersectedObjectResult?.edge;
             if (!clickedOnGraphElement) {
                 this.space.emit('ui:request:setSelectedNode', null, false);
             }
@@ -352,51 +362,112 @@ export class UIManager {
                     node.htmlElement?.querySelector('.node-content')?.focus();
                 }
             },
-            'delete-node': () => this._showConfirm(`Delete node "${nodeId?.substring(0, 10)}..."?`, () => this.space.emit('ui:request:removeNode', nodeId)),
-            'delete-edge': () => this._showConfirm(`Delete edge "${edgeId?.substring(0, 10)}..."?`, () => this.space.emit('ui:request:removeEdge', edgeId)),
-            'autozoom-node': () => this.space.emit('ui:request:autoZoomNode', this.space.plugins.getPlugin('NodePlugin')?.getNodeById(nodeId)),
-            'create-note': () => this.space.emit('ui:request:addNode', new NoteNode(null, JSON.parse(positionData), { content: 'New Note ✨' })),
-            'create-box': () => this.space.emit('ui:request:addNode', new ShapeNode(null, JSON.parse(positionData), { label: 'Box Node 📦', shape: 'box', size: 60, color: Math.random() * 0xffffff })),
-            'create-sphere': () => this.space.emit('ui:request:addNode', new ShapeNode(null, JSON.parse(positionData), { label: 'Sphere Node 🌐', shape: 'sphere', size: 60, color: Math.random() * 0xffffff, })),
+            'delete-node': () =>
+                this._showConfirm(`Delete node "${nodeId?.substring(0, 10)}..."?`, () =>
+                    this.space.emit('ui:request:removeNode', nodeId)
+                ),
+            'delete-edge': () =>
+                this._showConfirm(`Delete edge "${edgeId?.substring(0, 10)}..."?`, () =>
+                    this.space.emit('ui:request:removeEdge', edgeId)
+                ),
+            'autozoom-node': () =>
+                this.space.emit(
+                    'ui:request:autoZoomNode',
+                    this.space.plugins.getPlugin('NodePlugin')?.getNodeById(nodeId)
+                ),
+            'create-note': () =>
+                this.space.emit(
+                    'ui:request:addNode',
+                    new NoteNode(null, JSON.parse(positionData), { content: 'New Note ✨' })
+                ),
+            'create-box': () =>
+                this.space.emit(
+                    'ui:request:addNode',
+                    new ShapeNode(null, JSON.parse(positionData), {
+                        label: 'Box Node 📦',
+                        shape: 'box',
+                        size: 60,
+                        color: Math.random() * 0xffffff,
+                    })
+                ),
+            'create-sphere': () =>
+                this.space.emit(
+                    'ui:request:addNode',
+                    new ShapeNode(null, JSON.parse(positionData), {
+                        label: 'Sphere Node 🌐',
+                        shape: 'sphere',
+                        size: 60,
+                        color: Math.random() * 0xffffff,
+                    })
+                ),
             'center-view': () => this.space.emit('ui:request:centerView'),
             'reset-view': () => this.space.emit('ui:request:resetView'),
-            'start-link': () => this.space.emit('ui:request:startLinking', this.space.plugins.getPlugin('NodePlugin')?.getNodeById(nodeId)),
+            'start-link': () =>
+                this.space.emit(
+                    'ui:request:startLinking',
+                    this.space.plugins.getPlugin('NodePlugin')?.getNodeById(nodeId)
+                ),
             'reverse-edge': () => this.space.emit('ui:request:reverseEdge', edgeId),
-            'edit-edge': () => this.space.emit('ui:request:setSelectedEdge', this.space.plugins.getPlugin('EdgePlugin')?.getEdgeById(edgeId)),
+            'edit-edge': () =>
+                this.space.emit(
+                    'ui:request:setSelectedEdge',
+                    this.space.plugins.getPlugin('EdgePlugin')?.getEdgeById(edgeId)
+                ),
             'toggle-pin-node': () => this.space.togglePinNode(nodeId),
             'toggle-background': () => {
                 const renderingPlugin = this.space.plugins.getPlugin('RenderingPlugin');
                 if (renderingPlugin) {
-                    this.space.emit('ui:request:toggleBackground', renderingPlugin.background.alpha === 0 ? 0x1a1a1d : 0x000000, renderingPlugin.background.alpha === 0 ? 1.0 : 0 );
+                    this.space.emit(
+                        'ui:request:toggleBackground',
+                        renderingPlugin.background.alpha === 0 ? 0x1a1a1d : 0x000000,
+                        renderingPlugin.background.alpha === 0 ? 1.0 : 0
+                    );
                 }
             },
         };
         actions[action]?.() ?? console.warn('Unknown context menu action:', action);
     };
 
-    _onConfirmYes = () => { this.confirmCallback?.(); this._hideConfirm(); };
+    _onConfirmYes = () => {
+        this.confirmCallback?.();
+        this._hideConfirm();
+    };
     _onConfirmNo = () => this._hideConfirm();
 
     _onKeyDown = (e) => {
         const activeEl = document.activeElement;
-        const isEditing = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable);
+        const isEditing =
+            activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable);
         if (isEditing && e.key !== 'Escape') return;
 
         const uiPlugin = this.space.plugins.getPlugin('UIPlugin');
         const selectedNodes = uiPlugin?.getSelectedNodes();
         const selectedEdges = uiPlugin?.getSelectedEdges();
-        const primarySelectedNode = selectedNodes && selectedNodes.size > 0 ? selectedNodes.values().next().value : null;
-        const primarySelectedEdge = selectedEdges && selectedEdges.size > 0 ? selectedEdges.values().next().value : null;
+        const primarySelectedNode =
+            selectedNodes && selectedNodes.size > 0 ? selectedNodes.values().next().value : null;
+        const primarySelectedEdge =
+            selectedEdges && selectedEdges.size > 0 ? selectedEdges.values().next().value : null;
         let handled = true;
 
         switch (e.key) {
-            case 'Delete': case 'Backspace':
+            case 'Delete':
+            case 'Backspace':
                 if (primarySelectedNode) {
-                    const message = selectedNodes.size > 1 ? `Delete ${selectedNodes.size} selected nodes?` : `Delete node "${primarySelectedNode.id.substring(0, 10)}..."?`;
-                    this._showConfirm(message, () => selectedNodes.forEach(node => this.space.emit('ui:request:removeNode', node.id)));
+                    const message =
+                        selectedNodes.size > 1
+                            ? `Delete ${selectedNodes.size} selected nodes?`
+                            : `Delete node "${primarySelectedNode.id.substring(0, 10)}..."?`;
+                    this._showConfirm(message, () =>
+                        selectedNodes.forEach((node) => this.space.emit('ui:request:removeNode', node.id))
+                    );
                 } else if (primarySelectedEdge) {
-                    const message = selectedEdges.size > 1 ? `Delete ${selectedEdges.size} selected edges?` : `Delete edge "${primarySelectedEdge.id.substring(0, 10)}..."?`;
-                    this._showConfirm(message, () => selectedEdges.forEach(edge => this.space.emit('ui:request:removeEdge', edge.id)));
+                    const message =
+                        selectedEdges.size > 1
+                            ? `Delete ${selectedEdges.size} selected edges?`
+                            : `Delete edge "${primarySelectedEdge.id.substring(0, 10)}..."?`;
+                    this._showConfirm(message, () =>
+                        selectedEdges.forEach((edge) => this.space.emit('ui:request:removeEdge', edge.id))
+                    );
                 } else handled = false;
                 break;
             case 'Escape':
@@ -404,32 +475,47 @@ export class UIManager {
                 else if (this.contextMenuElement.style.display === 'block') this._hideContextMenu();
                 else if (this.confirmDialogElement.style.display === 'block') this._hideConfirm();
                 else if (this.edgeMenuObject) this.space.emit('ui:request:setSelectedEdge', null, false);
-                else if ((selectedNodes && selectedNodes.size > 0) || (selectedEdges && selectedEdges.size > 0)) this.space.emit('ui:request:setSelectedNode', null, false);
+                else if ((selectedNodes && selectedNodes.size > 0) || (selectedEdges && selectedEdges.size > 0))
+                    this.space.emit('ui:request:setSelectedNode', null, false);
                 else handled = false;
                 break;
             case 'Enter':
-                if (primarySelectedNode instanceof HtmlNode && primarySelectedNode.data.editable) primarySelectedNode.htmlElement?.querySelector('.node-content')?.focus();
+                if (primarySelectedNode instanceof HtmlNode && primarySelectedNode.data.editable)
+                    primarySelectedNode.htmlElement?.querySelector('.node-content')?.focus();
                 else handled = false;
                 break;
-            case '+': case '=':
-                if (primarySelectedNode instanceof HtmlNode) e.ctrlKey || e.metaKey ? this.space.emit('ui:request:adjustNodeSize', primarySelectedNode, 1.2) : this.space.emit('ui:request:adjustContentScale', primarySelectedNode, 1.15);
+            case '+':
+            case '=':
+                if (primarySelectedNode instanceof HtmlNode)
+                    e.ctrlKey || e.metaKey
+                        ? this.space.emit('ui:request:adjustNodeSize', primarySelectedNode, 1.2)
+                        : this.space.emit('ui:request:adjustContentScale', primarySelectedNode, 1.15);
                 else handled = false;
                 break;
-            case '-': case '_':
-                if (primarySelectedNode instanceof HtmlNode) e.ctrlKey || e.metaKey ? this.space.emit('ui:request:adjustNodeSize', primarySelectedNode, 1 / 1.2) : this.space.emit('ui:request:adjustContentScale', primarySelectedNode, 1 / 1.15);
+            case '-':
+            case '_':
+                if (primarySelectedNode instanceof HtmlNode)
+                    e.ctrlKey || e.metaKey
+                        ? this.space.emit('ui:request:adjustNodeSize', primarySelectedNode, 1 / 1.2)
+                        : this.space.emit('ui:request:adjustContentScale', primarySelectedNode, 1 / 1.15);
                 else handled = false;
                 break;
             case ' ':
                 if (primarySelectedNode) this.space.emit('ui:request:focusOnNode', primarySelectedNode, 0.5, true);
                 else if (primarySelectedEdge) {
-                    const midPoint = new THREE.Vector3().lerpVectors(primarySelectedEdge.source.position, primarySelectedEdge.target.position, 0.5);
+                    const midPoint = new THREE.Vector3().lerpVectors(
+                        primarySelectedEdge.source.position,
+                        primarySelectedEdge.target.position,
+                        0.5
+                    );
                     const dist = primarySelectedEdge.source.position.distanceTo(primarySelectedEdge.target.position);
                     const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
                     cameraPlugin?.pushState();
                     cameraPlugin?.moveTo(midPoint.x, midPoint.y, midPoint.z + dist * 0.6 + 100, 0.5, midPoint);
                 } else this.space.emit('ui:request:centerView');
                 break;
-            default: handled = false;
+            default:
+                handled = false;
         }
         if (handled) e.preventDefault();
     };
@@ -439,7 +525,8 @@ export class UIManager {
         if (e.target.closest('.node-controls, .edge-menu-frame') || targetInfo.contentEditable) return;
         if (e.ctrlKey || e.metaKey) {
             if (targetInfo.node instanceof HtmlNode) {
-                e.preventDefault(); e.stopPropagation();
+                e.preventDefault();
+                e.stopPropagation();
                 this.space.emit('ui:request:adjustContentScale', targetInfo.node, e.deltaY < 0 ? 1.1 : 1 / 1.1);
             }
         } else {
@@ -455,7 +542,9 @@ export class UIManager {
         const nodeControls = element?.closest('.node-controls button');
         const contentEditable = element?.closest('[contenteditable="true"]');
         const interactiveElement = element?.closest('button, input, textarea, select, a');
-        let node = nodeElement ? this.space.plugins.getPlugin('NodePlugin')?.getNodeById(nodeElement.dataset.nodeId) : null;
+        let node = nodeElement
+            ? this.space.plugins.getPlugin('NodePlugin')?.getNodeById(nodeElement.dataset.nodeId)
+            : null;
         let intersectedObjectResult = null;
         const needsRaycast = !element || (!resizeHandle && !nodeControls && !contentEditable && !interactiveElement);
         if (needsRaycast) {
@@ -464,7 +553,17 @@ export class UIManager {
                 node = intersectedObjectResult.node;
             }
         }
-        return { element, nodeElement, resizeHandle, nodeControls, contentEditable, interactiveElement, node, intersectedEdge: intersectedObjectResult?.edge ?? null, intersectedObjectResult };
+        return {
+            element,
+            nodeElement,
+            resizeHandle,
+            nodeControls,
+            contentEditable,
+            interactiveElement,
+            node,
+            intersectedEdge: intersectedObjectResult?.edge ?? null,
+            intersectedObjectResult,
+        };
     }
 
     _handleHover(e) {
@@ -472,23 +571,29 @@ export class UIManager {
         const selectedEdges = uiPlugin?.getSelectedEdges();
         if (this.pointerState.down || this.draggedNode || this.resizedNode || this.space.isLinking) {
             if (this.hoveredEdge && !selectedEdges?.has(this.hoveredEdge)) this.hoveredEdge.setHighlight(false);
-            this.hoveredEdge = null; return;
+            this.hoveredEdge = null;
+            return;
         }
         const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
         const edgePlugin = this.space.plugins.getPlugin('EdgePlugin');
         const camInstance = cameraPlugin?.getCameraInstance();
         if (!camInstance || !edgePlugin) {
             if (this.hoveredEdge && !selectedEdges?.has(this.hoveredEdge)) this.hoveredEdge.setHighlight(false);
-            this.hoveredEdge = null; return;
+            this.hoveredEdge = null;
+            return;
         }
-        const vec = new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
+        const vec = new THREE.Vector2(
+            (e.clientX / window.innerWidth) * 2 - 1,
+            -(e.clientY / window.innerHeight) * 2 + 1
+        );
         const raycaster = new THREE.Raycaster();
         raycaster.setFromCamera(vec, camInstance);
         raycaster.params.Line.threshold = 5;
         const currentEdgesMap = edgePlugin.getEdges();
         const edgeLines = [...currentEdgesMap.values()].map((edge) => edge.line).filter(Boolean);
         const intersects = edgeLines.length > 0 ? raycaster.intersectObjects(edgeLines, false) : [];
-        const intersectedEdgeInstance = intersects.length > 0 ? edgePlugin.getEdgeById(intersects[0].object.userData.edgeId) : null;
+        const intersectedEdgeInstance =
+            intersects.length > 0 ? edgePlugin.getEdgeById(intersects[0].object.userData.edgeId) : null;
         if (this.hoveredEdge !== intersectedEdgeInstance) {
             if (this.hoveredEdge && !selectedEdges?.has(this.hoveredEdge)) this.hoveredEdge.setHighlight(false);
             this.hoveredEdge = intersectedEdgeInstance;
@@ -498,38 +603,50 @@ export class UIManager {
 
     _handlePointerDownControls(e, targetInfo) {
         if (targetInfo.nodeControls && targetInfo.node instanceof HtmlNode) {
-            e.preventDefault(); e.stopPropagation();
+            e.preventDefault();
+            e.stopPropagation();
             const button = targetInfo.nodeControls;
             const actionClass = [...button.classList].find((cls) => cls.startsWith('node-') && !cls.includes('button'));
             const action = actionClass?.substring('node-'.length);
             const actions = {
-                delete: () => this._showConfirm(`Delete node "${targetInfo.node.id.substring(0, 10)}..."?`, () => this.space.emit('ui:request:removeNode', targetInfo.node.id)),
+                delete: () =>
+                    this._showConfirm(`Delete node "${targetInfo.node.id.substring(0, 10)}..."?`, () =>
+                        this.space.emit('ui:request:removeNode', targetInfo.node.id)
+                    ),
                 'content-zoom-in': () => this.space.emit('ui:request:adjustContentScale', targetInfo.node, 1.15),
                 'content-zoom-out': () => this.space.emit('ui:request:adjustContentScale', targetInfo.node, 1 / 1.15),
                 grow: () => this.space.emit('ui:request:adjustNodeSize', targetInfo.node, 1.2),
                 shrink: () => this.space.emit('ui:request:adjustNodeSize', targetInfo.node, 1 / 1.2),
             };
             if (action && actions[action]) actions[action]();
-            this._hideContextMenu(); return true;
+            this._hideContextMenu();
+            return true;
         }
         return false;
     }
 
     _handlePointerDownResize(e, targetInfo) {
         if (targetInfo.resizeHandle && targetInfo.node instanceof HtmlNode) {
-            e.preventDefault(); e.stopPropagation();
+            e.preventDefault();
+            e.stopPropagation();
             this.resizedNode = targetInfo.node;
             this.resizedNode.startResize();
             this.resizeStartPos = { x: e.clientX, y: e.clientY };
             this.resizeStartSize = { ...this.resizedNode.size };
             this.container.style.cursor = 'nwse-resize';
-            this._hideContextMenu(); return true;
+            this._hideContextMenu();
+            return true;
         }
         return false;
     }
 
     _handlePointerDownNode(e, targetInfo) {
-        const canDrag = targetInfo.node && !targetInfo.nodeControls && !targetInfo.resizeHandle && !targetInfo.interactiveElement && !targetInfo.contentEditable;
+        const canDrag =
+            targetInfo.node &&
+            !targetInfo.nodeControls &&
+            !targetInfo.resizeHandle &&
+            !targetInfo.interactiveElement &&
+            !targetInfo.contentEditable;
         if (canDrag) {
             e.preventDefault();
             this.draggedNode = targetInfo.node;
@@ -539,7 +656,8 @@ export class UIManager {
             this.dragOffset = worldPos ? worldPos.sub(this.draggedNode.position) : new THREE.Vector3();
             this.container.style.cursor = 'grabbing';
             this.space.emit('ui:request:setSelectedNode', targetInfo.node, e.shiftKey);
-            this._hideContextMenu(); return true;
+            this._hideContextMenu();
+            return true;
         }
         if (targetInfo.node && (targetInfo.interactiveElement || targetInfo.contentEditable)) {
             e.stopPropagation();
@@ -553,7 +671,8 @@ export class UIManager {
         if (targetInfo.intersectedEdge && !targetInfo.node) {
             e.preventDefault();
             this.space.emit('ui:request:setSelectedEdge', targetInfo.intersectedEdge, e.shiftKey);
-            this._hideContextMenu(); return true;
+            this._hideContextMenu();
+            return true;
         }
         return false;
     }
@@ -568,7 +687,8 @@ export class UIManager {
 
     _getContextMenuItemsNode(node) {
         const items = [];
-        if (node instanceof HtmlNode && node.data.editable) items.push({ label: 'Edit Content 📝', action: 'edit-node', nodeId: node.id });
+        if (node instanceof HtmlNode && node.data.editable)
+            items.push({ label: 'Edit Content 📝', action: 'edit-node', nodeId: node.id });
         items.push({ label: 'Start Link ✨', action: 'start-link', nodeId: node.id });
         items.push({ label: 'Auto Zoom / Back 🖱️', action: 'autozoom-node', nodeId: node.id });
         const pinActionLabel = node.isPinned ? 'Unpin Node 📌' : 'Pin Node 📌';
@@ -600,42 +720,71 @@ export class UIManager {
         items.push({ label: 'Reset Zoom & Pan', action: 'reset-view' });
         const renderingPlugin = this.space.plugins.getPlugin('RenderingPlugin');
         if (renderingPlugin) {
-            items.push({ label: renderingPlugin.background.alpha === 0 ? 'Set Dark Background' : 'Set Transparent BG', action: 'toggle-background' });
+            items.push({
+                label: renderingPlugin.background.alpha === 0 ? 'Set Dark Background' : 'Set Transparent BG',
+                action: 'toggle-background',
+            });
         }
         return items;
     }
 
     _showContextMenu(x, y, items) {
-        const cm = this.contextMenuElement; cm.innerHTML = '';
+        const cm = this.contextMenuElement;
+        cm.innerHTML = '';
         const ul = document.createElement('ul');
         items.forEach((itemData) => {
             const li = document.createElement('li');
             if (itemData.type === 'separator') li.className = 'separator';
             else {
                 li.textContent = itemData.label;
-                Object.entries(itemData).forEach(([k, v]) => { if (k !== 'label' && k !== 'type' && v != null) li.dataset[k] = String(v); });
+                Object.entries(itemData).forEach(([k, v]) => {
+                    if (k !== 'label' && k !== 'type' && v != null) li.dataset[k] = String(v);
+                });
                 if (itemData.disabled) li.classList.add('disabled');
             }
             ul.appendChild(li);
         });
         cm.appendChild(ul);
-        const { offsetWidth: menuWidth, offsetHeight: menuHeight } = cm; const margin = 5;
+        const { offsetWidth: menuWidth, offsetHeight: menuHeight } = cm;
+        const margin = 5;
         let finalX = x + margin + menuWidth > window.innerWidth - margin ? x - menuWidth - margin : x + margin;
         let finalY = y + margin + menuHeight > window.innerHeight - margin ? y - menuHeight - margin : y + margin;
-        cm.style.left = `${Math.max(margin, finalX)}px`; cm.style.top = `${Math.max(margin, finalY)}px`;
+        cm.style.left = `${Math.max(margin, finalX)}px`;
+        cm.style.top = `${Math.max(margin, finalY)}px`;
         cm.style.display = 'block';
     }
 
-    _hideContextMenu = () => { this.contextMenuElement.style.display = 'none'; this.contextMenuElement.innerHTML = ''; };
-    _showConfirm(message, onConfirm) { const messageEl = $('#confirm-message', this.confirmDialogElement); if (messageEl) messageEl.textContent = message; this.confirmCallback = onConfirm; this.confirmDialogElement.style.display = 'block'; }
-    _hideConfirm = () => { this.confirmDialogElement.style.display = 'none'; this.confirmCallback = null; };
+    _hideContextMenu = () => {
+        this.contextMenuElement.style.display = 'none';
+        this.contextMenuElement.innerHTML = '';
+    };
+    _showConfirm(message, onConfirm) {
+        const messageEl = $('#confirm-message', this.confirmDialogElement);
+        if (messageEl) messageEl.textContent = message;
+        this.confirmCallback = onConfirm;
+        this.confirmDialogElement.style.display = 'block';
+    }
+    _hideConfirm = () => {
+        this.confirmDialogElement.style.display = 'none';
+        this.confirmCallback = null;
+    };
 
     _createTempLinkLine(sourceNode) {
         this._removeTempLinkLine();
-        const material = new THREE.LineDashedMaterial({ color: 0xffaa00, linewidth: 2, dashSize: 8, gapSize: 4, transparent: true, opacity: 0.9, depthTest: false });
+        const material = new THREE.LineDashedMaterial({
+            color: 0xffaa00,
+            linewidth: 2,
+            dashSize: 8,
+            gapSize: 4,
+            transparent: true,
+            opacity: 0.9,
+            depthTest: false,
+        });
         const points = [sourceNode.position.clone(), sourceNode.position.clone()];
         const geometry = new THREE.BufferGeometry().setFromPoints(points);
-        this.tempLinkLine = new THREE.Line(geometry, material); this.tempLinkLine.computeLineDistances(); this.tempLinkLine.renderOrder = 1;
+        this.tempLinkLine = new THREE.Line(geometry, material);
+        this.tempLinkLine.computeLineDistances();
+        this.tempLinkLine.renderOrder = 1;
         this.space.plugins.getPlugin('RenderingPlugin')?.getWebGLScene()?.add(this.tempLinkLine);
     }
 
@@ -645,27 +794,34 @@ export class UIManager {
         if (targetPos) {
             const positions = this.tempLinkLine.geometry.attributes.position;
             positions.setXYZ(1, targetPos.x, targetPos.y, targetPos.z);
-            positions.needsUpdate = true; this.tempLinkLine.geometry.computeBoundingSphere(); this.tempLinkLine.computeLineDistances();
+            positions.needsUpdate = true;
+            this.tempLinkLine.geometry.computeBoundingSphere();
+            this.tempLinkLine.computeLineDistances();
         }
     }
 
     _removeTempLinkLine() {
         if (this.tempLinkLine) {
-            this.tempLinkLine.geometry?.dispose(); this.tempLinkLine.material?.dispose();
+            this.tempLinkLine.geometry?.dispose();
+            this.tempLinkLine.material?.dispose();
             this.space.plugins.getPlugin('RenderingPlugin')?.getWebGLScene()?.remove(this.tempLinkLine);
             this.tempLinkLine = null;
         }
     }
 
     showEdgeMenu(edge) {
-        if (!edge) return; this.hideEdgeMenu();
+        if (!edge) return;
+        this.hideEdgeMenu();
         const menuElement = this._createEdgeMenuElement(edge);
         this.edgeMenuObject = new CSS3DObject(menuElement);
-        this.space.cssScene.add(this.edgeMenuObject); this.updateEdgeMenuPosition();
+        this.space.cssScene.add(this.edgeMenuObject);
+        this.updateEdgeMenuPosition();
     }
 
     _createEdgeMenuElement(edge) {
-        const menu = document.createElement('div'); menu.className = 'edge-menu-frame'; menu.dataset.edgeId = edge.id;
+        const menu = document.createElement('div');
+        menu.className = 'edge-menu-frame';
+        menu.dataset.edgeId = edge.id;
         menu.innerHTML = `
             <input type="color" value="#${edge.data.color.toString(16).padStart(6, '0')}" title="Color" data-action="color">
             <input type="range" min="0.5" max="5" step="0.1" value="${edge.data.thickness}" title="Thickness" data-action="thickness">
@@ -674,31 +830,55 @@ export class UIManager {
             </select>
             <button title="Delete Edge" class="delete" data-action="delete">×</button>
         `;
-        menu.addEventListener('pointerdown', (e) => e.stopPropagation()); menu.addEventListener('wheel', (e) => e.stopPropagation());
+        menu.addEventListener('pointerdown', (e) => e.stopPropagation());
+        menu.addEventListener('wheel', (e) => e.stopPropagation());
         menu.addEventListener('input', (e) => {
-            const target = e.target; const action = target.dataset.action; const edgeId = menu.dataset.edgeId;
-            const edgePlugin = this.space.plugins.getPlugin('EdgePlugin'); const currentEdge = edgePlugin?.getEdgeById(edgeId);
-            if (!currentEdge) return; let value;
+            const target = e.target;
+            const action = target.dataset.action;
+            const edgeId = menu.dataset.edgeId;
+            const edgePlugin = this.space.plugins.getPlugin('EdgePlugin');
+            const currentEdge = edgePlugin?.getEdgeById(edgeId);
+            if (!currentEdge) return;
+            let value;
             switch (action) {
-                case 'color': value = parseInt(target.value.substring(1), 16); break;
-                case 'thickness': value = parseFloat(target.value); break;
-                case 'constraintType': value = target.value; break;
+                case 'color':
+                    value = parseInt(target.value.substring(1), 16);
+                    break;
+                case 'thickness':
+                    value = parseFloat(target.value);
+                    break;
+                case 'constraintType':
+                    value = target.value;
+                    break;
             }
             this.space.emit('ui:request:updateEdge', edgeId, action, value);
         });
         menu.addEventListener('click', (e) => {
-            const button = e.target.closest('button[data-action]'); if (!button || button.dataset.action !== 'delete') return;
+            const button = e.target.closest('button[data-action]');
+            if (!button || button.dataset.action !== 'delete') return;
             const edgeId = menu.dataset.edgeId;
-            this._showConfirm(`Delete edge "${edgeId?.substring(0, 10)}..."?`, () => this.space.emit('ui:request:removeEdge', edgeId));
+            this._showConfirm(`Delete edge "${edgeId?.substring(0, 10)}..."?`, () =>
+                this.space.emit('ui:request:removeEdge', edgeId)
+            );
         });
         return menu;
     }
 
-    hideEdgeMenu = () => { if (this.edgeMenuObject) { this.edgeMenuObject.element?.remove(); this.edgeMenuObject.parent?.remove(this.edgeMenuObject); this.edgeMenuObject = null; } };
+    hideEdgeMenu = () => {
+        if (this.edgeMenuObject) {
+            this.edgeMenuObject.element?.remove();
+            this.edgeMenuObject.parent?.remove(this.edgeMenuObject);
+            this.edgeMenuObject = null;
+        }
+    };
     updateEdgeMenuPosition = () => {
-        const uiPlugin = this.space.plugins.getPlugin('UIPlugin'); const selectedEdges = uiPlugin?.getSelectedEdges();
+        const uiPlugin = this.space.plugins.getPlugin('UIPlugin');
+        const selectedEdges = uiPlugin?.getSelectedEdges();
         if (!this.edgeMenuObject || !this.edgeMenuObject.element?.parentNode) return;
-        if (!selectedEdges || selectedEdges.size !== 1) { this.hideEdgeMenu(); return; }
+        if (!selectedEdges || selectedEdges.size !== 1) {
+            this.hideEdgeMenu();
+            return;
+        }
         const edge = selectedEdges.values().next().value;
         const midPoint = new THREE.Vector3().lerpVectors(edge.source.position, edge.target.position, 0.5);
         this.edgeMenuObject.position.copy(midPoint);
@@ -708,15 +888,33 @@ export class UIManager {
 
     _onNodeSelected = (targetNode) => {};
     _onEdgeSelected = (targetEdge) => {
-        const uiPlugin = this.space.plugins.getPlugin('UIPlugin'); const selectedEdges = uiPlugin?.getSelectedEdges();
-        if (targetEdge && selectedEdges && selectedEdges.size === 1 && selectedEdges.has(targetEdge)) this.showEdgeMenu(targetEdge);
+        const uiPlugin = this.space.plugins.getPlugin('UIPlugin');
+        const selectedEdges = uiPlugin?.getSelectedEdges();
+        if (targetEdge && selectedEdges && selectedEdges.size === 1 && selectedEdges.has(targetEdge))
+            this.showEdgeMenu(targetEdge);
         else this.hideEdgeMenu();
     };
-    _onNodeAdded = (node) => {}; _onNodeRemoved = (nodeId, node) => {}; _onEdgeAdded = (edge) => {}; _onEdgeRemoved = (edgeId, edge) => {};
-    _onLayoutStarted = () => {}; _onLayoutStopped = () => {};
-    _onLinkingStarted = (sourceNode) => { this.container.style.cursor = 'crosshair'; this._createTempLinkLine(sourceNode); this._hideContextMenu(); };
-    _onLinkingCancelled = () => { this._removeTempLinkLine(); this.container.style.cursor = 'grab'; $$('.node-common.linking-target').forEach((el) => el.classList.remove('linking-target')); };
-    _onLinkingCompleted = () => { this._removeTempLinkLine(); this.container.style.cursor = 'grab'; $$('.node-common.linking-target').forEach((el) => el.classList.remove('linking-target')); };
+    _onNodeAdded = (node) => {};
+    _onNodeRemoved = (nodeId, node) => {};
+    _onEdgeAdded = (edge) => {};
+    _onEdgeRemoved = (edgeId, edge) => {};
+    _onLayoutStarted = () => {};
+    _onLayoutStopped = () => {};
+    _onLinkingStarted = (sourceNode) => {
+        this.container.style.cursor = 'crosshair';
+        this._createTempLinkLine(sourceNode);
+        this._hideContextMenu();
+    };
+    _onLinkingCancelled = () => {
+        this._removeTempLinkLine();
+        this.container.style.cursor = 'grab';
+        $$('.node-common.linking-target').forEach((el) => el.classList.remove('linking-target'));
+    };
+    _onLinkingCompleted = () => {
+        this._removeTempLinkLine();
+        this.container.style.cursor = 'grab';
+        $$('.node-common.linking-target').forEach((el) => el.classList.remove('linking-target'));
+    };
 
     dispose() {
         const passiveOpts = { passive: false };
@@ -731,16 +929,27 @@ export class UIManager {
         window.removeEventListener('keydown', this._onKeyDown);
         this.container.removeEventListener('wheel', this._onWheel, passiveOpts);
 
-        this.space.off('node:selected', this._onNodeSelected); this.space.off('edge:selected', this._onEdgeSelected);
-        this.space.off('node:added', this._onNodeAdded); this.space.off('node:removed', this._onNodeRemoved);
-        this.space.off('edge:added', this._onEdgeAdded); this.space.off('edge:removed', this._onEdgeRemoved);
-        this.space.off('layout:started', this._onLayoutStarted); this.space.off('layout:stopped', this._onLayoutStopped);
-        this.space.off('ui:linking:started', this._onLinkingStarted); this.space.off('ui:linking:cancelled', this._onLinkingCancelled);
+        this.space.off('node:selected', this._onNodeSelected);
+        this.space.off('edge:selected', this._onEdgeSelected);
+        this.space.off('node:added', this._onNodeAdded);
+        this.space.off('node:removed', this._onNodeRemoved);
+        this.space.off('edge:added', this._onEdgeAdded);
+        this.space.off('edge:removed', this._onEdgeRemoved);
+        this.space.off('layout:started', this._onLayoutStarted);
+        this.space.off('layout:stopped', this._onLayoutStopped);
+        this.space.off('ui:linking:started', this._onLinkingStarted);
+        this.space.off('ui:linking:cancelled', this._onLinkingCancelled);
         this.space.off('ui:linking:completed', this._onLinkingCompleted);
 
         this.hideEdgeMenu();
-        this.space = null; this.container = null; this.contextMenuElement = null; this.confirmDialogElement = null;
-        this.draggedNode = null; this.resizedNode = null; this.hoveredEdge = null; this.confirmCallback = null;
+        this.space = null;
+        this.container = null;
+        this.contextMenuElement = null;
+        this.confirmDialogElement = null;
+        this.draggedNode = null;
+        this.resizedNode = null;
+        this.hoveredEdge = null;
+        this.confirmCallback = null;
         console.log('UIManager disposed.');
     }
 }

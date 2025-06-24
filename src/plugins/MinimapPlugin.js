@@ -41,7 +41,7 @@ export class MinimapPlugin extends Plugin {
         // Initial population of node proxies
         const nodePlugin = this.pluginManager.getPlugin('NodePlugin');
         if (nodePlugin) {
-            nodePlugin.getNodes().forEach(node => this._addNodeProxy(node));
+            nodePlugin.getNodes().forEach((node) => this._addNodeProxy(node));
         }
     }
 
@@ -52,9 +52,12 @@ export class MinimapPlugin extends Plugin {
         const aspect = 1; // Minimap is square
         const viewSize = 2000; // Fixed orthographic view size, adjust as needed
         this.minimapCamera = new THREE.OrthographicCamera(
-            -viewSize * aspect / 2, viewSize * aspect / 2,
-            viewSize / 2, -viewSize / 2,
-            1, 10000 // Near and far clipping planes
+            (-viewSize * aspect) / 2,
+            (viewSize * aspect) / 2,
+            viewSize / 2,
+            -viewSize / 2,
+            1,
+            10000 // Near and far clipping planes
         );
         this.minimapCamera.position.set(0, 0, 1000); // Positioned above the scene, looking down
         this.minimapCamera.lookAt(0, 0, 0);
@@ -94,7 +97,8 @@ export class MinimapPlugin extends Plugin {
         this.minimapScene.add(proxyMesh);
     }
 
-    _removeNodeProxy(nodeId) { // NodeId can be string or the node object itself
+    _removeNodeProxy(nodeId) {
+        // NodeId can be string or the node object itself
         const actualNodeId = typeof nodeId === 'string' ? nodeId : nodeId.id;
         const proxyMesh = this.nodeProxies.get(actualNodeId);
         if (proxyMesh) {
@@ -109,7 +113,7 @@ export class MinimapPlugin extends Plugin {
         const nodePlugin = this.pluginManager.getPlugin('NodePlugin');
         if (!nodePlugin) return;
 
-        nodePlugin.getNodes().forEach(node => {
+        nodePlugin.getNodes().forEach((node) => {
             const proxy = this.nodeProxies.get(node.id);
             if (proxy) {
                 proxy.position.copy(node.position);
@@ -134,12 +138,14 @@ export class MinimapPlugin extends Plugin {
         mainCamera.updateProjectionMatrix();
 
         const frustum = new THREE.Frustum();
-        frustum.setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(mainCamera.projectionMatrix, mainCamera.matrixWorldInverse));
+        frustum.setFromProjectionMatrix(
+            new THREE.Matrix4().multiplyMatrices(mainCamera.projectionMatrix, mainCamera.matrixWorldInverse)
+        );
 
         const points = [];
         const near = frustum.planes[4]; // Near plane
-        const far = frustum.planes[5];  // Far plane - for perspective this defines the base on Z=0 if camera looks down.
-                                        // For general camera, need to intersect frustum lines with Z=0 plane.
+        const far = frustum.planes[5]; // Far plane - for perspective this defines the base on Z=0 if camera looks down.
+        // For general camera, need to intersect frustum lines with Z=0 plane.
 
         // Simplified: Get the 4 corners of the near plane and 4 corners of the far plane in world space.
         // This is complex to project onto a 2D minimap plane accurately without knowing camera orientation.
@@ -165,24 +171,51 @@ export class MinimapPlugin extends Plugin {
         // Define corners of the rectangle around viewTarget on Z=0 plane
         // This assumes camera is somewhat looking down. A proper projection is more robust.
         const p = [
-            viewTarget.x - halfWidth, viewTarget.y + halfHeight, 0,
-            viewTarget.x + halfWidth, viewTarget.y + halfHeight, 0,
-            viewTarget.x + halfWidth, viewTarget.y - halfHeight, 0,
-            viewTarget.x - halfWidth, viewTarget.y - halfHeight, 0,
+            viewTarget.x - halfWidth,
+            viewTarget.y + halfHeight,
+            0,
+            viewTarget.x + halfWidth,
+            viewTarget.y + halfHeight,
+            0,
+            viewTarget.x + halfWidth,
+            viewTarget.y - halfHeight,
+            0,
+            viewTarget.x - halfWidth,
+            viewTarget.y - halfHeight,
+            0,
         ];
 
         const vertices = new Float32Array([
-            p[0], p[1], p[2],  p[3], p[4], p[5],  // Line 1
-            p[3], p[4], p[5],  p[6], p[7], p[8],  // Line 2
-            p[6], p[7], p[8],  p[9], p[10], p[11], // Line 3
-            p[9], p[10], p[11], p[0], p[1], p[2],  // Line 4
+            p[0],
+            p[1],
+            p[2],
+            p[3],
+            p[4],
+            p[5], // Line 1
+            p[3],
+            p[4],
+            p[5],
+            p[6],
+            p[7],
+            p[8], // Line 2
+            p[6],
+            p[7],
+            p[8],
+            p[9],
+            p[10],
+            p[11], // Line 3
+            p[9],
+            p[10],
+            p[11],
+            p[0],
+            p[1],
+            p[2], // Line 4
         ]);
 
         this.frustumHelper.geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
         this.frustumHelper.geometry.attributes.position.needsUpdate = true;
         this.frustumHelper.geometry.computeBoundingSphere();
     }
-
 
     // This method will be called by RenderingPlugin's update loop, after main scene render
     render(renderer) {
@@ -217,7 +250,7 @@ export class MinimapPlugin extends Plugin {
         renderer.setScissor(0, 0, this.currentViewport.x, this.currentViewport.y); // Restore full scissor
         renderer.setScissorTest(false);
         renderer.setClearColor(currentClearColor, currentClearAlpha); // Restore original clear color
-        if(currentRenderTarget) renderer.setRenderTarget(currentRenderTarget); // Restore if main scene used render target (composer)
+        if (currentRenderTarget) renderer.setRenderTarget(currentRenderTarget); // Restore if main scene used render target (composer)
     }
 
     dispose() {
@@ -225,7 +258,7 @@ export class MinimapPlugin extends Plugin {
         this.space.off('node:added', this._addNodeProxy.bind(this));
         this.space.off('node:removed', this._removeNodeProxy.bind(this));
 
-        this.nodeProxies.forEach(proxy => {
+        this.nodeProxies.forEach((proxy) => {
             this.minimapScene.remove(proxy);
             proxy.geometry.dispose();
             proxy.material.dispose();

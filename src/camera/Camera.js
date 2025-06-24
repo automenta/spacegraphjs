@@ -43,14 +43,13 @@ export class Camera {
     // AutoCamera (Follow Mode) related
     followTargetObject = null; // BaseNode or THREE.Vector3
     followOptions = {
-        distance: 300,      // Desired distance from target
-        offset: null,       // Optional THREE.Vector3 world-space offset from target before applying distance
-        height: 50,         // Height above target to look at and position relative to (if offset not given)
-        damping: 0.05,      // Damping factor for smooth follow
+        distance: 300, // Desired distance from target
+        offset: null, // Optional THREE.Vector3 world-space offset from target before applying distance
+        height: 50, // Height above target to look at and position relative to (if offset not given)
+        damping: 0.05, // Damping factor for smooth follow
         autoEndOnManualControl: true, // Stop following if user pans/zooms
     };
     isFollowing = false;
-
 
     constructor(space) {
         if (!space?._cam || !space.container)
@@ -96,26 +95,59 @@ export class Camera {
     _onKeyDown(event) {
         if (!this.isPointerLocked || this.cameraMode !== 'free') return;
         switch (event.code) {
-            case 'ArrowUp': case 'KeyW': this.moveForward = true; break;
-            case 'ArrowLeft': case 'KeyA': this.moveLeft = true; break;
-            case 'ArrowDown': case 'KeyS': this.moveBackward = true; break;
-            case 'ArrowRight': case 'KeyD': this.moveRight = true; break;
-            case 'Space': this.moveUp = true; break;
-            case 'ShiftLeft': case 'ControlLeft': this.moveDown = true; break;
+            case 'ArrowUp':
+            case 'KeyW':
+                this.moveForward = true;
+                break;
+            case 'ArrowLeft':
+            case 'KeyA':
+                this.moveLeft = true;
+                break;
+            case 'ArrowDown':
+            case 'KeyS':
+                this.moveBackward = true;
+                break;
+            case 'ArrowRight':
+            case 'KeyD':
+                this.moveRight = true;
+                break;
+            case 'Space':
+                this.moveUp = true;
+                break;
+            case 'ShiftLeft':
+            case 'ControlLeft':
+                this.moveDown = true;
+                break;
         }
     }
     _onKeyUp(event) {
         if (this.cameraMode !== 'free') return; // Allow key up even if not locked to reset flags
         switch (event.code) {
-            case 'ArrowUp': case 'KeyW': this.moveForward = false; break;
-            case 'ArrowLeft': case 'KeyA': this.moveLeft = false; break;
-            case 'ArrowDown': case 'KeyS': this.moveBackward = false; break;
-            case 'ArrowRight': case 'KeyD': this.moveRight = false; break;
-            case 'Space': this.moveUp = false; break;
-            case 'ShiftLeft': case 'ControlLeft': this.moveDown = false; break;
+            case 'ArrowUp':
+            case 'KeyW':
+                this.moveForward = false;
+                break;
+            case 'ArrowLeft':
+            case 'KeyA':
+                this.moveLeft = false;
+                break;
+            case 'ArrowDown':
+            case 'KeyS':
+                this.moveBackward = false;
+                break;
+            case 'ArrowRight':
+            case 'KeyD':
+                this.moveRight = false;
+                break;
+            case 'Space':
+                this.moveUp = false;
+                break;
+            case 'ShiftLeft':
+            case 'ControlLeft':
+                this.moveDown = false;
+                break;
         }
     }
-
 
     setInitialState() {
         if (!this.initialState) {
@@ -303,15 +335,17 @@ export class Camera {
 
             direction.normalize(); // Ensure consistent speed in all directions
 
-            if (direction.lengthSq() > 0) { // Only move if there's input
-                 // this.pointerLockControls.moveRight(direction.x * this.freeCameraSpeed * delta);
-                 // this.pointerLockControls.moveForward(direction.z * this.freeCameraSpeed * delta);
-                 // The above would move along world axes if camera is axis aligned.
-                 // For camera-relative movement:
+            if (direction.lengthSq() > 0) {
+                // Only move if there's input
+                // this.pointerLockControls.moveRight(direction.x * this.freeCameraSpeed * delta);
+                // this.pointerLockControls.moveForward(direction.z * this.freeCameraSpeed * delta);
+                // The above would move along world axes if camera is axis aligned.
+                // For camera-relative movement:
                 const actualMoveSpeed = this.freeCameraSpeed * delta;
                 if (direction.x !== 0) this.pointerLockControls.moveRight(direction.x * actualMoveSpeed);
                 if (direction.z !== 0) this.pointerLockControls.moveForward(direction.z * actualMoveSpeed);
-                if (direction.y !== 0) { // Vertical movement
+                if (direction.y !== 0) {
+                    // Vertical movement
                     this._cam.position.y += direction.y * actualMoveSpeed;
                 }
 
@@ -326,9 +360,11 @@ export class Camera {
         // AutoCamera (Follow) Logic
         if (this.isFollowing && this.followTargetObject) {
             let targetActualPosition;
-            if (this.followTargetObject.isVector3) { // Check if it's a THREE.Vector3
+            if (this.followTargetObject.isVector3) {
+                // Check if it's a THREE.Vector3
                 targetActualPosition = this.followTargetObject;
-            } else if (this.followTargetObject.position && this.followTargetObject.position.isVector3) { // Check if it's a node-like object
+            } else if (this.followTargetObject.position && this.followTargetObject.position.isVector3) {
+                // Check if it's a node-like object
                 targetActualPosition = this.followTargetObject.position;
             }
 
@@ -352,14 +388,13 @@ export class Camera {
                     // A more robust way: offset from target, then pull back along camera-to-target view.
                     // This simple version just puts camera at offset + distance along some axis.
                     // Let's refine: camera should be at target + offset, then pull back along view vector.
-                     const viewDirection = new THREE.Vector3().subVectors(this._cam.position, lookAtPoint).normalize();
-                     desiredCamPos = lookAtPoint.clone().addScaledVector(viewDirection, this.followOptions.distance);
-
+                    const viewDirection = new THREE.Vector3().subVectors(this._cam.position, lookAtPoint).normalize();
+                    desiredCamPos = lookAtPoint.clone().addScaledVector(viewDirection, this.followOptions.distance);
                 } else {
-                     // Position camera behind the target (relative to world Z or a fixed orientation)
-                     // This is a very basic follow-cam. A better one would maintain current camera yaw/pitch relative to target.
-                     desiredCamPos.y += this.followOptions.height;
-                     desiredCamPos.z += this.followOptions.distance;
+                    // Position camera behind the target (relative to world Z or a fixed orientation)
+                    // This is a very basic follow-cam. A better one would maintain current camera yaw/pitch relative to target.
+                    desiredCamPos.y += this.followOptions.height;
+                    desiredCamPos.z += this.followOptions.distance;
                 }
 
                 // Lerp targetPosition towards desiredCamPos
@@ -368,7 +403,10 @@ export class Camera {
 
                 // If user interacts, stop following (if option is set)
                 // This check (gsap.isTweening or this.isPanning) needs to be robust
-                if (this.followOptions.autoEndOnManualControl && (this.isPanning || gsap.isTweening(this.targetPosition))) {
+                if (
+                    this.followOptions.autoEndOnManualControl &&
+                    (this.isPanning || gsap.isTweening(this.targetPosition))
+                ) {
                     // Check if the tween is NOT from the follow logic itself. This is tricky.
                     // A simpler way: if user calls pan(), zoom(), moveTo() explicitly, set a flag to break follow.
                     // For now, any active tween or pan will break it.
@@ -377,14 +415,13 @@ export class Camera {
             }
         }
 
-
         this.animationFrameId = requestAnimationFrame(this._startUpdateLoop);
     };
 
     // --- AutoCamera (Follow Mode) Methods ---
     startFollowing(target, options = {}) {
         if (!target) {
-            console.warn("Camera: No target provided for startFollowing.");
+            // console.warn('Camera: No target provided for startFollowing.');
             return;
         }
         this.followTargetObject = target; // BaseNode or THREE.Vector3
@@ -393,7 +430,7 @@ export class Camera {
         this.currentTargetNodeId = target?.id || null; // If target is a node
         gsap.killTweensOf(this.targetPosition); // Stop other camera movements
         gsap.killTweensOf(this.targetLookAt);
-        console.log("Camera: Started following target.", this.followTargetObject);
+        // console.log('Camera: Started following target.', this.followTargetObject);
         this.space.emit('camera:followStarted', { target: this.followTargetObject, options: this.followOptions });
     }
 
@@ -402,7 +439,7 @@ export class Camera {
             const oldTarget = this.followTargetObject;
             this.isFollowing = false;
             this.followTargetObject = null;
-            console.log("Camera: Stopped following target.", oldTarget);
+            // console.log('Camera: Stopped following target.', oldTarget);
             this.space.emit('camera:followStopped', { oldTarget });
         }
     }
@@ -419,7 +456,7 @@ export class Camera {
         this.domElement = null;
         this.viewHistory = [];
         this.namedViews.clear();
-        console.log('Camera disposed.');
+        // console.log('Camera disposed.');
     }
 
     // --- Named Views Methods ---
@@ -436,7 +473,7 @@ export class Camera {
                         targetNodeId: viewData.targetNodeId,
                     });
                 });
-                console.log('Camera: Named views loaded from localStorage.');
+                // console.log('Camera: Named views loaded from localStorage.');
             }
         } catch (e) {
             console.error('Camera: Error loading named views from localStorage:', e);
@@ -471,7 +508,7 @@ export class Camera {
             targetNodeId: this.currentTargetNodeId,
         });
         this._saveNamedViewsToStorage(); // Persist
-        console.log(`Camera: View '${name}' saved.`);
+        // console.log(`Camera: View '${name}' saved.`);
         this.space.emit('camera:namedViewSaved', { name, view: this.namedViews.get(name) });
         return true;
     }
@@ -481,11 +518,11 @@ export class Camera {
         if (view) {
             this.moveTo(view.position.x, view.position.y, view.position.z, duration, view.lookAt);
             this.setCurrentTargetNodeId(view.targetNodeId);
-            console.log(`Camera: View '${name}' restored.`);
+            // console.log(`Camera: View '${name}' restored.`);
             this.space.emit('camera:namedViewRestored', { name, view });
             return true;
         }
-        console.warn(`Camera: View '${name}' not found.`);
+        // console.warn(`Camera: View '${name}' not found.`);
         return false;
     }
 
@@ -493,11 +530,11 @@ export class Camera {
         if (this.namedViews.has(name)) {
             this.namedViews.delete(name);
             this._saveNamedViewsToStorage(); // Persist
-            console.log(`Camera: View '${name}' deleted.`);
+            // console.log(`Camera: View '${name}' deleted.`);
             this.space.emit('camera:namedViewDeleted', { name });
             return true;
         }
-        console.warn(`Camera: View '${name}' not found for deletion.`);
+        // console.warn(`Camera: View '${name}' not found for deletion.`);
         return false;
     }
 
@@ -515,7 +552,7 @@ export class Camera {
             if (this.cameraMode === mode) return; // No change
 
             this.cameraMode = mode;
-            console.log(`Camera mode set to: ${this.cameraMode}`);
+            // console.log(`Camera mode set to: ${this.cameraMode}`);
             this.space.emit('camera:modeChanged', { mode: this.cameraMode });
 
             if (this.cameraMode === 'orbit') {
@@ -526,7 +563,6 @@ export class Camera {
                 const direction = new THREE.Vector3();
                 this._cam.getWorldDirection(direction); // Get current camera direction
                 this.targetLookAt.copy(this.targetPosition).addScaledVector(direction, lookAtDistance);
-
             } else if (this.cameraMode === 'free') {
                 this.domElement.style.cursor = 'crosshair';
                 // Attempt to lock pointer. User interaction (click) is usually required by browser.
@@ -534,11 +570,11 @@ export class Camera {
                 // this.pointerLockControls.lock(); // This might not work without user gesture.
                 // For now, assume UI will trigger lock via a space.requestPointerLock() or similar
                 this.targetPosition.copy(this._cam.position); // Sync targetPosition
-                const lookDirection = new THREE.Vector3(0,0,-1).applyQuaternion(this._cam.quaternion);
+                const lookDirection = new THREE.Vector3(0, 0, -1).applyQuaternion(this._cam.quaternion);
                 this.targetLookAt.copy(this.targetPosition).add(lookDirection); // Sync targetLookAt
             }
         } else {
-            console.warn(`Camera: Unknown mode '${mode}'. Allowed modes: 'orbit', 'free'.`);
+            // console.warn(`Camera: Unknown mode '${mode}'. Allowed modes: 'orbit', 'free'.`);
         }
     }
 
@@ -549,7 +585,8 @@ export class Camera {
     // --- Free Camera Movement/Rotation Methods (to be called by input manager) ---
     // deltaTime is expected from the game loop, for frame-rate independent movement
 
-    moveFreeCamera(direction, deltaTime = 0.016) { // direction is a THREE.Vector3 like (0,0,-1) for forward
+    moveFreeCamera(direction, _deltaTime = 0.016) {
+        // direction is a THREE.Vector3 like (0,0,-1) for forward
         if (this.cameraMode !== 'free' || !this._cam) return;
 
         gsap.killTweensOf(this.targetPosition); // Stop any ongoing tweens
@@ -557,7 +594,7 @@ export class Camera {
         const moveVector = direction.clone();
         // Apply movement relative to camera's current orientation
         moveVector.applyQuaternion(this._cam.quaternion);
-        moveVector.multiplyScalar(this.freeCameraSpeed * deltaTime * 50); // Adjust multiplier as needed
+        moveVector.multiplyScalar(this.freeCameraSpeed * _deltaTime * 50); // Adjust multiplier as needed
 
         this.targetPosition.add(moveVector);
         // In free mode, the lookAt point also moves with the camera to maintain view direction.
@@ -566,7 +603,8 @@ export class Camera {
         this.targetLookAt.add(moveVector);
     }
 
-    rotateFreeCamera(deltaYaw, deltaPitch, deltaTime = 0.016) { // deltaYaw, deltaPitch are changes in radians
+    rotateFreeCamera(deltaYaw, deltaPitch, _deltaTime = 0.016) {
+        // deltaYaw, deltaPitch are changes in radians
         if (this.cameraMode !== 'free' || !this._cam) return;
 
         gsap.killTweensOf(this.targetLookAt); // Stop any ongoing lookAt tweens
@@ -581,7 +619,6 @@ export class Camera {
         // For FPS style, yaw around camera's local Y:
         const cameraUp = new THREE.Vector3().setFromMatrixColumn(this._cam.matrixWorld, 1);
         yawQuaternion.setFromAxisAngle(cameraUp, deltaYaw * this.freeCameraRotationSpeed);
-
 
         // Create a quaternion for pitch (around camera's local X)
         const pitchQuaternion = new THREE.Quaternion();

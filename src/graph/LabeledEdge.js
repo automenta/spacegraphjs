@@ -3,13 +3,9 @@
  * @licence MIT
  */
 
-import * as THREE from 'three';
-import {
-    Edge
-} from './Edge.js';
-import {
-    CSS3DObject
-} from 'three/addons/renderers/CSS3DRenderer.js';
+// import * as THREE from 'three'; // Not directly used
+import { Edge } from './Edge.js';
+import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
 
 export class LabeledEdge extends Edge {
     labelObject = null;
@@ -52,7 +48,7 @@ export class LabeledEdge extends Edge {
             // Ensure this.space is available. EdgeFactory now sets it.
             // If not set, LOD won't work as camera access is via this.space.
             if (!this.space) {
-                console.warn(`LabeledEdge (${this.id}): this.space is not set. Label LOD will not function.`);
+                // console.warn(`LabeledEdge (${this.id}): this.space is not set. Label LOD will not function.`);
             }
 
             const sourcePos = this.source.position;
@@ -74,7 +70,8 @@ export class LabeledEdge extends Edge {
         }
     }
 
-    _applyLabelLOD() { // Adapted from HtmlNode/ShapeNode
+    _applyLabelLOD() {
+        // Adapted from HtmlNode/ShapeNode
         if (!this.labelObject?.element || !this.data.labelLod || this.data.labelLod.length === 0) {
             if (this.labelObject?.element) this.labelObject.element.style.visibility = '';
             return;
@@ -114,7 +111,6 @@ export class LabeledEdge extends Edge {
             // this.labelObject.element.style.backgroundColor = highlight ? 'rgba(255,255,0,0.7)' : (this.data.labelBackgroundColor || 'rgba(0,0,0,0.6)');
         }
     }
-
 
     dispose() {
         if (this.labelObject) {

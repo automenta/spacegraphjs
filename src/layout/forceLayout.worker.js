@@ -13,7 +13,6 @@ let lastKickTime = 0;
 // Placeholder for the core calculation logic, to be moved from ForceLayout.js
 function _calculateStepInWorker() {
     if (nodes.length < 2) return 0;
-    let currentTotalEnergy = 0;
     // --- All the force calculation logic from ForceLayout.js _calculateStep ---
     // --- will go here, operating on the 'nodes' and 'edges' arrays.  ---
     // --- It will update node positions (x,y,z) and velocities (vx,vy,vz) ---
@@ -22,10 +21,10 @@ function _calculateStepInWorker() {
     // --- Start of actual _calculateStep logic, adapted for worker's data structures ---
     let currentTotalEnergy = 0;
     // `forces` will store {fx, fy, fz} for each node ID
-    const nodeForces = new Map(nodes.map(n => [n.id, { x: 0, y: 0, z: 0 }]));
+    const nodeForces = new Map(nodes.map((n) => [n.id, { x: 0, y: 0, z: 0 }]));
 
     const { repulsion, centerStrength, zSpreadFactor, damping, nodePadding } = settings;
-    const gravityCenter = settings.gravityCenter || { x:0, y:0, z:0 }; // Ensure settings.gravityCenter is an object
+    const gravityCenter = settings.gravityCenter || { x: 0, y: 0, z: 0 }; // Ensure settings.gravityCenter is an object
 
     // Helper for vector operations on simple {x,y,z} objects
     const vecSub = (a, b) => ({ x: a.x - b.x, y: a.y - b.y, z: a.z - b.z });
@@ -49,7 +48,7 @@ function _calculateStepInWorker() {
             if (distSq < 1e-3) {
                 distSq = 1e-3;
                 // Simplified random push for worker
-                delta = { x: Math.random() - 0.5, y: Math.random() - 0.5, z: Math.random() - 0.5};
+                delta = { x: Math.random() - 0.5, y: Math.random() - 0.5, z: Math.random() - 0.5 };
                 delta = vecScalarMult(vecNormalize(delta), 0.1);
             }
             const distance = Math.sqrt(distSq);
@@ -65,7 +64,7 @@ function _calculateStepInWorker() {
             }
 
             let forceVec = vecScalarMult(vecNormalize(delta), forceMag);
-            forceVec.z *= (zSpreadFactor || 0.15);
+            forceVec.z *= zSpreadFactor || 0.15;
 
             if (!nodeA.isFixed) {
                 const currentForceA = nodeForces.get(nodeA.id);
@@ -80,10 +79,10 @@ function _calculateStepInWorker() {
     }
 
     // Find node by ID helper
-    const findNodeById = (id) => nodes.find(n => n.id === id);
+    const findNodeById = (id) => nodes.find((n) => n.id === id);
 
     // 2. Edge Constraints
-    edges.forEach(edge => {
+    edges.forEach((edge) => {
         const sourceNode = findNodeById(edge.sourceId);
         const targetNode = findNodeById(edge.targetId);
 
@@ -117,7 +116,7 @@ function _calculateStepInWorker() {
             }
         }
         let forceVec = vecScalarMult(vecNormalize(delta), forceMag);
-        forceVec.z *= (zSpreadFactor || 0.15);
+        forceVec.z *= zSpreadFactor || 0.15;
 
         if (!sourceNode.isFixed) {
             const currentForceS = nodeForces.get(sourceNode.id);
@@ -131,7 +130,7 @@ function _calculateStepInWorker() {
 
     // 3. Center Gravity Force
     if ((centerStrength || 0) > 0) {
-        nodes.forEach(node => {
+        nodes.forEach((node) => {
             if (node.isFixed) return;
             // node.position (which is just node {x,y,z})
             let forceVec = vecScalarMult(vecSub(gravityCenter, node), centerStrength);
@@ -144,7 +143,7 @@ function _calculateStepInWorker() {
     // 4. Clustering (Simplified for worker - assumes node.data.clusterId is available as node.clusterId)
     if (settings.enableClustering && (settings.clusterStrength || 0) > 0) {
         const clusters = new Map(); // { clusterId: { nodes: [], centerX:0, centerY:0, centerZ:0, count:0 }}
-        nodes.forEach(node => {
+        nodes.forEach((node) => {
             const clusterId = node.clusterId; // Assuming clusterId is directly on the worker node data
             if (clusterId === undefined || clusterId === null) return;
             if (!clusters.has(clusterId)) {
@@ -158,18 +157,18 @@ function _calculateStepInWorker() {
             clusterData.count++;
         });
 
-        clusters.forEach(clusterData => {
+        clusters.forEach((clusterData) => {
             if (clusterData.count > 0) {
                 const clusterCenter = {
                     x: clusterData.centerX / clusterData.count,
                     y: clusterData.centerY / clusterData.count,
                     z: clusterData.centerZ / clusterData.count,
                 };
-                clusterData.nodeIds.forEach(nodeId => {
+                clusterData.nodeIds.forEach((nodeId) => {
                     const node = findNodeById(nodeId);
                     if (node && !node.isFixed) {
                         let forceVec = vecScalarMult(vecSub(clusterCenter, node), settings.clusterStrength);
-                        forceVec.z *= (zSpreadFactor || 0.15);
+                        forceVec.z *= zSpreadFactor || 0.15;
                         const currentForce = nodeForces.get(node.id);
                         nodeForces.set(node.id, vecAdd(currentForce, forceVec));
                     }
@@ -179,7 +178,7 @@ function _calculateStepInWorker() {
     }
 
     // 5. Apply Forces and Update Velocities/Positions
-    nodes.forEach(node => {
+    nodes.forEach((node) => {
         if (node.isFixed) return;
         const force = nodeForces.get(node.id);
         // Ensure node has velocity properties (vx, vy, vz)
@@ -224,11 +223,15 @@ function startSimulation() {
         totalEnergy = _calculateStepInWorker();
 
         // Post updated positions back to the main thread
-        const positionsUpdate = nodes.map(n => ({ id: n.id, x: n.x, y: n.y, z: n.z }));
+        const positionsUpdate = nodes.map((n) => ({ id: n.id, x: n.x, y: n.y, z: n.z }));
         self.postMessage({ type: 'positionsUpdate', positions: positionsUpdate, energy: totalEnergy });
 
         const timeSinceKick = Date.now() - lastKickTime;
-        if (settings.autoStopDelay && totalEnergy < (settings.minEnergyThreshold || 0.1) && timeSinceKick > settings.autoStopDelay) {
+        if (
+            settings.autoStopDelay &&
+            totalEnergy < (settings.minEnergyThreshold || 0.1) &&
+            timeSinceKick > settings.autoStopDelay
+        ) {
             stopSimulation();
         } else {
             // Using setTimeout for a consistent loop, requestAnimationFrame might behave differently in workers.
@@ -246,7 +249,7 @@ function stopSimulation() {
     self.postMessage({ type: 'stopped', energy: totalEnergy });
 }
 
-self.onmessage = function(event) {
+self.onmessage = function (event) {
     const { type, payload } = event.data;
 
     switch (type) {
@@ -255,7 +258,8 @@ self.onmessage = function(event) {
             nodes = payload.nodes; // Expecting simplified node data
             edges = payload.edges; // Expecting simplified edge data
             settings = payload.settings;
-            nodes.forEach(n => { // Ensure velocities exist
+            nodes.forEach((n) => {
+                // Ensure velocities exist
                 n.vx = n.vx || 0;
                 n.vy = n.vy || 0;
                 n.vz = n.vz || 0;
@@ -270,8 +274,9 @@ self.onmessage = function(event) {
         case 'updateSettings':
             settings = { ...settings, ...payload.settings };
             console.log('ForceLayout Worker: Settings updated.', settings);
-            if (isRunning) lastKickTime = Date.now(); // Re-kick implicitly if running
-            else if(nodes.length > 0) startSimulation(); // Start if not running but has nodes
+            if (isRunning)
+                lastKickTime = Date.now(); // Re-kick implicitly if running
+            else if (nodes.length > 0) startSimulation(); // Start if not running but has nodes
             break;
         case 'kick':
             console.log('ForceLayout Worker: Kick received.');
@@ -279,7 +284,7 @@ self.onmessage = function(event) {
                 lastKickTime = Date.now();
                 totalEnergy = Infinity; // Reset energy
                 // Simplified kick: just randomize velocities slightly
-                nodes.forEach(node => {
+                nodes.forEach((node) => {
                     if (!node.isFixed) {
                         node.vx += (Math.random() - 0.5) * (payload.intensity || 1);
                         node.vy += (Math.random() - 0.5) * (payload.intensity || 1);
@@ -291,7 +296,9 @@ self.onmessage = function(event) {
             break;
         case 'addNode': {
             const newNode = payload.node;
-            newNode.vx =0; newNode.vy=0; newNode.vz=0;
+            newNode.vx = 0;
+            newNode.vy = 0;
+            newNode.vz = 0;
             nodes.push(newNode);
             if (!isRunning && nodes.length > 0) startSimulation();
             else if (isRunning) lastKickTime = Date.now();
@@ -299,7 +306,7 @@ self.onmessage = function(event) {
         }
         case 'removeNode': {
             const nodeId = payload.nodeId;
-            nodes = nodes.filter(n => n.id !== nodeId);
+            nodes = nodes.filter((n) => n.id !== nodeId);
             if (nodes.length < 2 && isRunning) stopSimulation();
             else if (isRunning) lastKickTime = Date.now();
             break;
@@ -309,19 +316,25 @@ self.onmessage = function(event) {
             if (isRunning) lastKickTime = Date.now();
             break;
         case 'removeEdge':
-            edges = edges.filter(e => !(e.sourceId === payload.edge.sourceId && e.targetId === payload.edge.targetId)); // Simple removal
+            edges = edges.filter(
+                (e) => !(e.sourceId === payload.edge.sourceId && e.targetId === payload.edge.targetId)
+            ); // Simple removal
             if (isRunning) lastKickTime = Date.now();
             break;
-        case 'updateNodeState': { // For isPinned, isFixed changes
+        case 'updateNodeState': {
+            // For isPinned, isFixed changes
             const { nodeId, isFixed, isPinned, position } = payload;
-            const node = nodes.find(n => n.id === nodeId);
+            const node = nodes.find((n) => n.id === nodeId);
             if (node) {
                 node.isFixed = isFixed;
                 node.isPinned = isPinned;
                 if (isFixed) {
-                    node.vx = 0; node.vy = 0; node.vz = 0;
+                    node.vx = 0;
+                    node.vy = 0;
+                    node.vz = 0;
                 }
-                if (position) { // If position is also updated (e.g. during drag)
+                if (position) {
+                    // If position is also updated (e.g. during drag)
                     node.x = position.x;
                     node.y = position.y;
                     node.z = position.z;

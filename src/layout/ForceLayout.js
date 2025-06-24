@@ -1,4 +1,4 @@
-// import * as THREE from 'three'; // THREE might not be needed directly in main thread class anymore for physics
+import * as THREE from 'three';
 
 export class ForceLayout {
     space = null; // SpaceGraph instance
@@ -52,7 +52,7 @@ export class ForceLayout {
         switch (type) {
             case 'positionsUpdate':
                 this.totalEnergy = energy;
-                positions.forEach(p => {
+                positions.forEach((p) => {
                     const node = this.nodesMap.get(p.id);
                     if (node) {
                         node.position.set(p.x, p.y, p.z);
@@ -68,7 +68,7 @@ export class ForceLayout {
                 this.isRunning = false;
                 this.totalEnergy = energy;
                 console.log('ForceLayout (Main): Worker reported stop. Energy:', energy);
-                this.space.emit('layout:stopped', { name: 'force (worker)'});
+                this.space.emit('layout:stopped', { name: 'force (worker)' });
                 break;
             case 'error': // Worker can post custom error messages
                 console.error('ForceLayout Worker reported error:', error);
@@ -85,27 +85,31 @@ export class ForceLayout {
      */
     init(initialNodes, initialEdges, config = {}) {
         this.nodesMap.clear();
-        initialNodes.forEach(n => this.nodesMap.set(n.id, n));
+        initialNodes.forEach((n) => this.nodesMap.set(n.id, n));
 
         this.edgesMap.clear();
-        initialEdges.forEach(e => this.edgesMap.set(e.id, e));
+        initialEdges.forEach((e) => this.edgesMap.set(e.id, e));
 
         if (config) {
             this.settings = { ...this.settings, ...config };
         }
 
-        const workerNodes = initialNodes.map(n => ({
+        const workerNodes = initialNodes.map((n) => ({
             id: n.id,
-            x: n.position.x, y: n.position.y, z: n.position.z,
-            vx: 0, vy: 0, vz: 0, // Initial velocities
+            x: n.position.x,
+            y: n.position.y,
+            z: n.position.z,
+            vx: 0,
+            vy: 0,
+            vz: 0, // Initial velocities
             mass: n.mass || 1.0,
             isFixed: n.isPinned, // Assuming isPinned implies fixed for the worker initially
             isPinned: n.isPinned,
             radius: n.getBoundingSphereRadius(), // Send radius for collision/weld
-            clusterId: n.data?.clusterId // Send clusterId if present
+            clusterId: n.data?.clusterId, // Send clusterId if present
         }));
 
-        const workerEdges = initialEdges.map(e => ({
+        const workerEdges = initialEdges.map((e) => ({
             sourceId: e.source.id,
             targetId: e.target.id,
             constraintType: e.data.constraintType,
@@ -113,17 +117,18 @@ export class ForceLayout {
         }));
 
         const gravityCenter = this.settings.gravityCenter; // Could be THREE.Vector3 or plain object
-        const plainGravityCenter = (gravityCenter && typeof gravityCenter.x === 'number')
-            ? { x: gravityCenter.x, y: gravityCenter.y, z: gravityCenter.z }
-            : { x: 0, y: 0, z: 0 };
+        const plainGravityCenter =
+            gravityCenter && typeof gravityCenter.x === 'number'
+                ? { x: gravityCenter.x, y: gravityCenter.y, z: gravityCenter.z }
+                : { x: 0, y: 0, z: 0 };
 
         this.worker.postMessage({
             type: 'init',
             payload: {
                 nodes: workerNodes,
                 edges: workerEdges,
-                settings: { ...this.settings, gravityCenter: plainGravityCenter }
-            }
+                settings: { ...this.settings, gravityCenter: plainGravityCenter },
+            },
         });
         // Don't start automatically, wait for run() or kick()
     }
@@ -146,7 +151,7 @@ export class ForceLayout {
             // Inform worker about the change. isFixed state in worker is tied to isPinned.
             this.worker.postMessage({
                 type: 'updateNodeState',
-                payload: { nodeId: node.id, isFixed: node.isPinned, isPinned: node.isPinned }
+                payload: { nodeId: node.id, isFixed: node.isPinned, isPinned: node.isPinned },
             });
             if (this.isRunning) this.kick(); // Re-energize simulation
         }
@@ -157,10 +162,14 @@ export class ForceLayout {
         if (this.nodesMap.has(node.id)) {
             // node.isFixed is a transient state for dragging, separate from isPinned.
             // The worker uses 'isFixed' for its simulation.
-             this.worker.postMessage({
+            this.worker.postMessage({
                 type: 'updateNodeState',
-                payload: { nodeId: node.id, isFixed: true, isPinned: node.isPinned,
-                           position: {x: node.position.x, y: node.position.y, z: node.position.z }}
+                payload: {
+                    nodeId: node.id,
+                    isFixed: true,
+                    isPinned: node.isPinned,
+                    position: { x: node.position.x, y: node.position.y, z: node.position.z },
+                },
             });
         }
     }
@@ -170,9 +179,9 @@ export class ForceLayout {
         if (this.nodesMap.has(node.id)) {
             // Release only if not permanently pinned
             if (!node.isPinned) {
-                 this.worker.postMessage({
+                this.worker.postMessage({
                     type: 'updateNodeState',
-                    payload: { nodeId: node.id, isFixed: false, isPinned: node.isPinned }
+                    payload: { nodeId: node.id, isFixed: false, isPinned: node.isPinned },
                 });
             }
             // If it was pinned, it remains fixed in the worker.
@@ -180,7 +189,6 @@ export class ForceLayout {
             this.kick();
         }
     }
-
 
     addNode(node) {
         if (!this.nodesMap.has(node.id)) {
@@ -190,21 +198,26 @@ export class ForceLayout {
                 payload: {
                     node: {
                         id: node.id,
-                        x: node.position.x, y: node.position.y, z: node.position.z,
-                        vx: 0, vy: 0, vz: 0,
+                        x: node.position.x,
+                        y: node.position.y,
+                        z: node.position.z,
+                        vx: 0,
+                        vy: 0,
+                        vz: 0,
                         mass: node.mass || 1.0,
                         isFixed: node.isPinned,
                         isPinned: node.isPinned,
                         radius: node.getBoundingSphereRadius(),
-                        clusterId: node.data?.clusterId
-                    }
-                }
+                        clusterId: node.data?.clusterId,
+                    },
+                },
             });
             if (this.isRunning || this.nodesMap.size > 1) this.kick();
         }
     }
 
-    removeNode(node) { // Parameter is the actual node object from main thread
+    removeNode(node) {
+        // Parameter is the actual node object from main thread
         if (this.nodesMap.has(node.id)) {
             this.nodesMap.delete(node.id);
             this.worker.postMessage({ type: 'removeNode', payload: { nodeId: node.id } });
@@ -225,25 +238,27 @@ export class ForceLayout {
                         targetId: edge.target.id,
                         constraintType: edge.data.constraintType,
                         constraintParams: edge.data.constraintParams,
-                    }
-                }
+                    },
+                },
             });
             if (this.isRunning) this.kick();
         }
     }
 
-    removeEdge(edge) { // Parameter is the actual edge object
+    removeEdge(edge) {
+        // Parameter is the actual edge object
         if (this.edgesMap.has(edge.id)) {
             this.edgesMap.delete(edge.id);
             // Worker edge removal might be by source/target ID if IDs aren't stored for edges
             this.worker.postMessage({
                 type: 'removeEdge',
                 payload: {
-                    edge: { // Send enough info for worker to identify the edge
+                    edge: {
+                        // Send enough info for worker to identify the edge
                         sourceId: edge.source.id,
-                        targetId: edge.target.id
-                    }
-                }
+                        targetId: edge.target.id,
+                    },
+                },
             });
             if (this.isRunning) this.kick();
         }
@@ -253,15 +268,18 @@ export class ForceLayout {
         // This was for synchronous layout. For worker, it's less direct.
         // We could send a message to worker to run N steps then stop and report.
         // For now, this will just start the continuous layout if not running.
-        console.warn("ForceLayout.runOnce() with worker: Starts continuous layout. For fixed steps, implement specific worker command.");
+        console.warn(
+            'ForceLayout.runOnce() with worker: Starts continuous layout. For fixed steps, implement specific worker command.'
+        );
         if (!this.isRunning) this.run();
     }
 
     // run() is the method LayoutManager calls
     run() {
-        if (this.isRunning || this.nodesMap.size < 1) { // Allow starting with 1 node, worker handles <2 check
-             // If already running or no nodes, do nothing or re-kick if desired
-            if(this.isRunning) this.kick();
+        if (this.isRunning || this.nodesMap.size < 1) {
+            // Allow starting with 1 node, worker handles <2 check
+            // If already running or no nodes, do nothing or re-kick if desired
+            if (this.isRunning) this.kick();
             return;
         }
         console.log('ForceLayout (Main): Sending start to worker.');
@@ -271,10 +289,11 @@ export class ForceLayout {
     }
 
     stop() {
-        if (!this.isRunning && this.worker) { // Check worker exists in case it's called before full init
-             // If worker exists but not running, ensure it's told to stop if it was somehow orphaned.
-             this.worker.postMessage({ type: 'stop' });
-             return;
+        if (!this.isRunning && this.worker) {
+            // Check worker exists in case it's called before full init
+            // If worker exists but not running, ensure it's told to stop if it was somehow orphaned.
+            this.worker.postMessage({ type: 'stop' });
+            return;
         }
         if (!this.worker) return;
 
@@ -296,14 +315,15 @@ export class ForceLayout {
     setSettings(newSettings) {
         this.settings = { ...this.settings, ...newSettings };
         const gravityCenter = this.settings.gravityCenter;
-        const plainGravityCenter = (gravityCenter && typeof gravityCenter.x === 'number')
-            ? { x: gravityCenter.x, y: gravityCenter.y, z: gravityCenter.z }
-            : { x: 0, y: 0, z: 0 };
+        const plainGravityCenter =
+            gravityCenter && typeof gravityCenter.x === 'number'
+                ? { x: gravityCenter.x, y: gravityCenter.y, z: gravityCenter.z }
+                : { x: 0, y: 0, z: 0 };
 
         console.log('ForceLayout (Main): Sending settings update to worker.');
         this.worker.postMessage({
             type: 'updateSettings',
-            payload: { settings: { ...this.settings, gravityCenter: plainGravityCenter } }
+            payload: { settings: { ...this.settings, gravityCenter: plainGravityCenter } },
         });
         // Worker will implicitly kick or start if needed upon settings update.
     }

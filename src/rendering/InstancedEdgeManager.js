@@ -69,16 +69,18 @@ class InstancedEdgeGroup {
         // We need to orient it along the 'direction' vector.
         const quaternion = new THREE.Quaternion();
         const up = new THREE.Vector3(0, 1, 0); // Cylinder's original axis
-        if (!direction.equals(new THREE.Vector3(0,0,0))) { // Avoid issues with zero vector
-            if (up.dot(direction) > 0.9999 || up.dot(direction) < -0.9999) { // Aligned or opposite
-                 if (up.dot(direction) < -0.9999) { // Opposite
-                    quaternion.setFromAxisAngle(new THREE.Vector3(1,0,0), Math.PI); // Rotate 180 deg around X
-                 } // Else, already aligned, no rotation needed for quaternion.setFromUnitVectors(up, direction)
+        if (!direction.equals(new THREE.Vector3(0, 0, 0))) {
+            // Avoid issues with zero vector
+            if (up.dot(direction) > 0.9999 || up.dot(direction) < -0.9999) {
+                // Aligned or opposite
+                if (up.dot(direction) < -0.9999) {
+                    // Opposite
+                    quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI); // Rotate 180 deg around X
+                } // Else, already aligned, no rotation needed for quaternion.setFromUnitVectors(up, direction)
             } else {
-                 quaternion.setFromUnitVectors(up, direction);
+                quaternion.setFromUnitVectors(up, direction);
             }
         }
-
 
         const thickness = edge.data?.thicknessInstanced ?? DEFAULT_EDGE_THICKNESS;
         // Scale: Y for length, X and Z for thickness (radius)
@@ -128,7 +130,7 @@ class InstancedEdgeGroup {
                     point: intersection[0].point,
                     distance: intersection[0].distance,
                     instanceId: instanceId,
-                    edgeId: edgeId // Custom: add edgeId here
+                    edgeId: edgeId, // Custom: add edgeId here
                 };
             }
         }
@@ -143,7 +145,6 @@ class InstancedEdgeGroup {
         this.instanceIdToEdgeId.clear();
     }
 }
-
 
 export class InstancedEdgeManager {
     constructor(scene) {
@@ -161,8 +162,8 @@ export class InstancedEdgeManager {
                 if (edge.line) edge.line.visible = false; // Hide original Line2 mesh
                 // Also hide arrowheads if they exist on the original edge
                 if (edge.arrowheads) {
-                    if(edge.arrowheads.source) edge.arrowheads.source.visible = false;
-                    if(edge.arrowheads.target) edge.arrowheads.target.visible = false;
+                    if (edge.arrowheads.source) edge.arrowheads.source.visible = false;
+                    if (edge.arrowheads.target) edge.arrowheads.target.visible = false;
                 }
                 return true;
             }
@@ -194,12 +195,3 @@ export class InstancedEdgeManager {
         this.edgeGroup = null;
     }
 }
-Okay, I'll start with Phase 2: Implement Advanced Rendering & Visuals.
-
-First, I'll tackle the post-processing effects. I'll use the `postprocessing` npm package as it's a popular and comprehensive library for Three.js.
-
-I need to:
-1.  Install the `postprocessing` package.
-2.  Modify `RenderingPlugin.js` to integrate it.
-3.  Implement Bloom, SSAO, and Outline effects.
-4.  Add configuration options for these effects.
