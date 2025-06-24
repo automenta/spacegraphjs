@@ -68,18 +68,40 @@ export class EdgePlugin extends Plugin {
         }
 
         const renderingPlugin = this.pluginManager.getPlugin('RenderingPlugin');
+        const cssScene = renderingPlugin?.getCSS3DScene();
+
         if (this.useInstancedEdges && this.instancedEdgeManager) {
             this.instancedEdgeManager.addEdge(edge);
-            renderingPlugin?.getCSS3DScene()?.add(edge.labelObject);
+            // For instanced edges, the main line is handled by InstancedEdgeManager.
+            // Labels and arrowheads (if any) are still individual objects.
+            if (edge.labelObject && cssScene) {
+                cssScene.add(edge.labelObject);
+            }
+            // Arrowheads for instanced edges might need special handling or might not be supported
+            // by InstancedEdgeManager. Assuming they are not part of instancing for now.
+            // If they need to be added, they'd be added to webglScene.
+            // This part depends on how InstancedEdgeManager is designed to work with arrowheads.
+            // For now, let's assume arrowheads are not added if the edge is instanced,
+            // or that InstancedEdgeManager handles them if it's supposed to.
+            // The original code didn't add arrowheads explicitly in the instanced path.
+
         } else if (renderingPlugin) {
             const webglScene = renderingPlugin.getWebGLScene();
-            const cssScene = renderingPlugin.getCSS3DScene();
-            webglScene?.add(edge.line);
-            webglScene?.add(edge.arrowheads?.source);
-            webglScene?.add(edge.arrowheads?.target);
-            cssScene?.add(edge.labelObject);
+
+            if (edge.line && webglScene) {
+                webglScene.add(edge.line);
+            }
+            if (edge.arrowheads?.source && webglScene) {
+                webglScene.add(edge.arrowheads.source);
+            }
+            if (edge.arrowheads?.target && webglScene) {
+                webglScene.add(edge.arrowheads.target);
+            }
+            if (edge.labelObject && cssScene) {
+                cssScene.add(edge.labelObject);
+            }
         } else {
-            console.warn('EdgePlugin: RenderingPlugin not available for standard edge.');
+            console.warn('EdgePlugin: RenderingPlugin not available for standard edge addition.');
         }
 
         this.space.emit('edge:added', edge);
