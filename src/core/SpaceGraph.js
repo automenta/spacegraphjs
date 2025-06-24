@@ -109,6 +109,12 @@ export class SpaceGraph {
         this.on('ui:request:addNode', (nodeInstance) => {
             // NodePlugin.addNode will emit 'node:added' which is handled below
             this.plugins.getPlugin('NodePlugin')?.addNode(nodeInstance);
+        });
+
+        // Listener for creating a node from data, using the factory
+        this.on('ui:request:createNode', (nodeConfig) => {
+            // NodePlugin.createAndAddNode will internally call addNode, which emits 'node:added'
+            this.plugins.getPlugin('NodePlugin')?.createAndAddNode(nodeConfig);
             // If LayoutPlugin doesn't listen to node:added to kick, we might need to kick here.
             // For now, assuming NodePlugin's addNode or LayoutPlugin's addNodeToLayout handles kicking or LayoutPlugin listens.
             // const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin');
@@ -266,6 +272,40 @@ export class SpaceGraph {
         }
         console.error('SpaceGraph: EdgePlugin not available to add edge.');
         return undefined;
+    }
+
+    /**
+     * Creates a new node from configuration data using the NodeFactory and adds it to the graph.
+     * This is a convenience method that wraps the NodePlugin's createAndAddNode functionality.
+     * @param {object} nodeConfig - Configuration for the new node.
+     * @param {string} nodeConfig.type - The type of node to create (e.g., 'html', 'shape').
+     * @param {object} nodeConfig.position - Initial position {x, y, z}.
+     * @param {object} [nodeConfig.data={}] - Custom data for the node.
+     * @param {number} [nodeConfig.mass=1.0] - Mass for physics calculations.
+     * @param {string} [nodeConfig.id] - Optional ID; one will be generated if not provided.
+     * @returns {import('../graph/nodes/BaseNode.js').BaseNode | undefined} The created node, or undefined on failure.
+     */
+    createNode(nodeConfig) {
+        const nodePlugin = this.plugins.getPlugin('NodePlugin');
+        if (nodePlugin) {
+            // createAndAddNode in NodePlugin will emit 'node:added', triggering layout kicks etc.
+            return nodePlugin.createAndAddNode(nodeConfig);
+        }
+        console.error('SpaceGraph: NodePlugin not available to create node.');
+        return undefined;
+    }
+
+    /**
+     * Toggles the pinned state of a specific node.
+     * @param {string} nodeId - The ID of the node to pin/unpin.
+     */
+    togglePinNode(nodeId) {
+        const layoutPlugin = this.plugins.getPlugin('LayoutPlugin');
+        if (layoutPlugin && typeof layoutPlugin.togglePinNode === 'function') {
+            layoutPlugin.togglePinNode(nodeId);
+        } else {
+            console.warn('SpaceGraph: LayoutPlugin not available or does not support togglePinNode.');
+        }
     }
 
     // updateNodesAndEdges() is removed as its responsibilities are covered by pluginManager.updatePlugins()

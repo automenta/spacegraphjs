@@ -26,12 +26,67 @@ export class ForceLayout {
         defaultElasticIdealLength: 200,
         defaultRigidStiffness: 0.1,
         defaultWeldStiffness: 0.5,
+        // Clustering settings
+        enableClustering: false, // Set to true to enable clustering
+        clusterAttribute: 'clusterId', // Node data attribute to use for clustering
+        clusterStrength: 0.005, // Attraction strength towards cluster center
+        // interClusterRepulsion: 5000, // Repulsion between cluster centers (optional)
     };
 
     constructor(space, config = {}) {
         if (!space) throw new Error('ForceLayout requires a SpaceGraph instance.');
         this.space = space;
         this.settings = { ...this.settings, ...config };
+    }
+
+    /**
+     * Initializes the layout with a set of nodes and edges.
+     * Expected by LayoutManager.
+     * @param {Array<import('../graph/nodes/BaseNode.js').BaseNode>} nodes
+     * @param {Array<import('../graph/Edge.js').Edge>} edges
+     * @param {object} [config={}] Optional configuration to apply.
+     */
+    init(nodes, edges, config = {}) {
+        this.nodes = [...nodes]; // Take copies
+        this.edges = [...edges];
+        this.velocities.clear();
+        this.nodes.forEach(node => this.velocities.set(node.id, new THREE.Vector3()));
+        this.fixedNodes.clear();
+        if (config) {
+            this.setSettings(config); // Apply any new config
+        }
+        // ForceLayout doesn't set initial target positions; it works from current positions.
+        // So, GSAP transition when switching TO ForceLayout will be from current to current, which is a no-op,
+        // then ForceLayout.run() starts the simulation. This is acceptable.
+
+        // Initialize fixedNodes based on isPinned status
+        this.nodes.forEach(node => {
+            if (node.isPinned) {
+                this.fixedNodes.add(node);
+            }
+        });
+    }
+
+    // Optional: For LayoutManager to query if layout is continuous
+    isRunningCheck() {
+        return this.isRunning;
+    }
+
+    // Optional: For LayoutManager to get current config if needed
+    getConfig() {
+        return {...this.settings};
+    }
+
+    setPinState(node, pinned) {
+        if (!this.nodes.includes(node)) return;
+        node.isPinned = pinned;
+        if (pinned) {
+            this.fixedNodes.add(node);
+            this.velocities.get(node.id)?.set(0, 0, 0); // Stop movement when pinned
+        } else {
+            this.fixedNodes.delete(node); // Unpinning also unfixes it
+        }
+        this.kick(); // Re-kick layout as pin state change might affect forces
     }
 
     addNode(node) {
@@ -70,7 +125,11 @@ export class ForceLayout {
     }
 
     releaseNode(node) {
-        this.fixedNodes.delete(node); /* Kick happens on drag/resize end */
+        // Only release from fixed set if not permanently pinned
+        if (!node.isPinned) {
+            this.fixedNodes.delete(node);
+        }
+        // Kicking is typically handled by the dragend event in LayoutPlugin after this.
     }
 
     runOnce(steps = 100) {
@@ -231,7 +290,54 @@ export class ForceLayout {
             });
         }
 
-        // 4. Apply Forces and Update Velocities/Positions
+        // 4. Center Gravity Force (Applied before clustering for overall cohesion)
+        if (centerStrength > 0) {
+            this.nodes.forEach((node) => {
+                if (this.fixedNodes.has(node)) return;
+                const forceVec = tempDelta.subVectors(gravityCenter, node.position).multiplyScalar(centerStrength);
+                forceVec.z *= zSpreadFactor * 0.5; // Weaker Z gravity
+                forces.get(node.id)?.add(forceVec);
+            });
+        }
+
+        // 5. Clustering Forces
+        if (this.settings.enableClustering && this.settings.clusterStrength > 0) {
+            const clusters = new Map(); // { clusterId: { nodes: [], center: Vector3, count: 0 } }
+
+            // Group nodes by cluster and calculate sum of positions
+            this.nodes.forEach(node => {
+                const clusterId = node.data?.[this.settings.clusterAttribute];
+                if (clusterId === undefined || clusterId === null) return;
+
+                if (!clusters.has(clusterId)) {
+                    clusters.set(clusterId, { nodes: [], center: new THREE.Vector3(), count: 0 });
+                }
+                const clusterData = clusters.get(clusterId);
+                clusterData.nodes.push(node);
+                clusterData.center.add(node.position);
+                clusterData.count++;
+            });
+
+            // Calculate geometric center for each cluster and apply attractive force
+            clusters.forEach(clusterData => {
+                if (clusterData.count > 0) {
+                    clusterData.center.divideScalar(clusterData.count); // Average position = cluster center
+
+                    clusterData.nodes.forEach(node => {
+                        if (this.fixedNodes.has(node)) return;
+                        const forceVec = tempDelta.subVectors(clusterData.center, node.position)
+                                               .multiplyScalar(this.settings.clusterStrength);
+                        forceVec.z *= zSpreadFactor; // Apply zSpread to cluster forces too
+                        forces.get(node.id)?.add(forceVec);
+                    });
+                }
+            });
+
+            // Optional: Inter-cluster repulsion could be added here by iterating through cluster centers
+        }
+
+
+        // 6. Apply Forces and Update Velocities/Positions
         this.nodes.forEach((node) => {
             if (this.fixedNodes.has(node)) return;
             const force = forces.get(node.id);

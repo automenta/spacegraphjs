@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { CSS3DRenderer } from 'three/addons/renderers/CSS3DRenderer.js';
 import { Plugin } from '../core/Plugin.js';
 import { $ } from '../utils.js'; // Assuming $ is a utility like querySelector
-import { EffectComposer, RenderPass, EffectPass, BloomEffect, OutlineEffect, Selection, KernelSize } from 'postprocessing';
+import { EffectComposer, RenderPass, EffectPass, BloomEffect, OutlineEffect, Selection, KernelSize, SSAOEffect, NormalPass } from 'postprocessing';
 
 export class RenderingPlugin extends Plugin {
     scene = null;
@@ -21,6 +21,7 @@ export class RenderingPlugin extends Plugin {
     css3dContainer = null;
     webglCanvas = null;
     background = { color: 0x1a1a1d, alpha: 1.0 }; // Default background
+    managedLights = new Map(); // To store and manage lights added via API
 
     constructor(spaceGraph, pluginManager) {
         super(spaceGraph, pluginManager);
@@ -152,6 +153,10 @@ export class RenderingPlugin extends Plugin {
         this.renderGL.setPixelRatio(window.devicePixelRatio);
         // this.renderGL.outputColorSpace = THREE.SRGBColorSpace; // Recommended for color accuracy with postprocessing
 
+        // Enable shadow mapping
+        this.renderGL.shadowMap.enabled = true;
+        this.renderGL.shadowMap.type = THREE.PCFSoftShadowMap; // Optional: for softer shadows
+
         // Setup Composer
         this.composer = new EffectComposer(this.renderGL);
         if (cam) { // cam should be available here due to plugin init order or fallback
@@ -199,6 +204,29 @@ export class RenderingPlugin extends Plugin {
         const effectPassOutline = new EffectPass(cam, this.outlineEffect);
         const effectPassBloom = new EffectPass(cam, bloomEffect);
 
+        // Setup SSAOEffect
+        // SSAOEffect needs a NormalPass to get screen-space normals.
+        const normalPass = new NormalPass(this.scene, cam);
+        const ssaoEffect = new SSAOEffect(cam, normalPass.texture, { // Pass camera, normal texture
+            blendFunction: 21, // BlendFunction.MULTIPLY / BlendFunction.SCREEN (check what looks best)
+            samples: 11, // Number of samples
+            rings: 4, // Number of rings
+            distanceThreshold: 0.02, // Distance threshold for occlusion
+            distanceFalloff: 0.0025, // Falloff for distance
+            rangeThreshold: 0.001, // Range threshold
+            rangeFalloff: 0.001, // Range falloff
+            luminanceInfluence: 0.7,
+            radius: 10, // Radius of samples
+            scale: 0.5, // Scale of the effect
+            bias: 0.05, // Bias
+            intensity: 1.0,
+            color: 0x000000, // Color of the AO, usually black
+        });
+        const effectPassSSAO = new EffectPass(cam, ssaoEffect);
+
+        // Add passes to composer in order
+        this.composer.addPass(normalPass); // NormalPass first (or RenderPass if it provides normals)
+        this.composer.addPass(effectPassSSAO);
         this.composer.addPass(effectPassOutline);
         this.composer.addPass(effectPassBloom);
 
@@ -220,11 +248,125 @@ export class RenderingPlugin extends Plugin {
         this.space.container.appendChild(this.css3dContainer);
     }
 
+    // --- Light Management API ---
+    addLight(id, type, options = {}) {
+        if (this.managedLights.has(id)) {
+            console.warn(`RenderingPlugin: Light with id '${id}' already exists.`);
+            return this.managedLights.get(id);
+        }
+
+        let light;
+        const color = options.color ?? 0xffffff;
+        const intensity = options.intensity ?? 1.0;
+
+        switch (type.toLowerCase()) {
+            case 'ambient':
+                light = new THREE.AmbientLight(color, intensity);
+                break;
+            case 'directional':
+                light = new THREE.DirectionalLight(color, intensity);
+                if (options.position) light.position.set(options.position.x, options.position.y, options.position.z);
+                if (options.target) { // THREE.Object3D to point at
+                    light.target = options.target;
+                    this.scene.add(light.target); // Target needs to be in scene
+                }
+                if (options.castShadow) {
+                    light.castShadow = true;
+                    // Configure shadow properties
+                    light.shadow.mapSize.width = options.shadowMapSizeWidth ?? 1024;
+                    light.shadow.mapSize.height = options.shadowMapSizeHeight ?? 1024;
+                    light.shadow.camera.near = options.shadowCameraNear ?? 0.5;
+                    light.shadow.camera.far = options.shadowCameraFar ?? 500;
+                    // Directional light shadow camera bounds (example values)
+                    light.shadow.camera.left = options.shadowCameraLeft ?? -100;
+                    light.shadow.camera.right = options.shadowCameraRight ?? 100;
+                    light.shadow.camera.top = options.shadowCameraTop ?? 100;
+                    light.shadow.camera.bottom = options.shadowCameraBottom ?? -100;
+                }
+                break;
+            case 'point':
+                light = new THREE.PointLight(color, intensity, options.distance ?? 0, options.decay ?? 2);
+                if (options.position) light.position.set(options.position.x, options.position.y, options.position.z);
+                if (options.castShadow) {
+                    light.castShadow = true;
+                    light.shadow.mapSize.width = options.shadowMapSizeWidth ?? 1024;
+                    light.shadow.mapSize.height = options.shadowMapSizeHeight ?? 1024;
+                    light.shadow.camera.near = options.shadowCameraNear ?? 0.5;
+                    light.shadow.camera.far = options.shadowCameraFar ?? 500;
+                }
+                break;
+            default:
+                console.error(`RenderingPlugin: Unknown light type '${type}'`);
+                return null;
+        }
+
+        if (light) {
+            light.userData.lightId = id; // Store id for later retrieval/removal
+            this.managedLights.set(id, light);
+            this.scene.add(light);
+            this.space.emit('light:added', { id, type, light });
+        }
+        return light;
+    }
+
+    removeLight(id) {
+        const light = this.managedLights.get(id);
+        if (light) {
+            if (light.target && light.target !== this.scene) this.scene.remove(light.target); // Remove target if it was added
+            this.scene.remove(light);
+            light.dispose?.(); // Some lights might have dispose methods
+            this.managedLights.delete(id);
+            this.space.emit('light:removed', { id });
+            return true;
+        }
+        console.warn(`RenderingPlugin: Light with id '${id}' not found for removal.`);
+        return false;
+    }
+
+    getLight(id) {
+        return this.managedLights.get(id);
+    }
+
+    configureLight(id, options) {
+        const light = this.managedLights.get(id);
+        if (!light) {
+            console.warn(`RenderingPlugin: Light with id '${id}' not found for configuration.`);
+            return false;
+        }
+
+        if (options.color !== undefined) light.color.set(options.color);
+        if (options.intensity !== undefined) light.intensity = options.intensity;
+        if (options.position && light.position) light.position.set(options.position.x, options.position.y, options.position.z);
+        if (options.castShadow !== undefined && light.castShadow !== undefined) light.castShadow = options.castShadow;
+        // Add more configurable properties as needed (e.g., shadow map size, camera frustum for shadows)
+        // For instance, if changing shadow parameters:
+        // if (light.shadow) {
+        //    if (options.shadowMapSizeWidth) light.shadow.mapSize.width = options.shadowMapSizeWidth;
+        //    ... etc.
+        //    light.shadow.needsUpdate = true; // Important for some shadow changes
+        // }
+        this.space.emit('light:configured', { id, light, options });
+        return true;
+    }
+    // --- End Light Management API ---
+
     _setupLighting() {
-        this.scene.add(new THREE.AmbientLight(0xffffff, 0.9));
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
-        dirLight.position.set(0.5, 1, 0.75);
-        this.scene.add(dirLight);
+        // Add default lights using the new API
+        this.addLight('defaultAmbient', 'ambient', { intensity: 0.9 });
+        this.addLight('defaultDirectional', 'directional', {
+            intensity: 0.6,
+            position: { x: 100, y: 150, z: 100 }, // Adjusted position for better shadow angles
+            castShadow: true,
+            // Example shadow parameters for directional light
+            shadowMapSizeWidth: 2048,
+            shadowMapSizeHeight: 2048,
+            shadowCameraNear: 50,
+            shadowCameraFar: 500,
+            shadowCameraLeft: -200,
+            shadowCameraRight: 200,
+            shadowCameraTop: 200,
+            shadowCameraBottom: -200,
+        });
     }
 
     setBackground(color = 0x000000, alpha = 0) {
@@ -253,6 +395,9 @@ export class RenderingPlugin extends Plugin {
             this.renderGL.setSize(iw, ih);
             this.composer.setSize(iw, ih); // Update composer size
             this.renderCSS3D.setSize(iw, ih);
+
+            // Emit a resize event that other plugins can listen to
+            this.space.emit('renderer:resize', { width: iw, height: ih });
         }
     };
 

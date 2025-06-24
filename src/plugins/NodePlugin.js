@@ -5,13 +5,17 @@
 
 import { Plugin } from '../core/Plugin.js';
 import { Utils } from '../utils.js'; // For Utils.generateId
+import { NodeFactory } from '../graph/nodes/NodeFactory.js';
 
 export class NodePlugin extends Plugin {
     /** @type {Map<string, import('../graph/nodes/BaseNode.js').BaseNode>} */
     nodes = new Map();
+    /** @type {NodeFactory} */
+    nodeFactory = null;
 
     constructor(spaceGraph, pluginManager) {
         super(spaceGraph, pluginManager);
+        this.nodeFactory = new NodeFactory(spaceGraph); // Pass space instance if factory needs it
     }
 
     getName() {
@@ -55,6 +59,31 @@ export class NodePlugin extends Plugin {
 
         this.space.emit('node:added', nodeInstance); // Emit event AFTER node is added to plugin and scenes
         return nodeInstance;
+    }
+
+    /**
+     * Creates a new node using the factory and adds it to the graph.
+     * @param {object} config - Configuration object for the node.
+     * @param {string} [config.id] - Optional ID for the node. If not provided, one will be generated.
+     * @param {string} config.type - The type of node to create (e.g., 'html', 'shape').
+     * @param {object} config.position - The initial position (e.g., { x, y, z }).
+     * @param {object} [config.data={}] - Data for the node.
+     * @param {number} [config.mass=1.0] - Mass of the node.
+     * @returns {import('../graph/nodes/BaseNode.js').BaseNode | undefined} The created and added node or undefined if failed.
+     */
+    createAndAddNode({ id, type, position, data = {}, mass = 1.0 }) {
+        const nodeId = id || Utils.generateId('node');
+        if (!type || !position) {
+            console.error('NodePlugin: Node type and position are required to create a node.');
+            return undefined;
+        }
+
+        const nodeInstance = this.nodeFactory.createNode(nodeId, type, position, data, mass);
+
+        if (nodeInstance) {
+            return this.addNode(nodeInstance); // Use the existing addNode logic to manage and add to scene
+        }
+        return undefined;
     }
 
     /**
