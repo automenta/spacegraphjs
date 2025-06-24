@@ -120,11 +120,15 @@ export class CurvedEdge extends Edge {
                 const interpolatedColor = new THREE.Color().lerpColors(colorStart, colorEnd, t);
                 curveColors.push(interpolatedColor.r, interpolatedColor.g, interpolatedColor.b);
             }
-            this.line.geometry.setColors(curveColors);
-            if (this.line.geometry.attributes.instanceColorStart)
-                this.line.geometry.attributes.instanceColorStart.needsUpdate = true;
-            if (this.line.geometry.attributes.instanceColorEnd)
-                this.line.geometry.attributes.instanceColorEnd.needsUpdate = true;
+            if (this.line.geometry.attributes.position && this.line.geometry.attributes.position.count > 0) {
+                this.line.geometry.setColors(curveColors);
+                if (this.line.geometry.attributes.instanceColorStart)
+                    this.line.geometry.attributes.instanceColorStart.needsUpdate = true;
+                if (this.line.geometry.attributes.instanceColorEnd)
+                    this.line.geometry.attributes.instanceColorEnd.needsUpdate = true;
+            } else {
+                console.warn(`CurvedEdge ${this.id}: Skipping setColors in update() due to empty geometry positions.`);
+            }
         } else {
             // Ensure no gradient if not specified (similar to Edge.js update)
             if (this.line.material.vertexColors) {
