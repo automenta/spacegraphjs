@@ -84,14 +84,14 @@ describe('PluginManager', () => {
         consoleErrorSpy.mockRestore();
     });
 
-    it('should initialize all registered plugins', () => {
+    it('should initialize all registered plugins', async () => { // Made test async
         const pm = new PluginManager(mockSpaceGraph);
         const plugin1 = new MockPlugin(mockSpaceGraph, pm, 'Plugin1');
         const plugin2 = new MockPlugin(mockSpaceGraph, pm, 'Plugin2');
         pm.add(plugin1);
         pm.add(plugin2);
 
-        pm.initPlugins();
+        await pm.initPlugins(); // Added await
 
         expect(plugin1.init).toHaveBeenCalled();
         expect(plugin1.isInitialized).toBe(true);
