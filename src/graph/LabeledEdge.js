@@ -3,9 +3,7 @@
  * @licence MIT
  */
 
-import *
-    THREE
-from 'three';
+import * as THREE from 'three';
 import {
     Edge
 } from './Edge.js';
