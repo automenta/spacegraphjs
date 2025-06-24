@@ -65,6 +65,17 @@ export class CurvedEdge extends Edge {
         const sourcePos = this.source.position;
         const targetPos = this.target.position;
 
+        // Fix A3: Check for NaN positions in source/target nodes
+        if (!isFinite(sourcePos.x) || !isFinite(sourcePos.y) || !isFinite(sourcePos.z) ||
+            !isFinite(targetPos.x) || !isFinite(targetPos.y) || !isFinite(targetPos.z)) {
+            console.warn(`CurvedEdge ${this.id}: Source or target node has NaN position. Skipping update. Source: (${sourcePos.x},${sourcePos.y},${sourcePos.z}), Target: (${targetPos.x},${targetPos.y},${targetPos.z})`);
+            // Optionally hide the edge:
+            // if (this.line) this.line.visible = false;
+            return;
+        }
+        // if (this.line) this.line.visible = true; // Ensure visible if previously hidden
+
+
         // Midpoint for control point calculation
         const midPoint = new THREE.Vector3().addVectors(sourcePos, targetPos).multiplyScalar(0.5);
 
@@ -105,6 +116,9 @@ export class CurvedEdge extends Edge {
         points.forEach((p) => positions.push(p.x, p.y, p.z));
         this.line.geometry.setPositions(positions);
 
+        // Ensure the geometry is valid before proceeding
+        if (this.line.geometry.attributes.position.count === 0) return;
+
         // Handle gradient colors for curved lines
         if (this.data.gradientColors && this.data.gradientColors.length === 2) {
             if (!this.line.material.vertexColors) {
@@ -120,14 +134,23 @@ export class CurvedEdge extends Edge {
                 const interpolatedColor = new THREE.Color().lerpColors(colorStart, colorEnd, t);
                 curveColors.push(interpolatedColor.r, interpolatedColor.g, interpolatedColor.b);
             }
-            if (this.line.geometry.attributes.position && this.line.geometry.attributes.position.count > 0) {
+
+            // Fix B1: Strengthen guard for setColors
+            const posAttribute = this.line.geometry.attributes.position;
+            const expectedMinLength = (this.numPoints + 1) * 3; // numPoints segments = numPoints+1 points
+
+            if (posAttribute && typeof posAttribute.count === 'number' && posAttribute.count > this.numPoints && // count must be numPoints + 1
+                posAttribute.array && typeof posAttribute.array.length === 'number' &&
+                posAttribute.array.length >= expectedMinLength && posAttribute.array.length % 3 === 0) {
+
                 this.line.geometry.setColors(curveColors);
                 if (this.line.geometry.attributes.instanceColorStart)
                     this.line.geometry.attributes.instanceColorStart.needsUpdate = true;
                 if (this.line.geometry.attributes.instanceColorEnd)
                     this.line.geometry.attributes.instanceColorEnd.needsUpdate = true;
             } else {
-                console.warn(`CurvedEdge ${this.id}: Skipping setColors in update() due to empty geometry positions.`);
+                console.warn(`CurvedEdge ${this.id}: Skipping setColors in update() due to missing/empty/invalid geometry positions.
+                    Count: ${posAttribute?.count}, Array Length: ${posAttribute?.array?.length}, Expected Min Length: ${expectedMinLength}, NumPoints: ${this.numPoints}`);
             }
         } else {
             // Ensure no gradient if not specified (similar to Edge.js update)

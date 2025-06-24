@@ -14,7 +14,12 @@ export class BaseNode {
 
     constructor(id, position = { x: 0, y: 0, z: 0 }, data = {}, mass = 1.0) {
         this.id = id ?? Utils.generateId('node');
-        this.position.set(position.x, position.y, position.z);
+        if (!isFinite(position.x) || !isFinite(position.y) || !isFinite(position.z)) {
+            console.warn(`BaseNode ${this.id}: Initial position is invalid (${position.x}, ${position.y}, ${position.z}). Defaulting to (0,0,0).`);
+            this.position.set(0, 0, 0);
+        } else {
+            this.position.set(position.x, position.y, position.z);
+        }
         this.data = Utils.mergeDeep({}, this.getDefaultData(), data);
         this.mass = Math.max(0.1, mass);
         this.isPinned = this.data.isPinned ?? false;
@@ -51,6 +56,10 @@ export class BaseNode {
     }
 
     setPosition(x, y, z) {
+        if (!isFinite(x) || !isFinite(y) || !isFinite(z)) {
+            console.warn(`BaseNode ${this.id}: Attempted to set invalid position (${x}, ${y}, ${z}). Keeping previous position: (${this.position.x}, ${this.position.y}, ${this.position.z}).`);
+            return;
+        }
         this.position.set(x, y, z);
     }
 
