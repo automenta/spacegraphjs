@@ -2,17 +2,13 @@ import * as THREE from 'three';
 import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
 import { $, $$ } from '../utils.js';
 import { HtmlNode } from '../graph/nodes/HtmlNode.js';
-import { NoteNode } from '../graph/nodes/NoteNode.js';
-import { ShapeNode } from '../graph/nodes/ShapeNode.js';
 
-// Interaction states
 const InteractionState = {
     IDLE: 'IDLE',
-    PANNING: 'PANNING', // Camera panning
+    PANNING: 'PANNING',
     DRAGGING_NODE: 'DRAGGING_NODE',
     RESIZING_NODE: 'RESIZING_NODE',
     LINKING_NODE: 'LINKING_NODE',
-    // Add other states as needed, e.g., FREE_CAMERA_MOVE
 };
 
 export class UIManager {
@@ -23,48 +19,41 @@ export class UIManager {
     toolbarElement = null;
     edgeMenuObject = null;
 
-    // Interaction state
     currentState = InteractionState.IDLE;
-    activePointerId = null; // For multi-touch, though primarily supporting single pointer for now
+    activePointerId = null;
 
-    // Dragging/Resizing specific state
-    draggedNode = null; // The primary node being interacted with
+    draggedNode = null;
     draggedNodeInitialZ = 0;
-    dragOffset = new THREE.Vector3(); // Offset from node origin to pointer click point
+    dragOffset = new THREE.Vector3();
 
     resizedNode = null;
-    resizeStartPointerPos = { x: 0, y: 0 }; // Screen coords
+    resizeStartPointerPos = { x: 0, y: 0 };
     resizeStartNodeSize = { width: 0, height: 0 };
 
-    // Hovering state
     hoveredEdge = null;
 
-    // Pointer tracking
     pointerState = {
-        down: false, // General pointer down state
-        button: -1, // 0: primary, 1: middle, 2: secondary
+        down: false,
+        button: -1,
         clientX: 0,
         clientY: 0,
         startClientX: 0,
         startClientY: 0,
-        isDraggingThresholdMet: false, // To differentiate click from drag
-        DRAG_THRESHOLD: 5, // Pixels
+        isDraggingThresholdMet: false,
+        DRAG_THRESHOLD: 5,
     };
 
     confirmCallback = null;
-    tempLinkLine = null; // Visual for linking
+    tempLinkLine = null;
 
-    // HUD Elements
     hudLayer = null;
     hudModeIndicator = null;
     hudSelectionInfo = null;
     hudKeyboardShortcutsButton = null;
     keyboardShortcutsDialogElement = null;
-    hudLayoutSettingsButton = null; // For layout settings
-    layoutSettingsDialogElement = null; // Dialog for layout settings
+    hudLayoutSettingsButton = null;
+    layoutSettingsDialogElement = null;
 
-
-    // Keyboard shortcuts definition
     keyboardShortcuts = [
         { keys: ['Delete', 'Backspace'], description: 'Delete selected node(s) or edge(s)' },
         { keys: ['Escape'], description: 'Close menus, cancel linking, deselect all, or exit pointer lock' },
@@ -74,127 +63,81 @@ export class UIManager {
         { keys: ['-'], description: 'Zoom out content of selected HTML node' },
         { keys: ['Ctrl/Meta + -'], description: 'Decrease size of selected HTML node' },
         { keys: ['Spacebar'], description: 'Focus on selected item or center view' },
-        // { keys: ['C'], description: 'Toggle Free Camera mode (Example - currently not active by default)' }, // Example for future
         { keys: ['Scroll Wheel'], description: 'Zoom camera' },
         { keys: ['Ctrl/Meta + Scroll Wheel'], description: 'Adjust content scale of hovered HTML node' },
         { keys: ['Middle Mouse Button (on node)'], description: 'Auto-zoom to node' },
         { keys: ['Alt + Drag Node (vertical)'], description: 'Adjust node Z-depth' },
     ];
 
-
     constructor(space, contextMenuEl, confirmDialogEl) {
-        if (!space || !contextMenuEl || !confirmDialogEl)
-            throw new Error('UIManager requires SpaceGraph instance and UI elements.');
+        if (!space || !contextMenuEl || !confirmDialogEl) throw new Error('UIManager requires SpaceGraph instance and UI elements.');
         this.space = space;
         this.container = space.container;
         this.contextMenuElement = contextMenuEl;
         this.confirmDialogElement = confirmDialogEl;
         this.toolbarElement = $('#toolbar');
 
-        this._createHudElements(); // Create HUD elements dynamically
-
+        this._createHudElements();
         this._bindEvents();
         this._subscribeToSpaceGraphEvents();
         this._setupToolbar();
-        this._applySavedTheme(); // Apply theme after elements are created
-        this._updateHudSelectionInfo(); // Initial update
-        this._updateHudCameraMode(); // Initial update
+        this._applySavedTheme();
+        this._updateHudSelectionInfo();
+        this._updateHudCameraMode();
     }
 
     _createHudElements() {
-        this.hudLayer = $('#hud-layer');
-        if (!this.hudLayer) {
-            this.hudLayer = document.createElement('div');
-            this.hudLayer.id = 'hud-layer';
-            this.container.parentNode.appendChild(this.hudLayer);
+        this.hudLayer = $('#hud-layer') || document.createElement('div');
+        this.hudLayer.id = 'hud-layer';
+        this.container.parentNode.appendChild(this.hudLayer);
+
+        if (this.hudModeIndicator && this.hudModeIndicator.tagName === 'DIV') this.hudModeIndicator.remove();
+        this.hudModeIndicator = $('#hud-mode-indicator') || document.createElement('select');
+        this.hudModeIndicator.id = 'hud-mode-indicator';
+
+        const cameraModes = { 'orbit': 'Orbit Control', 'free': 'Free Look' };
+        for (const modeKey in cameraModes) {
+            const option = document.createElement('option');
+            option.value = modeKey;
+            option.textContent = cameraModes[modeKey];
+            this.hudModeIndicator.appendChild(option);
         }
+        this.hudLayer.appendChild(this.hudModeIndicator);
+        this.hudModeIndicator.addEventListener('change', (event) => this.space.emit('ui:request:setCameraMode', event.target.value));
 
-        // Convert hudModeIndicator to a select element
-        this.hudModeIndicator = $('#hud-mode-indicator');
-        if (this.hudModeIndicator && this.hudModeIndicator.tagName === 'DIV') { // If old div exists, remove it
-            this.hudModeIndicator.remove();
-            this.hudModeIndicator = null;
-        }
+        this.hudSelectionInfo = $('#hud-selection-info') || document.createElement('div');
+        this.hudSelectionInfo.id = 'hud-selection-info';
+        this.hudLayer.appendChild(this.hudSelectionInfo);
 
-        if (!this.hudModeIndicator) {
-            this.hudModeIndicator = document.createElement('select');
-            this.hudModeIndicator.id = 'hud-mode-indicator';
+        this.hudKeyboardShortcutsButton = $('#hud-keyboard-shortcuts') || document.createElement('div');
+        this.hudKeyboardShortcutsButton.id = 'hud-keyboard-shortcuts';
+        this.hudKeyboardShortcutsButton.textContent = '⌨️';
+        this.hudKeyboardShortcutsButton.title = 'View Keyboard Shortcuts';
+        this.hudKeyboardShortcutsButton.style.cursor = 'pointer';
+        this.hudLayer.appendChild(this.hudKeyboardShortcutsButton);
+        this.hudKeyboardShortcutsButton.addEventListener('click', () => this._showKeyboardShortcutsDialog());
 
-            // Define camera modes for the dropdown
-            // These should match CAMERA_MODES in Camera.js: { ORBIT: 'orbit', FREE: 'free' }
-            const cameraModes = {
-                'orbit': 'Orbit Control',
-                'free': 'Free Look'
-                // Add other modes here if they exist
-            };
-
-            for (const modeKey in cameraModes) {
-                const option = document.createElement('option');
-                option.value = modeKey;
-                option.textContent = cameraModes[modeKey];
-                this.hudModeIndicator.appendChild(option);
-            }
-            this.hudLayer.appendChild(this.hudModeIndicator);
-
-            // Add event listener for when the selection changes
-            this.hudModeIndicator.addEventListener('change', (event) => {
-                const newMode = event.target.value;
-                this.space.emit('ui:request:setCameraMode', newMode);
-            });
-        }
-
-        this.hudSelectionInfo = $('#hud-selection-info');
-        if (!this.hudSelectionInfo) {
-            this.hudSelectionInfo = document.createElement('div');
-            this.hudSelectionInfo.id = 'hud-selection-info';
-            this.hudLayer.appendChild(this.hudSelectionInfo);
-        }
-
-        // Create Keyboard Shortcuts Button
-        this.hudKeyboardShortcutsButton = $('#hud-keyboard-shortcuts');
-        if (!this.hudKeyboardShortcutsButton) {
-            this.hudKeyboardShortcutsButton = document.createElement('div'); // Using div for styling consistency with other HUD items
-            this.hudKeyboardShortcutsButton.id = 'hud-keyboard-shortcuts';
-            this.hudKeyboardShortcutsButton.textContent = '⌨️'; // Keyboard emoji
-            this.hudKeyboardShortcutsButton.title = 'View Keyboard Shortcuts';
-            this.hudKeyboardShortcutsButton.style.cursor = 'pointer'; // Make it look clickable
-            this.hudLayer.appendChild(this.hudKeyboardShortcutsButton);
-
-            this.hudKeyboardShortcutsButton.addEventListener('click', () => {
-                this._showKeyboardShortcutsDialog();
-            });
-        }
-
-        // Create Layout Settings Button
-        this.hudLayoutSettingsButton = $('#hud-layout-settings');
-        if (!this.hudLayoutSettingsButton) {
-            this.hudLayoutSettingsButton = document.createElement('div');
-            this.hudLayoutSettingsButton.id = 'hud-layout-settings';
-            this.hudLayoutSettingsButton.textContent = '📐'; // Ruler/Layout emoji
-            this.hudLayoutSettingsButton.title = 'Layout Settings';
-            this.hudLayoutSettingsButton.style.cursor = 'pointer';
-            this.hudLayer.appendChild(this.hudLayoutSettingsButton);
-
-            this.hudLayoutSettingsButton.addEventListener('click', () => {
-                this._showLayoutSettingsDialog();
-            });
-        }
+        this.hudLayoutSettingsButton = $('#hud-layout-settings') || document.createElement('div');
+        this.hudLayoutSettingsButton.id = 'hud-layout-settings';
+        this.hudLayoutSettingsButton.textContent = '📐';
+        this.hudLayoutSettingsButton.title = 'Layout Settings';
+        this.hudLayoutSettingsButton.style.cursor = 'pointer';
+        this.hudLayer.appendChild(this.hudLayoutSettingsButton);
+        this.hudLayoutSettingsButton.addEventListener('click', () => this._showLayoutSettingsDialog());
     }
 
     _showLayoutSettingsDialog() {
         const layoutPlugin = this.space.plugins.getPlugin('LayoutPlugin');
-        if (!layoutPlugin || !layoutPlugin.layoutManager) {
+        if (!layoutPlugin?.layoutManager) {
             console.warn('UIManager: LayoutPlugin not available for layout settings.');
             return;
         }
 
-        if (!this.layoutSettingsDialogElement) {
-            this.layoutSettingsDialogElement = document.createElement('div');
-            this.layoutSettingsDialogElement.id = 'layout-settings-dialog';
-            this.layoutSettingsDialogElement.className = 'dialog';
-            this.layoutSettingsDialogElement.addEventListener('pointerdown', (e) => e.stopPropagation());
-            document.body.appendChild(this.layoutSettingsDialogElement);
-        }
+        this.layoutSettingsDialogElement = this.layoutSettingsDialogElement || document.createElement('div');
+        this.layoutSettingsDialogElement.id = 'layout-settings-dialog';
+        this.layoutSettingsDialogElement.className = 'dialog';
+        this.layoutSettingsDialogElement.addEventListener('pointerdown', (e) => e.stopPropagation());
+        document.body.appendChild(this.layoutSettingsDialogElement);
 
         const currentLayoutName = layoutPlugin.layoutManager.getActiveLayoutName();
         const availableLayouts = [...layoutPlugin.layoutManager.layouts.keys()];
@@ -213,7 +156,6 @@ export class UIManager {
                 </select>
             </div>
             <div class="layout-options-container" style="margin-top: 15px; min-height: 50px;">
-                <!-- Layout-specific options will go here in the future -->
                 <p><em>Layout-specific options will be available here in a future update.</em></p>
             </div>
             <button id="apply-layout-button" style="margin-right: 10px;">Apply Layout</button>
@@ -226,111 +168,79 @@ export class UIManager {
             const selectedLayout = $('#layout-select', this.layoutSettingsDialogElement)?.value;
             if (selectedLayout) {
                 this.space.emit('ui:request:applyLayout', selectedLayout);
-                // Optionally close dialog, or update current layout display if kept open
-                // For now, let's assume applyLayout might take time, so we don't auto-close.
-                // Update the displayed current layout name after a short delay or event
                 setTimeout(() => this._updateLayoutSettingsDialogContent(layoutPlugin), 100);
             }
         });
 
-        $('#close-layout-dialog', this.layoutSettingsDialogElement)?.addEventListener('click', () => {
-            this._hideLayoutSettingsDialog();
-        });
+        $('#close-layout-dialog', this.layoutSettingsDialogElement)?.addEventListener('click', () => this._hideDialog(this.layoutSettingsDialogElement));
 
         this.layoutSettingsDialogElement.style.display = 'block';
         this.space.emit('ui:layoutsettings:shown');
     }
 
     _updateLayoutSettingsDialogContent(layoutPlugin) {
-        if (!this.layoutSettingsDialogElement || this.layoutSettingsDialogElement.style.display === 'none') return;
-        if (!layoutPlugin || !layoutPlugin.layoutManager) return;
-
-        const currentLayoutName = layoutPlugin.layoutManager.getActiveLayoutName();
-        const selectElement = $('#layout-select', this.layoutSettingsDialogElement);
-        if (selectElement) {
-            selectElement.value = currentLayoutName;
-        }
-        // Future: update layout-specific options here
-    }
-
-    _hideLayoutSettingsDialog = () => {
-        if (this.layoutSettingsDialogElement) {
-            this.layoutSettingsDialogElement.style.display = 'none';
-            this.space.emit('ui:layoutsettings:hidden');
-        }
+        if (this.layoutSettingsDialogElement?.style.display === 'none' || !layoutPlugin?.layoutManager) return;
+        $('#layout-select', this.layoutSettingsDialogElement).value = layoutPlugin.layoutManager.getActiveLayoutName();
     }
 
     _showKeyboardShortcutsDialog() {
-        if (!this.keyboardShortcutsDialogElement) {
-            this.keyboardShortcutsDialogElement = document.createElement('div');
-            this.keyboardShortcutsDialogElement.id = 'keyboard-shortcuts-dialog';
-            this.keyboardShortcutsDialogElement.className = 'dialog'; // Reuse dialog styling
-            // Prevent clicks inside dialog from propagating to graph or closing other things
-            this.keyboardShortcutsDialogElement.addEventListener('pointerdown', (e) => e.stopPropagation());
+        this.keyboardShortcutsDialogElement = this.keyboardShortcutsDialogElement || document.createElement('div');
+        this.keyboardShortcutsDialogElement.id = 'keyboard-shortcuts-dialog';
+        this.keyboardShortcutsDialogElement.className = 'dialog';
+        this.keyboardShortcutsDialogElement.addEventListener('pointerdown', (e) => e.stopPropagation());
 
-
-            let tableHTML = `
-                <h2>Keyboard Shortcuts</h2>
-                <table class="shortcuts-table">
-                    <thead>
-                        <tr>
-                            <th>Key(s)</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-            this.keyboardShortcuts.forEach(shortcut => {
-                tableHTML += `
+        let tableHTML = `
+            <h2>Keyboard Shortcuts</h2>
+            <table class="shortcuts-table">
+                <thead>
                     <tr>
-                        <td>${shortcut.keys.map(key => `<kbd>${key}</kbd>`).join(' / ')}</td>
-                        <td>${shortcut.description}</td>
+                        <th>Key(s)</th>
+                        <th>Action</th>
                     </tr>
-                `;
-            });
+                </thead>
+                <tbody>
+        `;
+        this.keyboardShortcuts.forEach(shortcut => {
             tableHTML += `
-                    </tbody>
-                </table>
-                <button id="close-shortcuts-dialog">Close</button>
+                <tr>
+                    <td>${shortcut.keys.map(key => `<kbd>${key}</kbd>`).join(' / ')}</td>
+                    <td>${shortcut.description}</td>
+                </tr>
             `;
-            this.keyboardShortcutsDialogElement.innerHTML = tableHTML;
-            document.body.appendChild(this.keyboardShortcutsDialogElement);
+        });
+        tableHTML += `
+                </tbody>
+            </table>
+            <button id="close-shortcuts-dialog">Close</button>
+        `;
+        this.keyboardShortcutsDialogElement.innerHTML = tableHTML;
+        document.body.appendChild(this.keyboardShortcutsDialogElement);
 
-            $('#close-shortcuts-dialog', this.keyboardShortcutsDialogElement)?.addEventListener('click', () => {
-                this._hideKeyboardShortcutsDialog();
-            });
-        }
+        $('#close-shortcuts-dialog', this.keyboardShortcutsDialogElement)?.addEventListener('click', () => this._hideDialog(this.keyboardShortcutsDialogElement));
+
         this.keyboardShortcutsDialogElement.style.display = 'block';
         this.space.emit('ui:keyboardshortcuts:shown');
     }
 
-    _hideKeyboardShortcutsDialog = () => {
-        if (this.keyboardShortcutsDialogElement) {
-            this.keyboardShortcutsDialogElement.style.display = 'none';
-            this.space.emit('ui:keyboardshortcuts:hidden');
+    _hideDialog(dialogElement) {
+        if (dialogElement?.style.display === 'block') {
+            dialogElement.style.display = 'none';
+            this.space.emit(`ui:${dialogElement.id.replace(/-dialog$/, '')}:hidden`);
         }
     }
 
-
     _applySavedTheme() {
-        const savedTheme = localStorage.getItem('spacegraph-theme');
-        if (savedTheme === 'light') {
-            document.body.classList.add('theme-light');
-        } else {
-            document.body.classList.remove('theme-light');
-        }
-        // const themeButton = this.toolbarElement?.querySelector('#tb-toggle-theme');
-        // if (themeButton) { /* update icon/text */ }
+        localStorage.getItem('spacegraph-theme') === 'light' ? document.body.classList.add('theme-light') : document.body.classList.remove('theme-light');
     }
 
     _setupToolbar() {
         if (!this.toolbarElement) return;
         this.toolbarElement.innerHTML = '';
         const buttons = [
-            { id: 'tb-add-node', text: '➕', title: 'Add Default Node', action: 'addNode' }, // Node emoji was already there, just shortening text
-            { id: 'tb-center-view', text: '🎯', title: 'Center View', action: 'centerView' }, // Center emoji was already there
-            { id: 'tb-reset-view', text: '🔄', title: 'Reset View', action: 'resetView' },     // Reset emoji was already there
-            { id: 'tb-toggle-theme', text: '🎨', title: 'Toggle Light/Dark Theme', action: 'toggleTheme' }, // Theme emoji was already there
+            { id: 'tb-add-node', text: '➕', title: 'Add Default Node', action: 'addNode' },
+            { id: 'tb-center-view', text: '🎯', title: 'Center View', action: 'centerView' },
+            { id: 'tb-reset-view', text: '🔄', title: 'Reset View', action: 'resetView' },
+            { id: 'tb-toggle-theme', text: '🎨', title: 'Toggle Light/Dark Theme', action: 'toggleTheme' },
         ];
         buttons.forEach((btnData) => {
             const button = document.createElement('button');
@@ -345,17 +255,16 @@ export class UIManager {
     _handleToolbarAction(action, _buttonElement) {
         switch (action) {
             case 'addNode': {
-                const camPlugin = this.space.plugins.getPlugin('CameraPlugin');
-                const cam = camPlugin?.getCameraInstance();
+                const cam = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
                 let nodePos = { x: Math.random() * 200 - 100, y: Math.random() * 200 - 100, z: 0 };
                 if (cam) {
                     const camPos = new THREE.Vector3();
                     const camDir = new THREE.Vector3();
                     cam.getWorldPosition(camPos);
                     cam.getWorldDirection(camDir);
-                    const distanceInFront = 300; // Distance from camera to place the new node
+                    const distanceInFront = 300;
                     const targetPos = camPos.add(camDir.multiplyScalar(distanceInFront));
-                    nodePos = { x: targetPos.x, y: targetPos.y, z: 0 }; // Place on Z=0 plane initially
+                    nodePos = { x: targetPos.x, y: targetPos.y, z: 0 };
                 }
                 this.space.emit('ui:request:createNode', {
                     type: 'html',
@@ -385,10 +294,10 @@ export class UIManager {
     _bindEvents() {
         const passiveFalse = { passive: false };
         this.container.addEventListener('pointerdown', this._onPointerDown, passiveFalse);
-        window.addEventListener('pointermove', this._onPointerMove, passiveFalse); // Listen on window for drags outside container
-        window.addEventListener('pointerup', this._onPointerUp, passiveFalse); // Listen on window
+        window.addEventListener('pointermove', this._onPointerMove, passiveFalse);
+        window.addEventListener('pointerup', this._onPointerUp, passiveFalse);
         this.container.addEventListener('contextmenu', this._onContextMenu, passiveFalse);
-        document.addEventListener('click', this._onDocumentClick, true); // Capture phase for global click handling
+        document.addEventListener('click', this._onDocumentClick, true);
         this.contextMenuElement.addEventListener('click', this._onContextMenuClick);
         $('#confirm-yes', this.confirmDialogElement)?.addEventListener('click', this._onConfirmYes);
         $('#confirm-no', this.confirmDialogElement)?.addEventListener('click', this._onConfirmNo);
@@ -397,62 +306,52 @@ export class UIManager {
     }
 
     _subscribeToSpaceGraphEvents() {
-        this.space.on('node:selected', this._onNodeSelectedOrDeselected); // Unified handler
-        this.space.on('edge:selected', this._onEdgeSelectedOrDeselected); // Unified handler
-        this.space.on('selection:changed', this._onSelectionChanged); // More generic event
-
-        // Linking state changes from UIPlugin
+        this.space.on('node:selected', this._onNodeSelectedOrDeselected);
+        this.space.on('edge:selected', this._onEdgeSelectedOrDeselected);
+        this.space.on('selection:changed', this._onSelectionChanged);
         this.space.on('linking:started', this._onLinkingStarted);
         this.space.on('linking:cancelled', this._onLinkingCancelled);
         this.space.on('linking:succeeded', this._onLinkingCompleted);
         this.space.on('linking:failed', this._onLinkingCompleted);
-        this.space.on('camera:modeChanged', this._onCameraModeChanged); // Listen for camera mode changes
+        this.space.on('camera:modeChanged', this._onCameraModeChanged);
     }
 
-    _onCameraModeChanged = (data) => { // data = { newMode, oldMode }
-        this._updateHudCameraMode(data.newMode);
-    };
+    _onCameraModeChanged = (data) => this._updateHudCameraMode(data.newMode);
 
     _updateHudCameraMode(mode) {
-        // Now that hudModeIndicator is a select element
-        if (this.hudModeIndicator && this.hudModeIndicator.tagName === 'SELECT') {
+        if (this.hudModeIndicator?.tagName === 'SELECT') {
+            this.hudModeIndicator.value = mode || this.space.plugins.getPlugin('CameraPlugin')?.getCameraMode() || 'orbit';
+        } else if (this.hudModeIndicator) {
             const cameraMode = mode || this.space.plugins.getPlugin('CameraPlugin')?.getCameraMode() || 'orbit';
-            this.hudModeIndicator.value = cameraMode;
-        } else if (this.hudModeIndicator) { // Fallback for old div if somehow still present
-            const cameraMode = mode || this.space.plugins.getPlugin('CameraPlugin')?.getCameraMode() || 'orbit';
-            const modeName = cameraMode.charAt(0).toUpperCase() + cameraMode.slice(1);
-            this.hudModeIndicator.textContent = `Mode: ${modeName}`;
+            this.hudModeIndicator.textContent = `Mode: ${cameraMode.charAt(0).toUpperCase() + cameraMode.slice(1)}`;
         }
     }
 
     _updateHudSelectionInfo() {
-        if (this.hudSelectionInfo) {
-            const uiPlugin = this.space.plugins.getPlugin('UIPlugin');
-            if (!uiPlugin) {
-                this.hudSelectionInfo.textContent = 'Selected: N/A';
-                return;
-            }
-            const selectedNodes = uiPlugin.getSelectedNodes();
-            const selectedEdges = uiPlugin.getSelectedEdges();
+        if (!this.hudSelectionInfo) return;
+        const uiPlugin = this.space.plugins.getPlugin('UIPlugin');
+        if (!uiPlugin) {
+            this.hudSelectionInfo.textContent = 'Selected: N/A';
+            return;
+        }
+        const selectedNodes = uiPlugin.getSelectedNodes();
+        const selectedEdges = uiPlugin.getSelectedEdges();
 
-            if (selectedNodes.size === 1) {
-                const node = selectedNodes.values().next().value;
-                this.hudSelectionInfo.textContent = `Selected: Node ${node.data.label || node.id.substring(0, 8)}`;
-            } else if (selectedNodes.size > 1) {
-                this.hudSelectionInfo.textContent = `Selected: ${selectedNodes.size} Nodes`;
-            } else if (selectedEdges.size === 1) {
-                const edge = selectedEdges.values().next().value;
-                this.hudSelectionInfo.textContent = `Selected: Edge ${edge.id.substring(0, 8)}`;
-            } else if (selectedEdges.size > 1) {
-                this.hudSelectionInfo.textContent = `Selected: ${selectedEdges.size} Edges`;
-            } else {
-                this.hudSelectionInfo.textContent = 'Selected: None';
-            }
+        if (selectedNodes.size === 1) {
+            const node = selectedNodes.values().next().value;
+            this.hudSelectionInfo.textContent = `Selected: Node ${node.data.label || node.id.substring(0, 8)}`;
+        } else if (selectedNodes.size > 1) {
+            this.hudSelectionInfo.textContent = `Selected: ${selectedNodes.size} Nodes`;
+        } else if (selectedEdges.size === 1) {
+            const edge = selectedEdges.values().next().value;
+            this.hudSelectionInfo.textContent = `Selected: Edge ${edge.id.substring(0, 8)}`;
+        } else if (selectedEdges.size > 1) {
+            this.hudSelectionInfo.textContent = `Selected: ${selectedEdges.size} Edges`;
+        } else {
+            this.hudSelectionInfo.textContent = 'Selected: None';
         }
     }
 
-
-    // --- Centralized Event Normalization & State Update ---
     _updateNormalizedPointerState(e, isDownEvent = undefined) {
         this.pointerState.clientX = e.clientX;
         this.pointerState.clientY = e.clientY;
@@ -465,7 +364,6 @@ export class UIManager {
                 this.pointerState.startClientY = e.clientY;
                 this.pointerState.isDraggingThresholdMet = false;
             } else {
-                // On up, reset button, potentially other things if needed
                 this.pointerState.button = -1;
             }
         }
@@ -479,12 +377,9 @@ export class UIManager {
         }
     }
 
-    // --- Interaction State Machine ---
     _transitionToState(newState, data = {}) {
         if (this.currentState === newState) return;
 
-        // Exit current state logic (if any)
-        console.log(`UIManager: Exiting state: ${this.currentState}, transitioning to ${newState}`);
         switch (this.currentState) {
             case InteractionState.DRAGGING_NODE:
                 this.draggedNode?.endDrag();
@@ -501,28 +396,20 @@ export class UIManager {
                 this.container.style.cursor = 'grab';
                 break;
             case InteractionState.LINKING_NODE:
-                // Visual cleanup is handled by _onLinkingCancelled or _onLinkingCompleted
                 this.container.style.cursor = 'grab';
                 $$('.node-common.linking-target').forEach((el) => el.classList.remove('linking-target'));
                 break;
         }
 
         this.currentState = newState;
-        // console.log(`Entering state: ${this.currentState}`, data);
 
-        // Enter new state logic
         switch (newState) {
             case InteractionState.DRAGGING_NODE:
                 this.draggedNode = data.node;
                 this.draggedNodeInitialZ = this.draggedNode.position.z;
                 this.draggedNode.startDrag();
 
-                // Calculate drag offset in world space
-                const worldPos = this.space.screenToWorld(
-                    this.pointerState.clientX,
-                    this.pointerState.clientY,
-                    this.draggedNodeInitialZ
-                );
+                const worldPos = this.space.screenToWorld(this.pointerState.clientX, this.pointerState.clientY, this.draggedNodeInitialZ);
                 this.dragOffset = worldPos ? worldPos.sub(this.draggedNode.position) : new THREE.Vector3();
                 this.container.style.cursor = 'grabbing';
                 break;
@@ -530,76 +417,52 @@ export class UIManager {
             case InteractionState.RESIZING_NODE:
                 this.resizedNode = data.node;
                 this.resizedNode.startResize();
-                this.resizeStartNodeSize = { ...this.resizedNode.size }; // current size
+                this.resizeStartNodeSize = { ...this.resizedNode.size };
                 this.resizeStartPointerPos = { x: this.pointerState.clientX, y: this.pointerState.clientY };
                 this.container.style.cursor = 'nwse-resize';
                 break;
 
             case InteractionState.PANNING:
-                this.space.plugins
-                    .getPlugin('CameraPlugin')
-                    ?.startPan(this.pointerState.clientX, this.pointerState.clientY);
-                this.container.style.cursor = 'grabbing'; // Or specific panning cursor
+                this.space.plugins.getPlugin('CameraPlugin')?.startPan(this.pointerState.clientX, this.pointerState.clientY);
+                this.container.style.cursor = 'grabbing';
                 break;
             case InteractionState.LINKING_NODE:
-                // Actual linking state is managed by UIPlugin, UIManager just reacts visually
                 this.container.style.cursor = 'crosshair';
-                this._createTempLinkLine(data.sourceNode); // data.sourceNode comes from linking:started event
+                this._createTempLinkLine(data.sourceNode);
                 break;
             case InteractionState.IDLE:
-                this.container.style.cursor = 'grab'; // Default cursor
+                this.container.style.cursor = 'grab';
                 break;
         }
         this.space.emit('interaction:stateChanged', { newState, oldState: this.currentState, data });
     }
 
-    // --- Pointer Event Handlers ---
     _onPointerDown = (e) => {
-        // TODO: Handle multi-touch if e.pointerId is different and activePointerId is set
-        // For now, assume single pointer interaction or prioritize first.
         if (this.activePointerId !== null && this.activePointerId !== e.pointerId) return;
         this.activePointerId = e.pointerId;
 
         this._updateNormalizedPointerState(e, true);
-        const targetInfo = this._getTargetInfo(e); // Use normalized state if needed
+        const targetInfo = this._getTargetInfo(e);
 
-        // If in free camera mode and pointer is locked, primary clicks are for camera look, not graph interaction.
         const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
-        if (cameraPlugin?.getCameraMode() === 'free' && cameraPlugin.getControls()?.isPointerLocked && this.pointerState.button === 0) {
-            // Allow PointerLockControls to handle mouse movement for looking.
-            // Other buttons (middle/right for autozoom/context menu) might still be processed if needed.
-            // For now, if locked and primary button, assume it's for camera view control.
-            // We might want to allow specific UI elements (like a HUD button) to still be clickable.
-            // This would require checking if e.target is part of such UI.
-            // e.preventDefault(); // Prevent any default browser actions if any were to occur.
+        if (cameraPlugin?.getCameraMode() === 'free' && cameraPlugin.getControls()?.isPointerLocked && this.pointerState.button === 0) return;
+
+        if (this.pointerState.button === 2) {
+            e.preventDefault();
             return;
         }
 
-        // Secondary button (right-click) for context menu
-        if (this.pointerState.button === 2) {
-            // Context menu handled by _onContextMenu, which is a separate listener.
-            // We might want to prevent default pan/drag from starting here.
-            e.preventDefault(); // Prevent default browser context menu
-            return; // Let _onContextMenu handle it
-        }
-
-        // Middle mouse button for auto-zoom
         if (this.pointerState.button === 1) {
-            e.preventDefault(); // Prevent default browser scroll/pan
-            if (targetInfo.node) {
-                this.space.emit('ui:request:autoZoomNode', targetInfo.node);
-            }
-            return; // Middle click actions are usually terminal for this event
+            e.preventDefault();
+            if (targetInfo.node) this.space.emit('ui:request:autoZoomNode', targetInfo.node);
+            return;
         }
 
-        // Primary button (left-click/touch)
         if (this.pointerState.button === 0) {
             if (targetInfo.nodeControls) {
-                // Click on a node's internal quick control button (delete, zoom content etc.)
                 e.preventDefault();
-                e.stopPropagation(); // Prevent this click from bubbling to node selection/drag
+                e.stopPropagation();
                 this._handleNodeControlButtonClick(targetInfo.nodeControls, targetInfo.node);
-                // Typically doesn't start a drag/pan state
                 return;
             }
 
@@ -607,43 +470,35 @@ export class UIManager {
                 e.preventDefault();
                 e.stopPropagation();
                 this._transitionToState(InteractionState.RESIZING_NODE, { node: targetInfo.node });
-                this.space.emit('ui:request:setSelectedNode', targetInfo.node, false); // Select node being resized
-                this._hideContextMenu();
+                this.space.emit('ui:request:setSelectedNode', targetInfo.node, false);
+                this._hideDialog(this.contextMenuElement);
                 return;
             }
 
             if (targetInfo.node) {
                 e.preventDefault();
-                // If node is contentEditable or an interactive element inside, let it handle focus/input
                 if (targetInfo.contentEditable || targetInfo.interactiveElement) {
-                    e.stopPropagation(); // Prevent graph drag
+                    e.stopPropagation();
                     this.space.emit('ui:request:setSelectedNode', targetInfo.node, e.shiftKey);
-                    this._hideContextMenu();
-                    // Do not transition to DRAGGING_NODE for these cases
+                    this._hideDialog(this.contextMenuElement);
                     return;
                 }
-                // Default action for node is to initiate potential drag
                 this._transitionToState(InteractionState.DRAGGING_NODE, { node: targetInfo.node });
                 this.space.emit('ui:request:setSelectedNode', targetInfo.node, e.shiftKey);
-                this._hideContextMenu();
+                this._hideDialog(this.contextMenuElement);
                 return;
             }
 
             if (targetInfo.intersectedEdge) {
                 e.preventDefault();
                 this.space.emit('ui:request:setSelectedEdge', targetInfo.intersectedEdge, e.shiftKey);
-                this._hideContextMenu();
-                // Selecting an edge doesn't usually start a drag state by itself.
+                this._hideDialog(this.contextMenuElement);
                 return;
             }
 
-            // If clicked on background (no node/edge/control)
             this._transitionToState(InteractionState.PANNING);
-            this._hideContextMenu();
-            // Do not deselect if shift is pressed (handled by UIPlugin's selection logic)
-            if (!e.shiftKey) {
-                 this.space.emit('ui:request:setSelectedNode', null, false); // Deselect all
-            }
+            this._hideDialog(this.contextMenuElement);
+            if (!e.shiftKey) this.space.emit('ui:request:setSelectedNode', null, false);
         }
     };
 
@@ -659,41 +514,38 @@ export class UIManager {
 
         switch (this.currentState) {
             case InteractionState.IDLE:
-                this._handleHover(e); // Update hover effects
+                this._handleHover(e);
                 break;
 
             case InteractionState.DRAGGING_NODE:
                 e.preventDefault();
                 if (this.draggedNode) {
                     let targetZ = this.draggedNodeInitialZ;
-                    if (e.altKey) { // Alt + drag to change Z
-                        targetZ -= dy * 1.0; // Sensitivity for Z movement
+                    if (e.altKey) {
+                        targetZ -= dy * 1.0;
                         this.draggedNodeInitialZ = targetZ;
                     }
 
                     const worldPos = this.space.screenToWorld(this.pointerState.clientX, this.pointerState.clientY, targetZ);
                     if (worldPos) {
                         const primaryNodeNewCalculatedPos = worldPos.clone().sub(this.dragOffset);
-                        primaryNodeNewCalculatedPos.z = targetZ; // Ensure Z is maintained or updated
+                        primaryNodeNewCalculatedPos.z = targetZ;
 
                         const dragDelta = primaryNodeNewCalculatedPos.clone().sub(this.draggedNode.position);
                         const uiPlugin = this.space.plugins.getPlugin('UIPlugin');
                         const selectedNodes = uiPlugin?.getSelectedNodes();
 
-                        // Drag all selected nodes
-                        if (selectedNodes && selectedNodes.size > 0 && selectedNodes.has(this.draggedNode)) {
+                        if (selectedNodes?.size > 0 && selectedNodes.has(this.draggedNode)) {
                             selectedNodes.forEach((sNode) => {
                                 if (sNode === this.draggedNode) {
                                     sNode.drag(primaryNodeNewCalculatedPos);
                                 } else {
-                                    // Apply delta to other selected nodes to move them together
                                     const sNodeTargetPos = sNode.position.clone().add(dragDelta);
-                                    // Preserve individual Z for other nodes unless explicitly changing all
-                                    sNodeTargetPos.z = sNode.position.z; // Or apply Z delta if that's desired
+                                    sNodeTargetPos.z = sNode.position.z;
                                     sNode.drag(sNodeTargetPos);
                                 }
                             });
-                        } else { // Should not happen if selection is handled correctly on pointer down
+                        } else {
                             this.draggedNode.drag(primaryNodeNewCalculatedPos);
                         }
                         this.space.emit('graph:node:dragged', {node: this.draggedNode, position: primaryNodeNewCalculatedPos});
@@ -706,8 +558,8 @@ export class UIManager {
                 if (this.resizedNode) {
                     const totalDx = this.pointerState.clientX - this.resizeStartPointerPos.x;
                     const totalDy = this.pointerState.clientY - this.resizeStartPointerPos.y;
-                    const newWidth = Math.max(50, this.resizeStartNodeSize.width + totalDx); // Min width
-                    const newHeight = Math.max(30, this.resizeStartNodeSize.height + totalDy); // Min height
+                    const newWidth = Math.max(50, this.resizeStartNodeSize.width + totalDx);
+                    const newHeight = Math.max(30, this.resizeStartNodeSize.height + totalDy);
                     this.resizedNode.resize(newWidth, newHeight);
                     this.space.emit('graph:node:resized', {node: this.resizedNode, size: {newWidth, newHeight}});
                 }
@@ -736,28 +588,17 @@ export class UIManager {
         if (e.pointerId !== this.activePointerId) return;
 
         this._updateNormalizedPointerState(e, false);
-        const currentInteractionState = this.currentState; // Capture before transitioning to IDLE
+        const currentInteractionState = this.currentState;
 
-        // Handle click/tap action if drag threshold wasn't met
         if (!this.pointerState.isDraggingThresholdMet && e.button === 0) {
-            // This is a click/tap. Selection is already handled on pointerdown.
-            // Any specific click actions (not drag related) would go here.
-            // For example, if a node was clicked, and it wasn't a drag, maybe open an editor or focus.
             const targetInfo = this._getTargetInfo(e);
-            if (targetInfo.node && targetInfo.node instanceof HtmlNode && targetInfo.node.data.editable) {
-                 if (targetInfo.element && targetInfo.element.closest('.node-content') === targetInfo.node.htmlElement.querySelector('.node-content')) {
-                    // Click was inside content area, ensure focus.
-                    // targetInfo.node.htmlElement?.querySelector('.node-content')?.focus();
-                 }
+            if (targetInfo.node instanceof HtmlNode && targetInfo.node.data.editable && targetInfo.element?.closest('.node-content') === targetInfo.node.htmlElement?.querySelector('.node-content')) {
             }
         }
 
-
         if (currentInteractionState === InteractionState.LINKING_NODE && e.button === 0) {
-            // UIPlugin will handle the logic of completing the link via 'ui:request:completeLinking'
             this.space.emit('ui:request:completeLinking', this.pointerState.clientX, this.pointerState.clientY);
         }
-        // Always transition to IDLE on pointer up, specific states clean themselves up.
         this._transitionToState(InteractionState.IDLE);
         this.activePointerId = null;
     };
@@ -765,14 +606,11 @@ export class UIManager {
     _handleNodeControlButtonClick(buttonEl, node) {
         if (!(node instanceof HtmlNode)) return;
 
-        const actionClass = [...buttonEl.classList].find((cls) => cls.startsWith('node-') && !cls.includes('button'));
-        const action = actionClass?.substring('node-'.length);
+        const action = [...buttonEl.classList].find((cls) => cls.startsWith('node-') && !cls.includes('button'))?.substring('node-'.length);
 
         switch (action) {
             case 'delete':
-                this._showConfirmDialog(`Delete node "${node.id.substring(0, 10)}..."?`, () =>
-                    this.space.emit('ui:request:removeNode', node.id)
-                );
+                this._showConfirmDialog(`Delete node "${node.id.substring(0, 10)}..."?`, () => this.space.emit('ui:request:removeNode', node.id));
                 break;
             case 'content-zoom-in':
                 this.space.emit('ui:request:adjustContentScale', node, 1.15);
@@ -780,10 +618,10 @@ export class UIManager {
             case 'content-zoom-out':
                 this.space.emit('ui:request:adjustContentScale', node, 1 / 1.15);
                 break;
-            case 'grow': // Node size
+            case 'grow':
                 this.space.emit('ui:request:adjustNodeSize', node, 1.2);
                 break;
-            case 'shrink': // Node size
+            case 'shrink':
                 this.space.emit('ui:request:adjustNodeSize', node, 1 / 1.2);
                 break;
             default:
@@ -791,80 +629,46 @@ export class UIManager {
         }
     }
 
-
     _onContextMenu = (e) => {
         e.preventDefault();
-        this._updateNormalizedPointerState(e); // Update with current coords for menu positioning
-        this._hideContextMenu(); // Hide any existing menu
+        this._updateNormalizedPointerState(e);
+        this._hideDialog(this.contextMenuElement);
 
         const targetInfo = this._getTargetInfo(e);
         let menuItems = [];
-        let contextTarget = null; // The actual graph item (node/edge) for the menu
+        let contextTarget = null;
 
         if (targetInfo.node) {
             contextTarget = targetInfo.node;
-            // Ensure the right-clicked node becomes the primary selection if not multi-selecting
-            if (!e.shiftKey) { // TODO: Check if shift key is part of context menu logic for multi-select actions
-                this.space.emit('ui:request:setSelectedNode', contextTarget, false);
-            }
+            if (!e.shiftKey) this.space.emit('ui:request:setSelectedNode', contextTarget, false);
             menuItems = this._getContextMenuItemsForNode(contextTarget);
         } else if (targetInfo.intersectedEdge) {
             contextTarget = targetInfo.intersectedEdge;
-            if (!e.shiftKey) {
-                this.space.emit('ui:request:setSelectedEdge', contextTarget, false);
-            }
+            if (!e.shiftKey) this.space.emit('ui:request:setSelectedEdge', contextTarget, false);
             menuItems = this._getContextMenuItemsForEdge(contextTarget);
         } else {
-            // Clicked on background
-            if (!e.shiftKey) { // Deselect if not holding shift (standard behavior)
-                 this.space.emit('ui:request:setSelectedNode', null, false);
-            }
-            const worldPos = this.space.screenToWorld(e.clientX, e.clientY, 0); // Get world position for context
+            if (!e.shiftKey) this.space.emit('ui:request:setSelectedNode', null, false);
+            const worldPos = this.space.screenToWorld(e.clientX, e.clientY, 0);
             menuItems = this._getContextMenuItemsForBackground(worldPos);
         }
 
-        if (menuItems.length > 0) {
-            this._showContextMenu(e.clientX, e.clientY, menuItems, contextTarget);
-        }
+        if (menuItems.length > 0) this._showContextMenu(e.clientX, e.clientY, menuItems, contextTarget);
     };
 
     _onDocumentClick = (e) => {
-        // This handler is in capture phase.
-        // It's used to globally close menus if a click occurs outside of them.
+        if (this.contextMenuElement.contains(e.target) || this.contextMenuElement.style.display === 'none') return;
+        if (this.edgeMenuObject?.element?.contains(e.target)) return;
+        if (this.confirmDialogElement.contains(e.target)) return;
 
-        // Check if the click was on the context menu itself or initiated from within it.
-        if (this.contextMenuElement.contains(e.target) || this.contextMenuElement.style.display === 'none') {
-            // If click is inside menu, or menu is already hidden, do nothing here.
-            // Menu item clicks are handled by _onContextMenuClick.
-            return;
-        }
+        this._hideDialog(this.contextMenuElement);
 
-        // Check if click was on edge menu
-        if (this.edgeMenuObject?.element?.contains(e.target)) {
-            return;
-        }
-
-        // Check if click was on confirm dialog
-        if (this.confirmDialogElement.contains(e.target)) {
-            return;
-        }
-
-        // If the click was outside, hide the context menu.
-        this._hideContextMenu();
-
-        // If edge menu is visible and click is outside of it, and not on the selected edge, hide it.
         if (this.edgeMenuObject) {
             const targetInfo = this._getTargetInfo(e);
             const uiPlugin = this.space.plugins.getPlugin('UIPlugin');
             const selectedEdges = uiPlugin?.getSelectedEdges();
-            let clickedSelectedEdge = false;
-            if (targetInfo.intersectedEdge && selectedEdges) {
-                clickedSelectedEdge = selectedEdges.has(targetInfo.intersectedEdge);
-            }
+            let clickedSelectedEdge = selectedEdges?.has(targetInfo.intersectedEdge) ?? false;
 
-            if (!clickedSelectedEdge) {
-                 this.space.emit('ui:request:setSelectedEdge', null, false); // This will trigger hideEdgeMenu via _onEdgeSelectedOrDeselected
-            }
+            if (!clickedSelectedEdge) this.space.emit('ui:request:setSelectedEdge', null, false);
         }
     };
 
@@ -875,7 +679,7 @@ export class UIManager {
         const { action, nodeId, edgeId, positionX, positionY, positionZ } = li.dataset;
         const worldPos = positionX ? { x: parseFloat(positionX), y: parseFloat(positionY), z: parseFloat(positionZ) } : null;
 
-        this._hideContextMenu(); // Hide after action is determined
+        this._hideDialog(this.contextMenuElement);
 
         const nodePlugin = this.space.plugins.getPlugin('NodePlugin');
         const edgePlugin = this.space.plugins.getPlugin('EdgePlugin');
@@ -885,55 +689,30 @@ export class UIManager {
         const targetEdge = edgeId ? edgePlugin?.getEdgeById(edgeId) : null;
 
         switch (action) {
-            // Node Actions
             case 'edit-node-content':
-                if (targetNode instanceof HtmlNode && targetNode.data.editable) {
-                    targetNode.htmlElement?.querySelector('.node-content')?.focus();
-                }
+                if (targetNode instanceof HtmlNode && targetNode.data.editable) targetNode.htmlElement?.querySelector('.node-content')?.focus();
                 break;
             case 'delete-node':
-                if (targetNode) {
-                    this._showConfirmDialog(`Delete node "${targetNode.id.substring(0, 10)}..."?`, () =>
-                        this.space.emit('ui:request:removeNode', targetNode.id)
-                    );
-                }
+                if (targetNode) this._showConfirmDialog(`Delete node "${targetNode.id.substring(0, 10)}..."?`, () => this.space.emit('ui:request:removeNode', targetNode.id));
                 break;
             case 'start-linking-node':
-                if (targetNode) {
-                    this.space.emit('ui:request:startLinking', targetNode);
-                }
+                if (targetNode) this.space.emit('ui:request:startLinking', targetNode);
                 break;
             case 'autozoom-node':
-                if (targetNode) {
-                    this.space.emit('ui:request:autoZoomNode', targetNode);
-                }
+                if (targetNode) this.space.emit('ui:request:autoZoomNode', targetNode);
                 break;
             case 'toggle-pin-node':
-                if (targetNode) {
-                    this.space.togglePinNode(targetNode.id); // togglePinNode is on SpaceGraph, calls LayoutPlugin
-                }
+                if (targetNode) this.space.togglePinNode(targetNode.id);
                 break;
-
-            // Edge Actions
-            case 'edit-edge-style': // This implies showing the edge menu if not already visible
-                if (targetEdge) {
-                    this.space.emit('ui:request:setSelectedEdge', targetEdge, false); // Ensure it's selected to show menu
-                }
+            case 'edit-edge-style':
+                if (targetEdge) this.space.emit('ui:request:setSelectedEdge', targetEdge, false);
                 break;
             case 'reverse-edge-direction':
-                if (targetEdge) {
-                    this.space.emit('ui:request:reverseEdge', targetEdge.id);
-                }
+                if (targetEdge) this.space.emit('ui:request:reverseEdge', targetEdge.id);
                 break;
             case 'delete-edge':
-                if (targetEdge) {
-                    this._showConfirmDialog(`Delete edge "${targetEdge.id.substring(0, 10)}..."?`, () =>
-                        this.space.emit('ui:request:removeEdge', targetEdge.id)
-                    );
-                }
+                if (targetEdge) this._showConfirmDialog(`Delete edge "${targetEdge.id.substring(0, 10)}..."?`, () => this.space.emit('ui:request:removeEdge', targetEdge.id));
                 break;
-
-            // Background Actions
             case 'create-html-node':
                 if (worldPos) this.space.emit('ui:request:createNode', { type: 'html', position: worldPos, data: { label: 'New Node', content: 'Edit me!' } });
                 break;
@@ -946,8 +725,6 @@ export class UIManager {
            case 'create-shape-node-sphere':
                  if (worldPos) this.space.emit('ui:request:createNode', { type: 'shape', position: worldPos, data: { label: 'Sphere Node 🌐', shape: 'sphere', size: 60, color: Math.random() * 0xffffff } });
                 break;
-
-            // Global View Actions
             case 'center-camera-view':
                 this.space.emit('ui:request:centerView');
                 break;
@@ -970,12 +747,11 @@ export class UIManager {
 
     _onConfirmYes = () => {
         this.confirmCallback?.();
-        this._hideConfirmDialog();
+        this._hideDialog(this.confirmDialogElement);
     };
-    _onConfirmNo = () => this._hideConfirmDialog();
+    _onConfirmNo = () => this._hideDialog(this.confirmDialogElement);
 
     _onKeyDown = (e) => {
-        // Allow text editing inputs to capture keys unless it's Escape
         const activeEl = document.activeElement;
         const isEditingText = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable);
         if (isEditingText && e.key !== 'Escape') return;
@@ -988,54 +764,45 @@ export class UIManager {
         const primarySelectedNode = selectedNodes.size > 0 ? selectedNodes.values().next().value : null;
         const primarySelectedEdge = selectedEdges.size > 0 ? selectedEdges.values().next().value : null;
 
-        let handled = false; // Flag to call e.preventDefault()
+        let handled = false;
 
         switch (e.key) {
             case 'Delete':
             case 'Backspace':
                 if (primarySelectedNode) {
-                    const message = selectedNodes.size > 1
-                        ? `Delete ${selectedNodes.size} selected nodes?`
-                        : `Delete node "${primarySelectedNode.id.substring(0, 10)}..."?`;
-                    this._showConfirmDialog(message, () =>
-                        selectedNodes.forEach(node => this.space.emit('ui:request:removeNode', node.id))
-                    );
+                    const message = selectedNodes.size > 1 ? `Delete ${selectedNodes.size} selected nodes?` : `Delete node "${primarySelectedNode.id.substring(0, 10)}..."?`;
+                    this._showConfirmDialog(message, () => selectedNodes.forEach(node => this.space.emit('ui:request:removeNode', node.id)));
                     handled = true;
                 } else if (primarySelectedEdge) {
-                    const message = selectedEdges.size > 1
-                        ? `Delete ${selectedEdges.size} selected edges?`
-                        : `Delete edge "${primarySelectedEdge.id.substring(0, 10)}..."?`;
-                    this._showConfirmDialog(message, () =>
-                        selectedEdges.forEach(edge => this.space.emit('ui:request:removeEdge', edge.id))
-                    );
+                    const message = selectedEdges.size > 1 ? `Delete ${selectedEdges.size} selected edges?` : `Delete edge "${primarySelectedEdge.id.substring(0, 10)}..."?`;
+                    this._showConfirmDialog(message, () => selectedEdges.forEach(edge => this.space.emit('ui:request:removeEdge', edge.id)));
                     handled = true;
                 }
                 break;
 
             case 'Escape':
-                if (uiPlugin.getIsLinking()) { // Check linking state via UIPlugin
-                    this.space.emit('ui:request:cancelLinking'); // UIPlugin handles actual cancellation
+                if (uiPlugin.getIsLinking()) {
+                    this.space.emit('ui:request:cancelLinking');
                     handled = true;
                 } else if (this.layoutSettingsDialogElement?.style.display === 'block') {
-                    this._hideLayoutSettingsDialog();
+                    this._hideDialog(this.layoutSettingsDialogElement);
                     handled = true;
                 } else if (this.keyboardShortcutsDialogElement?.style.display === 'block') {
-                    this._hideKeyboardShortcutsDialog();
+                    this._hideDialog(this.keyboardShortcutsDialogElement);
                     handled = true;
                 } else if (this.contextMenuElement.style.display === 'block') {
-                    this._hideContextMenu();
+                    this._hideDialog(this.contextMenuElement);
                     handled = true;
                 } else if (this.confirmDialogElement.style.display === 'block') {
-                    this._hideConfirmDialog();
+                    this._hideDialog(this.confirmDialogElement);
                     handled = true;
-                } else if (this.edgeMenuObject) { // If edge edit menu is open
-                    this.space.emit('ui:request:setSelectedEdge', null, false); // Deselect to hide
+                } else if (this.edgeMenuObject) {
+                    this.space.emit('ui:request:setSelectedEdge', null, false);
                     handled = true;
                 } else if (selectedNodes.size > 0 || selectedEdges.size > 0) {
-                    this.space.emit('ui:request:setSelectedNode', null, false); // Deselect all
+                    this.space.emit('ui:request:setSelectedNode', null, false);
                     handled = true;
                 }
-                // If in free camera mode, Escape might unlock pointer (handled by Camera.js)
                 const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
                 if (cameraPlugin?.getCameraMode() === 'free' && cameraPlugin.getControls()?.isPointerLocked) {
                     cameraPlugin.exitPointerLock();
@@ -1050,60 +817,39 @@ export class UIManager {
                 }
                 break;
 
-            // Node content/size adjustments (Ctrl/Meta for node size, no modifier for content scale)
             case '+':
-            case '=': // NumpadPlus or Equal
+            case '=':
                 if (primarySelectedNode instanceof HtmlNode) {
-                    const factor = e.key === '+' || e.key === '=' ? 1.15 : 1.2; // Slightly different factors
-                    if (e.ctrlKey || e.metaKey) {
-                        this.space.emit('ui:request:adjustNodeSize', primarySelectedNode, factor);
-                    } else {
-                        this.space.emit('ui:request:adjustContentScale', primarySelectedNode, factor);
-                    }
+                    const factor = e.key === '+' || e.key === '=' ? 1.15 : 1.2;
+                    e.ctrlKey || e.metaKey ? this.space.emit('ui:request:adjustNodeSize', primarySelectedNode, factor) : this.space.emit('ui:request:adjustContentScale', primarySelectedNode, factor);
                     handled = true;
                 }
                 break;
             case '-':
-            case '_': // NumpadSubtract or Minus
+            case '_':
                  if (primarySelectedNode instanceof HtmlNode) {
                     const factor = e.key === '-' || e.key === '_' ? 1 / 1.15 : 1 / 1.2;
-                    if (e.ctrlKey || e.metaKey) {
-                        this.space.emit('ui:request:adjustNodeSize', primarySelectedNode, factor);
-                    } else {
-                        this.space.emit('ui:request:adjustContentScale', primarySelectedNode, factor);
-                    }
+                    e.ctrlKey || e.metaKey ? this.space.emit('ui:request:adjustNodeSize', primarySelectedNode, factor) : this.space.emit('ui:request:adjustContentScale', primarySelectedNode, factor);
                     handled = true;
                 }
                 break;
 
-            case ' ': // Spacebar
+            case ' ':
                 if (primarySelectedNode) {
-                    this.space.emit('ui:request:focusOnNode', primarySelectedNode, 0.5, true); // Focus with history
+                    this.space.emit('ui:request:focusOnNode', primarySelectedNode, 0.5, true);
                     handled = true;
                 } else if (primarySelectedEdge) {
-                    // Focus on edge midpoint
                     const midPoint = new THREE.Vector3().lerpVectors(primarySelectedEdge.source.position, primarySelectedEdge.target.position, 0.5);
                     const dist = primarySelectedEdge.source.position.distanceTo(primarySelectedEdge.target.position);
                     const camPlugin = this.space.plugins.getPlugin('CameraPlugin');
-                    camPlugin?.pushState(); // Save current view
+                    camPlugin?.pushState();
                     camPlugin?.moveTo(midPoint.x, midPoint.y, midPoint.z + dist * 0.6 + 100, 0.5, midPoint);
                     handled = true;
                 } else {
-                    // If nothing selected, center view on graph or default
                     this.space.emit('ui:request:centerView');
                     handled = true;
                 }
                 break;
-            // Add more keyboard shortcuts here, e.g., for camera modes, tool activation
-            // case 'c': // Example: toggle free camera mode
-            //     const camPlugin = this.space.plugins.getPlugin('CameraPlugin');
-            //     if (camPlugin) {
-            //         const currentMode = camPlugin.getCameraMode();
-            //         camPlugin.setCameraMode(currentMode === 'orbit' ? 'free' : 'orbit');
-            //         if (camPlugin.getCameraMode() === 'free') camPlugin.requestPointerLock();
-            //         handled = true;
-            //     }
-            //     break;
         }
 
         if (handled) {
@@ -1115,125 +861,87 @@ export class UIManager {
     _onWheel = (e) => {
         const targetInfo = this._getTargetInfo(e);
 
-        // Prevent zoom if wheeling over an interactive element inside a node (e.g. scrollable content)
-        // or a UI element like edge menu with its own scroll/range inputs.
-        if (targetInfo.element) {
-            if (targetInfo.element.closest('.node-content') && targetInfo.element.scrollHeight > targetInfo.element.clientHeight) {
-                // If the wheeled element is scrollable content within a node, let the browser handle scrolling.
-                return;
-            }
-            if (targetInfo.element.closest('.edge-menu-frame input[type="range"]')) {
-                // If wheeling over a range input in edge menu, let it handle.
-                return;
-            }
-        }
-        // Ctrl/Meta + Wheel to adjust content scale of a hovered HTML node
+        if (targetInfo.element?.closest('.node-content') && targetInfo.element.scrollHeight > targetInfo.element.clientHeight) return;
+        if (targetInfo.element?.closest('.edge-menu-frame input[type="range"]')) return;
+
         if ((e.ctrlKey || e.metaKey) && targetInfo.node instanceof HtmlNode) {
             e.preventDefault();
             e.stopPropagation();
             const scaleFactor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
             this.space.emit('ui:request:adjustContentScale', targetInfo.node, scaleFactor);
         } else {
-            // Default wheel action: Zoom camera
             e.preventDefault();
             this.space.emit('ui:request:zoomCamera', e.deltaY);
         }
     };
 
     _getTargetInfo(event) {
-        // Use document.elementFromPoint for initial check, then raycast if needed.
         const element = document.elementFromPoint(event.clientX, event.clientY);
 
-        const nodeElement = element?.closest('.node-common'); // HTML nodes
+        const nodeElement = element?.closest('.node-common');
         const resizeHandle = element?.closest('.resize-handle');
-        const nodeControlsButton = element?.closest('.node-controls button'); // Quick controls on node
+        const nodeControlsButton = element?.closest('.node-controls button');
         const contentEditableEl = element?.closest('[contenteditable="true"]');
-        const interactiveEl = element?.closest('button, input, textarea, select, a, .clickable'); // General interactive elements
+        const interactiveEl = element?.closest('button, input, textarea, select, a, .clickable');
 
-        let graphNode = null; // This will hold the BaseNode instance
-        if (nodeElement) {
-            graphNode = this.space.plugins.getPlugin('NodePlugin')?.getNodeById(nodeElement.dataset.nodeId);
-        }
-
+        let graphNode = nodeElement ? this.space.plugins.getPlugin('NodePlugin')?.getNodeById(nodeElement.dataset.nodeId) : null;
         let intersectedEdge = null;
-        let intersectedObjectResult = null; // Store full raycast result if done
+        let intersectedObjectResult = null;
 
-        // Raycast if:
-        // 1. No specific HTML element like resize handle or control button was hit.
-        // 2. The hit element isn't an interactive part of an HTML node (like its content area).
-        // 3. We need to check for 3D objects (ShapeNodes, Edges) that don't have direct HTML counterparts at pointer.
         const needsRaycast = !resizeHandle && !nodeControlsButton && !contentEditableEl && !interactiveEl;
 
         if (needsRaycast) {
             intersectedObjectResult = this.space.intersectedObjects(event.clientX, event.clientY);
             if (intersectedObjectResult) {
-                if (intersectedObjectResult.node && !graphNode) { // If raycast found a node and we didn't get one from HTML
-                    graphNode = intersectedObjectResult.node;
-                }
-                if (intersectedObjectResult.edge) {
-                    intersectedEdge = intersectedObjectResult.edge;
-                }
+                if (intersectedObjectResult.node && !graphNode) graphNode = intersectedObjectResult.node;
+                if (intersectedObjectResult.edge) intersectedEdge = intersectedObjectResult.edge;
             }
         }
 
         return {
-            element: element, // The direct HTML element under pointer
-            nodeElement: nodeElement, // The .node-common HTML element, if any
-            resizeHandle: resizeHandle,
-            nodeControls: nodeControlsButton, // Renamed from nodeControls to be more specific
+            element,
+            nodeElement,
+            resizeHandle,
+            nodeControls: nodeControlsButton,
             contentEditable: contentEditableEl,
             interactiveElement: interactiveEl,
-            node: graphNode, // The BaseNode instance (from HTML or raycast)
-            intersectedEdge: intersectedEdge, // The Edge instance (from raycast)
-            intersectedObjectResult: intersectedObjectResult, // Full raycast data if performed
+            node: graphNode,
+            intersectedEdge,
+            intersectedObjectResult,
         };
     }
 
     _handleHover(e) {
-        // Do not process hover if any pointer button is down or in a non-idle state
         if (this.pointerState.down || this.currentState !== InteractionState.IDLE) {
-            if (this.hoveredEdge) { // Clear previous hover if interaction starts
+            if (this.hoveredEdge) {
                 const uiPlugin = this.space.plugins.getPlugin('UIPlugin');
-                if (!uiPlugin?.getSelectedEdges().has(this.hoveredEdge)) {
-                    this.hoveredEdge.setHighlight(false);
-                }
+                if (!uiPlugin?.getSelectedEdges().has(this.hoveredEdge)) this.hoveredEdge.setHighlight(false);
                 this.hoveredEdge = null;
             }
             return;
         }
 
-        const targetInfo = this._getTargetInfo(e); // Use the same comprehensive target info
+        const targetInfo = this._getTargetInfo(e);
         let newHoveredEdge = targetInfo.intersectedEdge;
 
-        // Update visual feedback for edges
         if (this.hoveredEdge !== newHoveredEdge) {
             const uiPlugin = this.space.plugins.getPlugin('UIPlugin');
             const selectedEdges = uiPlugin?.getSelectedEdges();
 
-            if (this.hoveredEdge && !selectedEdges?.has(this.hoveredEdge)) {
-                this.hoveredEdge.setHighlight(false); // Remove highlight from previously hovered
-            }
+            if (this.hoveredEdge && !selectedEdges?.has(this.hoveredEdge)) this.hoveredEdge.setHighlight(false);
             this.hoveredEdge = newHoveredEdge;
-            if (this.hoveredEdge && !selectedEdges?.has(this.hoveredEdge)) {
-                this.hoveredEdge.setHighlight(true); // Add highlight to newly hovered
-            }
+            if (this.hoveredEdge && !selectedEdges?.has(this.hoveredEdge)) this.hoveredEdge.setHighlight(true);
         }
-        // TODO: Add hover feedback for nodes if desired (e.g., slight border change)
-        // This would require comparing targetInfo.node with a this.hoveredNode property.
     }
-
 
     _getContextMenuItemsForNode(node) {
         const items = [];
-        if (node instanceof HtmlNode && node.data.editable) {
-            items.push({ label: '📝 Edit Content', action: 'edit-node-content', nodeId: node.id });
-        }
-        items.push({ label: '🔗 Start Link', action: 'start-linking-node', nodeId: node.id }); // Changed emoji for "Start Link"
-        items.push({ label: '🔎 Auto Zoom', action: 'autozoom-node', nodeId: node.id }); // Changed "Auto Zoom / Back" and emoji
+        if (node instanceof HtmlNode && node.data.editable) items.push({ label: '📝 Edit Content', action: 'edit-node-content', nodeId: node.id });
+        items.push({ label: '🔗 Start Link', action: 'start-linking-node', nodeId: node.id });
+        items.push({ label: '🔎 Auto Zoom', action: 'autozoom-node', nodeId: node.id });
 
-        const layoutPlugin = this.space.plugins.getPlugin('LayoutPlugin');
-        const isPinned = layoutPlugin?.isNodePinned(node.id) || false;
-        items.push({ label: isPinned ? '📌 Unpin' : '📌 Pin', action: 'toggle-pin-node', nodeId: node.id }); // Shortened Pin/Unpin
+        const isPinned = this.space.plugins.getPlugin('LayoutPlugin')?.isNodePinned(node.id) || false;
+        items.push({ label: isPinned ? '📌 Unpin' : '📌 Pin', action: 'toggle-pin-node', nodeId: node.id });
 
         items.push({ type: 'separator' });
         items.push({ label: '🗑️ Delete Node', action: 'delete-node', nodeId: node.id, isDestructive: true });
@@ -1242,7 +950,7 @@ export class UIManager {
 
     _getContextMenuItemsForEdge(edge) {
         return [
-            { label: '🎨 Edit Style', action: 'edit-edge-style', edgeId: edge.id }, // Changed "Edit Style..."
+            { label: '🎨 Edit Style', action: 'edit-edge-style', edgeId: edge.id },
             { label: '↔️ Reverse Direction', action: 'reverse-edge-direction', edgeId: edge.id },
             { type: 'separator' },
             { label: '🗑️ Delete Edge', action: 'delete-edge', edgeId: edge.id, isDestructive: true },
@@ -1253,29 +961,29 @@ export class UIManager {
         const items = [];
         if (worldPos) {
             const posData = { positionX: worldPos.x, positionY: worldPos.y, positionZ: worldPos.z };
-            items.push({ label: '📄 Add HTML Node', action: 'create-html-node', ...posData }); // Changed "Create HTML Node"
-            items.push({ label: '📝 Add Note', action: 'create-note-node', ...posData });       // Changed "Create Note Here"
-            items.push({ label: '📦 Add Box', action: 'create-shape-node-box', ...posData });        // Changed "Create Box Here"
-            items.push({ label: '🌐 Add Sphere', action: 'create-shape-node-sphere', ...posData });  // Changed "Create Sphere Here"
+            items.push({ label: '📄 Add HTML Node', action: 'create-html-node', ...posData });
+            items.push({ label: '📝 Add Note', action: 'create-note-node', ...posData });
+            items.push({ label: '📦 Add Box', action: 'create-shape-node-box', ...posData });
+            items.push({ label: '🌐 Add Sphere', action: 'create-shape-node-sphere', ...posData });
         }
         items.push({ type: 'separator' });
-        items.push({ label: '🎯 Center View', action: 'center-camera-view' }); // Changed emoji for Center View
-        items.push({ label: '🔄 Reset View', action: 'reset-camera-view' }); // Changed "Reset Zoom & Pan" and emoji
+        items.push({ label: '🎯 Center View', action: 'center-camera-view' });
+        items.push({ label: '🔄 Reset View', action: 'reset-camera-view' });
 
         const renderingPlugin = this.space.plugins.getPlugin('RenderingPlugin');
         if (renderingPlugin) {
             const isTransparent = renderingPlugin.background.alpha === 0;
             items.push({
-                label: isTransparent ? '🖼️ Opaque BG' : '💨 Transparent BG', // Added emojis for background toggle
+                label: isTransparent ? '🖼️ Opaque BG' : '💨 Transparent BG',
                 action: 'toggle-background-visibility',
             });
         }
         return items;
     }
 
-    _showContextMenu(x, y, items, _targetContext = null) { // targetContext can be node/edge for future use
+    _showContextMenu(x, y, items, _targetContext = null) {
         const cm = this.contextMenuElement;
-        cm.innerHTML = ''; // Clear previous items
+        cm.innerHTML = '';
         const ul = document.createElement('ul');
 
         items.forEach(itemData => {
@@ -1284,34 +992,24 @@ export class UIManager {
                 li.className = 'separator';
             } else {
                 li.textContent = itemData.label;
-                // Store all relevant data attributes for the action
                 Object.keys(itemData).forEach(key => {
-                    if (key !== 'label' && key !== 'type' && key !== 'isDestructive' && itemData[key] !== undefined && itemData[key] !== null) {
+                    if (!['label', 'type', 'isDestructive'].includes(key) && itemData[key] !== undefined && itemData[key] !== null) {
                         li.dataset[key] = String(itemData[key]);
                     }
                 });
-                if (itemData.disabled) { // Check for explicit disabled flag
-                    li.classList.add('disabled');
-                }
-                if (itemData.isDestructive) {
-                    li.classList.add('destructive');
-                }
+                if (itemData.disabled) li.classList.add('disabled');
+                if (itemData.isDestructive) li.classList.add('destructive');
             }
             ul.appendChild(li);
         });
         cm.appendChild(ul);
 
-        // Position the menu, ensuring it stays within viewport
         const { offsetWidth: menuWidth, offsetHeight: menuHeight } = cm;
-        const margin = 5; // Small margin from window edges
+        const margin = 5;
         let finalX = x + margin;
-        if (finalX + menuWidth > window.innerWidth - margin) {
-            finalX = x - menuWidth - margin;
-        }
+        if (finalX + menuWidth > window.innerWidth - margin) finalX = x - menuWidth - margin;
         let finalY = y + margin;
-        if (finalY + menuHeight > window.innerHeight - margin) {
-            finalY = y - menuHeight - margin;
-        }
+        if (finalY + menuHeight > window.innerHeight - margin) finalY = y - menuHeight - margin;
         cm.style.left = `${Math.max(margin, finalX)}px`;
         cm.style.top = `${Math.max(margin, finalY)}px`;
         cm.style.display = 'block';
@@ -1319,48 +1017,29 @@ export class UIManager {
         this.space.emit('ui:contextmenu:shown', { x, y, items });
     }
 
-    _hideContextMenu = () => {
-        if (this.contextMenuElement.style.display === 'block') {
-            this.contextMenuElement.style.display = 'none';
-            this.contextMenuElement.innerHTML = ''; // Clear items
-            this.space.emit('ui:contextmenu:hidden');
-        }
-    };
-
     _showConfirmDialog(message, onConfirm) {
-        const messageEl = $('#confirm-message', this.confirmDialogElement);
-        if (messageEl) messageEl.textContent = message;
+        $('#confirm-message', this.confirmDialogElement).textContent = message;
         this.confirmCallback = onConfirm;
         this.confirmDialogElement.style.display = 'block';
         this.space.emit('ui:confirmdialog:shown', { message });
     }
 
-    _hideConfirmDialog = () => {
-        if (this.confirmDialogElement.style.display === 'block') {
-            this.confirmDialogElement.style.display = 'none';
-            this.confirmCallback = null;
-            this.space.emit('ui:confirmdialog:hidden');
-        }
-    };
-
-    // --- Visuals for Linking ---
     _createTempLinkLine(sourceNode) {
-        this._removeTempLinkLine(); // Ensure any old one is gone
+        this._removeTempLinkLine();
         const material = new THREE.LineDashedMaterial({
-            color: 0xffaa00, // Bright orange, good visibility
+            color: 0xffaa00,
             linewidth: 2,
             dashSize: 8,
             gapSize: 4,
             transparent: true,
             opacity: 0.9,
-            depthTest: false, // Render on top
+            depthTest: false,
         });
-        // Start and end points are initially the same (sourceNode.position)
         const points = [sourceNode.position.clone(), sourceNode.position.clone()];
         const geometry = new THREE.BufferGeometry().setFromPoints(points);
         this.tempLinkLine = new THREE.Line(geometry, material);
-        this.tempLinkLine.computeLineDistances(); // Required for dashed lines
-        this.tempLinkLine.renderOrder = 1; // Ensure it's drawn over other things if needed
+        this.tempLinkLine.computeLineDistances();
+        this.tempLinkLine.renderOrder = 1;
 
         this.space.plugins.getPlugin('RenderingPlugin')?.getWebGLScene()?.add(this.tempLinkLine);
     }
@@ -1370,15 +1049,14 @@ export class UIManager {
         if (!this.tempLinkLine || !uiPlugin?.getIsLinking() || !uiPlugin?.getLinkSourceNode()) return;
 
         const sourceNode = uiPlugin.getLinkSourceNode();
-        // Project pointer to the Z-plane of the source node for a flat linking experience
         const targetPos = this.space.screenToWorld(screenX, screenY, sourceNode.position.z);
 
         if (targetPos) {
             const positions = this.tempLinkLine.geometry.attributes.position;
-            positions.setXYZ(1, targetPos.x, targetPos.y, targetPos.z); // Update the second point
+            positions.setXYZ(1, targetPos.x, targetPos.y, targetPos.z);
             positions.needsUpdate = true;
-            this.tempLinkLine.geometry.computeBoundingSphere(); // Important for raycasting if line itself was interactive
-            this.tempLinkLine.computeLineDistances(); // Update for dashed appearance
+            this.tempLinkLine.geometry.computeBoundingSphere();
+            this.tempLinkLine.computeLineDistances();
         }
     }
 
@@ -1391,26 +1069,23 @@ export class UIManager {
         }
     }
 
-    // --- Edge Menu ---
     showEdgeMenu(edge) {
         if (!edge) return;
-        this.hideEdgeMenu(); // Hide any existing one
+        this.hideEdgeMenu();
 
         const menuElement = this._createEdgeMenuElement(edge);
-        this.edgeMenuObject = new CSS3DObject(menuElement); // Create CSS3D object for positioning in 3D space
+        this.edgeMenuObject = new CSS3DObject(menuElement);
         this.space.plugins.getPlugin('RenderingPlugin')?.getCSS3DScene()?.add(this.edgeMenuObject);
-        this.updateEdgeMenuPosition(); // Position it correctly
+        this.updateEdgeMenuPosition();
         this.space.emit('ui:edgemenu:shown', { edge });
     }
 
     _createEdgeMenuElement(edge) {
         const menu = document.createElement('div');
-        menu.className = 'edge-menu-frame'; // Use this class for styling
+        menu.className = 'edge-menu-frame';
         menu.dataset.edgeId = edge.id;
 
-        // Sanitize color for input: ensure it's hex and starts with #
         let edgeColorHex = `#${edge.data.color?.toString(16).padStart(6, '0') || 'ffffff'}`;
-
 
         menu.innerHTML = `
             <input type="color" value="${edgeColorHex}" title="Edge Color" data-property="color">
@@ -1423,19 +1098,14 @@ export class UIManager {
             <button title="Delete Edge" class="delete-button" data-action="delete-edge">×</button>
         `;
 
-        // Event listeners for live updates
         menu.addEventListener('input', (e) => {
             if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) {
                 const property = e.target.dataset.property;
                 if (!property) return;
 
                 let value = e.target.value;
-                if (e.target.type === 'color') {
-                    value = parseInt(value.substring(1), 16); // Convert hex string to number
-                } else if (e.target.type === 'range') {
-                    value = parseFloat(value);
-                }
-                // For select, value is already string.
+                if (e.target.type === 'color') value = parseInt(value.substring(1), 16);
+                else if (e.target.type === 'range') value = parseFloat(value);
 
                 this.space.emit('ui:request:updateEdge', edge.id, property, value);
             }
@@ -1443,23 +1113,20 @@ export class UIManager {
 
         menu.addEventListener('click', (e) => {
             if (e.target.closest('button[data-action="delete-edge"]')) {
-                this._showConfirmDialog(`Delete edge "${edge.id.substring(0, 10)}..."?`, () =>
-                    this.space.emit('ui:request:removeEdge', edge.id)
-                );
+                this._showConfirmDialog(`Delete edge "${edge.id.substring(0, 10)}..."?`, () => this.space.emit('ui:request:removeEdge', edge.id));
             }
         });
 
-        // Prevent pointer events on the menu from propagating to the graph (e.g., starting a pan)
         menu.addEventListener('pointerdown', (e) => e.stopPropagation());
-        menu.addEventListener('wheel', (e) => e.stopPropagation()); // Allow scrolling range inputs etc.
+        menu.addEventListener('wheel', (e) => e.stopPropagation());
 
         return menu;
     }
 
     hideEdgeMenu = () => {
         if (this.edgeMenuObject) {
-            this.edgeMenuObject.element?.remove(); // Remove HTML element from DOM
-            this.edgeMenuObject.parent?.remove(this.edgeMenuObject); // Remove 3D object from scene
+            this.edgeMenuObject.element?.remove();
+            this.edgeMenuObject.parent?.remove(this.edgeMenuObject);
             this.edgeMenuObject = null;
             this.space.emit('ui:edgemenu:hidden');
         }
@@ -1474,100 +1141,62 @@ export class UIManager {
             this.hideEdgeMenu();
             return;
         }
-        const edge = selectedEdges.values().next().value; // Get the single selected edge
+        const edge = selectedEdges.values().next().value;
 
-        // Position menu at the midpoint of the edge
         const midPoint = new THREE.Vector3().lerpVectors(edge.source.position, edge.target.position, 0.5);
         this.edgeMenuObject.position.copy(midPoint);
 
-        // Orient menu to face the camera (optional, can make it hard to read if camera moves fast)
         const camInstance = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
-        if (camInstance) {
-            // this.edgeMenuObject.quaternion.copy(camInstance.quaternion); // Simple billboard
-            // Or, more advanced: lookAt camera but keep upright
-             this.edgeMenuObject.lookAt(camInstance.position);
-        }
-        this.edgeMenuObject.element.style.transform = `scale(${1 / this.space.plugins.getPlugin('RenderingPlugin').getCSS3DRenderer().getSize().width * 100000})`; // Adjust scale
+        if (camInstance) this.edgeMenuObject.lookAt(camInstance.position);
+        this.edgeMenuObject.element.style.transform = `scale(${1 / this.space.plugins.getPlugin('RenderingPlugin').getCSS3DRenderer().getSize().width * 100000})`;
     };
 
-
-    // --- Event Handlers for SpaceGraph Events ---
     _onSelectionChanged = (payload) => {
-        // payload = { selected: [{item, type}, ...], deselected: [{item, type}, ...] }
-        // This is a more generic handler. Specific _onNodeSelected/_onEdgeSelected might still be useful
-        // for reacting to the primary selected item if UIManager needs that distinction.
-
-        // Example: if a single edge is selected, show edge menu. Otherwise, hide.
         const uiPlugin = this.space.plugins.getPlugin('UIPlugin');
         if (uiPlugin) {
             const selectedEdges = uiPlugin.getSelectedEdges();
             if (selectedEdges.size === 1) {
                 const edge = selectedEdges.values().next().value;
-                // Ensure menu is shown for the currently selected edge, or if it's different
                 if (!this.edgeMenuObject || this.edgeMenuObject.element.dataset.edgeId !== edge.id) {
                     this.showEdgeMenu(edge);
                 } else {
-                     this.updateEdgeMenuPosition(); // Already visible, just update position
+                     this.updateEdgeMenuPosition();
                 }
             } else {
                 this.hideEdgeMenu();
             }
         }
-        this._updateHudSelectionInfo(); // Update HUD on any selection change
+        this._updateHudSelectionInfo();
     };
 
-    // Specific handlers for node/edge selection if needed beyond _onSelectionChanged
-    _onNodeSelectedOrDeselected = (targetNode) => {
-        // Called when a node is the primary subject of a selection/deselection action.
-        // `targetNode` can be null if selection is cleared.
-        // UIManager might use this to update some specific UI related to a single "active" node.
-    };
+    _onNodeSelectedOrDeselected = (targetNode) => {};
 
     _onEdgeSelectedOrDeselected = (targetEdge) => {
-        // Similar to _onNodeSelectedOrDeselected, but for edges.
-        // This is where the logic to show/hide the edge menu is now primarily driven by _onSelectionChanged,
-        // but this hook remains if direct reaction to a primary edge interaction is needed.
         const uiPlugin = this.space.plugins.getPlugin('UIPlugin');
-        if (uiPlugin) {
-            const selectedEdges = uiPlugin.getSelectedEdges();
-            if (targetEdge && selectedEdges.has(targetEdge) && selectedEdges.size === 1) {
-                 if (!this.edgeMenuObject || this.edgeMenuObject.element.dataset.edgeId !== targetEdge.id) {
-                    this.showEdgeMenu(targetEdge);
-                }
-            } else if (!targetEdge || !selectedEdges.has(targetEdge)) {
-                // If the targetEdge was deselected, or selection cleared, hide menu only if it was for this edge or no edge.
-                if (this.edgeMenuObject && (!targetEdge || this.edgeMenuObject.element.dataset.edgeId === targetEdge?.id)) {
-                     this.hideEdgeMenu();
-                } else if (selectedEdges.size !== 1) { // general hide if not single selection
-                    this.hideEdgeMenu();
-                }
+        if (!uiPlugin) return;
+        const selectedEdges = uiPlugin.getSelectedEdges();
+        if (targetEdge && selectedEdges.has(targetEdge) && selectedEdges.size === 1) {
+             if (!this.edgeMenuObject || this.edgeMenuObject.element.dataset.edgeId !== targetEdge.id) this.showEdgeMenu(targetEdge);
+        } else if (!targetEdge || !selectedEdges.has(targetEdge)) {
+            if (this.edgeMenuObject && (!targetEdge || this.edgeMenuObject.element.dataset.edgeId === targetEdge?.id) || selectedEdges.size !== 1) {
+                 this.hideEdgeMenu();
             }
         }
     };
 
+    _onLinkingStarted = (data) => this._transitionToState(InteractionState.LINKING_NODE, { sourceNode: data.sourceNode });
 
-    // Linking Process Event Handlers (called by UIPlugin state changes)
-    _onLinkingStarted = (data) => { // data = { sourceNode }
-        this._transitionToState(InteractionState.LINKING_NODE, { sourceNode: data.sourceNode });
-    };
-
-    _onLinkingCancelled = (_data) => { // data = { sourceNode }
+    _onLinkingCancelled = (_data) => {
         this._removeTempLinkLine();
-        if (this.currentState === InteractionState.LINKING_NODE) {
-            this._transitionToState(InteractionState.IDLE);
-        }
+        if (this.currentState === InteractionState.LINKING_NODE) this._transitionToState(InteractionState.IDLE);
     };
 
-    _onLinkingCompleted = (_data) => { // data = { source, target } or { source } if failed
+    _onLinkingCompleted = (_data) => {
         this._removeTempLinkLine();
-        if (this.currentState === InteractionState.LINKING_NODE) {
-            this._transitionToState(InteractionState.IDLE);
-        }
+        if (this.currentState === InteractionState.LINKING_NODE) this._transitionToState(InteractionState.IDLE);
     };
-
 
     dispose() {
-        // Remove all event listeners
         const passiveFalse = { passive: false };
         this.container.removeEventListener('pointerdown', this._onPointerDown, passiveFalse);
         window.removeEventListener('pointermove', this._onPointerMove, passiveFalse);
@@ -1580,7 +1209,6 @@ export class UIManager {
         window.removeEventListener('keydown', this._onKeyDown);
         this.container.removeEventListener('wheel', this._onWheel, passiveFalse);
 
-        // Unsubscribe from SpaceGraph events
         this.space.off('node:selected', this._onNodeSelectedOrDeselected);
         this.space.off('edge:selected', this._onEdgeSelectedOrDeselected);
         this.space.off('selection:changed', this._onSelectionChanged);
@@ -1590,21 +1218,17 @@ export class UIManager {
         this.space.off('linking:failed', this._onLinkingCompleted);
         this.space.off('camera:modeChanged', this._onCameraModeChanged);
 
-
-        // Clean up UI elements created by UIManager
         this._removeTempLinkLine();
         this.hideEdgeMenu();
-        this._hideContextMenu();
-        this._hideConfirmDialog();
-        this._hideKeyboardShortcutsDialog();
+        this._hideDialog(this.contextMenuElement);
+        this._hideDialog(this.confirmDialogElement);
+        this._hideDialog(this.keyboardShortcutsDialogElement);
         this.keyboardShortcutsDialogElement?.remove();
-        this._hideLayoutSettingsDialog(); // Ensure it's hidden
-        this.layoutSettingsDialogElement?.remove(); // Remove from DOM
+        this._hideDialog(this.layoutSettingsDialogElement);
+        this.layoutSettingsDialogElement?.remove();
         if(this.toolbarElement) this.toolbarElement.innerHTML = '';
         this.hudLayer?.remove();
 
-
-        // Nullify references
         this.space = null;
         this.container = null;
         this.contextMenuElement = null;
@@ -1614,7 +1238,5 @@ export class UIManager {
         this.resizedNode = null;
         this.hoveredEdge = null;
         this.confirmCallback = null;
-
-        console.log('UIManager disposed.');
     }
 }

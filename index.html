@@ -10,12 +10,9 @@
         <link href="src/index.css" rel="stylesheet" />
     </head>
     <body>
-        <div id="toolbar">
-            <!-- Toolbar buttons will be added here -->
-        </div>
+        <div id="toolbar"></div>
 
         <div id="mindmap-container">
-            <!-- Changed ID from 'space' to 'mindmap-container' -->
             <canvas id="webgl-canvas"></canvas>
             <div id="css3d-container"></div>
         </div>
@@ -39,10 +36,10 @@
         </script>
         <script type="module">
             import * as S from './src/index.js';
-            import { createExampleGraph } from './src/examples/exampleGraph.js'; // New import
+            import { createExampleGraph } from './src/examples/exampleGraph.js';
 
-            async function init() { // Make init async
-                const container = S.$('#mindmap-container'); // Updated selector
+            async function init() {
+                const container = S.$('#mindmap-container');
                 const contextMenuEl = S.$('#context-menu');
                 const confirmDialogEl = S.$('#confirm-dialog');
 
@@ -56,47 +53,35 @@
                 }
 
                 try {
-                    // Pass contextMenuEl and confirmDialogEl to SpaceGraph constructor
                     const space = new S.SpaceGraph(container, contextMenuEl, confirmDialogEl);
-                    await space.init(); // Await the new async initialization
+                    await space.init();
 
-                    // UIManager and ForceLayout are now created and managed by plugins internally.
-                    // space.ui = new S.UIManager(space, contextMenuEl, confirmDialogEl); // REMOVED
-                    // const layout = new S.ForceLayout(space); // REMOVED
-                    // space.layout = layout; // REMOVED
+                    createExampleGraph(space);
 
-                    createExampleGraph(space); // Call the imported function
-
-                    // Access layout via LayoutPlugin
                     const layoutPlugin = space.plugins.getPlugin('LayoutPlugin');
                     const layoutManager = layoutPlugin?.layoutManager;
                     const activeLayout = layoutManager?.getActiveLayout();
 
                     if (activeLayout && layoutManager) {
-                        // The default layout (ForceLayout) is already started by LayoutManager.applyLayout.
-                        // An additional kick can help settle the graph after nodes from createExampleGraph are added.
-                        console.log('Kicking layout for initial settling after example graph creation.');
-                        layoutManager.kick?.(); // This calls activeLayout.kick()
+                        layoutManager.kick?.();
                     } else {
                         console.error('LayoutPlugin or activeLayout not available after SpaceGraph initialization. Cannot kick.');
                     }
 
-                    space.centerView(null, 0.8); // Center view smoothly
-                    space.animate(); // Start render loop
+                    space.centerView(null, 0.8);
+                    space.animate();
 
-                    window.space = space; // Expose for debugging
-                    console.log('Mind Map Initialized Successfully.');
+                    window.space = space;
                 } catch (error) {
                     console.error('Initialization Failed:', error);
                     container.innerHTML = `<div style="color: red; padding: 20px;">Error initializing Mind Map: ${error.message}<br><pre>${error.stack}</pre></div>`;
                 }
             }
 
-            // --- Start the application ---
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', init);
             } else {
-                init(); // DOMContentLoaded has already fired
+                init();
             }
         </script>
     </body>
