@@ -193,6 +193,14 @@ function _calculateStepInWorker() {
         node.vy = (node.vy + acceleration.y) * (damping || 0.92);
         node.vz = (node.vz + acceleration.z) * (damping || 0.92);
 
+        // Add guard for NaN/Infinite velocities
+        if (!isFinite(node.vx) || !isFinite(node.vy) || !isFinite(node.vz)) {
+            // console.warn(`Worker: Node ${node.id} has NaN/Infinite velocity. Resetting. V:(${node.vx}, ${node.vy}, ${node.vz})`);
+            node.vx = 0;
+            node.vy = 0;
+            node.vz = 0;
+        }
+
         const speed = Math.sqrt(node.vx * node.vx + node.vy * node.vy + node.vz * node.vz);
         const maxSpeed = settings.maxSpeed || 100; // Add maxSpeed to settings if needed
         if (speed > maxSpeed) {
@@ -205,6 +213,15 @@ function _calculateStepInWorker() {
         node.x += node.vx;
         node.y += node.vy;
         node.z += node.vz;
+
+        // Add guard for NaN/Infinite positions
+        if (!isFinite(node.x) || !isFinite(node.y) || !isFinite(node.z)) {
+            // console.warn(`Worker: Node ${node.id} position became NaN/Infinite. Resetting. Pos:(${node.x}, ${node.y}, ${node.z}), Vel:(${node.vx}, ${node.vy}, ${node.vz})`);
+            // Reset to origin and zero velocity to stabilize.
+            // Consider if lastKnownGoodPosition would be better if stored.
+            node.x = 0; node.y = 0; node.z = 0;
+            node.vx = 0; node.vy = 0; node.vz = 0; // Also reset velocity to prevent re-occurrence if velocity was the cause
+        }
 
         currentTotalEnergy += 0.5 * mass * (node.vx * node.vx + node.vy * node.vy + node.vz * node.vz);
     });

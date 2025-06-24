@@ -69,6 +69,13 @@ export class CurvedEdge extends Edge {
     update() {
         if (!this.line || !this.source || !this.target) return;
 
+        // Defensive check for this.numPoints at the start of update()
+        if (typeof this.numPoints !== 'number' || isNaN(this.numPoints) || this.numPoints <= 0) {
+            console.warn(`CurvedEdge ${this.id}: this.numPoints is invalid at start of update(). Value: ${this.numPoints}, Type: ${typeof this.numPoints}. Resetting to default 20.`);
+            // console.log(`CurvedEdge ${this.id}: this.data.numCurvePoints at this time: ${this.data.numCurvePoints}`); // Debug log, can be removed
+            this.numPoints = 20; // Default value
+        }
+
         const sourcePos = this.source.position;
         const targetPos = this.target.position;
 
