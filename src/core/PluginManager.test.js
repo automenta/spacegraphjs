@@ -2,10 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { PluginManager } from './PluginManager.js';
 import { Plugin } from './Plugin.js';
 
-// Mock SpaceGraph instance for the PluginManager constructor
 const mockSpaceGraph = {
     emit: vi.fn(),
-    // Add other properties/methods if PluginManager/Plugin interaction requires them
 };
 
 class MockPlugin extends Plugin {
@@ -71,7 +69,7 @@ describe('PluginManager', () => {
 
     it('should not register an invalid plugin object', () => {
         const pm = new PluginManager(mockSpaceGraph);
-        const invalidPlugin = { name: 'InvalidPlugin' }; // Does not extend Plugin or have getName
+        const invalidPlugin = { name: 'InvalidPlugin' };
         const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
         pm.add(invalidPlugin);
@@ -84,14 +82,14 @@ describe('PluginManager', () => {
         consoleErrorSpy.mockRestore();
     });
 
-    it('should initialize all registered plugins', async () => { // Made test async
+    it('should initialize all registered plugins', async () => {
         const pm = new PluginManager(mockSpaceGraph);
         const plugin1 = new MockPlugin(mockSpaceGraph, pm, 'Plugin1');
         const plugin2 = new MockPlugin(mockSpaceGraph, pm, 'Plugin2');
         pm.add(plugin1);
         pm.add(plugin2);
 
-        await pm.initPlugins(); // Added await
+        await pm.initPlugins();
 
         expect(plugin1.init).toHaveBeenCalled();
         expect(plugin1.isInitialized).toBe(true);

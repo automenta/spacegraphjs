@@ -22,9 +22,7 @@ SpaceGraphJS is a JavaScript library for creating interactive 3D force-directed 
 
 ## Live Demo
 
-A live demo is available on GitHub Pages: [https://TTime.github.io/spacegraphjs/](https://TTime.github.io/spacegraphjs/) (Note: This link will work once deployed via GitHub Actions as configured in `.github/workflows/gh-pages.yml`)
-
-The `index.html` in the root of this repository also serves as the live demo.
+A live demo is available on GitHub Pages: [https://TTime.github.io/spacegraphjs/](https://TTime.github.io/spacegraphjs/)
 
 ## Getting Started
 
@@ -44,7 +42,6 @@ SpaceGraphJS relies on ES modules and modern browser features. You'll need to im
             <meta charset="UTF-8" />
             <title>My SpaceGraph App</title>
             <link rel="stylesheet" href="path/to/your/spacegraph.css" />
-            <!-- Or your custom styles -->
             <style>
                 body {
                     margin: 0;
@@ -55,7 +52,6 @@ SpaceGraphJS relies on ES modules and modern browser features. You'll need to im
                     height: 100vh;
                     position: relative;
                 }
-                /* Required hidden elements for UIManager, styled by spacegraph.css or your CSS */
                 .context-menu {
                     display: none;
                 }
@@ -67,8 +63,6 @@ SpaceGraphJS relies on ES modules and modern browser features. You'll need to im
         <body>
             <div id="graph-container">
                 <canvas id="webgl-canvas"></canvas>
-                <!-- Required by SpaceGraph -->
-                <!-- css3d-container will be added by SpaceGraph -->
                 <div class="context-menu" id="context-menu"></div>
                 <div class="dialog" id="confirm-dialog">
                     <p id="confirm-message">Are you sure?</p>
@@ -101,11 +95,11 @@ SpaceGraphJS relies on ES modules and modern browser features. You'll need to im
         ForceLayout,
         NoteNode,
         ShapeNode,
-        $, // Optional utility for querySelector
+        $,
     } from './path/to/src/spacegraph.js';
 
     document.addEventListener('DOMContentLoaded', () => {
-        const graphContainer = $('#graph-container'); // Or document.getElementById('graph-container')
+        const graphContainer = $('#graph-container');
         const contextMenuEl = $('#context-menu');
         const confirmDialogEl = $('#confirm-dialog');
 
@@ -118,7 +112,6 @@ SpaceGraphJS relies on ES modules and modern browser features. You'll need to im
         space.ui = new UIManager(space, contextMenuEl, confirmDialogEl);
         space.layout = new ForceLayout(space);
 
-        // Add some nodes
         const node1 = space.addNode(
             new NoteNode(
                 'node1',
@@ -143,16 +136,14 @@ SpaceGraphJS relies on ES modules and modern browser features. You'll need to im
             )
         );
 
-        // Add an edge
         space.addEdge(node1, node2);
 
-        // Start layout and rendering
-        space.layout.runOnce(100); // Settle layout
+        space.layout.runOnce(100);
         space.centerView();
-        space.layout.start(); // Continuous layout updates
-        space.animate(); // Start render loop
+        space.layout.start();
+        space.animate();
 
-        window.mySpaceGraph = space; // For easy debugging
+        window.mySpaceGraph = space;
     });
     ```
 
@@ -162,8 +153,6 @@ You'll need CSS to style the HTML nodes, context menus, dialogs, and other UI el
 
 ## Development
 
-(This section can be expanded with build instructions if a build process is added later.)
-
 To run the demo locally, simply open `index.html` in a modern web browser that supports ES modules.
 
 ## Contributing
@@ -172,4 +161,4 @@ Contributions are welcome! Please feel free to submit issues or pull requests.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details (TODO: Add LICENSE file).
+This project is licensed under the MIT License - see the LICENSE file for details.

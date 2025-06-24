@@ -7,15 +7,14 @@ export class BaseNode {
     data = {};
     mass = 1.0;
     id = null;
-    mesh = null; // For 3D object nodes
-    cssObject = null; // For HTML nodes
-    labelObject = null; // For 3D labels on ShapeNodes
+    mesh = null;
+    cssObject = null;
+    labelObject = null;
     isPinned = false;
 
     constructor(id, position = { x: 0, y: 0, z: 0 }, data = {}, mass = 1.0) {
         this.id = id ?? Utils.generateId('node');
         if (!isFinite(position.x) || !isFinite(position.y) || !isFinite(position.z)) {
-            console.warn(`BaseNode ${this.id}: Initial position is invalid (${position.x}, ${position.y}, ${position.z}). Defaulting to (0,0,0).`);
             this.position.set(0, 0, 0);
         } else {
             this.position.set(position.x, position.y, position.z);
@@ -29,17 +28,15 @@ export class BaseNode {
         return { label: '' };
     }
 
-    update(_space) {
-        /* Base update logic */
-    }
+    update(_space) {}
 
     dispose() {
         this.mesh?.geometry?.dispose();
         this.mesh?.material?.dispose();
         this.mesh?.parent?.remove(this.mesh);
-        this.cssObject?.element?.remove(); // Remove HTML element if it exists
+        this.cssObject?.element?.remove();
         this.cssObject?.parent?.remove(this.cssObject);
-        this.labelObject?.element?.remove(); // Remove label element if it exists
+        this.labelObject?.element?.remove();
         this.labelObject?.parent?.remove(this.labelObject);
         this.space = null;
         this.mesh = null;
@@ -51,13 +48,10 @@ export class BaseNode {
         return 50;
     }
 
-    setSelectedStyle(_selected) {
-        /* Base selection style logic */
-    }
+    setSelectedStyle(_selected) {}
 
     setPosition(x, y, z) {
         if (!isFinite(x) || !isFinite(y) || !isFinite(z)) {
-            console.warn(`BaseNode ${this.id}: Attempted to set invalid position (${x}, ${y}, ${z}). Keeping previous position: (${this.position.x}, ${this.position.y}, ${this.position.z}).`);
             return;
         }
         this.position.set(x, y, z);
@@ -65,22 +59,13 @@ export class BaseNode {
 
     startDrag() {
         this.space?.emit('graph:node:dragstart', { node: this });
-        // Optionally, if LayoutPlugin needs to know directly:
-        // this.space?.plugins.getPlugin('LayoutPlugin')?.fixNode(this);
     }
 
     drag(newPosition) {
-        // The UIManager already emits 'graph:node:dragged' with new position.
-        // This internal drag method is primarily for updating the node's own state.
         this.setPosition(newPosition.x, newPosition.y, newPosition.z);
-        // Note: 'graph:node:dragged' is emitted by UIManager with {node, position}
-        // If a simpler 'node:drag' for internal use is needed by other systems, it could be added here.
-        // For now, UIManager's event is the primary one for external listeners.
     }
 
     endDrag() {
         this.space?.emit('graph:node:dragend', { node: this });
-        // Optionally, if LayoutPlugin needs to know directly:
-        // this.space?.plugins.getPlugin('LayoutPlugin')?.releaseNode(this);
     }
 }

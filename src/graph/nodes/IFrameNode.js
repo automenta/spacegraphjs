@@ -1,27 +1,13 @@
 import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
 import { BaseNode } from './BaseNode.js';
 
-/**
- * Represents a node that displays web content within an iframe.
- * The iframe is rendered as a `CSS3DObject`.
- */
 export class IFrameNode extends BaseNode {
     static DEFAULT_WIDTH = 480;
     static DEFAULT_HEIGHT = 360;
-    /** @type {HTMLElement | null} The main HTML element (wrapper div) for this node. */
     htmlElement = null;
-    /** @type {HTMLIFrameElement | null} The HTML iframe element. */
     iframeElement = null;
-    /** @type {{width: number, height: number}} The size of the iframe container. */
     size = { width: IFrameNode.DEFAULT_WIDTH, height: IFrameNode.DEFAULT_HEIGHT };
 
-    /**
-     * Creates an instance of IFrameNode.
-     * @param {string} id Unique ID for the node.
-     * @param {{x: number, y: number, z: number}} position Initial position.
-     * @param {Object} [data={}] Node data, including `iframeUrl`, `width`, `height`, `label`, `sandbox` policy.
-     * @param {number} [mass=1.3] Mass for physics calculations.
-     */
     constructor(id, position, data = {}, mass = 1.3) {
         super(id, position, data, mass);
         this.size = {
@@ -37,12 +23,12 @@ export class IFrameNode extends BaseNode {
     getDefaultData() {
         return {
             label: 'IFrame Node',
-            iframeUrl: 'https://threejs.org', // Default URL
+            iframeUrl: 'https://threejs.org',
             width: IFrameNode.DEFAULT_WIDTH,
             height: IFrameNode.DEFAULT_HEIGHT,
             type: 'iframe',
             backgroundColor: 'var(--sg-node-bg, #202025)',
-            borderColor: 'var(--sg-node-border-focus, #557799)', // For a visible frame
+            borderColor: 'var(--sg-node-border-focus, #557799)',
         };
     }
 
@@ -54,11 +40,10 @@ export class IFrameNode extends BaseNode {
         el.style.width = `${this.size.width}px`;
         el.style.height = `${this.size.height}px`;
         el.style.backgroundColor = this.data.backgroundColor;
-        el.style.border = `1px solid ${this.data.borderColor}`; // Visible border
+        el.style.border = `1px solid ${this.data.borderColor}`;
         el.draggable = false;
         el.ondragstart = (e) => e.preventDefault();
 
-        // Title bar (optional, but good for context and if iframe content is fully interactive)
         const titleDiv = document.createElement('div');
         titleDiv.className = 'node-title iframe-title-bar';
         titleDiv.textContent = this.data.label;
@@ -71,32 +56,24 @@ export class IFrameNode extends BaseNode {
             position: 'absolute',
             top: '0',
             left: '0',
-            width: 'calc(100% - 8px)', // Account for padding
-            zIndex: '1', // Above iframe if it misbehaves
-            pointerEvents: 'none', // Title bar itself is not interactive for dragging
+            width: 'calc(100% - 8px)',
+            zIndex: '1',
+            pointerEvents: 'none',
         });
 
         this.iframeElement = document.createElement('iframe');
         this.iframeElement.style.width = '100%';
         this.iframeElement.style.height = '100%';
         this.iframeElement.style.border = 'none';
-        // Ensure iframe content doesn't block main page scrolling if embedded iframe itself scrolls.
-        // this.iframeElement.style.overflow = 'auto'; // Default browser behavior
 
-        // Security attribute: sandbox (optional, but recommended for untrusted content)
-        // Example: this.iframeElement.sandbox = 'allow-scripts allow-same-origin';
         if (this.data.sandbox) {
             this.iframeElement.sandbox = this.data.sandbox;
         }
 
         this.iframeElement.src = this.data.iframeUrl;
 
-        // Allow iframe to capture pointer events for its content interaction.
-        // This means the node cannot be dragged by clicking inside the iframe.
-        // Users would need to drag by the border if one is styled, or by a drag handle if implemented.
         this.iframeElement.style.pointerEvents = 'auto';
 
-        // Stop graph interactions when interacting with iframe scrollbars or content
         this.iframeElement.addEventListener('pointerdown', (e) => e.stopPropagation());
         this.iframeElement.addEventListener('wheel', (e) => e.stopPropagation(), { passive: false });
 
@@ -105,10 +82,6 @@ export class IFrameNode extends BaseNode {
         return el;
     }
 
-    /**
-     * Sets or updates the URL for the iframe source.
-     * @param {string} url The new URL to load in the iframe.
-     */
     setIframeUrl(url) {
         this.data.iframeUrl = url;
         if (this.iframeElement) {
@@ -123,7 +96,6 @@ export class IFrameNode extends BaseNode {
                 this.cssObject.quaternion.copy(space.camera._cam.quaternion);
             }
         }
-        // Label LOD could be applied to the titleDiv if needed, or the whole node
     }
 
     getBoundingSphereRadius() {
@@ -141,8 +113,8 @@ export class IFrameNode extends BaseNode {
 
     dispose() {
         if (this.iframeElement) {
-            this.iframeElement.src = 'about:blank'; // Clear content
+            this.iframeElement.src = 'about:blank';
         }
-        super.dispose(); // Handles cssObject and htmlElement removal
+        super.dispose();
     }
 }

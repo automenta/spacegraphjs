@@ -1,12 +1,8 @@
-/**
- * @file DataNode.js - Represents a node that can display simple charts based on its data.
- * @licence MIT
- */
 import * as THREE from 'three';
 import { BaseNode } from './BaseNode.js';
-import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js'; // If label is CSS3D
+import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
 
-const DEFAULT_NODE_SIZE = 100; // Width/Height of the chart plane
+const DEFAULT_NODE_SIZE = 100;
 const DEFAULT_CHART_BG_COLOR = '#222227';
 const DEFAULT_CHART_TEXT_COLOR = '#eeeeee';
 
@@ -16,14 +12,14 @@ export class DataNode extends BaseNode {
     texture = null;
 
     constructor(id, position, data = {}, mass = 1.2) {
-        super(id, position, data, mass); // data might include { chartType: 'bar', chartData: [...], label: '...' }
-        this.size = this.data.size || DEFAULT_NODE_SIZE; // Used for plane geometry size
+        super(id, position, data, mass);
+        this.size = this.data.size || DEFAULT_NODE_SIZE;
 
         this._setupCanvas();
         this._createChartMesh();
 
         if (this.data.label) {
-            this.labelObject = this._createLabel(); // Similar to ShapeNode or HtmlNode
+            this.labelObject = this._createLabel();
         }
         this.update();
         this.updateBoundingSphere();
@@ -34,28 +30,24 @@ export class DataNode extends BaseNode {
             label: 'Data Node',
             type: 'data',
             size: DEFAULT_NODE_SIZE,
-            chartType: 'bar', // 'bar', 'line', 'pie'
+            chartType: 'bar',
             chartData: [
-                // Example data structure
                 { label: 'A', value: 10, color: '#ff6384' },
                 { label: 'B', value: 20, color: '#36a2eb' },
                 { label: 'C', value: 15, color: '#ffce56' },
             ],
             chartBackgroundColor: DEFAULT_CHART_BG_COLOR,
             chartTextColor: DEFAULT_CHART_TEXT_COLOR,
-            // labelLod: [] // Optional for label visibility
         };
     }
 
     _setupCanvas() {
         this.canvas = document.createElement('canvas');
-        // Power-of-two size for canvas texture is good practice, but not strictly necessary for modern GPUs
-        // Let's use a fixed reasonable resolution for now.
         this.canvas.width = 256;
         this.canvas.height = 256;
         this.ctx = this.canvas.getContext('2d');
         this.texture = new THREE.CanvasTexture(this.canvas);
-        this.texture.colorSpace = THREE.SRGBColorSpace; // Match renderer output color space
+        this.texture.colorSpace = THREE.SRGBColorSpace;
     }
 
     _createChartMesh() {
@@ -63,7 +55,7 @@ export class DataNode extends BaseNode {
         const material = new THREE.MeshStandardMaterial({
             map: this.texture,
             side: THREE.DoubleSide,
-            transparent: true, // If chart background has alpha
+            transparent: true,
             roughness: 0.8,
             metalness: 0.1,
         });
@@ -72,7 +64,7 @@ export class DataNode extends BaseNode {
         this.mesh.castShadow = true;
         this.mesh.receiveShadow = true;
 
-        this._drawChart(); // Initial draw
+        this._drawChart();
     }
 
     _drawChart() {
@@ -81,7 +73,6 @@ export class DataNode extends BaseNode {
         const { chartType, chartData, chartBackgroundColor, chartTextColor } = this.data;
         const { width, height } = this.canvas;
 
-        // Clear canvas
         this.ctx.fillStyle = chartBackgroundColor || DEFAULT_CHART_BG_COLOR;
         this.ctx.fillRect(0, 0, width, height);
 
@@ -100,7 +91,6 @@ export class DataNode extends BaseNode {
             case 'bar':
                 this._drawBarChart(chartData, width, height);
                 break;
-            // TODO: Implement 'line' and 'pie' chart types
             case 'line':
                 this.ctx.fillText('Line chart NI', width / 2, height / 2);
                 break;
@@ -119,8 +109,8 @@ export class DataNode extends BaseNode {
 
         const padding = 20;
         const chartWidth = canvasWidth - 2 * padding;
-        const chartHeight = canvasHeight - 2 * padding - 20; // Extra padding for labels at bottom
-        const barWidth = chartWidth / numBars - 5; // 5px spacing between bars
+        const chartHeight = canvasHeight - 2 * padding - 20;
+        const barWidth = chartWidth / numBars - 5;
         const maxValue = Math.max(...data.map((d) => d.value), 0);
 
         if (maxValue === 0) {
@@ -131,7 +121,7 @@ export class DataNode extends BaseNode {
         data.forEach((item, index) => {
             const barHeight = (item.value / maxValue) * chartHeight;
             const x = padding + index * (barWidth + 5);
-            const y = canvasHeight - padding - barHeight - 20; // -20 for bottom label space
+            const y = canvasHeight - padding - barHeight - 20;
 
             this.ctx.fillStyle = item.color || '#cccccc';
             this.ctx.fillRect(x, y, barWidth, barHeight);
@@ -141,33 +131,28 @@ export class DataNode extends BaseNode {
         });
     }
 
-    // Call this if data changes
     updateChartData(newData) {
         this.data.chartData = newData;
         this._drawChart();
     }
 
     _createLabel() {
-        // Basic CSS3D Label, similar to ShapeNode
         const div = document.createElement('div');
-        div.className = 'node-label-3d node-common'; // Use common styling
+        div.className = 'node-label-3d node-common';
         div.textContent = this.data.label || '';
         div.dataset.nodeId = this.id;
         const labelObj = new CSS3DObject(div);
-        // Initial position will be set in update()
         return labelObj;
     }
 
     update(space) {
-        super.update(space); // Handles this.mesh.position.copy(this.position)
+        super.update(space);
         if (this.labelObject) {
-            const offset = this.getBoundingSphereRadius() * 1.1 + 15; // Position above the plane
+            const offset = this.getBoundingSphereRadius() * 1.1 + 15;
             this.labelObject.position.copy(this.position).y += offset;
             if (space?.camera?._cam) {
-                // Billboard effect
                 this.labelObject.quaternion.copy(space.camera._cam.quaternion);
             }
-            // TODO: _applyLabelLOD if labelLod data is provided
         }
     }
 
@@ -177,9 +162,7 @@ export class DataNode extends BaseNode {
             this.mesh.geometry.computeBoundingSphere();
         }
         this._boundingSphere = this.mesh.geometry.boundingSphere.clone();
-        this._boundingSphere.center.copy(this.position); // Ensure it's centered on node's logical position
-        // Radius is based on plane size. PlaneGeometry's radius is sqrt((w/2)^2 + (h/2)^2)
-        // For a square plane of size `this.size`, radius is sqrt(2 * (this.size/2)^2) = (this.size/2)*sqrt(2)
+        this._boundingSphere.center.copy(this.position);
         this._boundingSphere.radius = (this.size / 2) * Math.sqrt(2);
     }
 
@@ -189,7 +172,6 @@ export class DataNode extends BaseNode {
     }
 
     setSelectedStyle(selected) {
-        // Example: Change material emissive or outline (if outline effect is aware of this node type)
         if (this.mesh?.material) {
             this.mesh.material.emissive?.setHex(selected ? 0x333300 : 0x000000);
         }
@@ -197,7 +179,7 @@ export class DataNode extends BaseNode {
     }
 
     dispose() {
-        super.dispose(); // Removes mesh and labelObject from scene
+        super.dispose();
         this.texture?.dispose();
         this.canvas = null;
         this.ctx = null;

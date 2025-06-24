@@ -1,55 +1,35 @@
-/**
- * @file CurvedEdge.js - Represents a curved edge (Bezier) in SpaceGraph.
- * @licence MIT
- */
-
 import * as THREE from 'three';
 import { Edge } from './Edge.js';
-// import { LineGeometry } from 'three/addons/lines/LineGeometry.js'; // Not needed, Edge uses LineGeometry from Line2
-// import { LineMaterial } from 'three/addons/lines/LineMaterial.js'; // Not needed, Edge handles material
-// import { Line2 } from 'three/addons/lines/Line2.js'; // Not needed, Edge handles line object
 import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
 
 export class CurvedEdge extends Edge {
-    labelObject = null; // For CSS3D label
-    // Default number of points to define the curve smoothness
+    labelObject = null;
     numPoints = 20;
-    // Controls the "bend" of the curve. Positive values bend one way, negative the other.
-    // Can be a fixed value or calculated dynamically (e.g., based on distance or angle between nodes).
-    curvature = 0.3; // Default curvature factor
+    curvature = 0.3;
 
     constructor(id, sourceNode, targetNode, data = {}) {
         super(id, sourceNode, targetNode, data);
 
         let requestedNumPoints = this.data.numCurvePoints;
-        // Ensure numPoints (segments for the curve) is a positive integer.
-        // curve.getPoints(N) requires N >= 1 to produce at least 2 points.
         if (typeof requestedNumPoints !== 'number' || isNaN(requestedNumPoints) || requestedNumPoints <= 0) {
-            requestedNumPoints = 20; // Default to 20 segments
+            requestedNumPoints = 20;
         }
-        this.numPoints = Math.max(1, Math.floor(requestedNumPoints)); // Ensure at least 1 segment, and integer
+        this.numPoints = Math.max(1, Math.floor(requestedNumPoints));
 
         this.curvature = (typeof this.data.curvature === 'number' && isFinite(this.data.curvature))
             ? this.data.curvature
-            : 0.3; // Default curvature
+            : 0.3;
 
-        // The line object created by super() is a straight line.
-        // We need to replace its geometry or re-create the line if Line2 geometry cannot be easily updated.
-        // For LineGeometry, setPositions should work.
         if (this.data.label) {
             this.labelObject = this._createLabel();
-            // Ensure label is added to the scene by EdgePlugin, similar to how arrowheads are handled.
-            // This might require EdgePlugin to check for labelObject and add it.
-            // For now, we assume it's added when the edge itself is added to the scene.
         }
-        this.update(); // Call update to apply curve points and position label
+        this.update();
     }
 
     _createLabel() {
         const div = document.createElement('div');
-        div.className = 'edge-label node-common'; // Re-use some styling
+        div.className = 'edge-label node-common';
         div.textContent = this.data.label;
-        // Basic styling, can be enhanced with data properties
         Object.assign(div.style, {
             pointerEvents: 'none',
             color: this.data.labelColor || 'var(--sg-edge-label-text, white)',
@@ -61,112 +41,78 @@ export class CurvedEdge extends Edge {
             whiteSpace: 'nowrap',
         });
         const label = new CSS3DObject(div);
-        label.userData = { edgeId: this.id, type: 'edge-label-curved' }; // Differentiate if needed
+        label.userData = { edgeId: this.id, type: 'edge-label-curved' };
         return label;
     }
 
-    // Override update to calculate and set points for a Bezier curve
     update() {
         if (!this.line || !this.source || !this.target) return;
 
-        // Defensive check for this.numPoints at the start of update()
         if (typeof this.numPoints !== 'number' || isNaN(this.numPoints) || this.numPoints <= 0) {
-            console.warn(`CurvedEdge ${this.id}: this.numPoints is invalid at start of update(). Value: ${this.numPoints}, Type: ${typeof this.numPoints}. Resetting to default 20.`);
-            // console.log(`CurvedEdge ${this.id}: this.data.numCurvePoints at this time: ${this.data.numCurvePoints}`); // Debug log, can be removed
-            this.numPoints = 20; // Default value
+            this.numPoints = 20;
         }
 
         const sourcePos = this.source.position;
         const targetPos = this.target.position;
 
-        // Fix A3: Check for NaN positions in source/target nodes
         if (!isFinite(sourcePos.x) || !isFinite(sourcePos.y) || !isFinite(sourcePos.z) ||
             !isFinite(targetPos.x) || !isFinite(targetPos.y) || !isFinite(targetPos.z)) {
-            console.warn(`CurvedEdge ${this.id}: Source or target node has NaN/Infinite position. Skipping update. Source: (${sourcePos.x},${sourcePos.y},${sourcePos.z}), Target: (${targetPos.x},${targetPos.y},${targetPos.z})`);
-            // Optionally hide the edge:
-            // if (this.line) this.line.visible = false;
             return;
         }
-        // if (this.line) this.line.visible = true; // Ensure visible if previously hidden
 
-
-        // Midpoint for control point calculation
         const midPoint = new THREE.Vector3().addVectors(sourcePos, targetPos).multiplyScalar(0.5);
 
-        // Perpendicular direction for control point offset
         const dx = targetPos.x - sourcePos.x;
         const dy = targetPos.y - sourcePos.y;
         let perpendicular = new THREE.Vector3(-dy, dx, 0);
 
-        // Check if perpendicular is a zero vector (or very close to it)
-        // or if it became NaN after normalization (if dx, dy were 0)
-        if (perpendicular.lengthSq() < 1e-8) { // Check before normalize to avoid NaN with (0,0,0).normalize()
-            // If source and target are at the same X,Y, or very close.
-            // Try to use something perpendicular to the view direction projected on XY.
+        if (perpendicular.lengthSq() < 1e-8) {
             const viewDirection = new THREE.Vector3();
             if (this.space?.camera?._cam) {
                 this.space.camera._cam.getWorldDirection(viewDirection);
-                perpendicular.set(-viewDirection.y, viewDirection.x, 0); // Perpendicular to camera's XY projection
+                perpendicular.set(-viewDirection.y, viewDirection.x, 0);
             }
-            // If still zero (e.g., camera looking straight down or up, or no camera info)
             if (perpendicular.lengthSq() < 1e-8) {
-                perpendicular.set(1, 0, 0); // Default fallback to X-axis
+                perpendicular.set(1, 0, 0);
             }
         }
-        perpendicular.normalize(); // Normalize after ensuring it's not a zero vector
+        perpendicular.normalize();
 
         const distance = sourcePos.distanceTo(targetPos);
         const controlPointOffset = perpendicular.multiplyScalar(distance * this.curvature);
         const controlPoint = new THREE.Vector3().addVectors(midPoint, controlPointOffset);
 
-        // Ensure controlPoint is not NaN
         if (isNaN(controlPoint.x) || isNaN(controlPoint.y) || isNaN(controlPoint.z)) {
-            console.warn(`CurvedEdge ${this.id}: Control point has NaN values. Defaulting to midpoint. CP:`, controlPoint, "Source:", sourcePos, "Target:", targetPos);
-            controlPoint.copy(midPoint); // Fallback if control point calculation failed
+            controlPoint.copy(midPoint);
         }
 
         const curve = new THREE.QuadraticBezierCurve3(sourcePos, controlPoint, targetPos);
 
-        // this.numPoints is already validated in constructor to be an integer >= 1
         const curveSegments = this.numPoints;
-        const points = curve.getPoints(curveSegments); // getPoints(N) returns N+1 points
+        const points = curve.getPoints(curveSegments);
 
         const positions = [];
         points.forEach((p) => {
-            // Additional check for NaN within points from curve.getPoints, though less likely if inputs are sane
             if (isNaN(p.x) || isNaN(p.y) || isNaN(p.z)) {
-                console.warn(`CurvedEdge ${this.id}: NaN coordinate in curve points. Point:`, p);
-                // Skip this point or use a fallback? For now, let it pass to see if setPositions handles it.
-                // Or, more drastically, positions.push(0,0,0) though that would distort the line.
             }
             positions.push(p.x, p.y, p.z);
         });
 
-        // Logging added for debugging the main issue of point count mismatch
-        // console.log(`CurvedEdge ${this.id}: numPoints: ${this.numPoints} (segments: ${curveSegments}), expected points: ${curveSegments + 1}, positions length: ${positions.length / 3}`);
-
         if (positions.length === 0 || positions.length / 3 !== curveSegments + 1) {
-            console.error(`CurvedEdge ${this.id}: Incorrect number of points generated. Expected ${curveSegments + 1} points, got ${positions.length/3}. NumPoints (segments for curve) was ${this.numPoints}. Source:`, sourcePos, "Target:", targetPos, "Control:", controlPoint);
-            // Fallback: create a straight line if curve generation failed catastrophically
-            positions.length = 0; // Clear potentially bad positions
+            positions.length = 0;
             positions.push(sourcePos.x, sourcePos.y, sourcePos.z);
             positions.push(targetPos.x, targetPos.y, targetPos.z);
-             // If we fallback to 2 points, numSegments for color needs to be 1.
-             // This part is tricky as color array expects numSegments+1 colors.
         }
 
         this.line.geometry.setPositions(positions);
 
-        // Ensure the geometry is valid before proceeding
         const posAttribute = this.line.geometry.attributes.position;
         if (!posAttribute || posAttribute.count === 0) {
-            console.warn(`CurvedEdge ${this.id}: Position attribute is empty after setPositions. Skipping further updates.`);
             return;
         }
 
-        const actualNumPointsInGeometry = posAttribute.count; // This is the true number of points in the geometry
+        const actualNumPointsInGeometry = posAttribute.count;
 
-        // Handle gradient colors for curved lines
         if (this.data.gradientColors && this.data.gradientColors.length === 2) {
             if (!this.line.material.vertexColors) {
                 this.line.material.vertexColors = true;
@@ -176,45 +122,29 @@ export class CurvedEdge extends Edge {
             const colorEnd = new THREE.Color(this.data.gradientColors[1]);
             const curveColors = [];
 
-            // The number of color entries must match the actual number of points in the geometry.
-            // Interpolation should be over (actualNumPointsInGeometry - 1) segments.
             const effectiveNumSegmentsForColor = Math.max(1, actualNumPointsInGeometry - 1);
 
             for (let i = 0; i < actualNumPointsInGeometry; i++) {
-                const t = (effectiveNumSegmentsForColor === 0) ? 0 : (i / effectiveNumSegmentsForColor); // Avoid division by zero if only 1 point (though unlikely)
+                const t = (effectiveNumSegmentsForColor === 0) ? 0 : (i / effectiveNumSegmentsForColor);
                 const interpolatedColor = new THREE.Color().lerpColors(colorStart, colorEnd, t);
                 curveColors.push(interpolatedColor.r, interpolatedColor.g, interpolatedColor.b);
             }
 
-            // Corrected guard for setColors:
-            // The number of points in geometry (posAttribute.count) must be consistent with
-            // the `numSegments` used for color generation (which is actualNumPointsInGeometry -1).
-            // The `curveColors` array will have `actualNumPointsInGeometry * 3` elements.
-            // `posAttribute.array.length` should be `actualNumPointsInGeometry * 3`.
-
             if (posAttribute.array && posAttribute.array.length > 0 && posAttribute.array.length === curveColors.length) {
                 this.line.geometry.setColors(curveColors);
-                // No need to check instanceColorStart/End here, this is for LineGeometry used by Line2
-            } else {
-                console.warn(`CurvedEdge ${this.id}: Skipping setColors in update() due to mismatch or invalid geometry positions.
-                    Actual Points in Geometry: ${actualNumPointsInGeometry}, Colors Generated: ${curveColors.length/3}, Positions Array Length: ${posAttribute?.array?.length},
-                    Original numPoints: ${this.numPoints}, Segments for Color: ${effectiveNumSegmentsForColor}`);
             }
         } else {
-            // Ensure no gradient if not specified (similar to Edge.js update)
             if (this.line.material.vertexColors) {
                 this.line.material.vertexColors = false;
                 this.line.material.needsUpdate = true;
             }
-            this.line.material.color.set(this.data.color || 0x00d0ff); // Fallback or defined solid color
+            this.line.material.color.set(this.data.color || 0x00d0ff);
         }
 
         if (this.line.material.dashed) {
-            this.line.computeLineDistances(); // Required for dashed lines
+            this.line.computeLineDistances();
         }
-        // setPositions and setColors should mark relevant attributes for update.
-        // this.line.geometry.attributes.position.needsUpdate = true; // Already handled by setPositions
-        this.line.geometry.computeBoundingSphere(); // Important for raycasting and culling
+        this.line.geometry.computeBoundingSphere();
 
         this._updateArrowheadsAlongCurve(points);
         this._updateLabelAlongCurve(points);
@@ -226,18 +156,18 @@ export class CurvedEdge extends Edge {
         const numSegments = points.length - 1;
 
         if (this.arrowheads.target) {
-            const targetPos = points[numSegments]; // Last point
-            const prevPos = points[numSegments - 1]; // Second to last point
+            const targetPos = points[numSegments];
+            const prevPos = points[numSegments - 1];
             this.arrowheads.target.position.copy(targetPos);
             const direction = new THREE.Vector3().subVectors(targetPos, prevPos).normalize();
             this._orientArrowhead(this.arrowheads.target, direction);
         }
 
         if (this.arrowheads.source) {
-            const sourcePos = points[0]; // First point
-            const nextPos = points[1]; // Second point
+            const sourcePos = points[0];
+            const nextPos = points[1];
             this.arrowheads.source.position.copy(sourcePos);
-            const direction = new THREE.Vector3().subVectors(sourcePos, nextPos).normalize(); // Direction from tip to tail for orientation
+            const direction = new THREE.Vector3().subVectors(sourcePos, nextPos).normalize();
             this._orientArrowhead(this.arrowheads.source, direction);
         }
     }
@@ -248,22 +178,20 @@ export class CurvedEdge extends Edge {
             this.labelObject.position.copy(points[midPointIndex]);
 
             if (this.space?.camera?._cam) {
-                // Ensure this.space is set by EdgeFactory
                 this.labelObject.quaternion.copy(this.space.camera._cam.quaternion);
             }
-            this._applyLabelLOD(); // Apply LOD to the label
+            this._applyLabelLOD();
         }
     }
 
     _applyLabelLOD() {
-        // Adapted from LabeledEdge
         if (!this.labelObject?.element || !this.data.labelLod || this.data.labelLod.length === 0) {
             if (this.labelObject?.element) this.labelObject.element.style.visibility = '';
             return;
         }
 
         const camera = this.space?.plugins?.getPlugin('CameraPlugin')?.getCameraInstance();
-        if (!camera || !this.space) return;
+        if (!camera) return;
 
         const distanceToCamera = this.labelObject.position.distanceTo(camera.position);
         const sortedLodLevels = [...this.data.labelLod].sort((a, b) => (b.distance || 0) - (a.distance || 0));
@@ -275,7 +203,6 @@ export class CurvedEdge extends Edge {
                     this.labelObject.element.style.visibility = 'hidden';
                 } else {
                     this.labelObject.element.style.visibility = '';
-                    // TODO: apply other styles
                 }
                 appliedRule = true;
                 break;
@@ -290,14 +217,12 @@ export class CurvedEdge extends Edge {
         super.setHighlight(highlight);
         if (this.labelObject?.element) {
             this.labelObject.element.classList.toggle('selected', highlight);
-            // Potentially update style for label background/color on highlight via CSS or directly
         }
     }
 
     dispose() {
         if (this.labelObject) {
             this.labelObject.element?.remove();
-            // Ensure it's removed from parent if added directly to scene (CSS3DScene)
             this.labelObject.parent?.remove(this.labelObject);
             this.labelObject = null;
         }

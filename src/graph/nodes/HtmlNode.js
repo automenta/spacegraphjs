@@ -1,11 +1,11 @@
 import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
-import { Utils, $ } from '../../utils.js'; // Added $ import
+import { Utils, $ } from '../../utils.js';
 import { BaseNode } from './BaseNode.js';
 
 export class HtmlNode extends BaseNode {
     static MIN_SIZE = { width: 80, height: 40 };
     static CONTENT_SCALE_RANGE = { min: 0.3, max: 3.0 };
-    htmlElement = null; // Reference to the DOM element within cssObject
+    htmlElement = null;
     size = { width: 160, height: 70 };
     billboard = false;
 
@@ -14,9 +14,9 @@ export class HtmlNode extends BaseNode {
         const initialWidth = this.data.width ?? 160;
         const initialHeight = this.data.height ?? 70;
         this.size = { width: initialWidth, height: initialHeight };
-        this.htmlElement = this._createElement(); // Create the element first
-        this.cssObject = new CSS3DObject(this.htmlElement); // Wrap it
-        this.cssObject.userData = { nodeId: this.id, type: 'html-node' }; // Link back
+        this.htmlElement = this._createElement();
+        this.cssObject = new CSS3DObject(this.htmlElement);
+        this.cssObject.userData = { nodeId: this.id, type: 'html-node' };
         this.update();
         this.setContentScale(this.data.contentScale ?? 1.0);
         this.setBackgroundColor(this.data.backgroundColor ?? '#333344');
@@ -32,16 +32,13 @@ export class HtmlNode extends BaseNode {
             backgroundColor: '#333344',
             type: 'html',
             editable: false,
-            // Example: labelLod: [{distance: 500, style: 'visibility:hidden;'}, {distance: 200, scale: 0.7}]
-            // 'style' will be applied directly. 'scale' will adjust transform:scale.
-            // 'html' could provide simplified HTML content for a distance.
             labelLod: [],
         };
     }
 
     _createElement() {
         const el = document.createElement('div');
-        el.className = 'node-html node-common'; // Add common class
+        el.className = 'node-html node-common';
         el.id = `node-html-${this.id}`;
         el.dataset.nodeId = this.id;
         el.style.width = `${this.size.width}px`;
@@ -64,12 +61,12 @@ export class HtmlNode extends BaseNode {
             </div>
             <div class="resize-handle" title="Resize Node"></div>
         `;
-        this._initContentEditable(el); // Pass element to init
+        this._initContentEditable(el);
         return el;
     }
 
     _initContentEditable(element) {
-        const contentDiv = $('.node-content', element); // Changed to use $ utility
+        const contentDiv = $('.node-content', element);
         if (contentDiv && this.data.editable) {
             contentDiv.contentEditable = 'true';
             let debounceTimer;
@@ -80,13 +77,11 @@ export class HtmlNode extends BaseNode {
                      this.space?.emit('graph:node:dataChanged', { node: this, property: 'content', value: this.data.content });
                 }, 300);
             });
-            // Prevent interactions within content from triggering pan/drag
             contentDiv.addEventListener('pointerdown', (e) => e.stopPropagation());
             contentDiv.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
             contentDiv.addEventListener(
                 'wheel',
                 (e) => {
-                    // Allow scrolling within the div if needed
                     const isScrollable =
                         contentDiv.scrollHeight > contentDiv.clientHeight ||
                         contentDiv.scrollWidth > contentDiv.clientWidth;
@@ -97,7 +92,7 @@ export class HtmlNode extends BaseNode {
                         (e.deltaX < 0 && contentDiv.scrollLeft > 0) ||
                         (e.deltaX > 0 && contentDiv.scrollLeft < contentDiv.scrollWidth - contentDiv.clientWidth);
                     if (isScrollable && (canScrollY || canScrollX)) {
-                        e.stopPropagation(); // Stop propagation only if scrolling is possible
+                        e.stopPropagation();
                     }
                 },
                 { passive: false }
@@ -121,16 +116,11 @@ export class HtmlNode extends BaseNode {
             const scaleFactor = Math.sqrt((this.size.width * this.size.height) / oldArea);
             this.setContentScale(this.data.contentScale * scaleFactor);
         }
-        // Note: 'graph:node:resized' is emitted by UIManager during the resize operation.
-        // This setSize is the final application. If an event is needed here for internal logic:
-        // this.space?.emit('node:size:changed', { node: this, oldSize, newSize: this.size });
-        // Removing kick from here; layout should be kicked by UIManager or endResize if needed.
-        // this.space?.layout?.kick();
     }
 
     setContentScale(scale) {
         this.data.contentScale = Utils.clamp(scale, HtmlNode.CONTENT_SCALE_RANGE.min, HtmlNode.CONTENT_SCALE_RANGE.max);
-        const contentEl = $('.node-content', this.htmlElement); // Changed to use $ utility
+        const contentEl = $('.node-content', this.htmlElement);
         if (contentEl) contentEl.style.transform = `scale(${this.data.contentScale})`;
         this.space?.emit('graph:node:dataChanged', { node: this, property: 'contentScale', value: this.data.contentScale });
     }
@@ -156,7 +146,6 @@ export class HtmlNode extends BaseNode {
 
     _applyLabelLOD(space) {
         if (!this.htmlElement || !this.data.labelLod || this.data.labelLod.length === 0) {
-            // Ensure element is visible if no LOD rules or if it was hidden by a previous rule
             this.htmlElement.style.visibility = '';
             return;
         }
@@ -166,50 +155,40 @@ export class HtmlNode extends BaseNode {
 
         const distanceToCamera = this.position.distanceTo(camera.position);
 
-        // Sort LOD levels by distance, descending, so closest matching rule is applied.
         const sortedLodLevels = [...this.data.labelLod].sort((a, b) => (b.distance || 0) - (a.distance || 0));
 
         let appliedRule = false;
         for (const level of sortedLodLevels) {
             if (distanceToCamera >= (level.distance || 0)) {
                 if (level.style) {
-                    // Potentially problematic to directly set style string like this,
-                    // as it overwrites all inline styles. Better to apply specific properties.
-                    // For now, 'visibility:hidden' is the primary use case.
                     if (level.style.includes('visibility:hidden')) {
                         this.htmlElement.style.visibility = 'hidden';
                     } else {
-                        this.htmlElement.style.visibility = ''; // Or apply other styles from level.style
-                        // Example: this.htmlElement.style.opacity = level.opacity ?? '1';
+                        this.htmlElement.style.visibility = '';
                     }
                 } else {
-                    this.htmlElement.style.visibility = ''; // Ensure visible if no style rule for this level
+                    this.htmlElement.style.visibility = '';
                 }
 
                 if (level.scale !== undefined) {
                     const contentEl = $('.node-content', this.htmlElement);
                     if (contentEl) {
-                        // Combine with existing contentScale
                         const baseScale = this.data.contentScale ?? 1.0;
                         contentEl.style.transform = `scale(${baseScale * level.scale})`;
                     }
                 } else {
-                    // Reset to base scale if no LOD scale rule applies
                     const contentEl = $('.node-content', this.htmlElement);
                     if (contentEl) {
                         const baseScale = this.data.contentScale ?? 1.0;
                         contentEl.style.transform = `scale(${baseScale})`;
                     }
                 }
-                // TODO: Handle level.html for simplified content
                 appliedRule = true;
                 break;
             }
         }
 
         if (!appliedRule) {
-            // If no rule matched (e.g., camera is closer than all defined LOD distances),
-            // ensure element is visible and at base scale.
             this.htmlElement.style.visibility = '';
             const contentEl = $('.node-content', this.htmlElement);
             if (contentEl) {
@@ -229,13 +208,11 @@ export class HtmlNode extends BaseNode {
 
     startResize() {
         this.htmlElement?.classList.add('resizing');
-        this.space?.plugins.getPlugin('LayoutPlugin')?.fixNode(this); // Inform layout plugin
+        this.space?.plugins.getPlugin('LayoutPlugin')?.fixNode(this);
         this.space?.emit('graph:node:resizestart', { node: this });
     }
 
     resize(newWidth, newHeight) {
-        // UIManager emits 'graph:node:resized' with new dimensions during interaction.
-        // This method applies the final size.
         this.setSize(newWidth, newHeight);
     }
 
@@ -245,11 +222,8 @@ export class HtmlNode extends BaseNode {
             const layoutPlugin = this.space?.plugins?.getPlugin('LayoutPlugin');
             if (layoutPlugin && typeof layoutPlugin.releaseNode === 'function') {
                 layoutPlugin.releaseNode(this);
-            } else {
-                console.warn('HtmlNode.endResize: LayoutPlugin or releaseNode not available.');
             }
         } catch (error) {
-            console.error('HtmlNode.endResize: Error calling releaseNode:', error);
         }
         this.space?.emit('graph:node:resizeend', { node: this, finalSize: { ...this.size } });
     }
