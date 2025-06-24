@@ -208,7 +208,7 @@ export class HtmlNode extends BaseNode {
 
     startResize() {
         this.htmlElement?.classList.add('resizing');
-        this.space?.plugins.getPlugin('LayoutPlugin')?.fixNode(this);
+        this.space?.plugins.getPlugin('LayoutPlugin')?.layoutManager?.getActiveLayout()?.fixNode(this);
         this.space?.emit('graph:node:resizestart', { node: this });
     }
 
@@ -219,11 +219,12 @@ export class HtmlNode extends BaseNode {
     endResize() {
         this.htmlElement?.classList.remove('resizing');
         try {
-            const layoutPlugin = this.space?.plugins?.getPlugin('LayoutPlugin');
-            if (layoutPlugin && typeof layoutPlugin.releaseNode === 'function') {
-                layoutPlugin.releaseNode(this);
+            const activeLayout = this.space?.plugins?.getPlugin('LayoutPlugin')?.layoutManager?.getActiveLayout();
+            if (activeLayout && typeof activeLayout.releaseNode === 'function') {
+                activeLayout.releaseNode(this);
             }
         } catch (error) {
+            console.error("Error releasing node during resize:", error);
         }
         this.space?.emit('graph:node:resizeend', { node: this, finalSize: { ...this.size } });
     }

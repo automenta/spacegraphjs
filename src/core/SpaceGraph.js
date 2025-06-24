@@ -5,8 +5,8 @@ import { RenderingPlugin } from '../plugins/RenderingPlugin.js';
 import { CameraPlugin } from '../plugins/CameraPlugin.js';
 import { NodePlugin } from '../plugins/NodePlugin.js';
 import { EdgePlugin } from '../plugins/EdgePlugin.js';
-import { LayoutPlugin } from '../plugins/LayoutPlugin.js';
-import { UIPlugin } from '../plugins/UIPlugin.js';
+import { LayoutPlugin } from '../plugins/LayoutPlugin.js'; // Already here, good.
+import { UIPlugin } from '../plugins/UIPlugin.js'; // Already here, good.
 import { MinimapPlugin } from '../plugins/MinimapPlugin.js';
 import { DataPlugin } from '../plugins/DataPlugin.js';
 
@@ -14,25 +14,26 @@ export class SpaceGraph {
     _cam = null;
     _listeners = new Map();
     plugins = null;
-    contextMenuElement = null;
-    confirmDialogElement = null;
+    // contextMenuElement and confirmDialogElement are no longer stored directly on SpaceGraph instance.
+    // They are passed to UIPlugin via options.
 
-    constructor(containerElement, contextMenuElement, confirmDialogElement) {
+    constructor(containerElement, options = {}) {
         if (!containerElement) throw new Error('SpaceGraph requires a valid HTML container element.');
-        if (!contextMenuElement) throw new Error('SpaceGraph requires a contextMenuElement.');
-        if (!confirmDialogElement) throw new Error('SpaceGraph requires a confirmDialogElement.');
 
         this.container = containerElement;
-        this.contextMenuElement = contextMenuElement;
-        this.confirmDialogElement = confirmDialogElement;
         this.plugins = new PluginManager(this);
+
+        const uiOptions = options.ui || {};
+        const contextMenuElement = uiOptions.contextMenuElement;
+        const confirmDialogElement = uiOptions.confirmDialogElement;
+        // UIPlugin will handle errors if these elements are missing but it needs them.
 
         this.plugins.add(new CameraPlugin(this, this.plugins));
         this.plugins.add(new RenderingPlugin(this, this.plugins));
         this.plugins.add(new NodePlugin(this, this.plugins));
         this.plugins.add(new EdgePlugin(this, this.plugins));
         this.plugins.add(new LayoutPlugin(this, this.plugins));
-        this.plugins.add(new UIPlugin(this, this.plugins, this.contextMenuElement, this.confirmDialogElement));
+        this.plugins.add(new UIPlugin(this, this.plugins, contextMenuElement, confirmDialogElement));
         this.plugins.add(new MinimapPlugin(this, this.plugins));
         this.plugins.add(new DataPlugin(this, this.plugins));
     }
