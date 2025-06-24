@@ -1,41 +1,34 @@
 :root {
-    /* Naming convention: --sg-category-element-state */
-    /* General App & Text */
     --sg-font-primary: sans-serif;
     --sg-font-mono: monospace;
 
-    /* RGB versions for rgba() alpha adjustments */
     --sg-bg-ui-rgb: 20, 20, 40;
     --sg-accent-secondary-rgb: 0, 142, 168;
     --sg-accent-primary-rgb: 0, 208, 255;
 
-    --sg-text-primary: #e0e0f0; /* Primary text color */
-    --sg-text-secondary: #a0a0b0; /* Secondary/dimmed text color */
-    --sg-text-on-accent: #000000; /* Text color on accent backgrounds */
-    --sg-accent-primary: #00d0ff; /* Primary accent for highlights, interactive elements */
-    --sg-accent-secondary: #008ea8; /* Darker accent or secondary interactive elements */
+    --sg-text-primary: #e0e0f0;
+    --sg-text-secondary: #a0a0b0;
+    --sg-text-on-accent: #000000;
+    --sg-accent-primary: #00d0ff;
+    --sg-accent-secondary: #008ea8;
 
-    /* Backgrounds */
-    --sg-bg-canvas: #000000; /* Main graph canvas background */
-    --sg-bg-ui: rgba(20, 20, 40, 0.95); /* General UI panels (toolbar, context menu, dialogs) */
-    --sg-bg-ui-hover: rgba(0, 208, 255, 0.15); /* Hover state for UI elements like menu items */
+    --sg-bg-canvas: #000000;
+    --sg-bg-ui: rgba(20, 20, 40, 0.95);
+    --sg-bg-ui-hover: rgba(0, 208, 255, 0.15);
 
-    /* Nodes */
-    --sg-node-bg: rgba(15, 15, 35, 0.85); /* Default HTML node background */
-    --sg-node-text: var(--sg-text-primary); /* Default text within nodes */
+    --sg-node-bg: rgba(15, 15, 35, 0.85);
+    --sg-node-text: var(--sg-text-primary);
     --sg-node-border: var(--sg-accent-secondary);
     --sg-node-shadow: rgba(0, 208, 255, 0.1);
     --sg-node-shadow-hover: rgba(0, 208, 255, 0.3);
     --sg-node-shadow-selected: rgba(0, 208, 255, 0.5);
     --sg-node-button-bg: rgba(255, 255, 255, 0.1);
     --sg-node-button-bg-hover: rgba(0, 208, 255, 0.3);
-    --sg-node-button-bg-active: rgba(0, 208, 255, 0.5); /* Added for active/pressed state */
+    --sg-node-button-bg-active: rgba(0, 208, 255, 0.5);
 
-    /* Edges */
     --sg-edge-color: rgba(0, 208, 255, 0.5);
     --sg-edge-color-highlight: #00ffff;
 
-    /* Specific UI Components */
     --sg-button-primary-bg: var(--sg-accent-primary);
     --sg-button-primary-text: var(--sg-text-on-accent);
     --sg-button-secondary-bg: #555;
@@ -43,11 +36,9 @@
     --sg-delete-button-bg: #d03030;
     --sg-delete-button-text: #ffffff;
 
-    /* Transitions */
     --sg-transition-fast: 0.15s ease-out;
     --sg-transition-medium: 0.3s ease-out;
 
-    /* Dot background for canvas (optional) */
     --sg-dot-color: rgba(100, 100, 120, 0.2);
 }
 
@@ -60,14 +51,12 @@
 body {
     margin: 0;
     overflow: hidden;
-    background-color: var(--sg-bg-canvas); /* USE NEW */
-    color: var(--sg-text-primary); /* USE NEW */
-    font-family: var(--sg-font-primary); /* USE NEW */
+    background-color: var(--sg-bg-canvas);
+    color: var(--sg-text-primary);
+    font-family: var(--sg-font-primary);
     overscroll-behavior: none;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    /*background-image: radial-gradient(var(--dot-color) 1px, transparent 1px);*/ /* Keep old or map if new exists */
-    /*background-size: 20px 20px;*/
 }
 
 #mindmap-container {
@@ -104,20 +93,18 @@ body {
 
 .node-html {
     position: absolute;
-    background-color: var(
-        --sg-node-bg
-    ); /* USE NEW - note: var(--node-bg, var(--node-bg-default)) implies --node-bg can be set inline. We'll keep this pattern if needed, or simplify to just --sg-node-bg. For now, assume --sg-node-bg is the primary source. */
-    border: 1px solid var(--sg-node-border); /* USE NEW */
+    background-color: var(--sg-node-bg);
+    border: 1px solid var(--sg-node-border);
     border-radius: 8px;
-    padding: 0; /* Padding handled by inner container */
-    color: var(--sg-node-text); /* USE NEW */
+    padding: 0;
+    color: var(--sg-node-text);
     pointer-events: auto;
     cursor: grab;
     transition:
         transform var(--sg-transition-fast),
         box-shadow var(--sg-transition-medium),
-        border-color var(--sg-transition-medium); /* USE NEW */
-    box-shadow: 0 2px 8px 1px var(--sg-node-shadow); /* USE NEW */
+        border-color var(--sg-transition-medium);
+    box-shadow: 0 2px 8px 1px var(--sg-node-shadow);
     min-width: 80px;
     min-height: 40px;
     display: flex;
@@ -128,20 +115,20 @@ body {
 }
 
 .node-html:hover {
-    box-shadow: 0 4px 15px 3px var(--sg-node-shadow-hover); /* USE NEW */
-    border-color: var(--sg-accent-primary); /* USE NEW */
+    box-shadow: 0 4px 15px 3px var(--sg-node-shadow-hover);
+    border-color: var(--sg-accent-primary);
     z-index: 10 !important;
 }
 
 .node-html.selected {
-    box-shadow: 0 0 20px 5px var(--sg-node-shadow-selected); /* USE NEW */
-    border-color: var(--sg-accent-primary); /* USE NEW */
-    z-index: 11 !important; /* Slightly higher than hover */
+    box-shadow: 0 0 20px 5px var(--sg-node-shadow-selected);
+    border-color: var(--sg-accent-primary);
+    z-index: 11 !important;
 }
 
 .node-html.dragging {
     cursor: grabbing;
-    box-shadow: 0 8px 25px 6px var(--sg-node-shadow-hover); /* USE NEW */
+    box-shadow: 0 8px 25px 6px var(--sg-node-shadow-hover);
     z-index: 1000 !important;
     transition: none;
 }
@@ -151,8 +138,8 @@ body {
 }
 
 .node-html.linking-target {
-    border-color: #ffaa00; /* This is a specific color, not from theme vars yet. Could become --sg-linking-target-border */
-    box-shadow: 0 0 20px 5px rgba(255, 170, 0, 0.5); /* Specific color */
+    border-color: #ffaa00;
+    box-shadow: 0 0 20px 5px rgba(255, 170, 0, 0.5);
 }
 
 .node-inner-wrapper {
@@ -160,8 +147,8 @@ body {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    overflow: hidden; /* Clip content */
-    position: relative; /* For absolute positioning of controls */
+    overflow: hidden;
+    position: relative;
 }
 
 .node-content {
@@ -169,14 +156,14 @@ body {
     outline: none;
     overflow-y: auto;
     max-height: 400px;
-    font-size: 1em; /* Base size, scaled by contentZoom */
+    font-size: 1em;
     line-height: 1.45;
     white-space: pre-wrap;
     word-wrap: break-word;
     user-select: text;
     scrollbar-width: thin;
-    scrollbar-color: var(--sg-accent-secondary) transparent; /* USE NEW */
-    transition: transform var(--sg-transition-fast); /* USE NEW */ /* For content zoom */
+    scrollbar-color: var(--sg-accent-secondary) transparent;
+    transition: transform var(--sg-transition-fast);
     transform-origin: top left;
 }
 
@@ -189,12 +176,12 @@ body {
 }
 
 .node-content::-webkit-scrollbar-thumb {
-    background-color: var(--sg-accent-secondary); /* USE NEW */
+    background-color: var(--sg-accent-secondary);
     border-radius: 0.1em;
 }
 
 .node-content:focus {
-    box-shadow: inset 0 0 0 1px var(--sg-accent-primary); /* USE NEW */
+    box-shadow: inset 0 0 0 1px var(--sg-accent-primary);
     margin: -1px;
 }
 
@@ -210,7 +197,7 @@ body {
 .node-content h2,
 .node-content h3 {
     margin: 0.5em 0;
-    color: var(--sg-accent-primary); /* USE NEW */
+    color: var(--sg-accent-primary);
     font-weight: 600;
 }
 
@@ -241,16 +228,16 @@ body {
 }
 
 .node-content code {
-    font-family: var(--sg-font-mono); /* USE NEW */
-    background-color: rgba(0, 0, 0, 0.2); /* Consider a theme variable for this */
+    font-family: var(--sg-font-mono);
+    background-color: rgba(0, 0, 0, 0.2);
     padding: 0.1em 0.3em;
     border-radius: 0.03em;
     font-size: 0.9em;
 }
 
 .node-content pre {
-    font-family: var(--sg-font-mono); /* USE NEW */
-    background-color: rgba(0, 0, 0, 0.2); /* Consider a theme variable for this */
+    font-family: var(--sg-font-mono);
+    background-color: rgba(0, 0, 0, 0.2);
     padding: 0.5em;
     border-radius: 4px;
     overflow-x: auto;
@@ -258,14 +245,14 @@ body {
 }
 
 .node-content blockquote {
-    border-left: 3px solid var(--sg-accent-secondary); /* USE NEW */
+    border-left: 3px solid var(--sg-accent-secondary);
     margin: 0.5em 0 0.5em 10px;
     padding-left: 10px;
-    color: var(--sg-text-secondary); /* USE NEW for quote text color */
+    color: var(--sg-text-secondary);
 }
 
 .node-content a {
-    color: var(--sg-accent-primary); /* USE NEW */
+    color: var(--sg-accent-primary);
     text-decoration: none;
 }
 
@@ -275,12 +262,11 @@ body {
 
 .node-content button,
 .node-content input {
-    /* Styles for form elements *inside* node content */
     pointer-events: auto;
     margin: 5px;
     padding: 5px 10px;
-    background-color: var(--sg-button-secondary-bg); /* USE NEW */
-    color: var(--sg-button-secondary-text); /* USE NEW */
+    background-color: var(--sg-button-secondary-bg);
+    color: var(--sg-button-secondary-text);
     border: none;
     border-radius: 4px;
     cursor: pointer;
@@ -291,16 +277,15 @@ body {
 }
 
 .node-content button:hover {
-    background-color: var(--sg-accent-primary); /* USE NEW */
-    color: var(--sg-text-on-accent); /* USE NEW */
+    background-color: var(--sg-accent-primary);
+    color: var(--sg-text-on-accent);
 }
 
-/* Keyboard Shortcuts Dialog Styles */
 #keyboard-shortcuts-dialog {
-    min-width: 450px; /* Wider for table content */
+    min-width: 450px;
     max-width: 90vw;
     max-height: 80vh;
-    overflow-y: auto; /* Scroll if content is too long */
+    overflow-y: auto;
 }
 
 #keyboard-shortcuts-dialog h2 {
@@ -325,11 +310,11 @@ body {
 }
 
 .shortcuts-table th {
-    background-color: rgba(var(--sg-accent-secondary-rgb), 0.2); /* Subtle header background */
+    background-color: rgba(var(--sg-accent-secondary-rgb), 0.2);
     color: var(--sg-text-primary);
 }
 
-.shortcuts-table td:first-child { /* Key column */
+.shortcuts-table td:first-child {
     white-space: nowrap;
     font-weight: 500;
 }
@@ -347,12 +332,10 @@ body {
 }
 
 #keyboard-shortcuts-dialog button#close-shortcuts-dialog {
-    /* Uses default .dialog button styles, can be overridden if needed */
     display: block;
-    margin: 15px auto 0; /* Center the close button */
+    margin: 15px auto 0;
 }
 
-/* Layout Settings Dialog Styles */
 #layout-settings-dialog {
     min-width: 350px;
     max-width: 90vw;
@@ -394,34 +377,31 @@ body {
     font-size: 0.9em;
 }
 
-
-/* HUD Styles */
 #hud-layer {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    padding: 10px; /* Default padding for items near edges */
-    z-index: 100; /* Below menus/dialogs but above graph */
-    pointer-events: none; /* Allow clicks through to graph by default for the layer itself */
-    display: block; /* Remove flex, children will be absolute */
-    background: none; /* Remove gradient from main layer */
+    padding: 10px;
+    z-index: 100;
+    pointer-events: none;
+    display: block;
+    background: none;
     color: var(--sg-text-secondary);
     font-size: 13px;
 }
 
-/* Common styles for all direct children of hud-layer (individual HUD elements) */
 #hud-layer > div,
-#hud-layer > select { /* Added select for future combobox */
-    position: absolute; /* Position children absolutely within hud-layer */
-    background-color: rgba(var(--sg-bg-ui-rgb, 20, 20, 40), 0.7); /* Use RGB components for alpha */
+#hud-layer > select {
+    position: absolute;
+    background-color: rgba(var(--sg-bg-ui-rgb, 20, 20, 40), 0.7);
     padding: 5px 10px;
     border-radius: 4px;
-    border: 1px solid rgba(var(--sg-accent-secondary-rgb, 0, 142, 168), 0.5); /* Use RGB for alpha */
-    opacity: 0.75; /* Overall opacity for the element */
+    border: 1px solid rgba(var(--sg-accent-secondary-rgb, 0, 142, 168), 0.5);
+    opacity: 0.75;
     box-shadow: 0 1px 5px rgba(0,0,0,0.2);
-    pointer-events: auto; /* Allow interaction with these elements */
+    pointer-events: auto;
     white-space: nowrap;
     transition: opacity var(--sg-transition-fast), background-color var(--sg-transition-fast);
 }
@@ -433,22 +413,21 @@ body {
     border-color: rgba(var(--sg-accent-primary-rgb, 0, 208, 255), 0.7);
 }
 
-/* Specific positioning */
 #hud-mode-indicator {
-    bottom: 10px; /* Aligns with #hud-layer padding */
+    bottom: 10px;
     left: 10px;
 }
 
 #hud-selection-info {
-    bottom: 10px; /* Aligns with #hud-layer padding */
+    bottom: 10px;
     right: 10px;
 }
 
 #hud-keyboard-shortcuts {
-    top: 10px; /* Aligns with #hud-layer padding */
+    top: 10px;
     left: 10px;
-    font-size: 1.2em; /* Make emoji slightly larger */
-    padding: 3px 8px; /* Adjust padding for a more button-like feel */
+    font-size: 1.2em;
+    padding: 3px 8px;
 }
 
 #hud-layout-settings {
@@ -458,20 +437,12 @@ body {
     padding: 3px 8px;
 }
 
-/* Add these RGB variables to :root and .theme-light for the rgba() trick */
-/* In :root */
-/* --sg-bg-ui-rgb: 20, 20, 40; (already matches default dark theme bg) */
-/* --sg-accent-secondary-rgb: 0, 142, 168; (derived from #008ea8) */
-/* --sg-accent-primary-rgb: 0, 208, 255; (derived from #00d0ff) */
-
-
 .theme-light #hud-layer {
-    /* hud-layer itself has no background now */
 }
 .theme-light #hud-layer > div,
 .theme-light #hud-layer > select {
-     background-color: rgba(var(--sg-bg-ui-rgb, 255, 255, 255), 0.7); /* Light theme bg with alpha */
-     border: 1px solid rgba(var(--sg-accent-secondary-rgb, 0, 86, 179), 0.5); /* Light theme accent with alpha */
+     background-color: rgba(var(--sg-bg-ui-rgb, 255, 255, 255), 0.7);
+     border: 1px solid rgba(var(--sg-accent-secondary-rgb, 0, 86, 179), 0.5);
      box-shadow: 0 1px 4px rgba(0,0,0,0.15);
 }
 .theme-light #hud-layer > div:hover,
@@ -481,28 +452,24 @@ body {
     border-color: rgba(var(--sg-accent-primary-rgb, 0, 123, 255), 0.7);
 }
 
-/* Styles for 3D Labels on ShapeNodes and Edges */
 .node-label-3d,
 .edge-label {
-    /* Common base for labels */
     pointer-events: none;
     padding: 3px 7px;
     border-radius: 4px;
     text-align: center;
     white-space: nowrap;
     backdrop-filter: blur(4px);
-    border: 1px solid var(--sg-accent-secondary); /* Default border */
+    border: 1px solid var(--sg-accent-secondary);
 }
 
 .node-label-3d {
-    /* Specifics for ShapeNode labels */
     color: var(--sg-node-text);
-    background-color: var(--sg-label-bg, rgba(10, 10, 20, 0.75)); /* Fallback if --sg-label-bg not set */
+    background-color: var(--sg-label-bg, rgba(10, 10, 20, 0.75));
     font-size: 14px;
 }
 
 .edge-label {
-    /* Specifics for Edge labels */
     color: var(--sg-edge-label-text, var(--sg-text-primary));
     background-color: var(--sg-edge-label-bg, var(--sg-bg-ui));
     font-size: 12px;
@@ -514,14 +481,10 @@ body {
     border-color: var(--sg-accent-primary);
 }
 
-/* Common node class for JS querySelector, if not already defined */
 .node-common {
-    /* Could include common box-sizing or other resets if needed */
 }
 
-/* Light Theme Definition */
 .theme-light {
-    /* RGB versions for rgba() alpha adjustments - Light Theme */
     --sg-bg-ui-rgb: 255, 255, 255;
     --sg-accent-secondary-rgb: 0, 86, 179;
     --sg-accent-primary-rgb: 0, 123, 255;
@@ -570,8 +533,8 @@ body {
     display: flex;
     gap: 4px;
     opacity: 0;
-    transition: opacity var(--transition-fast);
-    pointer-events: none; /* Allow clicks through initially */
+    transition: opacity var(--sg-transition-fast);
+    pointer-events: none;
 }
 
 .node-html:hover .node-controls,
@@ -581,8 +544,8 @@ body {
 }
 
 .node-quick-button {
-    background-color: var(--sg-node-button-bg); /* USE NEW */
-    color: var(--sg-text-primary); /* USE NEW */
+    background-color: var(--sg-node-button-bg);
+    color: var(--sg-text-primary);
     border: none;
     border-radius: 4px;
     width: 22px;
@@ -593,44 +556,44 @@ body {
     cursor: pointer;
     transition:
         background-color var(--sg-transition-fast),
-        transform var(--sg-transition-fast); /* USE NEW */
+        transform var(--sg-transition-fast);
 }
 
 .node-quick-button:hover {
-    background-color: var(--sg-node-button-bg-hover); /* USE NEW */
+    background-color: var(--sg-node-button-bg-hover);
     transform: scale(1.1);
 }
 
 .node-quick-button:active {
-    background-color: var(--sg-node-button-bg-active); /* USE NEW */
+    background-color: var(--sg-node-button-bg-active);
     transform: scale(0.95);
 }
 
 .node-quick-button.delete-button {
-    background-color: var(--sg-delete-button-bg); /* USE NEW */
-    color: var(--sg-delete-button-text); /* USE NEW */
+    background-color: var(--sg-delete-button-bg);
+    color: var(--sg-delete-button-text);
     font-weight: bold;
 }
 
 .node-quick-button.delete-button:hover {
-    background-color: #ff5555; /* This is specific, could be a --sg-delete-button-bg-hover */
+    background-color: #ff5555;
 }
 
 .resize-handle {
     position: absolute;
     bottom: -1px;
-    right: -1px; /* Align with bottom-right border */
+    right: -1px;
     width: 16px;
     height: 16px;
-    background-color: var(--sg-accent-primary); /* USE NEW */
-    border-top: 1px solid var(--sg-bg-canvas); /* USE NEW for border against background */
-    border-left: 1px solid var(--sg-bg-canvas); /* USE NEW */
-    border-bottom-right-radius: 7px; /* Match node radius */
+    background-color: var(--sg-accent-primary);
+    border-top: 1px solid var(--sg-bg-canvas);
+    border-left: 1px solid var(--sg-bg-canvas);
+    border-bottom-right-radius: 7px;
     cursor: nwse-resize;
     opacity: 0;
     transition:
         opacity var(--sg-transition-fast),
-        transform var(--sg-transition-fast); /* USE NEW */
+        transform var(--sg-transition-fast);
     pointer-events: auto;
     z-index: 10;
 }
@@ -640,7 +603,6 @@ body {
     opacity: 0.7;
 }
 
-/* Show on selected too */
 .resize-handle:hover {
     opacity: 1;
     transform: scale(1.15);
@@ -649,14 +611,14 @@ body {
 .context-menu,
 .dialog {
     position: fixed;
-    background-color: var(--sg-bg-ui); /* USE NEW */
-    border: 1px solid var(--sg-accent-primary); /* USE NEW for menu-border */
+    background-color: var(--sg-bg-ui);
+    border: 1px solid var(--sg-accent-primary);
     border-radius: 6px;
     box-shadow: 0 5px 25px rgba(0, 0, 0, 0.6);
     z-index: 10000;
     display: none;
     backdrop-filter: blur(8px);
-    animation: fadeIn 0.1s ease-out forwards; /* Animation uses --sg-transition-fast implicitly if needed */
+    animation: fadeIn 0.1s ease-out forwards;
 }
 
 @keyframes fadeIn {
@@ -686,54 +648,52 @@ body {
     cursor: pointer;
     transition:
         background-color var(--sg-transition-fast),
-        color var(--sg-transition-fast); /* USE NEW */
-    color: var(--sg-text-primary); /* USE NEW */
+        color var(--sg-transition-fast);
+    color: var(--sg-text-primary);
     white-space: nowrap;
 }
 
 .context-menu li:hover {
-    background-color: var(--sg-bg-ui-hover); /* USE NEW */
-    color: var(--sg-accent-primary); /* USE NEW */
+    background-color: var(--sg-bg-ui-hover);
+    color: var(--sg-accent-primary);
 }
 
 .context-menu li.disabled {
     color: var(--sg-text-secondary);
     cursor: not-allowed;
-    background-color: transparent !important; /* Ensure no hover/active bg */
+    background-color: transparent !important;
 }
-.context-menu li.disabled:hover { /* Keep consistent with non-hover disabled */
+.context-menu li.disabled:hover {
     color: var(--sg-text-secondary);
 }
 
-
 .context-menu li.separator {
     height: 1px;
-    background-color: var(--sg-accent-secondary); /* USE NEW */
+    background-color: var(--sg-accent-secondary);
     margin: 5px 0;
     padding: 0;
     cursor: default;
 }
 
 .context-menu li.separator:hover {
-    background-color: var(--sg-accent-secondary); /* USE NEW */
+    background-color: var(--sg-accent-secondary);
 }
 
 .context-menu li[data-action^='delete'] {
-    color: var(--sg-delete-button-bg); /* USE NEW */
+    color: var(--sg-delete-button-bg);
 }
 
 .context-menu li[data-action^='delete']:hover {
-    background-color: rgba(208, 48, 48, 0.2); /* Specific color, could be themed */
+    background-color: rgba(208, 48, 48, 0.2);
 }
 
 .dialog {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    /* background-color: var(--dialog-bg); // Already covered by .context-menu, .dialog rule using --sg-bg-ui */
     padding: 25px 30px;
     text-align: center;
-    color: var(--sg-text-primary); /* USE NEW */
+    color: var(--sg-text-primary);
     min-width: 300px;
 }
 
@@ -743,9 +703,8 @@ body {
 }
 
 .dialog button {
-    /* Yes button */
-    background-color: var(--sg-button-primary-bg); /* USE NEW */
-    color: var(--sg-button-primary-text); /* USE NEW */
+    background-color: var(--sg-button-primary-bg);
+    color: var(--sg-button-primary-text);
     border: none;
     padding: 10px 22px;
     margin: 0 10px;
@@ -754,14 +713,14 @@ body {
     font-weight: 600;
     transition:
         background-color var(--sg-transition-fast),
-        box-shadow var(--sg-transition-fast); /* USE NEW */
+        box-shadow var(--sg-transition-fast);
     min-width: 80px;
 }
 
 .dialog button:hover {
-    background-color: var(--sg-accent-primary); /* Could be a lighter shade of accent for hover */
-    filter: brightness(1.2); /* Example hover effect */
-    box-shadow: 0 0 12px var(--sg-accent-primary); /* USE NEW */
+    background-color: var(--sg-accent-primary);
+    filter: brightness(1.2);
+    box-shadow: 0 0 12px var(--sg-accent-primary);
 }
 .dialog button:active {
     transform: scale(0.98);
@@ -769,13 +728,12 @@ body {
 }
 
 .dialog button#confirm-no {
-    /* No button */
-    background-color: var(--sg-button-secondary-bg); /* USE NEW */
-    color: var(--sg-button-secondary-text); /* USE NEW */
+    background-color: var(--sg-button-secondary-bg);
+    color: var(--sg-button-secondary-text);
 }
 
 .dialog button#confirm-no:hover {
-    background-color: #777; /* Could be themed: --sg-button-secondary-bg-hover */
+    background-color: #777;
     box-shadow: none;
 }
 
@@ -783,8 +741,8 @@ body {
     position: fixed;
     bottom: 10px;
     left: 10px;
-    background-color: rgba(0, 0, 0, 0.7); /* Could be themed */
-    color: var(--sg-text-primary); /* USE NEW */
+    background-color: rgba(0, 0, 0, 0.7);
+    color: var(--sg-text-primary);
     padding: 5px 12px;
     border-radius: 4px;
     font-size: 12px;
@@ -799,7 +757,7 @@ body {
 }
 
 .edge-menu-frame {
-    position: absolute; /* Positioned by CSS3DRenderer */
+    position: absolute;
     background-color: var(--sg-bg-ui);
     border: 1px solid var(--sg-accent-secondary);
     border-radius: 6px;
@@ -807,8 +765,8 @@ body {
     display: flex;
     align-items: center;
     gap: 5px;
-    pointer-events: auto; /* Allow interaction with the menu itself */
-    z-index: 100; /* Ensure it's above other elements if needed, though CSS3D layers handle this too */
+    pointer-events: auto;
+    z-index: 100;
     opacity: 0.95;
     transition: opacity var(--sg-transition-fast);
     box-shadow: 0 2px 10px rgba(0,0,0,0.3);
@@ -819,21 +777,21 @@ body {
 .edge-menu-frame select {
     border: 1px solid var(--sg-accent-secondary);
     border-radius: 3px;
-    background-color: var(--sg-node-button-bg); /* Consistent with other controls */
+    background-color: var(--sg-node-button-bg);
     color: var(--sg-text-primary);
     padding: 3px 5px;
     margin: 1px;
     transition: border-color var(--sg-transition-fast);
-    font-size: 12px; /* Smaller font for compact menu */
+    font-size: 12px;
 }
 .edge-menu-frame input[type="color"]{
-    min-width: 25px; /* Ensure color picker is usable */
+    min-width: 25px;
     height: 22px;
     padding: 1px 2px;
 }
 .edge-menu-frame input[type="range"]{
     height: 22px;
-    flex-grow: 1; /* Allow range to take available space */
+    flex-grow: 1;
     min-width: 60px;
 }
 .edge-menu-frame select {
@@ -847,10 +805,10 @@ body {
 .edge-menu-frame input[type="range"]:focus,
 .edge-menu-frame select:focus {
     border-color: var(--sg-accent-primary);
-    outline: none; /* Remove default browser outline if custom border is sufficient */
+    outline: none;
 }
 
-.edge-menu-frame button.delete-button { /* Adjusted selector */
+.edge-menu-frame button.delete-button {
     background-color: var(--sg-delete-button-bg);
     color: var(--sg-delete-button-text);
     border: none;
@@ -865,23 +823,22 @@ body {
 }
 
 .edge-menu-frame button.delete-button:hover {
-    background-color: #ff5555; /* Consider var(--sg-delete-button-bg-hover) */
+    background-color: #ff5555;
     transform: scale(1.1);
 }
 .edge-menu-frame button.delete-button:active {
     transform: scale(0.95);
 }
 
-/* Toolbar Styles */
 #toolbar {
     position: absolute;
     top: 10px;
     left: 50%;
     transform: translateX(-50%);
-    background-color: var(--sg-bg-ui); /* USE NEW */
+    background-color: var(--sg-bg-ui);
     padding: 8px;
     border-radius: 8px;
-    border: 1px solid var(--sg-accent-primary); /* USE NEW for menu-border */
+    border: 1px solid var(--sg-accent-primary);
     z-index: 1000;
     display: flex;
     gap: 8px;
@@ -891,24 +848,24 @@ body {
 
 #toolbar button {
     padding: 6px 12px;
-    background-color: var(--sg-node-button-bg); /* Match node controls */
-    color: var(--sg-text-primary); /* USE NEW */
-    border: 1px solid var(--sg-accent-secondary); /* USE NEW */
+    background-color: var(--sg-node-button-bg);
+    color: var(--sg-text-primary);
+    border: 1px solid var(--sg-accent-secondary);
     border-radius: 5px;
     cursor: pointer;
     font-size: 13px;
     font-weight: 500;
     transition:
         background-color var(--sg-transition-fast),
-        border-color var(--sg-transition-fast); /* USE NEW */
+        border-color var(--sg-transition-fast);
 }
 
 #toolbar button:hover {
-    background-color: var(--sg-node-button-bg-hover); /* Match node controls */
-    border-color: var(--sg-accent-primary); /* USE NEW */
+    background-color: var(--sg-node-button-bg-hover);
+    border-color: var(--sg-accent-primary);
 }
 
 #toolbar button:active {
-    background-color: var(--sg-accent-primary); /* USE NEW */
-    color: var(--sg-text-on-accent); /* USE NEW */
+    background-color: var(--sg-accent-primary);
+    color: var(--sg-text-on-accent);
 }
