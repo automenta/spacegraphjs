@@ -8,6 +8,7 @@ import { CSS3DRenderer } from 'three/addons/renderers/CSS3DRenderer.js';
 import { Plugin } from '../core/Plugin.js';
 import { $ } from '../utils.js'; // Assuming $ is a utility like querySelector
 import { EffectComposer, RenderPass, EffectPass, BloomEffect, OutlineEffect, Selection, KernelSize, SSAOEffect, NormalPass } from 'postprocessing';
+import { InstancedMeshManager } from '../rendering/InstancedMeshManager.js';
 
 export class RenderingPlugin extends Plugin {
     scene = null;
@@ -22,6 +23,7 @@ export class RenderingPlugin extends Plugin {
     webglCanvas = null;
     background = { color: 0x1a1a1d, alpha: 1.0 }; // Default background
     managedLights = new Map(); // To store and manage lights added via API
+    instancedMeshManager = null;
 
     constructor(spaceGraph, pluginManager) {
         super(spaceGraph, pluginManager);
@@ -39,6 +41,10 @@ export class RenderingPlugin extends Plugin {
         this._setupRenderers(); // This now also sets up composer and effects
         this._setupLighting();
         this.setBackground(this.background.color, this.background.alpha);
+
+        // Initialize InstancedMeshManager
+        // It requires the main scene to add its InstancedMesh objects to.
+        this.instancedMeshManager = new InstancedMeshManager(this.scene);
 
         // The actual camera object is managed by SpaceGraph (or a CameraPlugin later)
         // but resize needs access to it.
@@ -108,6 +114,12 @@ export class RenderingPlugin extends Plugin {
                 this.renderGL.render(this.scene, this.space._cam);
             }
             this.renderCSS3D.render(this.cssScene, this.space._cam);
+        }
+
+        // After main render, render minimap if plugin exists
+        const minimapPlugin = this.pluginManager?.getPlugin('MinimapPlugin');
+        if (minimapPlugin && typeof minimapPlugin.render === 'function' && this.renderGL) {
+            minimapPlugin.render(this.renderGL);
         }
     }
 
@@ -410,9 +422,16 @@ export class RenderingPlugin extends Plugin {
         return this.cssScene;
     }
 
+    getInstancedMeshManager() {
+        return this.instancedMeshManager;
+    }
+
     dispose() {
         super.dispose();
         window.removeEventListener('resize', this._onWindowResize);
+
+        this.instancedMeshManager?.dispose();
+        this.instancedMeshManager = null;
 
         this.composer?.dispose(); // Dispose composer
         this.renderGL?.dispose();

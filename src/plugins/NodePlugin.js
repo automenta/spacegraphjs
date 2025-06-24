@@ -6,12 +6,16 @@
 import { Plugin } from '../core/Plugin.js';
 import { Utils } from '../utils.js'; // For Utils.generateId
 import { NodeFactory } from '../graph/nodes/NodeFactory.js';
+import { ShapeNode } from '../graph/nodes/ShapeNode.js'; // Import for instanceof check
 
 export class NodePlugin extends Plugin {
     /** @type {Map<string, import('../graph/nodes/BaseNode.js').BaseNode>} */
     nodes = new Map();
     /** @type {NodeFactory} */
     nodeFactory = null;
+    /** @type {import('../rendering/InstancedMeshManager.js').InstancedMeshManager | null} */
+    instancedMeshManager = null;
+
 
     constructor(spaceGraph, pluginManager) {
         super(spaceGraph, pluginManager);
@@ -24,8 +28,12 @@ export class NodePlugin extends Plugin {
 
     init() {
         super.init();
-        // _tempSelectedNodeRef and _tempLinkSourceNodeRef are removed as selection/linking
-        // state is now managed by UIPlugin.
+        const renderingPlugin = this.pluginManager.getPlugin('RenderingPlugin');
+        if (renderingPlugin && typeof renderingPlugin.getInstancedMeshManager === 'function') {
+            this.instancedMeshManager = renderingPlugin.getInstancedMeshManager();
+        } else {
+            console.warn('NodePlugin: InstancedMeshManager not available from RenderingPlugin.');
+        }
     }
 
     /**
@@ -43,16 +51,36 @@ export class NodePlugin extends Plugin {
         this.nodes.set(nodeInstance.id, nodeInstance);
         nodeInstance.space = this.space; // Ensure node has reference to SpaceGraph instance
 
+        let successfullyInstanced = false;
+        // Try to add to InstancedMeshManager first
+        if (this.instancedMeshManager && nodeInstance instanceof ShapeNode && nodeInstance.data.shape === 'sphere') {
+            // For PoC, only instancing spheres. Could expand this condition.
+            if (this.instancedMeshManager.addNode(nodeInstance)) {
+                successfullyInstanced = true;
+                // console.log(`NodePlugin: Node ${nodeInstance.id} added to instanced rendering.`);
+            }
+        }
+
         const renderingPlugin = this.pluginManager.getPlugin('RenderingPlugin');
         if (renderingPlugin) {
             const cssScene = renderingPlugin.getCSS3DScene();
-            const webglScene = renderingPlugin.getWebGLScene();
+            // Add CSS objects (labels, HTML content) regardless of instancing
             if (nodeInstance.cssObject && cssScene) cssScene.add(nodeInstance.cssObject);
-            if (nodeInstance.mesh && webglScene) webglScene.add(nodeInstance.mesh);
             if (nodeInstance.labelObject && cssScene) cssScene.add(nodeInstance.labelObject);
+
+            // If not successfully instanced, add its own mesh to the main scene
+            if (!successfullyInstanced && nodeInstance.mesh) {
+                const webglScene = renderingPlugin.getWebGLScene();
+                if (webglScene) {
+                    webglScene.add(nodeInstance.mesh);
+                } else {
+                     console.warn('NodePlugin: WebGLScene not available for non-instanced mesh.');
+                }
+            }
         } else {
             console.warn('NodePlugin: RenderingPlugin not available to add node to scenes.');
         }
+
 
         // const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin'); // LayoutPlugin now listens to node:added
         // layoutPlugin?.addNodeToLayout(nodeInstance);
@@ -123,7 +151,13 @@ export class NodePlugin extends Plugin {
         const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin');
         layoutPlugin?.removeNodeFromLayout(node);
 
-        node.dispose(); // Node should handle removing its objects from scenes.
+        // If node was instanced, remove from InstancedMeshManager
+        if (node.isInstanced && this.instancedMeshManager) {
+            this.instancedMeshManager.removeNode(node);
+        }
+        // BaseNode.dispose() handles removing mesh from scene if it was added.
+        // If it was instanced, its mesh was not added to scene, so dispose() is fine.
+        node.dispose();
         this.nodes.delete(nodeId);
         this.space.emit('node:removed', nodeId, node);
     }
@@ -146,10 +180,20 @@ export class NodePlugin extends Plugin {
     }
 
     update() {
-        // Corresponds to this.nodes.forEach(node => node.update(this.space)); in old SpaceGraph.updateNodesAndEdges
+        // Corresponds to this.nodes.forEach(node => node.update(this.space));
         this.nodes.forEach((node) => {
+            if (node.isInstanced && this.instancedMeshManager) {
+                // If node is instanced, its transform/color updates are handled by the manager
+                this.instancedMeshManager.updateNode(node);
+            }
+            // Call node's own update method for other logic (like label positioning)
+            // The node.update() method itself might need to be aware if it's instanced
+            // to avoid trying to update its own mesh's position directly if that mesh is hidden.
+            // For now, ShapeNode.update primarily updates its own mesh and label.
+            // If instanced, node.mesh.position might not be used by InstancedMeshManager directly,
+            // as the manager uses node.position.
             if (node.update && typeof node.update === 'function') {
-                node.update(this.space); // Pass space instance for context if needed by node
+                node.update(this.space);
             }
         });
     }

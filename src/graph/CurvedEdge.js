@@ -69,16 +69,45 @@ export class CurvedEdge extends Edge {
         const controlPoint = new THREE.Vector3().addVectors(midPoint, controlPointOffset);
 
         const curve = new THREE.QuadraticBezierCurve3(sourcePos, controlPoint, targetPos);
-        const points = curve.getPoints(this.numPoints);
+        const points = curve.getPoints(this.numPoints); // this.numPoints is N segments, so N+1 points
 
         const positions = [];
         points.forEach(p => positions.push(p.x, p.y, p.z));
-
         this.line.geometry.setPositions(positions);
+
+        // Handle gradient colors for curved lines
+        if (this.data.gradientColors && this.data.gradientColors.length === 2) {
+            if (!this.line.material.vertexColors) {
+                this.line.material.vertexColors = true;
+                this.line.material.needsUpdate = true;
+            }
+            const colorStart = new THREE.Color(this.data.gradientColors[0]);
+            const colorEnd = new THREE.Color(this.data.gradientColors[1]);
+            const curveColors = [];
+            for (let i = 0; i <= this.numPoints; i++) { // numPoints is number of segments, so numPoints+1 actual points
+                const t = i / this.numPoints;
+                const interpolatedColor = new THREE.Color().lerpColors(colorStart, colorEnd, t);
+                curveColors.push(interpolatedColor.r, interpolatedColor.g, interpolatedColor.b);
+            }
+            this.line.geometry.setColors(curveColors);
+            if (this.line.geometry.attributes.instanceColorStart) this.line.geometry.attributes.instanceColorStart.needsUpdate = true;
+            if (this.line.geometry.attributes.instanceColorEnd) this.line.geometry.attributes.instanceColorEnd.needsUpdate = true;
+
+        } else {
+            // Ensure no gradient if not specified (similar to Edge.js update)
+            if (this.line.material.vertexColors) {
+                this.line.material.vertexColors = false;
+                this.line.material.needsUpdate = true;
+            }
+            this.line.material.color.set(this.data.color || 0x00d0ff); // Fallback or defined solid color
+        }
+
+
         if (this.line.material.dashed) {
             this.line.computeLineDistances(); // Required for dashed lines
         }
-        this.line.geometry.attributes.position.needsUpdate = true;
+        // setPositions and setColors should mark relevant attributes for update.
+        // this.line.geometry.attributes.position.needsUpdate = true; // Already handled by setPositions
         this.line.geometry.computeBoundingSphere(); // Important for raycasting and culling
     }
 }

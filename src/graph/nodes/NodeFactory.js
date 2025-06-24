@@ -5,8 +5,7 @@
 
 import { HtmlNode } from './HtmlNode.js';
 import { ShapeNode } from './ShapeNode.js';
-// Import other node types here as they are created
-// e.g. import { ImageNode } from './ImageNode.js';
+import { ImageNode } from './ImageNode.js'; // Import ImageNode
 
 export class NodeFactory {
     constructor(space) {
@@ -18,8 +17,7 @@ export class NodeFactory {
     _registerDefaultNodeTypes() {
         this.registerNodeType('html', HtmlNode);
         this.registerNodeType('shape', ShapeNode);
-        // Register other default types here
-        // this.registerNodeType('image', ImageNode);
+        this.registerNodeType('image', ImageNode); // Register ImageNode
 
         // Fallback/generic type if specific type is not found or not specified
         // For now, ShapeNode can be a reasonable default if no type is given.

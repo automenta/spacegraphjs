@@ -127,6 +127,53 @@ export function createExampleGraph(space) {
     space.addEdge(n_features, n_interactive);
     space.addEdge(n_style, n_interactive, { constraintType: 'elastic', constraintParams: { idealLength: 250 } });
 
+    // Example of a curved edge with a gradient
+    if (n_tech && n_style) {
+        space.addEdge(n_tech, n_style, {
+            type: 'curved', // Specify curved type
+            label: 'Tech <-> Style (Gradient)',
+            curvature: 0.4,
+            gradientColors: [0xff00ff, 0x00ffff], // Magenta to Cyan
+            // gradientColors: ['#ff00ff', '#00ffff'], // String format also works
+            thickness: 4,
+        });
+    }
+
+    // Example of a straight edge with a gradient
+    if (n_tech && n_box) {
+        space.addEdge(n_tech, n_box, {
+            type: 'straight', // Default, but can be explicit
+            label: 'Tech <-> Box (Gradient)',
+            gradientColors: ['#ffaa00', '#00ffaa'], // Orange to Green
+            thickness: 4,
+            dashed: true,
+            dashSize: 10,
+            gapSize: 5,
+        });
+    }
+
+    // Example of an ImageNode
+    const n_image = space.createNode({
+        id: 'imageNode1',
+        type: 'image',
+        position: { x: -350, y: -150, z: 40 },
+        data: {
+            label: 'Image Node 🖼️',
+            // Using a placeholder image service URL
+            imageUrl: 'https://via.placeholder.com/200x150.png?text=SpaceGraph.js',
+            size: 150, // Max dimension for the image plane
+        },
+        mass: 1.2
+    });
+    if (n_image && n_tech) {
+        space.addEdge(n_tech, n_image, {
+            type: 'curved',
+            curvature: -0.3,
+            label: 'Image Link'
+        });
+    }
+
+
     const nodePlugin = space.plugins?.getPlugin('NodePlugin');
     const edgePlugin = space.plugins?.getPlugin('EdgePlugin');
     const nodeCount = nodePlugin?.getNodes()?.size || 0;

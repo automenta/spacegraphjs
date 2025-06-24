@@ -12,13 +12,14 @@ export class Edge {
     arrowheadMesh = null; // For arrowhead
     // Default constraint: elastic spring
     data = {
-        color: 0x00d0ff,
+        color: 0x00d0ff, // Default single color
+        gradientColors: null, // E.g., [0xff0000, 0x0000ff] or ['#ff0000', '#0000ff']
         thickness: 3, // Adjusted for Line2, which uses pixel units
         constraintType: 'elastic',
         constraintParams: { stiffness: 0.001, idealLength: 200 },
         arrowhead: false, // Can be true, 'source', 'target', or 'both'
         arrowheadSize: 10,
-        arrowheadColor: null, // null means use edge color
+        arrowheadColor: null, // null means use edge color (or gradient average/start)
     };
 
     constructor(id, sourceNode, targetNode, data = {}) {
@@ -26,43 +27,105 @@ export class Edge {
         this.id = id;
         this.source = sourceNode;
         this.target = targetNode;
+        // Default data setup carefully merges, ensuring data from instance takes precedence
         const defaultData = {
             color: 0x00d0ff,
-            thickness: 3, // Default thickness for Line2
+            gradientColors: null,
+            thickness: 3,
             constraintType: 'elastic',
             constraintParams: { stiffness: 0.001, idealLength: 200 },
+            arrowhead: false,
+            arrowheadSize: 10,
+            arrowheadColor: null,
         };
         this.data = Utils.mergeDeep({}, defaultData, data);
+
+        // Ensure color is set if gradientColors is not provided, and vice-versa
+        if (this.data.gradientColors && this.data.gradientColors.length === 2) {
+            this.data.color = null; // Prioritize gradient if valid
+        } else if (this.data.color === null) {
+            this.data.color = defaultData.color; // Fallback if no gradient and no color
+        }
+
         this.line = this._createLine();
-        this.update();
+        this.update(); // This will also set initial colors if gradient
     }
 
     _createLine() {
         const geometry = new LineGeometry();
-        // Positions will be set in update()
+        // Positions and colors will be set in update() or immediately after creation
 
-        const material = new LineMaterial({
-            color: this.data.color,
-            linewidth: this.data.thickness, // in pixels
+        const materialConfig = {
+            linewidth: this.data.thickness,
             transparent: true,
             opacity: Edge.DEFAULT_OPACITY,
-            depthTest: false, // Render edges slightly "on top"
-            resolution: new THREE.Vector2(window.innerWidth, window.innerHeight), // for correct thickness
-            // Dashed properties are now controlled by data
+            depthTest: false,
+            resolution: new THREE.Vector2(window.innerWidth, window.innerHeight),
             dashed: this.data.dashed || false,
             dashScale: this.data.dashScale ?? 1,
             dashSize: this.data.dashSize ?? 3,
             gapSize: this.data.gapSize ?? 1,
-        });
+        };
 
+        if (this.data.gradientColors && this.data.gradientColors.length === 2) {
+            materialConfig.vertexColors = true; // Enable vertex colors
+            // Note: `color` property on material is ignored if vertexColors is true
+        } else {
+            materialConfig.color = this.data.color;
+        }
+
+        const material = new LineMaterial(materialConfig);
         const line = new Line2(geometry, material);
-        if (line.material.dashed) {
+
+        if (material.dashed) {
             line.computeLineDistances(); // Required for dashed lines
         }
-        line.renderOrder = -1; // Render after nodes if nodes are at 0 or positive
-        line.userData = { edgeId: this.id }; // Link back
-        // line.computeLineDistances(); // Important for dashed lines, but also good practice
+        line.renderOrder = -1;
+        line.userData = { edgeId: this.id };
         return line;
+    }
+
+    _setGradientColors() {
+        if (!this.line || !this.data.gradientColors || this.data.gradientColors.length !== 2) {
+            // If switching from gradient to solid color, ensure vertexColors is off and material color is set
+            if (this.line && this.line.material.vertexColors) {
+                this.line.material.vertexColors = false;
+                this.line.material.color.set(this.data.color || 0x00d0ff); // Fallback color
+                this.line.material.needsUpdate = true;
+            }
+            // Clear any existing color attributes from geometry if necessary
+            // For LineGeometry, simply not calling setColors or providing an empty array might suffice,
+            // or ensure the material isn't expecting vertex colors.
+            // The above vertexColors = false should handle it.
+            return;
+        }
+
+        if (!this.line.material.vertexColors) {
+            this.line.material.vertexColors = true;
+            this.line.material.needsUpdate = true; // Crucial when changing material properties
+        }
+
+        const colorStart = new THREE.Color(this.data.gradientColors[0]);
+        const colorEnd = new THREE.Color(this.data.gradientColors[1]);
+
+        const colors = [];
+        // For a simple line (source to target), we provide two colors.
+        // LineGeometry expects colors for each *vertex* of the segments.
+        // A single line segment in LineGeometry is made of two points,
+        // and it interpolates colors between them if vertexColors is true.
+        // The setColors method for LineGeometry takes a flat array for all points.
+        // If the geometry has N points, it needs N*3 color values.
+        // For a line with just a start and end point (2 points), we need 6 color values.
+        colors.push(colorStart.r, colorStart.g, colorStart.b);
+        colors.push(colorEnd.r, colorEnd.g, colorEnd.b);
+
+        // If the line has more than 2 points (e.g. CurvedEdge), this needs adjustment.
+        // For base Edge.js, it's always 2 points.
+        // CurvedEdge will need to override this part if it wants a gradient over many segments.
+
+        this.line.geometry.setColors(colors);
+        this.line.geometry.attributes.instanceColorStart.needsUpdate = true;
+        this.line.geometry.attributes.instanceColorEnd.needsUpdate = true;
     }
 
     update() {
@@ -77,9 +140,26 @@ export class Edge {
             this.target.position.z,
         ];
         this.line.geometry.setPositions(positions);
-        // this.line.computeLineDistances(); // Recalculate for dashed lines if parameters change or on initial setup
-        this.line.geometry.attributes.position.needsUpdate = true; // May not be strictly necessary with setPositions
-        this.line.geometry.computeBoundingSphere(); // Important for raycasting and culling
+
+        if (this.data.gradientColors && this.data.gradientColors.length === 2) {
+            this._setGradientColors();
+        } else {
+            // Ensure no gradient if not specified (e.g., if it was previously a gradient)
+            // This might involve setting material.vertexColors = false and material.color if state changed.
+            // _setGradientColors() handles turning off vertexColors if gradientColors is invalid.
+            // We also need to ensure the single color is correctly applied if switching from gradient.
+            if (this.line.material.vertexColors) { // Was gradient, now isn't
+                this.line.material.vertexColors = false;
+                this.line.material.needsUpdate = true;
+            }
+            this.line.material.color.set(this.data.color); // Set solid color
+        }
+
+        if (this.line.material.dashed) { // Recompute if dashed (might be needed if positions change significantly)
+            this.line.computeLineDistances();
+        }
+        // this.line.geometry.attributes.position.needsUpdate = true; // setPositions should handle this.
+        this.line.geometry.computeBoundingSphere();
 
         if (this.arrowheadMesh) {
             const targetPos = this.target.position;

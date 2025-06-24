@@ -11,6 +11,7 @@ import { NodePlugin } from '../plugins/NodePlugin.js';
 import { EdgePlugin } from '../plugins/EdgePlugin.js';
 import { LayoutPlugin } from '../plugins/LayoutPlugin.js';
 import { UIPlugin } from '../plugins/UIPlugin.js';
+import { MinimapPlugin } from '../plugins/MinimapPlugin.js'; // Import MinimapPlugin
 
 export class SpaceGraph {
     // nodes = new Map(); // Moved to NodePlugin
@@ -58,6 +59,9 @@ export class SpaceGraph {
         this.plugins.add(
             new UIPlugin(this, this.plugins, this.contextMenuElement, this.confirmDialogElement)
         ); // Modified
+        // Register MinimapPlugin (can be after UI or Rendering)
+        this.plugins.add(new MinimapPlugin(this, this.plugins));
+
 
         // _cam is now created by CameraPlugin and assigned to this.space._cam in CameraPlugin.init() for now.
         // Direct instantiation of THREE.PerspectiveCamera, CameraControls, Layout, and UIManager is removed from here.
@@ -380,30 +384,69 @@ export class SpaceGraph {
         const vec = new THREE.Vector2((screenX / window.innerWidth) * 2 - 1, -(screenY / window.innerHeight) * 2 + 1);
         const raycaster = new THREE.Raycaster();
         raycaster.setFromCamera(vec, camInstance);
-        raycaster.params.Line.threshold = 5; // This might become configurable or part of an InteractionPlugin
+        raycaster.params.Line.threshold = 5;
 
         const nodePlugin = this.plugins.getPlugin('NodePlugin');
-        const currentNodes = nodePlugin?.getNodes();
-        if (!currentNodes) return null;
+        const edgePlugin = this.plugins.getPlugin('EdgePlugin');
+        const renderingPlugin = this.plugins.getPlugin('RenderingPlugin');
+        const instancedMeshManager = renderingPlugin?.getInstancedMeshManager();
 
-        const nodeMeshes = [...currentNodes.values()].map((n) => n.mesh).filter(Boolean);
-        const nodeIntersects = nodeMeshes.length > 0 ? raycaster.intersectObjects(nodeMeshes, false) : [];
-        if (nodeIntersects.length > 0) {
-            const intersectedMesh = nodeIntersects[0].object;
-            const node = nodePlugin.getNodeById(intersectedMesh.userData?.nodeId);
-            if (node) return { node, distance: nodeIntersects[0].distance };
+        let closestIntersect = null;
+
+        // 1. Raycast against instanced meshes
+        if (instancedMeshManager) {
+            const instancedIntersection = instancedMeshManager.raycast(raycaster);
+            if (instancedIntersection) {
+                const node = nodePlugin?.getNodeById(instancedIntersection.nodeId);
+                if (node) {
+                    closestIntersect = { node, distance: instancedIntersection.distance, type: 'node' };
+                }
+            }
         }
 
-        const edgePlugin = this.plugins.getPlugin('EdgePlugin');
-        const currentEdges = edgePlugin?.getEdges();
-        if (!currentEdges) return null; // Or handle differently if only nodes are relevant
+        // 2. Raycast against non-instanced node meshes
+        const currentNodes = nodePlugin?.getNodes();
+        if (currentNodes) {
+            const nonInstancedNodeMeshes = [...currentNodes.values()]
+                .filter(n => !n.isInstanced && n.mesh && n.mesh.visible) // Only check non-instanced, visible meshes
+                .map(n => n.mesh);
 
-        const edgeLines = [...currentEdges.values()].map((e) => e.line).filter(Boolean);
-        const edgeIntersects = edgeLines.length > 0 ? raycaster.intersectObjects(edgeLines, false) : [];
-        if (edgeIntersects.length > 0) {
-            const intersectedLine = edgeIntersects[0].object;
-            const edge = edgePlugin.getEdgeById(intersectedLine.userData?.edgeId);
-            if (edge) return { edge, distance: edgeIntersects[0].distance };
+            if (nonInstancedNodeMeshes.length > 0) {
+                const nodeIntersects = raycaster.intersectObjects(nonInstancedNodeMeshes, false);
+                if (nodeIntersects.length > 0) {
+                    if (!closestIntersect || nodeIntersects[0].distance < closestIntersect.distance) {
+                        const intersectedMesh = nodeIntersects[0].object;
+                        const node = nodePlugin.getNodeById(intersectedMesh.userData?.nodeId);
+                        if (node) {
+                            closestIntersect = { node, distance: nodeIntersects[0].distance, type: 'node' };
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3. Raycast against edges (only if no node was hit closer or at all)
+        const currentEdges = edgePlugin?.getEdges();
+        if (currentEdges) {
+            const edgeLines = [...currentEdges.values()].map((e) => e.line).filter(Boolean);
+            if (edgeLines.length > 0) {
+                const edgeIntersects = raycaster.intersectObjects(edgeLines, false);
+                if (edgeIntersects.length > 0) {
+                    if (!closestIntersect || edgeIntersects[0].distance < closestIntersect.distance) {
+                        const intersectedLine = edgeIntersects[0].object;
+                        const edge = edgePlugin.getEdgeById(intersectedLine.userData?.edgeId);
+                        if (edge) {
+                            closestIntersect = { edge, distance: edgeIntersects[0].distance, type: 'edge' };
+                        }
+                    }
+                }
+            }
+        }
+
+        // Return only the relevant part (node or edge)
+        if (closestIntersect) {
+            if (closestIntersect.type === 'node') return { node: closestIntersect.node, distance: closestIntersect.distance };
+            if (closestIntersect.type === 'edge') return { edge: closestIntersect.edge, distance: closestIntersect.distance };
         }
 
         return null;
