@@ -20,7 +20,10 @@ export class CurvedEdge extends Edge {
 
     constructor(id, sourceNode, targetNode, data = {}) {
         super(id, sourceNode, targetNode, data);
-        this.numPoints = this.data.numCurvePoints ?? 20;
+        // Ensure numPoints is at least 1 to prevent issues with curve generation and color arrays.
+        // 0 segments (1 point) would lead to t = 0/0 = NaN in color interpolation.
+        // Negative segments would lead to errors in getPoints or empty point arrays.
+        this.numPoints = Math.max(1, this.data.numCurvePoints ?? 20);
         this.curvature = this.data.curvature ?? 0.3;
 
         // The line object created by super() is a straight line.
