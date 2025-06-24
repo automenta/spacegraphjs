@@ -1,17 +1,10 @@
-/**
- * @file CameraPlugin.js - Manages camera setup and controls for SpaceGraph.
- * @licence MIT
- */
-
 import * as THREE from 'three';
 import { Plugin } from '../core/Plugin.js';
-import { Camera as CameraControls } from '../camera/Camera.js'; // Renaming to avoid class name collision
-import { Utils } from '../utils.js'; // For DEG2RAD
+import { Camera as CameraControls } from '../camera/Camera.js';
+import { Utils } from '../utils.js';
 
 export class CameraPlugin extends Plugin {
-    /** @type {THREE.PerspectiveCamera | null} */
     perspectiveCamera = null;
-    /** @type {CameraControls | null} */
     cameraControls = null;
 
     constructor(spaceGraph, pluginManager) {
@@ -28,24 +21,10 @@ export class CameraPlugin extends Plugin {
         this.perspectiveCamera.position.z = 700;
 
         if (this.space) {
-            this.space._cam = this.perspectiveCamera; // TODO: Phase out direct _cam access
+            this.space._cam = this.perspectiveCamera;
         }
 
         this.cameraControls = new CameraControls(this.space);
-
-        // Initial camera centering is now done more explicitly.
-        // Call this.centerView() after all plugins are initialized if needed,
-        // or let the application decide the initial view.
-        // For now, we'll make it available for SpaceGraph to call post-init.
-        // However, the original SpaceGraph called these *after* all plugins were inited.
-        // To replicate, we can defer or SpaceGraph calls them explicitly post-init.
-        // For now, let's assume SpaceGraph will call them.
-        // If this plugin should do it itself, it needs to be after NodePlugin might have nodes.
-        // A simple way is to do it at the end of this init, assuming NodePlugin runs before CameraPlugin,
-        // or use a 'ready' event system.
-        // For now, let SpaceGraph call these on the plugin instance after all plugins are ready.
-        // this.centerView(null, 0);
-        // this.setInitialState();
         this._subscribeToEvents();
     }
 
@@ -53,25 +32,20 @@ export class CameraPlugin extends Plugin {
         this.space.on('ui:request:setCameraMode', (mode) => {
             this.setCameraMode(mode);
         });
-        // Listen to other relevant UI requests if any
     }
 
-    /** @returns {THREE.PerspectiveCamera | null} */
     getCameraInstance() {
         return this.perspectiveCamera;
     }
 
-    /** @returns {CameraControls | null} */
     getControls() {
         return this.cameraControls;
     }
 
-    // --- Core Camera Movement ---
     moveTo(x, y, z, duration = 0.7, lookAtTarget = null) {
         this.cameraControls?.moveTo(x, y, z, duration, lookAtTarget);
     }
 
-    // --- Higher-Level Camera Actions ---
     _determineCenterViewTarget(targetPosition = null) {
         const nodePlugin = this.pluginManager.getPlugin('NodePlugin');
         const currentNodes = nodePlugin?.getNodes();
@@ -104,15 +78,14 @@ export class CameraPlugin extends Plugin {
     }
 
     _determineFocusNodeDistance(node) {
-        if (!node || !this.perspectiveCamera) return 50; // Default small distance
+        if (!node || !this.perspectiveCamera) return 50;
 
         const fov = this.perspectiveCamera.fov * Utils.DEG2RAD;
         const aspect = this.perspectiveCamera.aspect;
-        // Ensure getBoundingSphereRadius is a method on the node object
         const nodeSize = typeof node.getBoundingSphereRadius === 'function' ? node.getBoundingSphereRadius() * 2 : 100;
-        const projectedSize = Math.max(nodeSize, nodeSize / aspect); // Consider aspect ratio for flatness
-        const paddingFactor = 1.5; // How much padding around the node
-        const minDistance = 50; // Minimum distance to prevent camera clipping or being too close
+        const projectedSize = Math.max(nodeSize, nodeSize / aspect);
+        const paddingFactor = 1.5;
+        const minDistance = 50;
 
         return Math.max(minDistance, (projectedSize * paddingFactor) / (2 * Math.tan(fov / 2)));
     }
@@ -127,7 +100,6 @@ export class CameraPlugin extends Plugin {
         this.moveTo(targetPos.x, targetPos.y, targetPos.z + distance, duration, targetPos);
     }
 
-    // --- Delegated Camera Control Methods from CameraControls ---
     pan(deltaX, deltaY) {
         this.cameraControls?.pan(deltaX, deltaY);
     }
@@ -159,7 +131,6 @@ export class CameraPlugin extends Plugin {
         this.cameraControls?.setInitialState();
     }
 
-    // --- Named View Methods (delegating to CameraControls) ---
     saveNamedView(name) {
         return this.cameraControls?.saveNamedView(name);
     }
@@ -180,7 +151,6 @@ export class CameraPlugin extends Plugin {
         return this.cameraControls?.hasNamedView(name) || false;
     }
 
-    // --- Camera Mode Control ---
     setCameraMode(mode) {
         this.cameraControls?.setCameraMode(mode);
     }
@@ -189,7 +159,6 @@ export class CameraPlugin extends Plugin {
         return this.cameraControls?.getCameraMode();
     }
 
-    // --- AutoCamera (Follow Mode) Delegation ---
     startFollowing(target, options = {}) {
         this.cameraControls?.startFollowing(target, options);
     }
@@ -202,9 +171,6 @@ export class CameraPlugin extends Plugin {
         return this.cameraControls?.isFollowing || false;
     }
 
-    // --- Free Camera Control Delegation ---
-    // Note: PointerLockControls are now largely self-contained for movement/rotation via its own listeners in Camera.js
-    // These might be kept for programmatic control if needed, but direct user input for free cam is via Camera.js listeners.
     moveFreeCamera(direction, deltaTime) {
         this.cameraControls?.moveFreeCamera(direction, deltaTime);
     }
@@ -213,12 +179,10 @@ export class CameraPlugin extends Plugin {
         this.cameraControls?.rotateFreeCamera(deltaYaw, deltaPitch, deltaTime);
     }
 
-    // Method to request pointer lock, to be called by UI (e.g. on a button click or canvas click in free mode)
     requestPointerLock() {
         this.cameraControls?.pointerLockControls?.lock();
     }
 
-    // Method to exit pointer lock
     exitPointerLock() {
         this.cameraControls?.pointerLockControls?.unlock();
     }
