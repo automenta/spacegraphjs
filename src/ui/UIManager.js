@@ -58,6 +58,29 @@ export class UIManager {
     hudLayer = null;
     hudModeIndicator = null;
     hudSelectionInfo = null;
+    hudKeyboardShortcutsButton = null;
+    keyboardShortcutsDialogElement = null;
+    hudLayoutSettingsButton = null; // For layout settings
+    layoutSettingsDialogElement = null; // Dialog for layout settings
+
+
+    // Keyboard shortcuts definition
+    keyboardShortcuts = [
+        { keys: ['Delete', 'Backspace'], description: 'Delete selected node(s) or edge(s)' },
+        { keys: ['Escape'], description: 'Close menus, cancel linking, deselect all, or exit pointer lock' },
+        { keys: ['Enter'], description: 'Focus content of selected HTML node (if editable)' },
+        { keys: ['+', '='], description: 'Zoom in content of selected HTML node' },
+        { keys: ['Ctrl/Meta + +', 'Ctrl/Meta + ='], description: 'Increase size of selected HTML node' },
+        { keys: ['-'], description: 'Zoom out content of selected HTML node' },
+        { keys: ['Ctrl/Meta + -'], description: 'Decrease size of selected HTML node' },
+        { keys: ['Spacebar'], description: 'Focus on selected item or center view' },
+        // { keys: ['C'], description: 'Toggle Free Camera mode (Example - currently not active by default)' }, // Example for future
+        { keys: ['Scroll Wheel'], description: 'Zoom camera' },
+        { keys: ['Ctrl/Meta + Scroll Wheel'], description: 'Adjust content scale of hovered HTML node' },
+        { keys: ['Middle Mouse Button (on node)'], description: 'Auto-zoom to node' },
+        { keys: ['Alt + Drag Node (vertical)'], description: 'Adjust node Z-depth' },
+    ];
+
 
     constructor(space, contextMenuEl, confirmDialogEl) {
         if (!space || !contextMenuEl || !confirmDialogEl)
@@ -83,16 +106,41 @@ export class UIManager {
         if (!this.hudLayer) {
             this.hudLayer = document.createElement('div');
             this.hudLayer.id = 'hud-layer';
-            // Append to body or a specific main app container if not this.container
-            // For now, appending to graph container, but might need a higher-level parent
             this.container.parentNode.appendChild(this.hudLayer);
         }
 
+        // Convert hudModeIndicator to a select element
         this.hudModeIndicator = $('#hud-mode-indicator');
+        if (this.hudModeIndicator && this.hudModeIndicator.tagName === 'DIV') { // If old div exists, remove it
+            this.hudModeIndicator.remove();
+            this.hudModeIndicator = null;
+        }
+
         if (!this.hudModeIndicator) {
-            this.hudModeIndicator = document.createElement('div');
+            this.hudModeIndicator = document.createElement('select');
             this.hudModeIndicator.id = 'hud-mode-indicator';
+
+            // Define camera modes for the dropdown
+            // These should match CAMERA_MODES in Camera.js: { ORBIT: 'orbit', FREE: 'free' }
+            const cameraModes = {
+                'orbit': 'Orbit Control',
+                'free': 'Free Look'
+                // Add other modes here if they exist
+            };
+
+            for (const modeKey in cameraModes) {
+                const option = document.createElement('option');
+                option.value = modeKey;
+                option.textContent = cameraModes[modeKey];
+                this.hudModeIndicator.appendChild(option);
+            }
             this.hudLayer.appendChild(this.hudModeIndicator);
+
+            // Add event listener for when the selection changes
+            this.hudModeIndicator.addEventListener('change', (event) => {
+                const newMode = event.target.value;
+                this.space.emit('ui:request:setCameraMode', newMode);
+            });
         }
 
         this.hudSelectionInfo = $('#hud-selection-info');
@@ -101,7 +149,168 @@ export class UIManager {
             this.hudSelectionInfo.id = 'hud-selection-info';
             this.hudLayer.appendChild(this.hudSelectionInfo);
         }
+
+        // Create Keyboard Shortcuts Button
+        this.hudKeyboardShortcutsButton = $('#hud-keyboard-shortcuts');
+        if (!this.hudKeyboardShortcutsButton) {
+            this.hudKeyboardShortcutsButton = document.createElement('div'); // Using div for styling consistency with other HUD items
+            this.hudKeyboardShortcutsButton.id = 'hud-keyboard-shortcuts';
+            this.hudKeyboardShortcutsButton.textContent = '⌨️'; // Keyboard emoji
+            this.hudKeyboardShortcutsButton.title = 'View Keyboard Shortcuts';
+            this.hudKeyboardShortcutsButton.style.cursor = 'pointer'; // Make it look clickable
+            this.hudLayer.appendChild(this.hudKeyboardShortcutsButton);
+
+            this.hudKeyboardShortcutsButton.addEventListener('click', () => {
+                this._showKeyboardShortcutsDialog();
+            });
+        }
+
+        // Create Layout Settings Button
+        this.hudLayoutSettingsButton = $('#hud-layout-settings');
+        if (!this.hudLayoutSettingsButton) {
+            this.hudLayoutSettingsButton = document.createElement('div');
+            this.hudLayoutSettingsButton.id = 'hud-layout-settings';
+            this.hudLayoutSettingsButton.textContent = '📐'; // Ruler/Layout emoji
+            this.hudLayoutSettingsButton.title = 'Layout Settings';
+            this.hudLayoutSettingsButton.style.cursor = 'pointer';
+            this.hudLayer.appendChild(this.hudLayoutSettingsButton);
+
+            this.hudLayoutSettingsButton.addEventListener('click', () => {
+                this._showLayoutSettingsDialog();
+            });
+        }
     }
+
+    _showLayoutSettingsDialog() {
+        const layoutPlugin = this.space.plugins.getPlugin('LayoutPlugin');
+        if (!layoutPlugin || !layoutPlugin.layoutManager) {
+            console.warn('UIManager: LayoutPlugin not available for layout settings.');
+            return;
+        }
+
+        if (!this.layoutSettingsDialogElement) {
+            this.layoutSettingsDialogElement = document.createElement('div');
+            this.layoutSettingsDialogElement.id = 'layout-settings-dialog';
+            this.layoutSettingsDialogElement.className = 'dialog';
+            this.layoutSettingsDialogElement.addEventListener('pointerdown', (e) => e.stopPropagation());
+            document.body.appendChild(this.layoutSettingsDialogElement);
+        }
+
+        const currentLayoutName = layoutPlugin.layoutManager.getActiveLayoutName();
+        const availableLayouts = [...layoutPlugin.layoutManager.layouts.keys()];
+
+        let dialogHTML = `
+            <h2>Layout Settings</h2>
+            <div>
+                <label for="layout-select">Current Layout: </label>
+                <select id="layout-select">
+        `;
+        availableLayouts.forEach(name => {
+            const displayName = name.charAt(0).toUpperCase() + name.slice(1);
+            dialogHTML += `<option value="${name}" ${name === currentLayoutName ? 'selected' : ''}>${displayName}</option>`;
+        });
+        dialogHTML += `
+                </select>
+            </div>
+            <div class="layout-options-container" style="margin-top: 15px; min-height: 50px;">
+                <!-- Layout-specific options will go here in the future -->
+                <p><em>Layout-specific options will be available here in a future update.</em></p>
+            </div>
+            <button id="apply-layout-button" style="margin-right: 10px;">Apply Layout</button>
+            <button id="close-layout-dialog">Close</button>
+        `;
+
+        this.layoutSettingsDialogElement.innerHTML = dialogHTML;
+
+        $('#apply-layout-button', this.layoutSettingsDialogElement)?.addEventListener('click', () => {
+            const selectedLayout = $('#layout-select', this.layoutSettingsDialogElement)?.value;
+            if (selectedLayout) {
+                this.space.emit('ui:request:applyLayout', selectedLayout);
+                // Optionally close dialog, or update current layout display if kept open
+                // For now, let's assume applyLayout might take time, so we don't auto-close.
+                // Update the displayed current layout name after a short delay or event
+                setTimeout(() => this._updateLayoutSettingsDialogContent(layoutPlugin), 100);
+            }
+        });
+
+        $('#close-layout-dialog', this.layoutSettingsDialogElement)?.addEventListener('click', () => {
+            this._hideLayoutSettingsDialog();
+        });
+
+        this.layoutSettingsDialogElement.style.display = 'block';
+        this.space.emit('ui:layoutsettings:shown');
+    }
+
+    _updateLayoutSettingsDialogContent(layoutPlugin) {
+        if (!this.layoutSettingsDialogElement || this.layoutSettingsDialogElement.style.display === 'none') return;
+        if (!layoutPlugin || !layoutPlugin.layoutManager) return;
+
+        const currentLayoutName = layoutPlugin.layoutManager.getActiveLayoutName();
+        const selectElement = $('#layout-select', this.layoutSettingsDialogElement);
+        if (selectElement) {
+            selectElement.value = currentLayoutName;
+        }
+        // Future: update layout-specific options here
+    }
+
+    _hideLayoutSettingsDialog = () => {
+        if (this.layoutSettingsDialogElement) {
+            this.layoutSettingsDialogElement.style.display = 'none';
+            this.space.emit('ui:layoutsettings:hidden');
+        }
+    }
+
+    _showKeyboardShortcutsDialog() {
+        if (!this.keyboardShortcutsDialogElement) {
+            this.keyboardShortcutsDialogElement = document.createElement('div');
+            this.keyboardShortcutsDialogElement.id = 'keyboard-shortcuts-dialog';
+            this.keyboardShortcutsDialogElement.className = 'dialog'; // Reuse dialog styling
+            // Prevent clicks inside dialog from propagating to graph or closing other things
+            this.keyboardShortcutsDialogElement.addEventListener('pointerdown', (e) => e.stopPropagation());
+
+
+            let tableHTML = `
+                <h2>Keyboard Shortcuts</h2>
+                <table class="shortcuts-table">
+                    <thead>
+                        <tr>
+                            <th>Key(s)</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            this.keyboardShortcuts.forEach(shortcut => {
+                tableHTML += `
+                    <tr>
+                        <td>${shortcut.keys.map(key => `<kbd>${key}</kbd>`).join(' / ')}</td>
+                        <td>${shortcut.description}</td>
+                    </tr>
+                `;
+            });
+            tableHTML += `
+                    </tbody>
+                </table>
+                <button id="close-shortcuts-dialog">Close</button>
+            `;
+            this.keyboardShortcutsDialogElement.innerHTML = tableHTML;
+            document.body.appendChild(this.keyboardShortcutsDialogElement);
+
+            $('#close-shortcuts-dialog', this.keyboardShortcutsDialogElement)?.addEventListener('click', () => {
+                this._hideKeyboardShortcutsDialog();
+            });
+        }
+        this.keyboardShortcutsDialogElement.style.display = 'block';
+        this.space.emit('ui:keyboardshortcuts:shown');
+    }
+
+    _hideKeyboardShortcutsDialog = () => {
+        if (this.keyboardShortcutsDialogElement) {
+            this.keyboardShortcutsDialogElement.style.display = 'none';
+            this.space.emit('ui:keyboardshortcuts:hidden');
+        }
+    }
+
 
     _applySavedTheme() {
         const savedTheme = localStorage.getItem('spacegraph-theme');
@@ -118,10 +327,10 @@ export class UIManager {
         if (!this.toolbarElement) return;
         this.toolbarElement.innerHTML = '';
         const buttons = [
-            { id: 'tb-add-node', text: '➕ Node', title: 'Add Default Node', action: 'addNode' },
-            { id: 'tb-center-view', text: '🎯 Center', title: 'Center View', action: 'centerView' },
-            { id: 'tb-reset-view', text: '🔄 Reset', title: 'Reset View', action: 'resetView' },
-            { id: 'tb-toggle-theme', text: '🎨 Theme', title: 'Toggle Light/Dark Theme', action: 'toggleTheme' },
+            { id: 'tb-add-node', text: '➕', title: 'Add Default Node', action: 'addNode' }, // Node emoji was already there, just shortening text
+            { id: 'tb-center-view', text: '🎯', title: 'Center View', action: 'centerView' }, // Center emoji was already there
+            { id: 'tb-reset-view', text: '🔄', title: 'Reset View', action: 'resetView' },     // Reset emoji was already there
+            { id: 'tb-toggle-theme', text: '🎨', title: 'Toggle Light/Dark Theme', action: 'toggleTheme' }, // Theme emoji was already there
         ];
         buttons.forEach((btnData) => {
             const button = document.createElement('button');
@@ -205,7 +414,11 @@ export class UIManager {
     };
 
     _updateHudCameraMode(mode) {
-        if (this.hudModeIndicator) {
+        // Now that hudModeIndicator is a select element
+        if (this.hudModeIndicator && this.hudModeIndicator.tagName === 'SELECT') {
+            const cameraMode = mode || this.space.plugins.getPlugin('CameraPlugin')?.getCameraMode() || 'orbit';
+            this.hudModeIndicator.value = cameraMode;
+        } else if (this.hudModeIndicator) { // Fallback for old div if somehow still present
             const cameraMode = mode || this.space.plugins.getPlugin('CameraPlugin')?.getCameraMode() || 'orbit';
             const modeName = cameraMode.charAt(0).toUpperCase() + cameraMode.slice(1);
             this.hudModeIndicator.textContent = `Mode: ${modeName}`;
@@ -271,7 +484,7 @@ export class UIManager {
         if (this.currentState === newState) return;
 
         // Exit current state logic (if any)
-        // console.log(`Exiting state: ${this.currentState}`);
+        console.log(`UIManager: Exiting state: ${this.currentState}, transitioning to ${newState}`);
         switch (this.currentState) {
             case InteractionState.DRAGGING_NODE:
                 this.draggedNode?.endDrag();
@@ -803,6 +1016,12 @@ export class UIManager {
                 if (uiPlugin.getIsLinking()) { // Check linking state via UIPlugin
                     this.space.emit('ui:request:cancelLinking'); // UIPlugin handles actual cancellation
                     handled = true;
+                } else if (this.layoutSettingsDialogElement?.style.display === 'block') {
+                    this._hideLayoutSettingsDialog();
+                    handled = true;
+                } else if (this.keyboardShortcutsDialogElement?.style.display === 'block') {
+                    this._hideKeyboardShortcutsDialog();
+                    handled = true;
                 } else if (this.contextMenuElement.style.display === 'block') {
                     this._hideContextMenu();
                     handled = true;
@@ -1007,26 +1226,26 @@ export class UIManager {
     _getContextMenuItemsForNode(node) {
         const items = [];
         if (node instanceof HtmlNode && node.data.editable) {
-            items.push({ label: 'Edit Content 📝', action: 'edit-node-content', nodeId: node.id });
+            items.push({ label: '📝 Edit Content', action: 'edit-node-content', nodeId: node.id });
         }
-        items.push({ label: 'Start Link ✨', action: 'start-linking-node', nodeId: node.id });
-        items.push({ label: 'Auto Zoom / Back 🖱️', action: 'autozoom-node', nodeId: node.id });
+        items.push({ label: '🔗 Start Link', action: 'start-linking-node', nodeId: node.id }); // Changed emoji for "Start Link"
+        items.push({ label: '🔎 Auto Zoom', action: 'autozoom-node', nodeId: node.id }); // Changed "Auto Zoom / Back" and emoji
 
         const layoutPlugin = this.space.plugins.getPlugin('LayoutPlugin');
         const isPinned = layoutPlugin?.isNodePinned(node.id) || false;
-        items.push({ label: isPinned ? 'Unpin Node 📌' : 'Pin Node 📌', action: 'toggle-pin-node', nodeId: node.id });
+        items.push({ label: isPinned ? '📌 Unpin' : '📌 Pin', action: 'toggle-pin-node', nodeId: node.id }); // Shortened Pin/Unpin
 
         items.push({ type: 'separator' });
-        items.push({ label: 'Delete Node 🗑️', action: 'delete-node', nodeId: node.id, isDestructive: true });
+        items.push({ label: '🗑️ Delete Node', action: 'delete-node', nodeId: node.id, isDestructive: true });
         return items;
     }
 
     _getContextMenuItemsForEdge(edge) {
         return [
-            { label: 'Edit Style...', action: 'edit-edge-style', edgeId: edge.id },
-            { label: 'Reverse Direction ↔️', action: 'reverse-edge-direction', edgeId: edge.id },
+            { label: '🎨 Edit Style', action: 'edit-edge-style', edgeId: edge.id }, // Changed "Edit Style..."
+            { label: '↔️ Reverse Direction', action: 'reverse-edge-direction', edgeId: edge.id },
             { type: 'separator' },
-            { label: 'Delete Edge 🗑️', action: 'delete-edge', edgeId: edge.id, isDestructive: true },
+            { label: '🗑️ Delete Edge', action: 'delete-edge', edgeId: edge.id, isDestructive: true },
         ];
     }
 
@@ -1034,20 +1253,20 @@ export class UIManager {
         const items = [];
         if (worldPos) {
             const posData = { positionX: worldPos.x, positionY: worldPos.y, positionZ: worldPos.z };
-            items.push({ label: 'Create HTML Node 📄', action: 'create-html-node', ...posData });
-            items.push({ label: 'Create Note Here 📝', action: 'create-note-node', ...posData });
-            items.push({ label: 'Create Box Here 📦', action: 'create-shape-node-box', ...posData });
-            items.push({ label: 'Create Sphere Here 🌐', action: 'create-shape-node-sphere', ...posData });
+            items.push({ label: '📄 Add HTML Node', action: 'create-html-node', ...posData }); // Changed "Create HTML Node"
+            items.push({ label: '📝 Add Note', action: 'create-note-node', ...posData });       // Changed "Create Note Here"
+            items.push({ label: '📦 Add Box', action: 'create-shape-node-box', ...posData });        // Changed "Create Box Here"
+            items.push({ label: '🌐 Add Sphere', action: 'create-shape-node-sphere', ...posData });  // Changed "Create Sphere Here"
         }
         items.push({ type: 'separator' });
-        items.push({ label: 'Center View 🧭', action: 'center-camera-view' });
-        items.push({ label: 'Reset Zoom & Pan 🔄', action: 'reset-camera-view' });
+        items.push({ label: '🎯 Center View', action: 'center-camera-view' }); // Changed emoji for Center View
+        items.push({ label: '🔄 Reset View', action: 'reset-camera-view' }); // Changed "Reset Zoom & Pan" and emoji
 
         const renderingPlugin = this.space.plugins.getPlugin('RenderingPlugin');
         if (renderingPlugin) {
             const isTransparent = renderingPlugin.background.alpha === 0;
             items.push({
-                label: isTransparent ? 'Set Opaque Background' : 'Set Transparent BG',
+                label: isTransparent ? '🖼️ Opaque BG' : '💨 Transparent BG', // Added emojis for background toggle
                 action: 'toggle-background-visibility',
             });
         }
@@ -1377,6 +1596,10 @@ export class UIManager {
         this.hideEdgeMenu();
         this._hideContextMenu();
         this._hideConfirmDialog();
+        this._hideKeyboardShortcutsDialog();
+        this.keyboardShortcutsDialogElement?.remove();
+        this._hideLayoutSettingsDialog(); // Ensure it's hidden
+        this.layoutSettingsDialogElement?.remove(); // Remove from DOM
         if(this.toolbarElement) this.toolbarElement.innerHTML = '';
         this.hudLayer?.remove();
 
