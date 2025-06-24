@@ -55,11 +55,11 @@ export class HtmlNode extends BaseNode {
                     ${this.data.content || this.data.label || ''}
                 </div>
                 <div class="node-controls">
-                    <button class="node-quick-button node-content-zoom-in" title="Zoom In Content (+)">+</button>
-                    <button class="node-quick-button node-content-zoom-out" title="Zoom Out Content (-)">-</button>
-                    <button class="node-quick-button node-grow" title="Grow Node (Ctrl++)">➚</button>
-                    <button class="node-quick-button node-shrink" title="Shrink Node (Ctrl+-)">➘</button>
-                    <button class="node-quick-button delete-button node-delete" title="Delete Node (Del)">×</button>
+                    <button class="node-quick-button node-content-zoom-in" title="Zoom In Content (+)">➕</button>
+                    <button class="node-quick-button node-content-zoom-out" title="Zoom Out Content (-)">➖</button>
+                    <button class="node-quick-button node-grow" title="Grow Node (Ctrl++)">↗️</button>
+                    <button class="node-quick-button node-shrink" title="Shrink Node (Ctrl+-)">↙️</button>
+                    <button class="node-quick-button delete-button node-delete" title="Delete Node (Del)">🗑️</button>
                 </div>
             </div>
             <div class="resize-handle" title="Resize Node"></div>
@@ -124,7 +124,8 @@ export class HtmlNode extends BaseNode {
         // Note: 'graph:node:resized' is emitted by UIManager during the resize operation.
         // This setSize is the final application. If an event is needed here for internal logic:
         // this.space?.emit('node:size:changed', { node: this, oldSize, newSize: this.size });
-        this.space?.layout?.kick(); // Kick layout if size changed
+        // Removing kick from here; layout should be kicked by UIManager or endResize if needed.
+        // this.space?.layout?.kick();
     }
 
     setContentScale(scale) {
@@ -240,7 +241,16 @@ export class HtmlNode extends BaseNode {
 
     endResize() {
         this.htmlElement?.classList.remove('resizing');
-        this.space?.plugins.getPlugin('LayoutPlugin')?.releaseNode(this); // Inform layout plugin
+        try {
+            const layoutPlugin = this.space?.plugins?.getPlugin('LayoutPlugin');
+            if (layoutPlugin && typeof layoutPlugin.releaseNode === 'function') {
+                layoutPlugin.releaseNode(this);
+            } else {
+                console.warn('HtmlNode.endResize: LayoutPlugin or releaseNode not available.');
+            }
+        } catch (error) {
+            console.error('HtmlNode.endResize: Error calling releaseNode:', error);
+        }
         this.space?.emit('graph:node:resizeend', { node: this, finalSize: { ...this.size } });
     }
 }

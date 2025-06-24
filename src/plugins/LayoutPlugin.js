@@ -68,6 +68,11 @@ export class LayoutPlugin extends Plugin {
         // if it registers them with this.space.
         // For now, assuming these event handlers in LayoutPlugin are for generic layout interactions.
 
+        this.space.on('ui:request:applyLayout', (layoutName) => {
+            this.applyLayout(layoutName);
+            // Potentially emit an event or update UI if needed after layout application starts
+        });
+
         this.space.on('node:dragstart', (draggedNodeInstance) => {
             const currentLayout = this.layoutManager.getActiveLayout();
             if (currentLayout && typeof currentLayout.fixNode === 'function') {

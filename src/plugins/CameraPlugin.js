@@ -46,6 +46,14 @@ export class CameraPlugin extends Plugin {
         // For now, let SpaceGraph call these on the plugin instance after all plugins are ready.
         // this.centerView(null, 0);
         // this.setInitialState();
+        this._subscribeToEvents();
+    }
+
+    _subscribeToEvents() {
+        this.space.on('ui:request:setCameraMode', (mode) => {
+            this.setCameraMode(mode);
+        });
+        // Listen to other relevant UI requests if any
     }
 
     /** @returns {THREE.PerspectiveCamera | null} */
