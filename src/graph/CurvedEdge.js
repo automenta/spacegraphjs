@@ -80,44 +80,77 @@ export class CurvedEdge extends Edge {
         const midPoint = new THREE.Vector3().addVectors(sourcePos, targetPos).multiplyScalar(0.5);
 
         // Perpendicular direction for control point offset
-        // For 2D graphs on XY plane, this is simpler. For 3D, need a consistent perpendicular.
-        // Let's use a simple perpendicular in the XY plane for now, or a fixed offset.
-        // A more robust method might involve cross products with a camera up vector or similar.
         const dx = targetPos.x - sourcePos.x;
         const dy = targetPos.y - sourcePos.y;
-        // const dz = targetPos.z - sourcePos.z; // if needed for 3D curvature
+        let perpendicular = new THREE.Vector3(-dy, dx, 0);
 
-        // Simple perpendicular in XY plane
-        let perpendicular = new THREE.Vector3(-dy, dx, 0).normalize();
-
-        // If dx and dy are zero (nodes are vertically aligned in XY), perpendicular will be (0,0,0).
-        // Fallback for co-linear points or pure Z offset.
-        if (perpendicular.lengthSq() === 0) {
-            // If source and target are at the same X,Y, bend along X-axis or view plane normal
+        // Check if perpendicular is a zero vector (or very close to it)
+        // or if it became NaN after normalization (if dx, dy were 0)
+        if (perpendicular.lengthSq() < 1e-8) { // Check before normalize to avoid NaN with (0,0,0).normalize()
+            // If source and target are at the same X,Y, or very close.
+            // Try to use something perpendicular to the view direction projected on XY.
             const viewDirection = new THREE.Vector3();
-            this.space?.camera?._cam?.getWorldDirection(viewDirection); // Get camera view direction
-            if (viewDirection && (Math.abs(viewDirection.x) > 0.1 || Math.abs(viewDirection.y) > 0.1)) {
-                // Try to use something perpendicular to the view direction projected on XY
-                perpendicular.set(-viewDirection.y, viewDirection.x, 0).normalize();
-                if (perpendicular.lengthSq() === 0) perpendicular.set(1, 0, 0); // Absolute fallback
-            } else {
-                perpendicular.set(1, 0, 0); // Default fallback if camera info is not helpful
+            if (this.space?.camera?._cam) {
+                this.space.camera._cam.getWorldDirection(viewDirection);
+                perpendicular.set(-viewDirection.y, viewDirection.x, 0); // Perpendicular to camera's XY projection
+            }
+            // If still zero (e.g., camera looking straight down or up, or no camera info)
+            if (perpendicular.lengthSq() < 1e-8) {
+                perpendicular.set(1, 0, 0); // Default fallback to X-axis
             }
         }
+        perpendicular.normalize(); // Normalize after ensuring it's not a zero vector
 
         const distance = sourcePos.distanceTo(targetPos);
         const controlPointOffset = perpendicular.multiplyScalar(distance * this.curvature);
         const controlPoint = new THREE.Vector3().addVectors(midPoint, controlPointOffset);
 
+        // Ensure controlPoint is not NaN
+        if (isNaN(controlPoint.x) || isNaN(controlPoint.y) || isNaN(controlPoint.z)) {
+            console.warn(`CurvedEdge ${this.id}: Control point has NaN values. Defaulting to midpoint. CP:`, controlPoint, "Source:", sourcePos, "Target:", targetPos);
+            controlPoint.copy(midPoint); // Fallback if control point calculation failed
+        }
+
         const curve = new THREE.QuadraticBezierCurve3(sourcePos, controlPoint, targetPos);
-        const points = curve.getPoints(this.numPoints); // this.numPoints is N segments, so N+1 points
+
+        // Ensure numPoints is valid for getPoints
+        const numSegments = Math.max(1, this.numPoints); // Ensure at least 1 segment (2 points)
+        const points = curve.getPoints(numSegments);
 
         const positions = [];
-        points.forEach((p) => positions.push(p.x, p.y, p.z));
+        points.forEach((p) => {
+            // Additional check for NaN within points from curve.getPoints, though less likely if inputs are sane
+            if (isNaN(p.x) || isNaN(p.y) || isNaN(p.z)) {
+                console.warn(`CurvedEdge ${this.id}: NaN coordinate in curve points. Point:`, p);
+                // Skip this point or use a fallback? For now, let it pass to see if setPositions handles it.
+                // Or, more drastically, positions.push(0,0,0) though that would distort the line.
+            }
+            positions.push(p.x, p.y, p.z);
+        });
+
+        // Logging added for debugging the main issue of point count mismatch
+        // console.log(`CurvedEdge ${this.id}: numPoints: ${this.numPoints} (segments: ${numSegments}), expected points: ${numSegments + 1}, positions length: ${positions.length / 3}`);
+
+        if (positions.length === 0 || positions.length / 3 !== numSegments + 1) {
+            console.error(`CurvedEdge ${this.id}: Incorrect number of points generated. Expected ${numSegments + 1}, got ${positions.length/3}. NumPoints was ${this.numPoints}. Source:`, sourcePos, "Target:", targetPos, "Control:", controlPoint);
+            // Fallback: create a straight line if curve generation failed catastrophically
+            positions.length = 0; // Clear potentially bad positions
+            positions.push(sourcePos.x, sourcePos.y, sourcePos.z);
+            positions.push(targetPos.x, targetPos.y, targetPos.z);
+             // If we fallback to 2 points, numSegments for color needs to be 1.
+             // This part is tricky as color array expects numSegments+1 colors.
+        }
+
         this.line.geometry.setPositions(positions);
 
         // Ensure the geometry is valid before proceeding
-        if (this.line.geometry.attributes.position.count === 0) return;
+        const posAttribute = this.line.geometry.attributes.position;
+        if (!posAttribute || posAttribute.count === 0) {
+            console.warn(`CurvedEdge ${this.id}: Position attribute is empty after setPositions. Skipping further updates.`);
+            return;
+        }
+
+        const actualNumPointsInGeometry = posAttribute.count; // This is the true number of points in the geometry
 
         // Handle gradient colors for curved lines
         if (this.data.gradientColors && this.data.gradientColors.length === 2) {
@@ -128,29 +161,30 @@ export class CurvedEdge extends Edge {
             const colorStart = new THREE.Color(this.data.gradientColors[0]);
             const colorEnd = new THREE.Color(this.data.gradientColors[1]);
             const curveColors = [];
-            for (let i = 0; i <= this.numPoints; i++) {
-                // numPoints is number of segments, so numPoints+1 actual points
-                const t = i / this.numPoints;
+
+            // The number of color entries must match the actual number of points in the geometry.
+            // Interpolation should be over (actualNumPointsInGeometry - 1) segments.
+            const effectiveNumSegmentsForColor = Math.max(1, actualNumPointsInGeometry - 1);
+
+            for (let i = 0; i < actualNumPointsInGeometry; i++) {
+                const t = (effectiveNumSegmentsForColor === 0) ? 0 : (i / effectiveNumSegmentsForColor); // Avoid division by zero if only 1 point (though unlikely)
                 const interpolatedColor = new THREE.Color().lerpColors(colorStart, colorEnd, t);
                 curveColors.push(interpolatedColor.r, interpolatedColor.g, interpolatedColor.b);
             }
 
-            // Fix B1: Strengthen guard for setColors
-            const posAttribute = this.line.geometry.attributes.position;
-            const expectedMinLength = (this.numPoints + 1) * 3; // numPoints segments = numPoints+1 points
+            // Corrected guard for setColors:
+            // The number of points in geometry (posAttribute.count) must be consistent with
+            // the `numSegments` used for color generation (which is actualNumPointsInGeometry -1).
+            // The `curveColors` array will have `actualNumPointsInGeometry * 3` elements.
+            // `posAttribute.array.length` should be `actualNumPointsInGeometry * 3`.
 
-            if (posAttribute && typeof posAttribute.count === 'number' && posAttribute.count > this.numPoints && // count must be numPoints + 1
-                posAttribute.array && typeof posAttribute.array.length === 'number' &&
-                posAttribute.array.length >= expectedMinLength && posAttribute.array.length % 3 === 0) {
-
+            if (posAttribute.array && posAttribute.array.length > 0 && posAttribute.array.length === curveColors.length) {
                 this.line.geometry.setColors(curveColors);
-                if (this.line.geometry.attributes.instanceColorStart)
-                    this.line.geometry.attributes.instanceColorStart.needsUpdate = true;
-                if (this.line.geometry.attributes.instanceColorEnd)
-                    this.line.geometry.attributes.instanceColorEnd.needsUpdate = true;
+                // No need to check instanceColorStart/End here, this is for LineGeometry used by Line2
             } else {
-                console.warn(`CurvedEdge ${this.id}: Skipping setColors in update() due to missing/empty/invalid geometry positions.
-                    Count: ${posAttribute?.count}, Array Length: ${posAttribute?.array?.length}, Expected Min Length: ${expectedMinLength}, NumPoints: ${this.numPoints}`);
+                console.warn(`CurvedEdge ${this.id}: Skipping setColors in update() due to mismatch or invalid geometry positions.
+                    Actual Points in Geometry: ${actualNumPointsInGeometry}, Colors Generated: ${curveColors.length/3}, Positions Array Length: ${posAttribute?.array?.length},
+                    Original numPoints: ${this.numPoints}, Segments for Color: ${effectiveNumSegmentsForColor}`);
             }
         } else {
             // Ensure no gradient if not specified (similar to Edge.js update)
