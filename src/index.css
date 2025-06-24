@@ -1,28 +1,47 @@
 :root {
-    --bg-color: #000000;
-    --dot-color: rgba(100, 100, 120, 0.2);
-    --primary-color: #e0e0f0;
-    --accent-color: #00d0ff;
-    --accent-color-darker: #008ea8;
-    --node-bg-default: rgba(15, 15, 35, 0.85);
-    --node-border: var(--accent-color-darker);
-    --node-shadow: rgba(0, 208, 255, 0.1);
-    --node-hover-shadow: rgba(0, 208, 255, 0.3);
-    --node-selected-shadow: rgba(0, 208, 255, 0.5);
-    --edge-color: rgba(0, 208, 255, 0.5);
-    --edge-highlight-color: #00ffff;
-    --delete-button-bg: #d03030;
-    --delete-button-text: #ffffff;
-    --menu-bg: rgba(20, 20, 40, 0.95);
-    --menu-border: var(--accent-color);
-    --menu-hover-bg: rgba(0, 208, 255, 0.15);
-    --dialog-bg: rgba(25, 25, 50, 0.98);
-    --font-family: sans-serif;
-    --font-mono: monospace;
-    --transition-fast: 0.15s ease-out;
-    --transition-med: 0.3s ease-out;
-    --node-button-bg: rgba(255, 255, 255, 0.1);
-    --node-button-hover-bg: rgba(0, 208, 255, 0.3);
+    /* Naming convention: --sg-category-element-state */
+    /* General App & Text */
+    --sg-font-primary: sans-serif;
+    --sg-font-mono: monospace;
+    --sg-text-primary: #e0e0f0;       /* Primary text color */
+    --sg-text-secondary: #a0a0b0;     /* Secondary/dimmed text color */
+    --sg-text-on-accent: #000000;     /* Text color on accent backgrounds */
+    --sg-accent-primary: #00d0ff;     /* Primary accent for highlights, interactive elements */
+    --sg-accent-secondary: #008ea8;   /* Darker accent or secondary interactive elements */
+
+    /* Backgrounds */
+    --sg-bg-canvas: #000000;          /* Main graph canvas background */
+    --sg-bg-ui: rgba(20, 20, 40, 0.95); /* General UI panels (toolbar, context menu, dialogs) */
+    --sg-bg-ui-hover: rgba(0, 208, 255, 0.15); /* Hover state for UI elements like menu items */
+
+    /* Nodes */
+    --sg-node-bg: rgba(15, 15, 35, 0.85); /* Default HTML node background */
+    --sg-node-text: var(--sg-text-primary); /* Default text within nodes */
+    --sg-node-border: var(--sg-accent-secondary);
+    --sg-node-shadow: rgba(0, 208, 255, 0.1);
+    --sg-node-shadow-hover: rgba(0, 208, 255, 0.3);
+    --sg-node-shadow-selected: rgba(0, 208, 255, 0.5);
+    --sg-node-button-bg: rgba(255, 255, 255, 0.1);
+    --sg-node-button-bg-hover: rgba(0, 208, 255, 0.3);
+
+    /* Edges */
+    --sg-edge-color: rgba(0, 208, 255, 0.5);
+    --sg-edge-color-highlight: #00ffff;
+
+    /* Specific UI Components */
+    --sg-button-primary-bg: var(--sg-accent-primary);
+    --sg-button-primary-text: var(--sg-text-on-accent);
+    --sg-button-secondary-bg: #555;
+    --sg-button-secondary-text: var(--sg-text-primary);
+    --sg-delete-button-bg: #d03030;
+    --sg-delete-button-text: #ffffff;
+
+    /* Transitions */
+    --sg-transition-fast: 0.15s ease-out;
+    --sg-transition-medium: 0.3s ease-out;
+
+    /* Dot background for canvas (optional) */
+    --sg-dot-color: rgba(100, 100, 120, 0.2);
 }
 
 *, *::before, *::after {
@@ -32,13 +51,13 @@
 body {
     margin: 0;
     overflow: hidden;
-    background-color: var(--bg-color);
-    color: var(--primary-color);
-    font-family: var(--font-family);
+    background-color: var(--sg-bg-canvas); /* USE NEW */
+    color: var(--sg-text-primary);      /* USE NEW */
+    font-family: var(--sg-font-primary); /* USE NEW */
     overscroll-behavior: none;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    /*background-image: radial-gradient(var(--dot-color) 1px, transparent 1px);*/
+    /*background-image: radial-gradient(var(--dot-color) 1px, transparent 1px);*//* Keep old or map if new exists */
     /*background-size: 20px 20px;*/
 }
 
@@ -75,15 +94,15 @@ body {
 
 .node-html {
     position: absolute;
-    background-color: var(--node-bg, var(--node-bg-default));
-    border: 1px solid var(--node-border);
+    background-color: var(--sg-node-bg); /* USE NEW - note: var(--node-bg, var(--node-bg-default)) implies --node-bg can be set inline. We'll keep this pattern if needed, or simplify to just --sg-node-bg. For now, assume --sg-node-bg is the primary source. */
+    border: 1px solid var(--sg-node-border); /* USE NEW */
     border-radius: 8px;
     padding: 0; /* Padding handled by inner container */
-    color: var(--primary-color);
+    color: var(--sg-node-text); /* USE NEW */
     pointer-events: auto;
     cursor: grab;
-    transition: transform var(--transition-fast), box-shadow var(--transition-med), border-color var(--transition-med);
-    box-shadow: 0 2px 8px 1px var(--node-shadow);
+    transition: transform var(--sg-transition-fast), box-shadow var(--sg-transition-medium), border-color var(--sg-transition-medium); /* USE NEW */
+    box-shadow: 0 2px 8px 1px var(--sg-node-shadow); /* USE NEW */
     min-width: 80px;
     min-height: 40px;
     display: flex;
@@ -94,20 +113,20 @@ body {
 }
 
 .node-html:hover {
-    box-shadow: 0 4px 15px 3px var(--node-hover-shadow);
-    border-color: var(--accent-color);
+    box-shadow: 0 4px 15px 3px var(--sg-node-shadow-hover); /* USE NEW */
+    border-color: var(--sg-accent-primary); /* USE NEW */
     z-index: 10 !important;
 }
 
 .node-html.selected {
-    box-shadow: 0 0 20px 5px var(--node-selected-shadow);
-    border-color: var(--accent-color);
+    box-shadow: 0 0 20px 5px var(--sg-node-shadow-selected); /* USE NEW */
+    border-color: var(--sg-accent-primary); /* USE NEW */
     z-index: 11 !important; /* Slightly higher than hover */
 }
 
 .node-html.dragging {
     cursor: grabbing;
-    box-shadow: 0 8px 25px 6px var(--node-hover-shadow);
+    box-shadow: 0 8px 25px 6px var(--sg-node-shadow-hover); /* USE NEW */
     z-index: 1000 !important;
     transition: none;
 }
@@ -117,8 +136,8 @@ body {
 }
 
 .node-html.linking-target {
-    border-color: #ffaa00;
-    box-shadow: 0 0 20px 5px rgba(255, 170, 0, 0.5);
+    border-color: #ffaa00; /* This is a specific color, not from theme vars yet. Could become --sg-linking-target-border */
+    box-shadow: 0 0 20px 5px rgba(255, 170, 0, 0.5); /* Specific color */
 }
 
 .node-inner-wrapper {
@@ -141,8 +160,8 @@ body {
     word-wrap: break-word;
     user-select: text;
     scrollbar-width: thin;
-    scrollbar-color: var(--accent-color-darker) transparent;
-    transition: transform var(--transition-fast); /* For content zoom */
+    scrollbar-color: var(--sg-accent-secondary) transparent; /* USE NEW */
+    transition: transform var(--sg-transition-fast); /* USE NEW */ /* For content zoom */
     transform-origin: top left;
 }
 
@@ -155,12 +174,12 @@ body {
 }
 
 .node-content::-webkit-scrollbar-thumb {
-    background-color: var(--accent-color-darker);
+    background-color: var(--sg-accent-secondary); /* USE NEW */
     border-radius: 0.1em;
 }
 
 .node-content:focus {
-    box-shadow: inset 0 0 0 1px var(--accent-color);
+    box-shadow: inset 0 0 0 1px var(--sg-accent-primary); /* USE NEW */
     margin: -1px;
 }
 
@@ -174,7 +193,7 @@ body {
 
 .node-content h1, .node-content h2, .node-content h3 {
     margin: 0.5em 0;
-    color: var(--accent-color);
+    color: var(--sg-accent-primary); /* USE NEW */
     font-weight: 600;
 }
 
@@ -204,16 +223,16 @@ body {
 }
 
 .node-content code {
-    font-family: var(--font-mono);
-    background-color: rgba(0, 0, 0, 0.2);
+    font-family: var(--sg-font-mono); /* USE NEW */
+    background-color: rgba(0, 0, 0, 0.2); /* Consider a theme variable for this */
     padding: 0.1em 0.3em;
     border-radius: 0.03em;
     font-size: 0.9em;
 }
 
 .node-content pre {
-    font-family: var(--font-mono);
-    background-color: rgba(0, 0, 0, 0.2);
+    font-family: var(--sg-font-mono); /* USE NEW */
+    background-color: rgba(0, 0, 0, 0.2); /* Consider a theme variable for this */
     padding: 0.5em;
     border-radius: 4px;
     overflow-x: auto;
@@ -221,14 +240,14 @@ body {
 }
 
 .node-content blockquote {
-    border-left: 3px solid var(--accent-color-darker);
+    border-left: 3px solid var(--sg-accent-secondary); /* USE NEW */
     margin: 0.5em 0 0.5em 10px;
     padding-left: 10px;
-    color: #bbb;
+    color: var(--sg-text-secondary); /* USE NEW for quote text color */
 }
 
 .node-content a {
-    color: var(--accent-color);
+    color: var(--sg-accent-primary); /* USE NEW */
     text-decoration: none;
 }
 
@@ -236,12 +255,12 @@ body {
     text-decoration: underline;
 }
 
-.node-content button, .node-content input {
-    pointer-events: auto; /* Allow interaction with form elements */
+.node-content button, .node-content input { /* Styles for form elements *inside* node content */
+    pointer-events: auto;
     margin: 5px;
     padding: 5px 10px;
-    background-color: var(--accent-color-darker);
-    color: white;
+    background-color: var(--sg-button-secondary-bg); /* USE NEW */
+    color: var(--sg-button-secondary-text);         /* USE NEW */
     border: none;
     border-radius: 4px;
     cursor: pointer;
@@ -252,7 +271,81 @@ body {
 }
 
 .node-content button:hover {
-    background-color: var(--accent-color);
+    background-color: var(--sg-accent-primary); /* USE NEW */
+    color: var(--sg-text-on-accent); /* USE NEW */
+}
+
+/* Styles for 3D Labels on ShapeNodes and Edges */
+.node-label-3d, .edge-label { /* Common base for labels */
+    pointer-events: none;
+    padding: 3px 7px;
+    border-radius: 4px;
+    text-align: center;
+    white-space: nowrap;
+    backdrop-filter: blur(4px);
+    border: 1px solid var(--sg-accent-secondary); /* Default border */
+}
+
+.node-label-3d { /* Specifics for ShapeNode labels */
+    color: var(--sg-node-text);
+    background-color: var(--sg-label-bg, rgba(10, 10, 20, 0.75)); /* Fallback if --sg-label-bg not set */
+    font-size: 14px;
+}
+
+.edge-label { /* Specifics for Edge labels */
+    color: var(--sg-edge-label-text, var(--sg-text-primary));
+    background-color: var(--sg-edge-label-bg, var(--sg-bg-ui));
+    font-size: 12px;
+    opacity: 0.9;
+}
+
+.edge-label.selected {
+    color: var(--sg-accent-primary);
+    border-color: var(--sg-accent-primary);
+}
+
+/* Common node class for JS querySelector, if not already defined */
+.node-common {
+    /* Could include common box-sizing or other resets if needed */
+}
+
+/* Light Theme Definition */
+.theme-light {
+    --sg-font-primary: sans-serif;
+    --sg-font-mono: monospace;
+    --sg-text-primary: #222222;
+    --sg-text-secondary: #555555;
+    --sg-text-on-accent: #ffffff;
+    --sg-accent-primary: #007bff;
+    --sg-accent-secondary: #0056b3;
+
+    --sg-bg-canvas: #f4f4f4;
+    --sg-bg-ui: rgba(255, 255, 255, 0.95);
+    --sg-bg-ui-hover: rgba(0, 123, 255, 0.1);
+    --sg-label-bg: rgba(230, 230, 230, 0.85);
+
+    --sg-node-bg: rgba(255, 255, 255, 0.9);
+    --sg-node-text: var(--sg-text-primary);
+    --sg-node-border: var(--sg-accent-secondary);
+    --sg-node-shadow: rgba(0, 0, 0, 0.1);
+    --sg-node-shadow-hover: rgba(0, 123, 255, 0.25);
+    --sg-node-shadow-selected: rgba(0, 123, 255, 0.4);
+    --sg-node-button-bg: rgba(0, 0, 0, 0.05);
+    --sg-node-button-bg-hover: rgba(0, 123, 255, 0.15);
+
+    --sg-edge-color: rgba(0, 86, 179, 0.5);
+    --sg-edge-color-highlight: #007bff;
+    --sg-edge-label-text: var(--sg-text-primary);
+    --sg-edge-label-bg: var(--sg-bg-ui);
+
+    --sg-button-primary-bg: var(--sg-accent-primary);
+    --sg-button-primary-text: var(--sg-text-on-accent);
+    --sg-button-secondary-bg: #e0e0e0;
+    --sg-button-secondary-text: var(--sg-text-primary);
+    --sg-delete-button-bg: #dc3545;
+    --sg-delete-button-text: #ffffff;
+
+    --sg-dot-color: rgba(0, 0, 0, 0.1);
 }
 
 .node-controls {
@@ -273,8 +366,8 @@ body {
 }
 
 .node-quick-button {
-    background-color: var(--node-button-bg);
-    color: var(--primary-color);
+    background-color: var(--sg-node-button-bg); /* USE NEW */
+    color: var(--sg-text-primary); /* USE NEW */
     border: none;
     border-radius: 4px;
     width: 22px;
@@ -283,22 +376,22 @@ body {
     line-height: 22px;
     text-align: center;
     cursor: pointer;
-    transition: background-color var(--transition-fast), transform var(--transition-fast);
+    transition: background-color var(--sg-transition-fast), transform var(--sg-transition-fast); /* USE NEW */
 }
 
 .node-quick-button:hover {
-    background-color: var(--node-button-hover-bg);
+    background-color: var(--sg-node-button-bg-hover); /* USE NEW */
     transform: scale(1.1);
 }
 
 .node-quick-button.delete-button {
-    background-color: var(--delete-button-bg);
-    color: var(--delete-button-text);
+    background-color: var(--sg-delete-button-bg); /* USE NEW */
+    color: var(--sg-delete-button-text); /* USE NEW */
     font-weight: bold;
 }
 
 .node-quick-button.delete-button:hover {
-    background-color: #ff5555;
+    background-color: #ff5555; /* This is specific, could be a --sg-delete-button-bg-hover */
 }
 
 .resize-handle {
@@ -307,13 +400,13 @@ body {
     right: -1px; /* Align with bottom-right border */
     width: 16px;
     height: 16px;
-    background-color: var(--accent-color);
-    border-top: 1px solid var(--bg-color);
-    border-left: 1px solid var(--bg-color);
+    background-color: var(--sg-accent-primary); /* USE NEW */
+    border-top: 1px solid var(--sg-bg-canvas);    /* USE NEW for border against background */
+    border-left: 1px solid var(--sg-bg-canvas);   /* USE NEW */
     border-bottom-right-radius: 7px; /* Match node radius */
     cursor: nwse-resize;
     opacity: 0;
-    transition: opacity var(--transition-fast), transform var(--transition-fast);
+    transition: opacity var(--sg-transition-fast), transform var(--sg-transition-fast); /* USE NEW */
     pointer-events: auto;
     z-index: 10;
 }
@@ -331,14 +424,14 @@ body {
 
 .context-menu, .dialog {
     position: fixed;
-    background-color: var(--menu-bg);
-    border: 1px solid var(--menu-border);
+    background-color: var(--sg-bg-ui); /* USE NEW */
+    border: 1px solid var(--sg-accent-primary); /* USE NEW for menu-border */
     border-radius: 6px;
     box-shadow: 0 5px 25px rgba(0, 0, 0, 0.6);
     z-index: 10000;
     display: none;
     backdrop-filter: blur(8px);
-    animation: fadeIn 0.1s ease-out forwards;
+    animation: fadeIn 0.1s ease-out forwards; /* Animation uses --sg-transition-fast implicitly if needed */
 }
 
 @keyframes fadeIn {
@@ -366,44 +459,44 @@ body {
 .context-menu li {
     padding: 8px 18px;
     cursor: pointer;
-    transition: background-color var(--transition-fast), color var(--transition-fast);
-    color: var(--primary-color);
+    transition: background-color var(--sg-transition-fast), color var(--sg-transition-fast); /* USE NEW */
+    color: var(--sg-text-primary); /* USE NEW */
     white-space: nowrap;
 }
 
 .context-menu li:hover {
-    background-color: var(--menu-hover-bg);
-    color: var(--accent-color);
+    background-color: var(--sg-bg-ui-hover); /* USE NEW */
+    color: var(--sg-accent-primary); /* USE NEW */
 }
 
 .context-menu li.separator {
     height: 1px;
-    background-color: var(--accent-color-darker);
+    background-color: var(--sg-accent-secondary); /* USE NEW */
     margin: 5px 0;
     padding: 0;
     cursor: default;
 }
 
 .context-menu li.separator:hover {
-    background-color: var(--accent-color-darker);
+    background-color: var(--sg-accent-secondary); /* USE NEW */
 }
 
 .context-menu li[data-action^="delete"] {
-    color: var(--delete-button-bg);
+    color: var(--sg-delete-button-bg); /* USE NEW */
 }
 
 .context-menu li[data-action^="delete"]:hover {
-    background-color: rgba(208, 48, 48, 0.2);
+    background-color: rgba(208, 48, 48, 0.2); /* Specific color, could be themed */
 }
 
 .dialog {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background-color: var(--dialog-bg);
+    /* background-color: var(--dialog-bg); // Already covered by .context-menu, .dialog rule using --sg-bg-ui */
     padding: 25px 30px;
     text-align: center;
-    color: var(--primary-color);
+    color: var(--sg-text-primary); /* USE NEW */
     min-width: 300px;
 }
 
@@ -412,31 +505,32 @@ body {
     font-size: 1.1em;
 }
 
-.dialog button {
-    background-color: var(--accent-color);
-    color: var(--bg-color);
+.dialog button { /* Yes button */
+    background-color: var(--sg-button-primary-bg); /* USE NEW */
+    color: var(--sg-button-primary-text);       /* USE NEW */
     border: none;
     padding: 10px 22px;
     margin: 0 10px;
     border-radius: 5px;
     cursor: pointer;
     font-weight: 600;
-    transition: background-color var(--transition-fast), box-shadow var(--transition-fast);
+    transition: background-color var(--sg-transition-fast), box-shadow var(--sg-transition-fast); /* USE NEW */
     min-width: 80px;
 }
 
 .dialog button:hover {
-    background-color: #3fffff;
-    box-shadow: 0 0 12px var(--accent-color);
+    background-color: var(--sg-accent-primary); /* Could be a lighter shade of accent for hover */
+    filter: brightness(1.2); /* Example hover effect */
+    box-shadow: 0 0 12px var(--sg-accent-primary); /* USE NEW */
 }
 
-.dialog button#confirm-no {
-    background-color: #555;
-    color: var(--primary-color);
+.dialog button#confirm-no { /* No button */
+    background-color: var(--sg-button-secondary-bg); /* USE NEW */
+    color: var(--sg-button-secondary-text);      /* USE NEW */
 }
 
 .dialog button#confirm-no:hover {
-    background-color: #777;
+    background-color: #777; /* Could be themed: --sg-button-secondary-bg-hover */
     box-shadow: none;
 }
 
@@ -444,8 +538,8 @@ body {
     position: fixed;
     bottom: 10px;
     left: 10px;
-    background-color: rgba(0, 0, 0, 0.7);
-    color: var(--primary-color);
+    background-color: rgba(0, 0, 0, 0.7); /* Could be themed */
+    color: var(--sg-text-primary); /* USE NEW */
     padding: 5px 12px;
     border-radius: 4px;
     font-size: 12px;
@@ -491,6 +585,45 @@ body {
 }
 
 .edge-menu-frame button.delete {
-    background-color: var(--delete-button-bg);
-    color: var(--delete-button-text);
+    background-color: var(--sg-delete-button-bg); /* USE NEW */
+    color: var(--sg-delete-button-text); /* USE NEW */
+}
+
+/* Toolbar Styles */
+#toolbar {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--sg-bg-ui); /* USE NEW */
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid var(--sg-accent-primary); /* USE NEW for menu-border */
+    z-index: 1000;
+    display: flex;
+    gap: 8px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+    backdrop-filter: blur(8px);
+}
+
+#toolbar button {
+    padding: 6px 12px;
+    background-color: var(--sg-node-button-bg); /* Match node controls */
+    color: var(--sg-text-primary); /* USE NEW */
+    border: 1px solid var(--sg-accent-secondary); /* USE NEW */
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: background-color var(--sg-transition-fast), border-color var(--sg-transition-fast); /* USE NEW */
+}
+
+#toolbar button:hover {
+    background-color: var(--sg-node-button-bg-hover); /* Match node controls */
+    border-color: var(--sg-accent-primary); /* USE NEW */
+}
+
+#toolbar button:active {
+    background-color: var(--sg-accent-primary); /* USE NEW */
+    color: var(--sg-text-on-accent); /* USE NEW */
 }

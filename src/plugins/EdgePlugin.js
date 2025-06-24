@@ -4,15 +4,20 @@
  */
 
 import { Plugin } from '../core/Plugin.js';
-import { Edge } from '../graph/Edge.js'; // Assuming Edge class is in this path
+// Edge class is now primarily used via EdgeFactory
+// import { Edge } from '../graph/Edge.js';
 import { Utils } from '../utils.js'; // For Utils.generateId
+import { EdgeFactory } from '../graph/EdgeFactory.js';
 
 export class EdgePlugin extends Plugin {
-    /** @type {Map<string, Edge>} */
+    /** @type {Map<string, import('../graph/Edge.js').Edge>} */
     edges = new Map();
+    /** @type {EdgeFactory} */
+    edgeFactory = null;
 
     constructor(spaceGraph, pluginManager) {
         super(spaceGraph, pluginManager);
+        this.edgeFactory = new EdgeFactory(spaceGraph);
     }
 
     getName() {
@@ -22,14 +27,23 @@ export class EdgePlugin extends Plugin {
     init() {
         super.init();
         // _tempSelectedEdgeRef removed, UIPlugin manages selection.
+        this.space.on('renderer:resize', this.handleRendererResize.bind(this));
+    }
+
+    handleRendererResize({ width, height }) {
+        this.edges.forEach(edge => {
+            if (edge.updateResolution) {
+                edge.updateResolution(width, height);
+            }
+        });
     }
 
     /**
      * Adds an edge between two nodes.
      * @param {import('../graph/nodes/BaseNode.js').BaseNode} sourceNode - The source node instance.
      * @param {import('../graph/nodes/BaseNode.js').BaseNode} targetNode - The target node instance.
-     * @param {object} [data={}] - Optional data for the edge.
-     * @returns {Edge | null} The added edge or null if failed.
+     * @param {object} [data={}] - Optional data for the edge. Should include `type` if not default.
+     * @returns {import('../graph/Edge.js').Edge | null} The added edge or null if failed.
      */
     addEdge(sourceNode, targetNode, data = {}) {
         if (!sourceNode || !targetNode || sourceNode === targetNode) {
@@ -37,26 +51,41 @@ export class EdgePlugin extends Plugin {
             return null;
         }
 
-        // Check for duplicate edges
+        // Check for duplicate edges (basic check, might need refinement for different edge types if allowed)
         for (const existingEdge of this.edges.values()) {
             if (
                 (existingEdge.source === sourceNode && existingEdge.target === targetNode) ||
                 (existingEdge.source === targetNode && existingEdge.target === sourceNode)
             ) {
+                // Consider if different types of edges between same nodes are allowed.
+                // For now, assume only one edge (of any type) between two nodes.
                 console.warn(`EdgePlugin: Duplicate edge ignored between ${sourceNode.id} and ${targetNode.id}.`);
-                return existingEdge; // Or null, depending on desired behavior
+                return existingEdge;
             }
         }
 
         const edgeId = Utils.generateId('edge');
-        const edge = new Edge(edgeId, sourceNode, targetNode, data);
+        const edgeType = data.type || 'default'; // 'default' will be resolved by factory
+
+        const edge = this.edgeFactory.createEdge(edgeId, edgeType, sourceNode, targetNode, data);
+
+        if (!edge) {
+            console.error(`EdgePlugin: Failed to create edge of type "${edgeType}".`);
+            return null;
+        }
+
+        // The factory now sets edge.space if the edge class needs it (like CurvedEdge)
+        // edge.space = this.space; // Ensure edge has reference to SpaceGraph instance if factory doesn't set it
+
         this.edges.set(edge.id, edge);
 
         const renderingPlugin = this.pluginManager.getPlugin('RenderingPlugin');
-        if (renderingPlugin && edge.line) {
-            renderingPlugin.getWebGLScene()?.add(edge.line);
-        } else if (!renderingPlugin) {
-            console.warn('EdgePlugin: RenderingPlugin not available to add edge to scene.');
+        if (renderingPlugin) {
+            if (edge.line) renderingPlugin.getWebGLScene()?.add(edge.line);
+            if (edge.labelObject) renderingPlugin.getCSS3DScene()?.add(edge.labelObject);
+            if (edge.arrowheadMesh) renderingPlugin.getWebGLScene()?.add(edge.arrowheadMesh); // Add arrowhead
+        } else {
+            console.warn('EdgePlugin: RenderingPlugin not available to add edge components to scene.');
         }
 
         // const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin'); // LayoutPlugin now listens to edge:added

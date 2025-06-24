@@ -10,12 +10,14 @@ export class BaseNode {
     mesh = null; // For 3D object nodes
     cssObject = null; // For HTML nodes
     labelObject = null; // For 3D labels on ShapeNodes
+    isPinned = false;
 
     constructor(id, position = { x: 0, y: 0, z: 0 }, data = {}, mass = 1.0) {
         this.id = id ?? Utils.generateId('node');
         this.position.set(position.x, position.y, position.z);
         this.data = Utils.mergeDeep({}, this.getDefaultData(), data);
         this.mass = Math.max(0.1, mass);
+        this.isPinned = this.data.isPinned ?? false;
     }
 
     getDefaultData() {

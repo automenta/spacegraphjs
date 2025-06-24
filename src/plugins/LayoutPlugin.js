@@ -4,81 +4,90 @@
  */
 
 import { Plugin } from '../core/Plugin.js';
-import { ForceLayout } from '../layout/ForceLayout.js'; // Assuming ForceLayout is here
+import { ForceLayout } from '../layout/ForceLayout.js';
+import { LayoutManager } from '../layout/LayoutManager.js';
 
 export class LayoutPlugin extends Plugin {
-    /** @type {ForceLayout | null} */ // Should be a generic LayoutAlgorithm type later
-    activeLayout = null;
+    /** @type {LayoutManager | null} */
+    layoutManager = null;
 
     constructor(spaceGraph, pluginManager) {
         super(spaceGraph, pluginManager);
+        this.layoutManager = new LayoutManager(spaceGraph, pluginManager);
     }
 
     getName() {
         return 'LayoutPlugin';
     }
 
-    init() {
+    async init() { // init can be async due to applyLayout
         super.init();
-        // Instantiate and set the default layout.
-        // ForceLayout expects the SpaceGraph instance.
-        // We might need to refactor ForceLayout later to not depend on the whole space instance directly,
-        // or pass specific dependencies (node/edge plugins).
-        this.activeLayout = new ForceLayout(this.space);
 
-        // Populate the layout with existing nodes and edges if any were added before layout init.
-        // This is important if plugins are initialized in a specific order.
-        const nodePlugin = this.pluginManager.getPlugin('NodePlugin');
-        const edgePlugin = this.pluginManager.getPlugin('EdgePlugin');
+        // Create and register layout instances
+        const forceLayout = new ForceLayout(this.space); // ForceLayout constructor takes space
+        this.layoutManager.registerLayout('force', forceLayout);
 
-        if (nodePlugin && this.activeLayout && typeof this.activeLayout.addNode === 'function') {
-            nodePlugin.getNodes().forEach((node) => this.activeLayout.addNode(node));
-        }
-        if (edgePlugin && this.activeLayout && typeof this.activeLayout.addEdge === 'function') {
-            edgePlugin.getEdges().forEach((edge) => this.activeLayout.addEdge(edge));
-        }
-        // this.kick(); // Initial kick can be deferred or handled by application post-setup. Or done after listeners.
+        // TODO: Register other layouts here, e.g. GridLayout, CircularLayout
+        // const gridLayout = new GridLayout(this.space, this.pluginManager); // Assuming GridLayout structure
+        // this.layoutManager.registerLayout('grid', gridLayout);
+
+        // Set a default layout
+        // applyLayout will call init() on the layout, which might populate it.
+        await this.layoutManager.applyLayout('force');
+        // No need to manually populate here if layout.init() handles it,
+        // which LayoutManager's applyLayout calls.
 
         this._setupEventListeners();
-        this.kick(); // Kick after setup and potential population.
+        // this.kick(); // Initial kick might be handled by applyLayout or layout's own run method.
+        // If ForceLayout's run/kick is not called by applyLayout, we might need it here.
+        // ForceLayout.run() is called by LayoutManager.applyLayout.
+        // ForceLayout's constructor doesn't auto-start.
     }
 
     _setupEventListeners() {
-        if (!this.space) return;
+        if (!this.space || !this.layoutManager) return;
         const uiPlugin = this.pluginManager.getPlugin('UIPlugin');
+        const activeLayout = this.layoutManager.getActiveLayout(); // Get initial active layout
+
+        // Note: activeLayout might change. Event listeners should ideally operate on the
+        // currently active layout via this.layoutManager.getActiveLayout() if the action
+        // is generic, or the layout itself should handle these via its own event listeners
+        // if it registers them with this.space.
+        // For now, assuming these event handlers in LayoutPlugin are for generic layout interactions.
 
         this.space.on('node:dragstart', (draggedNodeInstance) => {
-            if (this.activeLayout && typeof this.activeLayout.fixNode === 'function') {
+            const currentLayout = this.layoutManager.getActiveLayout();
+            if (currentLayout && typeof currentLayout.fixNode === 'function') {
                 const selectedNodes = uiPlugin?.getSelectedNodes();
                 if (selectedNodes && selectedNodes.has(draggedNodeInstance)) {
-                    selectedNodes.forEach(sNode => this.activeLayout.fixNode(sNode));
+                    selectedNodes.forEach(sNode => currentLayout.fixNode(sNode));
                 } else {
-                    // Fallback or if dragging a non-selected node (though selection should precede drag)
-                    this.activeLayout.fixNode(draggedNodeInstance);
+                    currentLayout.fixNode(draggedNodeInstance);
                 }
             }
         });
 
         this.space.on('node:drag', (eventData) => {
-            // Node position is already updated by BaseNode.drag().
-            // Layout system might need a kick if it's not automatically handling fixed node movements.
-            // If layout is very active, continuous kicking might be performance intensive.
-            // For now, let dragend handle the kick.
+            // Node position updated by BaseNode.drag().
+            // Continuous layouts (like force-directed) might pick this up if they read positions each tick.
+            // Or a specific 'node:moved' event could be emitted if layouts need to react more directly.
+            // For now, assuming fixed nodes' positions are directly used by the layout.
         });
 
         this.space.on('node:dragend', (draggedNodeInstance) => {
-            if (this.activeLayout && typeof this.activeLayout.releaseNode === 'function') {
-                 const selectedNodes = uiPlugin?.getSelectedNodes();
+            const currentLayout = this.layoutManager.getActiveLayout();
+            if (currentLayout && typeof currentLayout.releaseNode === 'function') {
+                const selectedNodes = uiPlugin?.getSelectedNodes();
                 if (selectedNodes && selectedNodes.has(draggedNodeInstance)) {
-                    selectedNodes.forEach(sNode => this.activeLayout.releaseNode(sNode));
+                    selectedNodes.forEach(sNode => currentLayout.releaseNode(sNode));
                 } else {
-                    this.activeLayout.releaseNode(draggedNodeInstance);
+                    currentLayout.releaseNode(draggedNodeInstance);
                 }
             }
             this.kick(); // Recalculate layout after node(s) are released.
         });
 
-        // Event-driven updates for graph structure changes
+        // Event-driven updates for graph structure changes, delegated through LayoutManager
         this.space.on('node:added', (node) => {
             this.addNodeToLayout(node);
             this.kick();
@@ -100,66 +109,98 @@ export class LayoutPlugin extends Plugin {
     }
 
     /**
-     * Adds a node to the current layout.
+     * Adds a node to the current layout via the LayoutManager.
      * @param {import('../graph/nodes/BaseNode.js').BaseNode} node
      */
     addNodeToLayout(node) {
-        this.activeLayout?.addNode(node);
+        this.layoutManager?.addNodeToLayout(node);
     }
 
     /**
-     * Removes a node from the current layout.
+     * Removes a node from the current layout via the LayoutManager.
      * @param {import('../graph/nodes/BaseNode.js').BaseNode} node
      */
     removeNodeFromLayout(node) {
-        this.activeLayout?.removeNode(node);
+        this.layoutManager?.removeNodeFromLayout(node);
     }
 
     /**
-     * Adds an edge to the current layout.
+     * Adds an edge to the current layout via the LayoutManager.
      * @param {import('../graph/Edge.js').Edge} edge
      */
     addEdgeToLayout(edge) {
-        this.activeLayout?.addEdge(edge);
+        this.layoutManager?.addEdgeToLayout(edge);
     }
 
     /**
-     * Removes an edge from the current layout.
+     * Removes an edge from the current layout via the LayoutManager.
      * @param {import('../graph/Edge.js').Edge} edge
      */
     removeEdgeFromLayout(edge) {
-        this.activeLayout?.removeEdge(edge);
+        this.layoutManager?.removeEdgeFromLayout(edge);
     }
 
     /**
-     * Triggers the layout algorithm to re-calculate positions.
+     * Triggers the layout algorithm to re-calculate positions via the LayoutManager.
      */
     kick() {
-        this.activeLayout?.kick();
+        this.layoutManager?.kick();
     }
 
     /**
-     * Stops the layout algorithm.
+     * Stops the current layout algorithm via the LayoutManager.
      */
     stop() {
-        this.activeLayout?.stop();
+        this.layoutManager?.stopLayout();
     }
 
     /**
-     * The main update loop for the layout, if it requires explicit stepping.
-     * ForceLayout manages its own animation via 'kick' and internal rAF loop for physics.
-     * Other layouts might need this.
+     * Applies a new layout.
+     * @param {string} name - The name of the layout to apply.
+     * @param {object} [config={}] - Configuration for the new layout.
+     */
+    async applyLayout(name, config = {}) {
+        if (this.layoutManager) {
+            return await this.layoutManager.applyLayout(name, config);
+        }
+        console.error("LayoutPlugin: LayoutManager not available to apply layout.");
+        return false;
+    }
+
+    /**
+     * Toggles the pinned state of a node in the current layout.
+     * @param {string} nodeId - The ID of the node to toggle pin state for.
+     */
+    togglePinNode(nodeId) {
+        const nodePlugin = this.pluginManager.getPlugin('NodePlugin');
+        const node = nodePlugin?.getNodeById(nodeId);
+        if (!node) {
+            console.warn(`LayoutPlugin: Node with ID ${nodeId} not found for pinning.`);
+            return;
+        }
+
+        const currentLayout = this.layoutManager?.getActiveLayout();
+        if (currentLayout && typeof currentLayout.setPinState === 'function') {
+            // Toggle the current pinned state
+            currentLayout.setPinState(node, !node.isPinned);
+            this.space.emit('node:pinned', { node, isPinned: node.isPinned });
+        } else {
+            console.warn(`LayoutPlugin: Active layout does not support pinning or setPinState method.`);
+        }
+    }
+
+    /**
+     * The main update loop for the layout, delegating to LayoutManager.
+     * This is for layouts that require continuous updates (e.g. physics steps).
      */
     update() {
-        // if (this.activeLayout && typeof this.activeLayout.step === 'function') {
-        //     this.activeLayout.step();
-        // }
+        this.layoutManager?.update();
     }
 
     dispose() {
         super.dispose();
-        this.stop();
-        this.activeLayout = null;
+        this.layoutManager?.dispose();
+        this.layoutManager = null;
         // console.log('LayoutPlugin disposed.');
     }
 }
