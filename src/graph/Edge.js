@@ -148,9 +148,13 @@ export class Edge {
         // For base Edge.js, it's always 2 points.
         // CurvedEdge will need to override this part if it wants a gradient over many segments.
 
-        this.line.geometry.setColors(colors);
-        this.line.geometry.attributes.instanceColorStart.needsUpdate = true;
-        this.line.geometry.attributes.instanceColorEnd.needsUpdate = true;
+        if (this.line.geometry.attributes.position && this.line.geometry.attributes.position.count > 0) {
+            this.line.geometry.setColors(colors);
+            if (this.line.geometry.attributes.instanceColorStart) this.line.geometry.attributes.instanceColorStart.needsUpdate = true;
+            if (this.line.geometry.attributes.instanceColorEnd) this.line.geometry.attributes.instanceColorEnd.needsUpdate = true;
+        } else {
+            console.warn(`Edge ${this.id}: Skipping setColors in _setGradientColors due to empty geometry positions.`);
+        }
     }
 
     update() {
