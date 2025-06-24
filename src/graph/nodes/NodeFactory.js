@@ -5,7 +5,10 @@
 
 import { HtmlNode } from './HtmlNode.js';
 import { ShapeNode } from './ShapeNode.js';
-import { ImageNode } from './ImageNode.js'; // Import ImageNode
+import { ImageNode } from './ImageNode.js';
+import { VideoNode } from './VideoNode.js';
+import { IFrameNode } from './IFrameNode.js';
+import { GroupNode } from './GroupNode.js'; // Import GroupNode
 
 export class NodeFactory {
     constructor(space) {
@@ -17,7 +20,10 @@ export class NodeFactory {
     _registerDefaultNodeTypes() {
         this.registerNodeType('html', HtmlNode);
         this.registerNodeType('shape', ShapeNode);
-        this.registerNodeType('image', ImageNode); // Register ImageNode
+        this.registerNodeType('image', ImageNode);
+        this.registerNodeType('video', VideoNode);
+        this.registerNodeType('iframe', IFrameNode);
+        this.registerNodeType('group', GroupNode); // Register GroupNode
 
         // Fallback/generic type if specific type is not found or not specified
         // For now, ShapeNode can be a reasonable default if no type is given.

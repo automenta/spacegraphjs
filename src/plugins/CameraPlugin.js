@@ -151,6 +151,45 @@ export class CameraPlugin extends Plugin {
         this.cameraControls?.setInitialState();
     }
 
+    // --- Named View Methods (delegating to CameraControls) ---
+    saveNamedView(name) {
+        return this.cameraControls?.saveNamedView(name);
+    }
+
+    restoreNamedView(name, duration = 0.7) {
+        return this.cameraControls?.restoreNamedView(name, duration);
+    }
+
+    deleteNamedView(name) {
+        return this.cameraControls?.deleteNamedView(name);
+    }
+
+    getNamedViews() {
+        return this.cameraControls?.getNamedViews() || [];
+    }
+
+    hasNamedView(name) {
+        return this.cameraControls?.hasNamedView(name) || false;
+    }
+
+    // --- Camera Mode Control ---
+    setCameraMode(mode) {
+        this.cameraControls?.setCameraMode(mode);
+    }
+
+    getCameraMode() {
+        return this.cameraControls?.getCameraMode();
+    }
+
+    // --- Free Camera Control Delegation ---
+    moveFreeCamera(direction, deltaTime) {
+        this.cameraControls?.moveFreeCamera(direction, deltaTime);
+    }
+
+    rotateFreeCamera(deltaYaw, deltaPitch, deltaTime) {
+        this.cameraControls?.rotateFreeCamera(deltaYaw, deltaPitch, deltaTime);
+    }
+
     dispose() {
         super.dispose();
         this.cameraControls?.dispose();

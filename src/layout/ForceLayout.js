@@ -1,19 +1,17 @@
-import * as THREE from 'three';
+// import * as THREE from 'three'; // THREE might not be needed directly in main thread class anymore for physics
 
 export class ForceLayout {
-    space = null;
-    nodes = [];
-    edges = [];
-    velocities = new Map(); // Map<nodeId, THREE.Vector3>
-    fixedNodes = new Set(); // Set<Node>
-    isRunning = false;
-    animationFrameId = null;
-    totalEnergy = Infinity;
-    lastKickTime = 0;
-    autoStopTimeout = null;
+    space = null; // SpaceGraph instance
+    nodesMap = new Map(); // Main thread Node instances: Map<nodeId, BaseNode>
+    edgesMap = new Map(); // Main thread Edge instances: Map<edgeId, Edge>
 
+    worker = null;
+    isRunning = false;
+    totalEnergy = Infinity; // Last reported energy from worker
+
+    // Settings are now primarily managed by the worker, but main thread can hold a copy.
     settings = {
-        repulsion: 3000, // Base repulsion strength
+        repulsion: 3000,
         centerStrength: 0.0005, // Gravity towards center
         damping: 0.92, // Velocity damping (0-1)
         minEnergyThreshold: 0.1, // Threshold to auto-stop
@@ -36,35 +34,98 @@ export class ForceLayout {
     constructor(space, config = {}) {
         if (!space) throw new Error('ForceLayout requires a SpaceGraph instance.');
         this.space = space;
-        this.settings = { ...this.settings, ...config };
+        this.settings = { ...this.settings, ...config }; // Initial settings
+
+        // Initialize the worker
+        this.worker = new Worker(new URL('./forceLayout.worker.js', import.meta.url), { type: 'module' });
+        this.worker.onmessage = this._handleWorkerMessage.bind(this);
+        this.worker.onerror = (error) => {
+            console.error('ForceLayout Worker Error:', error);
+            // Potentially try to stop or recover
+            this.isRunning = false;
+            this.space.emit('layout:error', { error });
+        };
+    }
+
+    _handleWorkerMessage(event) {
+        const { type, positions, energy, error } = event.data;
+        switch (type) {
+            case 'positionsUpdate':
+                this.totalEnergy = energy;
+                positions.forEach(p => {
+                    const node = this.nodesMap.get(p.id);
+                    if (node) {
+                        node.position.set(p.x, p.y, p.z);
+                        // No direct velocity update needed on main thread BaseNode unless other systems use it.
+                        // The worker manages velocities.
+                    }
+                });
+                // SpaceGraph's main animation loop will handle rendering.
+                // We might emit a 'layout:tick' if other systems need to react to sub-frame updates.
+                // For now, relying on the RAF loop of SpaceGraph.
+                break;
+            case 'stopped':
+                this.isRunning = false;
+                this.totalEnergy = energy;
+                console.log('ForceLayout (Main): Worker reported stop. Energy:', energy);
+                this.space.emit('layout:stopped', { name: 'force (worker)'});
+                break;
+            case 'error': // Worker can post custom error messages
+                console.error('ForceLayout Worker reported error:', error);
+                this.space.emit('layout:error', { error });
+                break;
+        }
     }
 
     /**
      * Initializes the layout with a set of nodes and edges.
-     * Expected by LayoutManager.
-     * @param {Array<import('../graph/nodes/BaseNode.js').BaseNode>} nodes
-     * @param {Array<import('../graph/Edge.js').Edge>} edges
+     * @param {Array<import('../graph/nodes/BaseNode.js').BaseNode>} initialNodes
+     * @param {Array<import('../graph/Edge.js').Edge>} initialEdges
      * @param {object} [config={}] Optional configuration to apply.
      */
-    init(nodes, edges, config = {}) {
-        this.nodes = [...nodes]; // Take copies
-        this.edges = [...edges];
-        this.velocities.clear();
-        this.nodes.forEach(node => this.velocities.set(node.id, new THREE.Vector3()));
-        this.fixedNodes.clear();
-        if (config) {
-            this.setSettings(config); // Apply any new config
-        }
-        // ForceLayout doesn't set initial target positions; it works from current positions.
-        // So, GSAP transition when switching TO ForceLayout will be from current to current, which is a no-op,
-        // then ForceLayout.run() starts the simulation. This is acceptable.
+    init(initialNodes, initialEdges, config = {}) {
+        this.nodesMap.clear();
+        initialNodes.forEach(n => this.nodesMap.set(n.id, n));
 
-        // Initialize fixedNodes based on isPinned status
-        this.nodes.forEach(node => {
-            if (node.isPinned) {
-                this.fixedNodes.add(node);
+        this.edgesMap.clear();
+        initialEdges.forEach(e => this.edgesMap.set(e.id, e));
+
+        if (config) {
+            this.settings = { ...this.settings, ...config };
+        }
+
+        const workerNodes = initialNodes.map(n => ({
+            id: n.id,
+            x: n.position.x, y: n.position.y, z: n.position.z,
+            vx: 0, vy: 0, vz: 0, // Initial velocities
+            mass: n.mass || 1.0,
+            isFixed: n.isPinned, // Assuming isPinned implies fixed for the worker initially
+            isPinned: n.isPinned,
+            radius: n.getBoundingSphereRadius(), // Send radius for collision/weld
+            clusterId: n.data?.clusterId // Send clusterId if present
+        }));
+
+        const workerEdges = initialEdges.map(e => ({
+            sourceId: e.source.id,
+            targetId: e.target.id,
+            constraintType: e.data.constraintType,
+            constraintParams: e.data.constraintParams,
+        }));
+
+        const gravityCenter = this.settings.gravityCenter; // Could be THREE.Vector3 or plain object
+        const plainGravityCenter = (gravityCenter && typeof gravityCenter.x === 'number')
+            ? { x: gravityCenter.x, y: gravityCenter.y, z: gravityCenter.z }
+            : { x: 0, y: 0, z: 0 };
+
+        this.worker.postMessage({
+            type: 'init',
+            payload: {
+                nodes: workerNodes,
+                edges: workerEdges,
+                settings: { ...this.settings, gravityCenter: plainGravityCenter }
             }
         });
+        // Don't start automatically, wait for run() or kick()
     }
 
     // Optional: For LayoutManager to query if layout is continuous
@@ -74,306 +135,192 @@ export class ForceLayout {
 
     // Optional: For LayoutManager to get current config if needed
     getConfig() {
-        return {...this.settings};
+        return { ...this.settings };
     }
 
-    setPinState(node, pinned) {
-        if (!this.nodes.includes(node)) return;
-        node.isPinned = pinned;
-        if (pinned) {
-            this.fixedNodes.add(node);
-            this.velocities.get(node.id)?.set(0, 0, 0); // Stop movement when pinned
-        } else {
-            this.fixedNodes.delete(node); // Unpinning also unfixes it
+    // Method expected by LayoutManager. Called by LayoutPlugin when a node is pinned/unpinned by UI.
+    togglePinNode(nodeId) {
+        const node = this.nodesMap.get(nodeId);
+        if (node) {
+            node.isPinned = !node.isPinned; // Toggle on main thread instance
+            // Inform worker about the change. isFixed state in worker is tied to isPinned.
+            this.worker.postMessage({
+                type: 'updateNodeState',
+                payload: { nodeId: node.id, isFixed: node.isPinned, isPinned: node.isPinned }
+            });
+            if (this.isRunning) this.kick(); // Re-energize simulation
         }
-        this.kick(); // Re-kick layout as pin state change might affect forces
     }
 
-    addNode(node) {
-        if (!this.nodes.some((n) => n.id === node.id)) {
-            this.nodes.push(node);
-            this.velocities.set(node.id, new THREE.Vector3());
+    // Called by LayoutPlugin when dragging starts
+    fixNode(node) {
+        if (this.nodesMap.has(node.id)) {
+            // node.isFixed is a transient state for dragging, separate from isPinned.
+            // The worker uses 'isFixed' for its simulation.
+             this.worker.postMessage({
+                type: 'updateNodeState',
+                payload: { nodeId: node.id, isFixed: true, isPinned: node.isPinned,
+                           position: {x: node.position.x, y: node.position.y, z: node.position.z }}
+            });
+        }
+    }
+
+    // Called by LayoutPlugin when dragging ends
+    releaseNode(node) {
+        if (this.nodesMap.has(node.id)) {
+            // Release only if not permanently pinned
+            if (!node.isPinned) {
+                 this.worker.postMessage({
+                    type: 'updateNodeState',
+                    payload: { nodeId: node.id, isFixed: false, isPinned: node.isPinned }
+                });
+            }
+            // If it was pinned, it remains fixed in the worker.
+            // A kick might be good if the node was moved significantly during drag.
             this.kick();
         }
     }
 
-    removeNode(node) {
-        this.nodes = this.nodes.filter((n) => n !== node);
-        this.velocities.delete(node.id);
-        this.fixedNodes.delete(node);
-        if (this.nodes.length < 2) this.stop();
-        else this.kick();
+
+    addNode(node) {
+        if (!this.nodesMap.has(node.id)) {
+            this.nodesMap.set(node.id, node);
+            this.worker.postMessage({
+                type: 'addNode',
+                payload: {
+                    node: {
+                        id: node.id,
+                        x: node.position.x, y: node.position.y, z: node.position.z,
+                        vx: 0, vy: 0, vz: 0,
+                        mass: node.mass || 1.0,
+                        isFixed: node.isPinned,
+                        isPinned: node.isPinned,
+                        radius: node.getBoundingSphereRadius(),
+                        clusterId: node.data?.clusterId
+                    }
+                }
+            });
+            if (this.isRunning || this.nodesMap.size > 1) this.kick();
+        }
+    }
+
+    removeNode(node) { // Parameter is the actual node object from main thread
+        if (this.nodesMap.has(node.id)) {
+            this.nodesMap.delete(node.id);
+            this.worker.postMessage({ type: 'removeNode', payload: { nodeId: node.id } });
+            if (this.isRunning && this.nodesMap.size < 2) this.stop();
+            else if (this.isRunning) this.kick();
+        }
     }
 
     addEdge(edge) {
-        if (!this.edges.includes(edge)) {
-            this.edges.push(edge);
-            this.kick();
+        if (!this.edgesMap.has(edge.id)) {
+            this.edgesMap.set(edge.id, edge);
+            this.worker.postMessage({
+                type: 'addEdge',
+                payload: {
+                    edge: {
+                        id: edge.id, // Worker might not need edge ID, but good for consistency
+                        sourceId: edge.source.id,
+                        targetId: edge.target.id,
+                        constraintType: edge.data.constraintType,
+                        constraintParams: edge.data.constraintParams,
+                    }
+                }
+            });
+            if (this.isRunning) this.kick();
         }
     }
 
-    removeEdge(edge) {
-        this.edges = this.edges.filter((e) => e !== edge);
-        this.kick();
-    }
-
-    fixNode(node) {
-        if (this.nodes.includes(node)) {
-            this.fixedNodes.add(node);
-            this.velocities.get(node.id)?.set(0, 0, 0);
+    removeEdge(edge) { // Parameter is the actual edge object
+        if (this.edgesMap.has(edge.id)) {
+            this.edgesMap.delete(edge.id);
+            // Worker edge removal might be by source/target ID if IDs aren't stored for edges
+            this.worker.postMessage({
+                type: 'removeEdge',
+                payload: {
+                    edge: { // Send enough info for worker to identify the edge
+                        sourceId: edge.source.id,
+                        targetId: edge.target.id
+                    }
+                }
+            });
+            if (this.isRunning) this.kick();
         }
     }
 
-    releaseNode(node) {
-        // Only release from fixed set if not permanently pinned
-        if (!node.isPinned) {
-            this.fixedNodes.delete(node);
-        }
-        // Kicking is typically handled by the dragend event in LayoutPlugin after this.
+    runOnce() {
+        // This was for synchronous layout. For worker, it's less direct.
+        // We could send a message to worker to run N steps then stop and report.
+        // For now, this will just start the continuous layout if not running.
+        console.warn("ForceLayout.runOnce() with worker: Starts continuous layout. For fixed steps, implement specific worker command.");
+        if (!this.isRunning) this.run();
     }
 
-    runOnce(steps = 100) {
-        console.log(`ForceLayout: Running ${steps} initial steps...`);
-        let i = 0;
-        for (; i < steps; i++) {
-            if (this._calculateStep() < this.settings.minEnergyThreshold) break;
+    // run() is the method LayoutManager calls
+    run() {
+        if (this.isRunning || this.nodesMap.size < 1) { // Allow starting with 1 node, worker handles <2 check
+             // If already running or no nodes, do nothing or re-kick if desired
+            if(this.isRunning) this.kick();
+            return;
         }
-        console.log(`ForceLayout: Initial steps completed after ${i} iterations.`);
-        // Update visuals once after settling by calling all plugin update methods, which includes rendering.
-        this.space?.plugins?.updatePlugins();
-    }
-
-    start() {
-        if (this.isRunning || this.nodes.length < 2) return;
-        console.log('ForceLayout: Starting simulation.');
-        this.isRunning = true;
-        this.lastKickTime = Date.now();
-        this.space.emit('layout:started'); // Emit event
-        const loop = () => {
-            if (!this.isRunning) return;
-            this.totalEnergy = this._calculateStep();
-            // Visual updates happen in SpaceGraph.animate loop
-            const timeSinceKick = Date.now() - this.lastKickTime;
-            if (this.totalEnergy < this.settings.minEnergyThreshold && timeSinceKick > this.settings.autoStopDelay) {
-                this.stop();
-            } else {
-                this.animationFrameId = requestAnimationFrame(loop);
-            }
-        };
-        this.animationFrameId = requestAnimationFrame(loop);
+        console.log('ForceLayout (Main): Sending start to worker.');
+        this.isRunning = true; // Assume it will start successfully
+        this.worker.postMessage({ type: 'start' });
+        this.space.emit('layout:started', { name: 'force (worker)' });
     }
 
     stop() {
-        if (!this.isRunning) return;
-        this.isRunning = false;
-        if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId);
-        clearTimeout(this.autoStopTimeout);
-        this.animationFrameId = null;
-        this.autoStopTimeout = null;
-        console.log('ForceLayout: Simulation stopped. Energy:', this.totalEnergy.toFixed(4));
-        this.space.emit('layout:stopped'); // Emit event
+        if (!this.isRunning && this.worker) { // Check worker exists in case it's called before full init
+             // If worker exists but not running, ensure it's told to stop if it was somehow orphaned.
+             this.worker.postMessage({ type: 'stop' });
+             return;
+        }
+        if (!this.worker) return;
+
+        console.log('ForceLayout (Main): Sending stop to worker.');
+        this.worker.postMessage({ type: 'stop' });
+        // isRunning will be set to false when worker confirms 'stopped' message.
+        // Emitting layout:stopped is also handled by worker confirmation.
     }
 
     kick(intensity = 1) {
-        if (this.nodes.length < 1) return;
-        this.lastKickTime = Date.now();
-        this.totalEnergy = Infinity;
-        const impulse = new THREE.Vector3();
-        this.nodes.forEach((node) => {
-            if (!this.fixedNodes.has(node)) {
-                impulse
-                    .set(Math.random() - 0.5, Math.random() - 0.5, (Math.random() - 0.5) * this.settings.zSpreadFactor)
-                    .normalize()
-                    .multiplyScalar(intensity * (0.5 + Math.random())); // Slightly randomized intensity
-                this.velocities.get(node.id)?.add(impulse);
-            }
-        });
-        if (!this.isRunning) this.start();
-        // Reset auto-stop timer
-        clearTimeout(this.autoStopTimeout);
-        this.autoStopTimeout = setTimeout(() => {
-            if (this.isRunning && this.totalEnergy < this.settings.minEnergyThreshold) this.stop();
-        }, this.settings.autoStopDelay);
+        if (this.nodesMap.size < 1 || !this.worker) return;
+        console.log('ForceLayout (Main): Sending kick to worker.');
+        this.worker.postMessage({ type: 'kick', payload: { intensity } });
+        if (!this.isRunning) {
+            this.run(); // Start if not already running
+        }
     }
 
     setSettings(newSettings) {
         this.settings = { ...this.settings, ...newSettings };
-        console.log('ForceLayout settings updated:', this.settings);
-        this.kick();
+        const gravityCenter = this.settings.gravityCenter;
+        const plainGravityCenter = (gravityCenter && typeof gravityCenter.x === 'number')
+            ? { x: gravityCenter.x, y: gravityCenter.y, z: gravityCenter.z }
+            : { x: 0, y: 0, z: 0 };
+
+        console.log('ForceLayout (Main): Sending settings update to worker.');
+        this.worker.postMessage({
+            type: 'updateSettings',
+            payload: { settings: { ...this.settings, gravityCenter: plainGravityCenter } }
+        });
+        // Worker will implicitly kick or start if needed upon settings update.
     }
 
-    _calculateStep() {
-        if (this.nodes.length < 2) return 0;
-        let currentTotalEnergy = 0;
-        const forces = new Map(this.nodes.map((node) => [node.id, new THREE.Vector3()]));
-        const { repulsion, centerStrength, gravityCenter, zSpreadFactor, damping, nodePadding } = this.settings;
-        const tempDelta = new THREE.Vector3(); // Reusable vector
-
-        // 1. Repulsion Force (Node-Node)
-        for (let i = 0; i < this.nodes.length; i++) {
-            const nodeA = this.nodes[i];
-            for (let j = i + 1; j < this.nodes.length; j++) {
-                const nodeB = this.nodes[j];
-                tempDelta.subVectors(nodeB.position, nodeA.position);
-                let distSq = tempDelta.lengthSq();
-                if (distSq < 1e-3) {
-                    // Avoid singularity
-                    distSq = 1e-3;
-                    tempDelta.randomDirection().multiplyScalar(0.1); // Apply tiny random push
-                }
-                const distance = Math.sqrt(distSq);
-                // Use node's bounding sphere for consistent padding calculation
-                const radiusA = nodeA.getBoundingSphereRadius();
-                const radiusB = nodeB.getBoundingSphereRadius();
-                const combinedRadius = (radiusA + radiusB) * nodePadding;
-                // Repulsion = base inverse square + extra force if overlapping
-                let forceMag = -repulsion / distSq;
-                const overlap = combinedRadius - distance;
-                if (overlap > 0) {
-                    // Stronger pushback when overlapping, proportional to overlap squared
-                    forceMag -= (repulsion * overlap ** 2 * 0.01) / distance; // Tunable factor
-                }
-
-                const forceVec = tempDelta.normalize().multiplyScalar(forceMag);
-                forceVec.z *= zSpreadFactor; // Reduce Z component
-                if (!this.fixedNodes.has(nodeA)) forces.get(nodeA.id)?.add(forceVec);
-                if (!this.fixedNodes.has(nodeB)) forces.get(nodeB.id)?.sub(forceVec); // Equal and opposite
-            }
-        }
-
-        // 2. Edge Constraints
-        this.edges.forEach((edge) => {
-            const { source, target, data } = edge;
-            if (!source || !target || !this.velocities.has(source.id) || !this.velocities.has(target.id)) return; // Skip if nodes removed
-            tempDelta.subVectors(target.position, source.position);
-            const distance = tempDelta.length() + 1e-6; // Add epsilon
-            let forceMag = 0;
-            const params = data.constraintParams ?? {};
-
-            switch (data.constraintType) {
-                case 'rigid': {
-                    const targetDist = params.distance ?? this.settings.defaultElasticIdealLength; // Fallback to elastic length if no distance set
-                    const rStiffness = params.stiffness ?? this.settings.defaultRigidStiffness;
-                    forceMag = rStiffness * (distance - targetDist);
-                    break;
-                }
-                case 'weld': {
-                    // Target distance is sum of radii, strong stiffness
-                    const weldDist =
-                        params.distance ?? source.getBoundingSphereRadius() + target.getBoundingSphereRadius();
-                    const wStiffness = params.stiffness ?? this.settings.defaultWeldStiffness;
-                    forceMag = wStiffness * (distance - weldDist);
-                    break;
-                }
-                case 'elastic':
-                default: {
-                    const idealLen = params.idealLength ?? this.settings.defaultElasticIdealLength;
-                    const eStiffness = params.stiffness ?? this.settings.defaultElasticStiffness;
-                    forceMag = eStiffness * (distance - idealLen); // Hooke's Law
-                    break;
-                }
-            }
-
-            const forceVec = tempDelta.normalize().multiplyScalar(forceMag);
-            forceVec.z *= zSpreadFactor; // Reduce Z component
-            if (!this.fixedNodes.has(source)) forces.get(source.id)?.add(forceVec);
-            if (!this.fixedNodes.has(target)) forces.get(target.id)?.sub(forceVec);
-        });
-
-        // 3. Center Gravity Force
-        if (centerStrength > 0) {
-            this.nodes.forEach((node) => {
-                if (this.fixedNodes.has(node)) return;
-                const forceVec = tempDelta.subVectors(gravityCenter, node.position).multiplyScalar(centerStrength);
-                forceVec.z *= zSpreadFactor * 0.5; // Weaker Z gravity
-                forces.get(node.id)?.add(forceVec);
-            });
-        }
-
-        // 4. Center Gravity Force (Applied before clustering for overall cohesion)
-        if (centerStrength > 0) {
-            this.nodes.forEach((node) => {
-                if (this.fixedNodes.has(node)) return;
-                const forceVec = tempDelta.subVectors(gravityCenter, node.position).multiplyScalar(centerStrength);
-                forceVec.z *= zSpreadFactor * 0.5; // Weaker Z gravity
-                forces.get(node.id)?.add(forceVec);
-            });
-        }
-
-        // 5. Clustering Forces
-        if (this.settings.enableClustering && this.settings.clusterStrength > 0) {
-            const clusters = new Map(); // { clusterId: { nodes: [], center: Vector3, count: 0 } }
-
-            // Group nodes by cluster and calculate sum of positions
-            this.nodes.forEach(node => {
-                const clusterId = node.data?.[this.settings.clusterAttribute];
-                if (clusterId === undefined || clusterId === null) return;
-
-                if (!clusters.has(clusterId)) {
-                    clusters.set(clusterId, { nodes: [], center: new THREE.Vector3(), count: 0 });
-                }
-                const clusterData = clusters.get(clusterId);
-                clusterData.nodes.push(node);
-                clusterData.center.add(node.position);
-                clusterData.count++;
-            });
-
-            // Calculate geometric center for each cluster and apply attractive force
-            clusters.forEach(clusterData => {
-                if (clusterData.count > 0) {
-                    clusterData.center.divideScalar(clusterData.count); // Average position = cluster center
-
-                    clusterData.nodes.forEach(node => {
-                        if (this.fixedNodes.has(node)) return;
-                        const forceVec = tempDelta.subVectors(clusterData.center, node.position)
-                                               .multiplyScalar(this.settings.clusterStrength);
-                        forceVec.z *= zSpreadFactor; // Apply zSpread to cluster forces too
-                        forces.get(node.id)?.add(forceVec);
-                    });
-                }
-            });
-
-            // Optional: Inter-cluster repulsion could be added here by iterating through cluster centers
-        }
-
-
-        // 6. Apply Forces and Update Velocities/Positions
-        this.nodes.forEach((node) => {
-            if (this.fixedNodes.has(node)) return;
-            const force = forces.get(node.id);
-            const velocity = this.velocities.get(node.id);
-            if (!force || !velocity) return; // Should not happen
-
-            const mass = node.mass || 1.0; // Use node's mass
-            // a = F / m
-            const acceleration = tempDelta.copy(force).divideScalar(mass); // Reuse tempDelta
-            // v = (v + a) * damping
-            velocity.add(acceleration).multiplyScalar(damping);
-
-            // Limit velocity to prevent nodes escaping to infinity
-            const speed = velocity.length();
-            const maxSpeed = 100; // Tunable max speed per step
-            if (speed > maxSpeed) {
-                velocity.multiplyScalar(maxSpeed / speed);
-            }
-
-            // p = p + v
-            node.position.add(velocity);
-
-            // Accumulate kinetic energy (using mass)
-            currentTotalEnergy += 0.5 * mass * velocity.lengthSq();
-        });
-
-        return currentTotalEnergy;
-    }
+    // _calculateStep is removed, worker handles calculations.
+    // Animation loop in main thread is removed.
 
     dispose() {
-        this.stop();
-        this.nodes = [];
-        this.edges = [];
-        this.velocities.clear();
-        this.fixedNodes.clear();
-        this.space = null;
-        console.log('ForceLayout disposed.');
+        console.log('ForceLayout (Main): Disposing worker.');
+        if (this.worker) {
+            this.worker.terminate();
+            this.worker = null;
+        }
+        this.nodesMap.clear();
+        this.edgesMap.clear();
+        this.isRunning = false;
+        this.space = null; // Release reference to SpaceGraph
+        // console.log('ForceLayout (Main) disposed.'); // Already logged by worker indirectly
     }
 }

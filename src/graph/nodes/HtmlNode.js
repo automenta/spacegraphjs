@@ -32,6 +32,10 @@ export class HtmlNode extends BaseNode {
             backgroundColor: '#333344',
             type: 'html',
             editable: false,
+            // Example: labelLod: [{distance: 500, style: 'visibility:hidden;'}, {distance: 200, scale: 0.7}]
+            // 'style' will be applied directly. 'scale' will adjust transform:scale.
+            // 'html' could provide simplified HTML content for a distance.
+            labelLod: [],
         };
     }
 
@@ -134,6 +138,72 @@ export class HtmlNode extends BaseNode {
             this.cssObject.position.copy(this.position);
             if (this.billboard && space?.camera?._cam) {
                 this.cssObject.quaternion.copy(space.camera._cam.quaternion);
+            }
+            this._applyLabelLOD(space);
+        }
+    }
+
+    _applyLabelLOD(space) {
+        if (!this.htmlElement || !this.data.labelLod || this.data.labelLod.length === 0) {
+            // Ensure element is visible if no LOD rules or if it was hidden by a previous rule
+            this.htmlElement.style.visibility = '';
+            return;
+        }
+
+        const camera = space?.plugins?.getPlugin('CameraPlugin')?.getCameraInstance();
+        if (!camera) return;
+
+        const distanceToCamera = this.position.distanceTo(camera.position);
+
+        // Sort LOD levels by distance, descending, so closest matching rule is applied.
+        const sortedLodLevels = [...this.data.labelLod].sort((a, b) => (b.distance || 0) - (a.distance || 0));
+
+        let appliedRule = false;
+        for (const level of sortedLodLevels) {
+            if (distanceToCamera >= (level.distance || 0)) {
+                if (level.style) {
+                    // Potentially problematic to directly set style string like this,
+                    // as it overwrites all inline styles. Better to apply specific properties.
+                    // For now, 'visibility:hidden' is the primary use case.
+                    if (level.style.includes('visibility:hidden')) {
+                        this.htmlElement.style.visibility = 'hidden';
+                    } else {
+                        this.htmlElement.style.visibility = ''; // Or apply other styles from level.style
+                        // Example: this.htmlElement.style.opacity = level.opacity ?? '1';
+                    }
+                } else {
+                     this.htmlElement.style.visibility = ''; // Ensure visible if no style rule for this level
+                }
+
+                if (level.scale !== undefined) {
+                    const contentEl = $('.node-content', this.htmlElement);
+                    if (contentEl) {
+                        // Combine with existing contentScale
+                        const baseScale = this.data.contentScale ?? 1.0;
+                        contentEl.style.transform = `scale(${baseScale * level.scale})`;
+                    }
+                } else {
+                     // Reset to base scale if no LOD scale rule applies
+                    const contentEl = $('.node-content', this.htmlElement);
+                    if (contentEl) {
+                         const baseScale = this.data.contentScale ?? 1.0;
+                         contentEl.style.transform = `scale(${baseScale})`;
+                    }
+                }
+                // TODO: Handle level.html for simplified content
+                appliedRule = true;
+                break;
+            }
+        }
+
+        if (!appliedRule) {
+            // If no rule matched (e.g., camera is closer than all defined LOD distances),
+            // ensure element is visible and at base scale.
+            this.htmlElement.style.visibility = '';
+            const contentEl = $('.node-content', this.htmlElement);
+            if (contentEl) {
+                 const baseScale = this.data.contentScale ?? 1.0;
+                 contentEl.style.transform = `scale(${baseScale})`;
             }
         }
     }

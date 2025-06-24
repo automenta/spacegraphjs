@@ -81,9 +81,18 @@ export class EdgePlugin extends Plugin {
 
         const renderingPlugin = this.pluginManager.getPlugin('RenderingPlugin');
         if (renderingPlugin) {
-            if (edge.line) renderingPlugin.getWebGLScene()?.add(edge.line);
-            if (edge.labelObject) renderingPlugin.getCSS3DScene()?.add(edge.labelObject);
-            if (edge.arrowheadMesh) renderingPlugin.getWebGLScene()?.add(edge.arrowheadMesh); // Add arrowhead
+            const webglScene = renderingPlugin.getWebGLScene();
+            const cssScene = renderingPlugin.getCSS3DScene();
+
+            if (edge.line) webglScene?.add(edge.line);
+
+            // Add arrowheads if they exist
+            if (edge.arrowheads?.source) webglScene?.add(edge.arrowheads.source);
+            if (edge.arrowheads?.target) webglScene?.add(edge.arrowheads.target);
+
+            // Add labelObject if it exists (for LabeledEdge and now CurvedEdge with label)
+            if (edge.labelObject) cssScene?.add(edge.labelObject);
+
         } else {
             console.warn('EdgePlugin: RenderingPlugin not available to add edge components to scene.');
         }

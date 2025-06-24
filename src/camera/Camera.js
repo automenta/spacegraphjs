@@ -23,6 +23,10 @@ export class Camera {
     dampingFactor = 0.12;
     maxHistory = 20;
     animationFrameId = null;
+    namedViews = new Map(); // For storing named views
+    cameraMode = 'orbit'; // 'orbit' or 'free'
+    freeCameraSpeed = 20.0; // Movement speed for free camera
+    freeCameraRotationSpeed = 0.02; // Rotation speed for free camera
 
     constructor(space) {
         if (!space?._cam || !space.container)
@@ -216,6 +220,147 @@ export class Camera {
         this._cam = null;
         this.domElement = null;
         this.viewHistory = [];
+        this.namedViews.clear();
         console.log('Camera disposed.');
+    }
+
+    // --- Named Views Methods ---
+    saveNamedView(name) {
+        if (!name || typeof name !== 'string') {
+            console.error('Camera: Invalid name provided for saveNamedView.');
+            return false;
+        }
+        this.namedViews.set(name, {
+            position: this.targetPosition.clone(),
+            lookAt: this.targetLookAt.clone(),
+            targetNodeId: this.currentTargetNodeId, // Also save the target node if any
+        });
+        console.log(`Camera: View '${name}' saved.`);
+        this.space.emit('camera:namedViewSaved', { name, view: this.namedViews.get(name) });
+        return true;
+    }
+
+    restoreNamedView(name, duration = 0.7) {
+        const view = this.namedViews.get(name);
+        if (view) {
+            this.moveTo(view.position.x, view.position.y, view.position.z, duration, view.lookAt);
+            this.setCurrentTargetNodeId(view.targetNodeId); // Restore target node context
+            console.log(`Camera: View '${name}' restored.`);
+            this.space.emit('camera:namedViewRestored', { name, view });
+            return true;
+        }
+        console.warn(`Camera: View '${name}' not found.`);
+        return false;
+    }
+
+    deleteNamedView(name) {
+        if (this.namedViews.has(name)) {
+            this.namedViews.delete(name);
+            console.log(`Camera: View '${name}' deleted.`);
+            this.space.emit('camera:namedViewDeleted', { name });
+            return true;
+        }
+        console.warn(`Camera: View '${name}' not found for deletion.`);
+        return false;
+    }
+
+    getNamedViews() {
+        // Returns an array of {name, view} objects or just names
+        return Array.from(this.namedViews.keys());
+        // Or: return Array.from(this.namedViews, ([name, view]) => ({ name, view }));
+    }
+
+    hasNamedView(name) {
+        return this.namedViews.has(name);
+    }
+
+    // --- Camera Mode Methods ---
+    setCameraMode(mode) {
+        if (mode === 'orbit' || mode === 'free') {
+            this.cameraMode = mode;
+            console.log(`Camera mode set to: ${this.cameraMode}`);
+            this.space.emit('camera:modeChanged', { mode: this.cameraMode });
+            if (this.cameraMode === 'orbit') {
+                // Ensure lookAt is reasonable when switching back to orbit
+                // For example, look at the point in front of the camera
+                const lookAtDistance = this.targetPosition.distanceTo(this.currentLookAt) || 300;
+                const direction = new THREE.Vector3();
+                this._cam.getWorldDirection(direction);
+                this.targetLookAt.copy(this.targetPosition).addScaledVector(direction, lookAtDistance);
+            }
+            // When switching to 'free', existing targetPosition is the starting point.
+            // currentLookAt will be implicitly managed by direct camera rotation.
+        } else {
+            console.warn(`Camera: Unknown mode '${mode}'. Allowed modes: 'orbit', 'free'.`);
+        }
+    }
+
+    getCameraMode() {
+        return this.cameraMode;
+    }
+
+    // --- Free Camera Movement/Rotation Methods (to be called by input manager) ---
+    // deltaTime is expected from the game loop, for frame-rate independent movement
+
+    moveFreeCamera(direction, deltaTime = 0.016) { // direction is a THREE.Vector3 like (0,0,-1) for forward
+        if (this.cameraMode !== 'free' || !this._cam) return;
+
+        gsap.killTweensOf(this.targetPosition); // Stop any ongoing tweens
+
+        const moveVector = direction.clone();
+        // Apply movement relative to camera's current orientation
+        moveVector.applyQuaternion(this._cam.quaternion);
+        moveVector.multiplyScalar(this.freeCameraSpeed * deltaTime * 50); // Adjust multiplier as needed
+
+        this.targetPosition.add(moveVector);
+        // In free mode, the lookAt point also moves with the camera to maintain view direction.
+        // However, explicit rotations will change lookAt more directly.
+        // For pure translation, lookAt should translate identically.
+        this.targetLookAt.add(moveVector);
+    }
+
+    rotateFreeCamera(deltaYaw, deltaPitch, deltaTime = 0.016) { // deltaYaw, deltaPitch are changes in radians
+        if (this.cameraMode !== 'free' || !this._cam) return;
+
+        gsap.killTweensOf(this.targetLookAt); // Stop any ongoing lookAt tweens
+
+        // Get current direction vector
+        const currentDirection = new THREE.Vector3();
+        this._cam.getWorldDirection(currentDirection);
+
+        // Create a quaternion for yaw (around world UP or camera's local Y)
+        const yawQuaternion = new THREE.Quaternion();
+        // yawQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), deltaYaw * this.freeCameraRotationSpeed); // World Y
+        // For FPS style, yaw around camera's local Y:
+        const cameraUp = new THREE.Vector3().setFromMatrixColumn(this._cam.matrixWorld, 1);
+        yawQuaternion.setFromAxisAngle(cameraUp, deltaYaw * this.freeCameraRotationSpeed);
+
+
+        // Create a quaternion for pitch (around camera's local X)
+        const pitchQuaternion = new THREE.Quaternion();
+        const cameraRight = new THREE.Vector3().setFromMatrixColumn(this._cam.matrixWorld, 0);
+        pitchQuaternion.setFromAxisAngle(cameraRight, deltaPitch * this.freeCameraRotationSpeed);
+
+        // Combine rotations: apply pitch then yaw to the current direction
+        // Or, more directly, rotate the camera itself.
+        // Let's rotate the camera's quaternion and then update targetLookAt from it.
+
+        // Apply yaw to camera's quaternion
+        this._cam.quaternion.premultiply(yawQuaternion);
+        // Apply pitch to camera's quaternion
+        this._cam.quaternion.multiply(pitchQuaternion); // Or premultiply, depending on desired order
+
+        // Update targetPosition to camera's current position (as rotation is around camera's eye)
+        this.targetPosition.copy(this._cam.position);
+
+        // Update targetLookAt based on new camera orientation
+        const newDirection = new THREE.Vector3(0, 0, -1); // Forward vector
+        newDirection.applyQuaternion(this._cam.quaternion);
+        this.targetLookAt.copy(this.targetPosition).add(newDirection);
+
+        // Clamping pitch:
+        // This is more complex as it involves extracting Euler angles, clamping, then converting back.
+        // Or, limit the rotation based on the current view direction's angle with the world up vector.
+        // For simplicity, initial version might not have strict pitch clamping.
     }
 }

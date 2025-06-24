@@ -49,6 +49,12 @@ export class LabeledEdge extends Edge {
         super.update(); // Update line geometry first
 
         if (this.labelObject) {
+            // Ensure this.space is available. EdgeFactory now sets it.
+            // If not set, LOD won't work as camera access is via this.space.
+            if (!this.space) {
+                console.warn(`LabeledEdge (${this.id}): this.space is not set. Label LOD will not function.`);
+            }
+
             const sourcePos = this.source.position;
             const targetPos = this.target.position;
 
@@ -64,6 +70,38 @@ export class LabeledEdge extends Edge {
                 // offsetVector.applyQuaternion(this.space.camera._cam.quaternion);
                 // this.labelObject.position.add(offsetVector.multiplyScalar(0.1));
             }
+            this._applyLabelLOD(); // Apply LOD to the label
+        }
+    }
+
+    _applyLabelLOD() { // Adapted from HtmlNode/ShapeNode
+        if (!this.labelObject?.element || !this.data.labelLod || this.data.labelLod.length === 0) {
+            if (this.labelObject?.element) this.labelObject.element.style.visibility = '';
+            return;
+        }
+
+        const camera = this.space?.plugins?.getPlugin('CameraPlugin')?.getCameraInstance();
+        if (!camera || !this.space) return; // this.space check for safety
+
+        // For edges, distance can be from camera to label's current position
+        const distanceToCamera = this.labelObject.position.distanceTo(camera.position);
+        const sortedLodLevels = [...this.data.labelLod].sort((a, b) => (b.distance || 0) - (a.distance || 0));
+
+        let appliedRule = false;
+        for (const level of sortedLodLevels) {
+            if (distanceToCamera >= (level.distance || 0)) {
+                if (level.style && level.style.includes('visibility:hidden')) {
+                    this.labelObject.element.style.visibility = 'hidden';
+                } else {
+                    this.labelObject.element.style.visibility = '';
+                    // TODO: apply other styles
+                }
+                appliedRule = true;
+                break;
+            }
+        }
+        if (!appliedRule) {
+            this.labelObject.element.style.visibility = '';
         }
     }
 

@@ -11,7 +11,8 @@ import { NodePlugin } from '../plugins/NodePlugin.js';
 import { EdgePlugin } from '../plugins/EdgePlugin.js';
 import { LayoutPlugin } from '../plugins/LayoutPlugin.js';
 import { UIPlugin } from '../plugins/UIPlugin.js';
-import { MinimapPlugin } from '../plugins/MinimapPlugin.js'; // Import MinimapPlugin
+import { MinimapPlugin } from '../plugins/MinimapPlugin.js';
+import { DataPlugin } from '../plugins/DataPlugin.js'; // Import DataPlugin
 
 export class SpaceGraph {
     // nodes = new Map(); // Moved to NodePlugin
@@ -61,6 +62,8 @@ export class SpaceGraph {
         ); // Modified
         // Register MinimapPlugin (can be after UI or Rendering)
         this.plugins.add(new MinimapPlugin(this, this.plugins));
+        // Register DataPlugin
+        this.plugins.add(new DataPlugin(this, this.plugins));
 
 
         // _cam is now created by CameraPlugin and assigned to this.space._cam in CameraPlugin.init() for now.
@@ -476,5 +479,35 @@ export class SpaceGraph {
         // this.ui?.dispose(); // Handled by UIPlugin
         this._listeners.clear(); // Clear all event listeners on SpaceGraph itself
         console.log('SpaceGraph disposed.');
+    }
+
+    // --- Data Import/Export Methods ---
+    /**
+     * Exports the current graph to a JSON string.
+     * @param {object} options - Export options (see DataPlugin.exportGraphToJSON).
+     * @returns {string | null} JSON string or null on error.
+     */
+    exportGraphToJSON(options) {
+        const dataPlugin = this.plugins.getPlugin('DataPlugin');
+        if (dataPlugin) {
+            return dataPlugin.exportGraphToJSON(options);
+        }
+        console.error('SpaceGraph: DataPlugin not available for export.');
+        return null;
+    }
+
+    /**
+     * Imports a graph from a JSON string or object.
+     * @param {string | object} jsonData - JSON string or object.
+     * @param {object} options - Import options (see DataPlugin.importGraphFromJSON).
+     * @returns {Promise<boolean>} True if import was successful, false otherwise.
+     */
+    async importGraphFromJSON(jsonData, options) {
+        const dataPlugin = this.plugins.getPlugin('DataPlugin');
+        if (dataPlugin) {
+            return await dataPlugin.importGraphFromJSON(jsonData, options);
+        }
+        console.error('SpaceGraph: DataPlugin not available for import.');
+        return false;
     }
 }

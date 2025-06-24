@@ -9,7 +9,8 @@ export class Edge {
     static DEFAULT_OPACITY = 0.8; // Adjusted for potentially thicker lines
     static HIGHLIGHT_OPACITY = 1.0;
     line = null;
-    arrowheadMesh = null; // For arrowhead
+    // arrowheadMesh = null; // Old: single arrowhead
+    arrowheads = { source: null, target: null }; // New: multiple arrowheads
     // Default constraint: elastic spring
     data = {
         color: 0x00d0ff, // Default single color
@@ -48,7 +49,20 @@ export class Edge {
         }
 
         this.line = this._createLine();
-        this.update(); // This will also set initial colors if gradient
+        this._createArrowheads(); // Create arrowheads based on data
+        this.update(); // This will also set initial colors and position arrowheads
+    }
+
+    _createArrowheads() {
+        const arrowheadOpt = this.data.arrowhead;
+        if (arrowheadOpt === true || arrowheadOpt === 'target' || arrowheadOpt === 'both') {
+            this.arrowheads.target = this._createSingleArrowhead('target');
+            if (this.line?.parent) this.line.parent.add(this.arrowheads.target); // Add to scene if line is already there
+        }
+        if (arrowheadOpt === 'source' || arrowheadOpt === 'both') {
+            this.arrowheads.source = this._createSingleArrowhead('source');
+            if (this.line?.parent) this.line.parent.add(this.arrowheads.source);
+        }
     }
 
     _createLine() {
@@ -161,33 +175,37 @@ export class Edge {
         // this.line.geometry.attributes.position.needsUpdate = true; // setPositions should handle this.
         this.line.geometry.computeBoundingSphere();
 
-        if (this.arrowheadMesh) {
-            const targetPos = this.target.position;
-            const sourcePos = this.source.position; // Needed for direction
+        this._updateArrowheads();
+    }
 
-            // Position arrowhead at the target node's position, or slightly offset along the edge
-            // For now, placing it directly at target. Offset might be needed if target node has a large radius.
-            this.arrowheadMesh.position.copy(targetPos);
+    _updateArrowheads() {
+        const sourcePos = this.source.position;
+        const targetPos = this.target.position;
 
-            // Orient arrowhead
+        if (this.arrowheads.target) {
+            this.arrowheads.target.position.copy(targetPos);
             const direction = new THREE.Vector3().subVectors(targetPos, sourcePos).normalize();
-            if (direction.lengthSq() > 0.0001) { // Ensure not zero vector
-                 // Point the arrowhead along the Z-axis of its local space, then align this Z-axis with the direction vector.
-                 // Default cone geometry points along its Y axis. We'll rotate it to point along Z.
-                const quaternion = new THREE.Quaternion();
-                // Arrowheads are typically modeled pointing along an axis (e.g. +Z or +Y).
-                // Let's assume our cone points along its local +Y axis.
-                // We want to align this +Y axis with 'direction'.
-                // The default THREE.ConeGeometry is oriented along the Y axis.
-                // We need to align the arrowhead's local Y-axis to the edge's direction.
-                const up = new THREE.Vector3(0, 1, 0); // Default orientation of ConeGeometry
-                quaternion.setFromUnitVectors(up, direction);
-                this.arrowheadMesh.quaternion.copy(quaternion);
-            }
+            this._orientArrowhead(this.arrowheads.target, direction);
+        }
+
+        if (this.arrowheads.source) {
+            this.arrowheads.source.position.copy(sourcePos);
+            const direction = new THREE.Vector3().subVectors(sourcePos, targetPos).normalize(); // Reversed direction
+            this._orientArrowhead(this.arrowheads.source, direction);
         }
     }
 
-    _createArrowhead() {
+    _orientArrowhead(arrowheadMesh, direction) {
+        if (!arrowheadMesh) return;
+        if (direction.lengthSq() > 0.0001) { // Ensure not zero vector
+            const quaternion = new THREE.Quaternion();
+            const up = new THREE.Vector3(0, 1, 0); // Default orientation of ConeGeometry is along Y axis
+            quaternion.setFromUnitVectors(up, direction);
+            arrowheadMesh.quaternion.copy(quaternion);
+        }
+    }
+
+    _createSingleArrowhead(type) { // type is 'source' or 'target' for potential differentiation
         const size = this.data.arrowheadSize || 10;
         // A cone is a common choice for an arrowhead
         // ConeGeometry(radius, height, radialSegments)
@@ -212,17 +230,22 @@ export class Edge {
         if (!this.line?.material) return;
         const mat = this.line.material;
         mat.opacity = highlight ? Edge.HIGHLIGHT_OPACITY : Edge.DEFAULT_OPACITY;
-        mat.color.set(highlight ? Edge.HIGHLIGHT_COLOR : this.data.color);
+        mat.color.set(highlight ? Edge.HIGHLIGHT_COLOR : this.data.color); // Note: This won't work for gradient edges as color is from vertexColors
         mat.linewidth = highlight ? this.data.thickness * 1.5 : this.data.thickness; // Adjust thickness on highlight
         mat.needsUpdate = true;
 
-        if (this.arrowheadMesh?.material) {
-            this.arrowheadMesh.material.color.set(highlight ? Edge.HIGHLIGHT_COLOR : (this.data.arrowheadColor || this.data.color) );
-            this.arrowheadMesh.material.opacity = highlight ? Edge.HIGHLIGHT_OPACITY : Edge.DEFAULT_OPACITY;
-            // Optionally scale arrowhead on highlight
-            // const scale = highlight ? 1.2 : 1;
-            // this.arrowheadMesh.scale.set(scale, scale, scale);
-        }
+        const highlightArrowhead = (arrowhead) => {
+            if (arrowhead?.material) {
+                arrowhead.material.color.set(highlight ? Edge.HIGHLIGHT_COLOR : (this.data.arrowheadColor || this.data.color));
+                arrowhead.material.opacity = highlight ? Edge.HIGHLIGHT_OPACITY : Edge.DEFAULT_OPACITY;
+                // Optionally scale arrowhead on highlight
+                // const scale = highlight ? 1.2 : 1;
+                // arrowhead.scale.set(scale, scale, scale);
+            }
+        };
+
+        highlightArrowhead(this.arrowheads.source);
+        highlightArrowhead(this.arrowheads.target);
     }
 
     // Call this if the window resizes, or ensure RenderingPlugin does.
@@ -242,11 +265,18 @@ export class Edge {
             this.line.parent?.remove(this.line);
             this.line = null;
         }
-        if (this.arrowheadMesh) {
-            this.arrowheadMesh.geometry?.dispose();
-            this.arrowheadMesh.material?.dispose();
-            this.arrowheadMesh.parent?.remove(this.arrowheadMesh);
-            this.arrowheadMesh = null;
-        }
+
+        const disposeArrowhead = (arrowhead) => {
+            if (arrowhead) {
+                arrowhead.geometry?.dispose();
+                arrowhead.material?.dispose();
+                arrowhead.parent?.remove(arrowhead);
+            }
+        };
+
+        disposeArrowhead(this.arrowheads.source);
+        this.arrowheads.source = null;
+        disposeArrowhead(this.arrowheads.target);
+        this.arrowheads.target = null;
     }
 }

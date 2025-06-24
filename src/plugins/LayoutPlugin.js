@@ -5,6 +5,8 @@
 
 import { Plugin } from '../core/Plugin.js';
 import { ForceLayout } from '../layout/ForceLayout.js';
+import { GridLayout } from '../layout/GridLayout.js';
+import { CircularLayout } from '../layout/CircularLayout.js'; // Import CircularLayout
 import { LayoutManager } from '../layout/LayoutManager.js';
 
 export class LayoutPlugin extends Plugin {
@@ -27,9 +29,13 @@ export class LayoutPlugin extends Plugin {
         const forceLayout = new ForceLayout(this.space); // ForceLayout constructor takes space
         this.layoutManager.registerLayout('force', forceLayout);
 
-        // TODO: Register other layouts here, e.g. GridLayout, CircularLayout
-        // const gridLayout = new GridLayout(this.space, this.pluginManager); // Assuming GridLayout structure
-        // this.layoutManager.registerLayout('grid', gridLayout);
+        const gridLayout = new GridLayout(); // GridLayout constructor is empty, context set by LayoutManager
+        this.layoutManager.registerLayout('grid', gridLayout);
+
+        const circularLayout = new CircularLayout(); // CircularLayout constructor is empty
+        this.layoutManager.registerLayout('circular', circularLayout);
+
+        // TODO: Register SphericalLayout, HierarchicalLayout
 
         // Set a default layout
         // applyLayout will call init() on the layout, which might populate it.
