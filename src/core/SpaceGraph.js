@@ -66,10 +66,20 @@ export class SpaceGraph {
         // _cam is now created by CameraPlugin and assigned to this.space._cam in CameraPlugin.init() for now.
         // Direct instantiation of THREE.PerspectiveCamera, CameraControls, Layout, and UIManager is removed from here.
 
+        // Plugin initialization will be handled by a separate async init() method.
+    }
+
+    /**
+     * Asynchronously initializes all registered plugins and performs initial setup.
+     * This method must be called and awaited after constructing SpaceGraph.
+     * @returns {Promise<void>}
+     */
+    async init() {
         // Initialize all registered plugins.
         // RenderingPlugin's init() sets up scenes, renderers, lighting.
         // CameraPlugin's init() creates the camera, controls.
-        this.plugins.initPlugins();
+        // LayoutPlugin.init() is async and will be awaited.
+        await this.plugins.initPlugins();
 
         // Initial camera setup
         const cameraPlugin = this.plugins.getPlugin('CameraPlugin');

@@ -58,10 +58,13 @@ export class PluginManager {
      * Initializes all registered plugins.
      * This is typically called by SpaceGraph after its own core setup is complete.
      */
-    initPlugins() {
+    async initPlugins() {
         for (const plugin of this.plugins) {
             try {
-                plugin.init();
+                // Check if init is a function before calling
+                if (typeof plugin.init === 'function') {
+                    await plugin.init(); // Await the init call
+                }
             } catch (error) {
                 console.error(`PluginManager: Error initializing plugin "${plugin.getName()}":`, error);
             }

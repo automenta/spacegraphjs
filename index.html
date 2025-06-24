@@ -41,7 +41,7 @@
             import * as S from './src/index.js';
             import { createExampleGraph } from './src/examples/exampleGraph.js'; // New import
 
-            function init() {
+            async function init() { // Make init async
                 const container = S.$('#mindmap-container'); // Updated selector
                 const contextMenuEl = S.$('#context-menu');
                 const confirmDialogEl = S.$('#confirm-dialog');
@@ -58,6 +58,7 @@
                 try {
                     // Pass contextMenuEl and confirmDialogEl to SpaceGraph constructor
                     const space = new S.SpaceGraph(container, contextMenuEl, confirmDialogEl);
+                    await space.init(); // Await the new async initialization
 
                     // UIManager and ForceLayout are now created and managed by plugins internally.
                     // space.ui = new S.UIManager(space, contextMenuEl, confirmDialogEl); // REMOVED

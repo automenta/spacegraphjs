@@ -162,7 +162,7 @@ export function createExampleGraph(space) {
         data: {
             label: 'Image Node 🖼️',
             // Using a placeholder image service URL
-            imageUrl: 'https://via.placeholder.com/200x150.png?text=SpaceGraph.js',
+            imageUrl: 'https://placehold.co/200x150.png?text=SpaceGraph.js', // Changed placeholder service
             size: 150, // Max dimension for the image plane
         },
         mass: 1.2,
