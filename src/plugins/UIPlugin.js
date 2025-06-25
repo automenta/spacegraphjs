@@ -72,7 +72,7 @@ export class UIManager {
     ];
 
     constructor(space, contextMenuEl, confirmDialogEl) {
-        if (!space || !contextMenuEl || !confirmDialogEl) throw new Error('UIManager requires SpaceGraph and UI elements.');
+        if (!space || !contextMenuEl || !confirmDialogEl) throw new Error('UIManager requires SpaceGraph instance and UI elements.');
         this.space = space;
         this.container = space.container;
         this.contextMenuElement = contextMenuEl;
@@ -91,33 +91,36 @@ export class UIManager {
     _createHudElements() {
         this.hudLayer = $('#hud-layer') || document.createElement('div');
         this.hudLayer.id = 'hud-layer';
-        this.container.parentNode.appendChild(this.hudLayer);
+        if (!this.hudLayer.parentNode) this.container.parentNode.appendChild(this.hudLayer);
 
         this.hudModeIndicator = $('#hud-mode-indicator');
-        if (this.hudModeIndicator?.tagName === 'DIV') this.hudModeIndicator.remove();
-        this.hudModeIndicator = this.hudModeIndicator?.tagName === 'SELECT' ? this.hudModeIndicator : document.createElement('select');
-        this.hudModeIndicator.id = 'hud-mode-indicator';
-
-        const cameraModes = { 'orbit': 'Orbit Control', 'free': 'Free Look' };
-        for (const modeKey in cameraModes) {
-            const option = document.createElement('option');
-            option.value = modeKey;
-            option.textContent = cameraModes[modeKey];
-            this.hudModeIndicator.appendChild(option);
+        if (this.hudModeIndicator?.tagName === 'DIV') {
+            this.hudModeIndicator.remove();
+            this.hudModeIndicator = null;
         }
-        this.hudLayer.appendChild(this.hudModeIndicator);
-        this.hudModeIndicator.addEventListener('change', (e) => this.space.emit('ui:request:setCameraMode', e.target.value));
+        if (!this.hudModeIndicator) {
+            this.hudModeIndicator = document.createElement('select');
+            this.hudModeIndicator.id = 'hud-mode-indicator';
+            for (const [modeKey, modeText] of Object.entries({ 'orbit': 'Orbit Control', 'free': 'Free Look' })) {
+                const option = document.createElement('option');
+                option.value = modeKey;
+                option.textContent = modeText;
+                this.hudModeIndicator.appendChild(option);
+            }
+            this.hudLayer.appendChild(this.hudModeIndicator);
+            this.hudModeIndicator.addEventListener('change', (e) => this.space.emit('ui:request:setCameraMode', e.target.value));
+        }
 
         this.hudSelectionInfo = $('#hud-selection-info') || document.createElement('div');
         this.hudSelectionInfo.id = 'hud-selection-info';
-        this.hudLayer.appendChild(this.hudSelectionInfo);
+        if (!this.hudSelectionInfo.parentNode) this.hudLayer.appendChild(this.hudSelectionInfo);
 
         this.hudKeyboardShortcutsButton = $('#hud-keyboard-shortcuts') || document.createElement('div');
         this.hudKeyboardShortcutsButton.id = 'hud-keyboard-shortcuts';
         this.hudKeyboardShortcutsButton.textContent = '⌨️';
         this.hudKeyboardShortcutsButton.title = 'View Keyboard Shortcuts';
         this.hudKeyboardShortcutsButton.style.cursor = 'pointer';
-        this.hudLayer.appendChild(this.hudKeyboardShortcutsButton);
+        if (!this.hudKeyboardShortcutsButton.parentNode) this.hudLayer.appendChild(this.hudKeyboardShortcutsButton);
         this.hudKeyboardShortcutsButton.addEventListener('click', () => this._showKeyboardShortcutsDialog());
 
         this.hudLayoutSettingsButton = $('#hud-layout-settings') || document.createElement('div');
@@ -125,7 +128,7 @@ export class UIManager {
         this.hudLayoutSettingsButton.textContent = '📐';
         this.hudLayoutSettingsButton.title = 'Layout Settings';
         this.hudLayoutSettingsButton.style.cursor = 'pointer';
-        this.hudLayer.appendChild(this.hudLayoutSettingsButton);
+        if (!this.hudLayoutSettingsButton.parentNode) this.hudLayer.appendChild(this.hudLayoutSettingsButton);
         this.hudLayoutSettingsButton.addEventListener('click', () => this._showLayoutSettingsDialog());
     }
 
@@ -137,7 +140,7 @@ export class UIManager {
         this.layoutSettingsDialogElement.id = 'layout-settings-dialog';
         this.layoutSettingsDialogElement.className = 'dialog';
         this.layoutSettingsDialogElement.addEventListener('pointerdown', (e) => e.stopPropagation());
-        document.body.appendChild(this.layoutSettingsDialogElement);
+        if (!this.layoutSettingsDialogElement.parentNode) document.body.appendChild(this.layoutSettingsDialogElement);
 
         const currentLayoutName = layoutPlugin.layoutManager.getActiveLayoutName();
         const availableLayouts = [...layoutPlugin.layoutManager.layouts.keys()];
@@ -185,7 +188,7 @@ export class UIManager {
         this.keyboardShortcutsDialogElement.id = 'keyboard-shortcuts-dialog';
         this.keyboardShortcutsDialogElement.className = 'dialog';
         this.keyboardShortcutsDialogElement.addEventListener('pointerdown', (e) => e.stopPropagation());
-        document.body.appendChild(this.keyboardShortcutsDialogElement);
+        if (!this.keyboardShortcutsDialogElement.parentNode) document.body.appendChild(this.keyboardShortcutsDialogElement);
 
         this.keyboardShortcutsDialogElement.innerHTML = `
             <h2>Keyboard Shortcuts</h2>
@@ -347,7 +350,7 @@ export class UIManager {
                 $$('.node-common.linking-target').forEach((el) => el.classList.remove('linking-target'));
                 break;
         }
-        this.container.style.cursor = 'grab'; // Default cursor after exiting state
+        this.container.style.cursor = 'grab';
 
         this.currentState = newState;
 
@@ -390,6 +393,7 @@ export class UIManager {
                 this.space.plugins.getPlugin('CameraPlugin')?.startPan(this.pointerState.clientX, this.pointerState.clientY);
                 this.container.style.cursor = 'grabbing';
                 break;
+
             case InteractionState.LINKING_NODE:
                 this.container.style.cursor = 'crosshair';
                 this._createTempLinkLine(data.sourceNode);

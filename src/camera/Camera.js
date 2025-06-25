@@ -280,7 +280,7 @@ export class Camera {
     startFollowing(target, options = {}) {
         if (!target) return;
         this.followTargetObject = target;
-        this.followOptions = { ...this.followOptions, ...this.defaultFollowOptions, ...options };
+        this.followOptions = { ...this.followOptions, ...options };
         this.isFollowing = true;
         this._isManuallyControlled = false;
         this.currentTargetNodeId = target?.id || null;

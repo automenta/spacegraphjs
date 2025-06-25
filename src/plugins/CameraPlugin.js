@@ -171,14 +171,6 @@ export class CameraPlugin extends Plugin {
         return this.cameraControls?.isFollowing || false;
     }
 
-    moveFreeCamera(direction, deltaTime) {
-        this.cameraControls?.moveFreeCamera(direction, deltaTime);
-    }
-
-    rotateFreeCamera(deltaYaw, deltaPitch, deltaTime) {
-        this.cameraControls?.rotateFreeCamera(deltaYaw, deltaPitch, deltaTime);
-    }
-
     requestPointerLock() {
         this.cameraControls?.pointerLockControls?.lock();
     }

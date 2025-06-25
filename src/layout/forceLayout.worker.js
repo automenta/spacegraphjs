@@ -12,8 +12,9 @@ function _calculateStepInWorker() {
     let currentTotalEnergy = 0;
     const nodeForces = new Map(nodes.map((n) => [n.id, { x: 0, y: 0, z: 0 }]));
 
-    const { repulsion, centerStrength, zSpreadFactor, damping, nodePadding } = settings;
+    const { repulsion, centerStrength, zSpreadFactor, damping } = settings;
     const gravityCenter = settings.gravityCenter || { x: 0, y: 0, z: 0 };
+    const nodePadding = settings.nodePadding || 1.2;
 
     const vecSub = (a, b) => ({ x: a.x - b.x, y: a.y - b.y, z: a.z - b.z });
     const vecLengthSq = (a) => a.x * a.x + a.y * a.y + a.z * a.z;
@@ -39,14 +40,14 @@ function _calculateStepInWorker() {
 
             const radiusA = nodeA.radius || 10;
             const radiusB = nodeB.radius || 10;
-            const combinedRadius = (radiusA + radiusB) * (nodePadding || 1.2);
+            const combinedRadius = (radiusA + radiusB) * nodePadding;
 
-            let forceMag = -(repulsion || 3000) / distSq;
+            let forceMag = -repulsion / distSq;
             const overlap = combinedRadius - distance;
-            if (overlap > 0) forceMag -= ((repulsion || 3000) * overlap ** 2 * 0.01) / distance;
+            if (overlap > 0) forceMag -= (repulsion * overlap ** 2 * 0.01) / distance;
 
             let forceVec = vecScalarMult(vecNormalize(delta), forceMag);
-            forceVec.z *= zSpreadFactor || 0.15;
+            forceVec.z *= zSpreadFactor;
 
             if (!nodeA.isFixed) nodeForces.set(nodeA.id, vecAdd(nodeForces.get(nodeA.id), forceVec));
             if (!nodeB.isFixed) nodeForces.set(nodeB.id, vecSub(nodeForces.get(nodeB.id), forceVec));
@@ -69,33 +70,33 @@ function _calculateStepInWorker() {
 
         switch (edge.constraintType) {
             case 'rigid':
-                forceMag = (params.stiffness ?? (s.defaultRigidStiffness || 0.1)) * (distance - (params.distance ?? (s.defaultElasticIdealLength || 200)));
+                forceMag = (params.stiffness ?? s.defaultRigidStiffness) * (distance - (params.distance ?? s.defaultElasticIdealLength));
                 break;
             case 'weld':
-                forceMag = (params.stiffness ?? (s.defaultWeldStiffness || 0.5)) * (distance - (params.distance ?? (sourceNode.radius || 10) + (targetNode.radius || 10)));
+                forceMag = (params.stiffness ?? s.defaultWeldStiffness) * (distance - (params.distance ?? (sourceNode.radius || 10) + (targetNode.radius || 10)));
                 break;
             case 'elastic':
             default:
-                forceMag = (params.stiffness ?? (s.defaultElasticStiffness || 0.001)) * (distance - (params.idealLength ?? (s.defaultElasticIdealLength || 200)));
+                forceMag = (params.stiffness ?? s.defaultElasticStiffness) * (distance - (params.idealLength ?? s.defaultElasticIdealLength));
                 break;
         }
         let forceVec = vecScalarMult(vecNormalize(delta), forceMag);
-        forceVec.z *= zSpreadFactor || 0.15;
+        forceVec.z *= zSpreadFactor;
 
         if (!sourceNode.isFixed) nodeForces.set(sourceNode.id, vecAdd(nodeForces.get(sourceNode.id), forceVec));
         if (!targetNode.isFixed) nodeForces.set(targetNode.id, vecSub(nodeForces.get(targetNode.id), forceVec));
     });
 
-    if ((centerStrength || 0) > 0) {
+    if (centerStrength > 0) {
         nodes.forEach((node) => {
             if (node.isFixed) return;
             let forceVec = vecScalarMult(vecSub(gravityCenter, node), centerStrength);
-            forceVec.z *= (zSpreadFactor || 0.15) * 0.5;
+            forceVec.z *= zSpreadFactor * 0.5;
             nodeForces.set(node.id, vecAdd(nodeForces.get(node.id), forceVec));
         });
     }
 
-    if (settings.enableClustering && (settings.clusterStrength || 0) > 0) {
+    if (settings.enableClustering && settings.clusterStrength > 0) {
         const clusters = new Map();
         nodes.forEach((node) => {
             const clusterId = node.clusterId;
@@ -120,7 +121,7 @@ function _calculateStepInWorker() {
                 const node = findNodeById(nodeId);
                 if (!node || node.isFixed) return;
                 let forceVec = vecScalarMult(vecSub(clusterCenter, node), settings.clusterStrength);
-                forceVec.z *= zSpreadFactor || 0.15;
+                forceVec.z *= zSpreadFactor;
                 nodeForces.set(node.id, vecAdd(nodeForces.get(node.id), forceVec));
             });
         });
@@ -133,9 +134,9 @@ function _calculateStepInWorker() {
 
         const acceleration = vecScalarMult(force, 1.0 / (node.mass || 1.0));
 
-        node.vx = (node.vx + acceleration.x) * (damping || 0.92);
-        node.vy = (node.vy + acceleration.y) * (damping || 0.92);
-        node.vz = (node.vz + acceleration.z) * (damping || 0.92);
+        node.vx = (node.vx + acceleration.x) * damping;
+        node.vy = (node.vy + acceleration.y) * damping;
+        node.vz = (node.vz + acceleration.z) * damping;
 
         if (!isFinite(node.vx) || !isFinite(node.vy) || !isFinite(node.vz)) {
             node.vx = 0; node.vy = 0; node.vz = 0;
@@ -174,7 +175,7 @@ function startSimulation() {
         self.postMessage({ type: 'positionsUpdate', positions: nodes.map((n) => ({ id: n.id, x: n.x, y: n.y, z: n.z })), energy: totalEnergy });
 
         const timeSinceKick = Date.now() - lastKickTime;
-        if (settings.autoStopDelay && totalEnergy < (settings.minEnergyThreshold || 0.1) && timeSinceKick > settings.autoStopDelay) {
+        if (settings.autoStopDelay && totalEnergy < settings.minEnergyThreshold && timeSinceKick > settings.autoStopDelay) {
             stopSimulation();
         } else {
             setTimeout(loop, 16);
@@ -218,7 +219,7 @@ self.onmessage = function (event) {
                 if (!node.isFixed) {
                     node.vx += (Math.random() - 0.5) * (payload.intensity || 1);
                     node.vy += (Math.random() - 0.5) * (payload.intensity || 1);
-                    node.vz += (Math.random() - 0.5) * (payload.intensity || 1) * (settings.zSpreadFactor || 0.1);
+                    node.vz += (Math.random() - 0.5) * (payload.intensity || 1) * settings.zSpreadFactor;
                 }
             });
             if (!isRunning) startSimulation();
