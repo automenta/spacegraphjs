@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CSS3DRenderer } from 'three/addons/renderers/CSS3DRenderer.js';
 import { Plugin } from '../core/Plugin.js';
-import { $ } from '../utils.js'; // Added import for $
+import { $ } from '../utils.js';
 import {
     EffectComposer, RenderPass, EffectPass, BloomEffect, OutlineEffect, Selection, KernelSize, SSAOEffect, NormalPass, BlendFunction,
 } from 'postprocessing';
@@ -123,7 +123,6 @@ export class RenderingPlugin extends Plugin {
 
         this.webglCanvas = $('#webgl-canvas') || document.createElement('canvas');
         this.webglCanvas.id = 'webgl-canvas';
-        // Only append if it's a newly created canvas, or if it's not already a child
         if (!this.webglCanvas.parentNode) {
             this.space.container.appendChild(this.webglCanvas);
         }
@@ -145,14 +144,12 @@ export class RenderingPlugin extends Plugin {
         this.renderCSS3D = new CSS3DRenderer();
         this.renderCSS3D.setSize(window.innerWidth, window.innerHeight);
 
-        // Use existing css3d-container if available, otherwise create and append
         this.css3dContainer = $('#css3d-container');
         if (!this.css3dContainer) {
             this.css3dContainer = document.createElement('div');
             this.css3dContainer.id = 'css3d-container';
             this.space.container.appendChild(this.css3dContainer);
         }
-        // Append the CSS3DRenderer's DOM element to the container
         this.css3dContainer.appendChild(this.renderCSS3D.domElement);
 
         Object.assign(this.renderCSS3D.domElement.style, {
@@ -366,3 +363,5 @@ export class RenderingPlugin extends Plugin {
         this.cssScene?.clear();
 
         this.scene = null; this.cssScene = null; this.renderGL = null;
+    }
+}

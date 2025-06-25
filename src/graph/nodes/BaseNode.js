@@ -47,7 +47,6 @@ export class BaseNode {
     setSelectedStyle(_selected) {}
 
     setPosition(pos, y, z) {
-        // Ensure y and z default to 0 if not provided when pos is an object
         const { x, _y, _z } = typeof pos === 'object' && pos !== null ? pos : { x: pos, _y: y, _z: z };
         const finalY = _y ?? 0;
         const finalZ = _z ?? 0;

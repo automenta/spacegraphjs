@@ -58,7 +58,7 @@ export class Edge {
         }
 
         this.line = this._createLine();
-        this._createArrowheads(); // Arrowheads are created here, but not added to scene. EdgePlugin will add them.
+        this._createArrowheads();
         this.update();
     }
 
@@ -66,11 +66,9 @@ export class Edge {
         const arrowheadOpt = this.data.arrowhead;
         if (arrowheadOpt === true || arrowheadOpt === 'target' || arrowheadOpt === 'both') {
             this.arrowheads.target = this._createSingleArrowhead('target');
-            // Removed: this.line?.parent?.add(this.arrowheads.target); - EdgePlugin will add this.
         }
         if (arrowheadOpt === 'source' || arrowheadOpt === 'both') {
             this.arrowheads.source = this._createSingleArrowhead('source');
-            // Removed: this.line?.parent?.add(this.arrowheads.source); - EdgePlugin will add this.
         }
     }
 
