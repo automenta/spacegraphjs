@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
 import { $, $$ } from '../utils.js';
 import { HtmlNode } from '../graph/nodes/HtmlNode.js';
+import { NoteNode } from '../graph/nodes/NoteNode.js';
+import { ShapeNode } from '../graph/nodes/ShapeNode.js';
 
 const InteractionState = {
     IDLE: 'IDLE',
@@ -29,8 +31,6 @@ export class UIManager {
     resizedNode = null;
     resizeStartPointerPos = { x: 0, y: 0 };
     resizeStartNodeSize = { width: 0, height: 0 };
-    resizeNodeScreenScaleX = 1;
-    resizeNodeScreenScaleY = 1;
 
     hoveredEdge = null;
 
@@ -72,7 +72,8 @@ export class UIManager {
     ];
 
     constructor(space, contextMenuEl, confirmDialogEl) {
-        if (!space || !contextMenuEl || !confirmDialogEl) throw new Error('UIManager requires SpaceGraph instance and UI elements.');
+        if (!space || !contextMenuEl || !confirmDialogEl)
+            throw new Error('UIManager requires SpaceGraph instance and UI elements.');
         this.space = space;
         this.container = space.container;
         this.contextMenuElement = contextMenuEl;
@@ -80,6 +81,7 @@ export class UIManager {
         this.toolbarElement = $('#toolbar');
 
         this._createHudElements();
+
         this._bindEvents();
         this._subscribeToSpaceGraphEvents();
         this._setupToolbar();
@@ -89,91 +91,141 @@ export class UIManager {
     }
 
     _createHudElements() {
-        this.hudLayer = $('#hud-layer') || document.createElement('div');
-        this.hudLayer.id = 'hud-layer';
-        if (!this.hudLayer.parentNode) this.container.parentNode.appendChild(this.hudLayer);
+        this.hudLayer = $('#hud-layer');
+        if (!this.hudLayer) {
+            this.hudLayer = document.createElement('div');
+            this.hudLayer.id = 'hud-layer';
+            this.container.parentNode.appendChild(this.hudLayer);
+        }
 
         this.hudModeIndicator = $('#hud-mode-indicator');
         if (this.hudModeIndicator?.tagName === 'DIV') {
             this.hudModeIndicator.remove();
             this.hudModeIndicator = null;
         }
+
         if (!this.hudModeIndicator) {
             this.hudModeIndicator = document.createElement('select');
             this.hudModeIndicator.id = 'hud-mode-indicator';
-            for (const [modeKey, modeText] of Object.entries({ 'orbit': 'Orbit Control', 'free': 'Free Look' })) {
+
+            const cameraModes = {
+                'orbit': 'Orbit Control',
+                'free': 'Free Look'
+            };
+
+            for (const modeKey in cameraModes) {
                 const option = document.createElement('option');
                 option.value = modeKey;
-                option.textContent = modeText;
+                option.textContent = cameraModes[modeKey];
                 this.hudModeIndicator.appendChild(option);
             }
             this.hudLayer.appendChild(this.hudModeIndicator);
-            this.hudModeIndicator.addEventListener('change', (e) => this.space.emit('ui:request:setCameraMode', e.target.value));
+
+            this.hudModeIndicator.addEventListener('change', (event) => {
+                const newMode = event.target.value;
+                this.space.emit('ui:request:setCameraMode', newMode);
+            });
         }
 
-        this.hudSelectionInfo = $('#hud-selection-info') || document.createElement('div');
-        this.hudSelectionInfo.id = 'hud-selection-info';
-        if (!this.hudSelectionInfo.parentNode) this.hudLayer.appendChild(this.hudSelectionInfo);
+        this.hudSelectionInfo = $('#hud-selection-info');
+        if (!this.hudSelectionInfo) {
+            this.hudSelectionInfo = document.createElement('div');
+            this.hudSelectionInfo.id = 'hud-selection-info';
+            this.hudLayer.appendChild(this.hudSelectionInfo);
+        }
 
-        this.hudKeyboardShortcutsButton = $('#hud-keyboard-shortcuts') || document.createElement('div');
-        this.hudKeyboardShortcutsButton.id = 'hud-keyboard-shortcuts';
-        this.hudKeyboardShortcutsButton.textContent = '⌨️';
-        this.hudKeyboardShortcutsButton.title = 'View Keyboard Shortcuts';
-        this.hudKeyboardShortcutsButton.style.cursor = 'pointer';
-        if (!this.hudKeyboardShortcutsButton.parentNode) this.hudLayer.appendChild(this.hudKeyboardShortcutsButton);
-        this.hudKeyboardShortcutsButton.addEventListener('click', () => this._showKeyboardShortcutsDialog());
+        this.hudKeyboardShortcutsButton = $('#hud-keyboard-shortcuts');
+        if (!this.hudKeyboardShortcutsButton) {
+            this.hudKeyboardShortcutsButton = document.createElement('div');
+            this.hudKeyboardShortcutsButton.id = 'hud-keyboard-shortcuts';
+            this.hudKeyboardShortcutsButton.textContent = '⌨️';
+            this.hudKeyboardShortcutsButton.title = 'View Keyboard Shortcuts';
+            this.hudKeyboardShortcutsButton.style.cursor = 'pointer';
+            this.hudLayer.appendChild(this.hudKeyboardShortcutsButton);
 
-        this.hudLayoutSettingsButton = $('#hud-layout-settings') || document.createElement('div');
-        this.hudLayoutSettingsButton.id = 'hud-layout-settings';
-        this.hudLayoutSettingsButton.textContent = '📐';
-        this.hudLayoutSettingsButton.title = 'Layout Settings';
-        this.hudLayoutSettingsButton.style.cursor = 'pointer';
-        if (!this.hudLayoutSettingsButton.parentNode) this.hudLayer.appendChild(this.hudLayoutSettingsButton);
-        this.hudLayoutSettingsButton.addEventListener('click', () => this._showLayoutSettingsDialog());
+            this.hudKeyboardShortcutsButton.addEventListener('click', () => {
+                this._showKeyboardShortcutsDialog();
+            });
+        }
+
+        this.hudLayoutSettingsButton = $('#hud-layout-settings');
+        if (!this.hudLayoutSettingsButton) {
+            this.hudLayoutSettingsButton = document.createElement('div');
+            this.hudLayoutSettingsButton.id = 'hud-layout-settings';
+            this.hudLayoutSettingsButton.textContent = '📐';
+            this.hudLayoutSettingsButton.title = 'Layout Settings';
+            this.hudLayoutSettingsButton.style.cursor = 'pointer';
+            this.hudLayer.appendChild(this.hudLayoutSettingsButton);
+
+            this.hudLayoutSettingsButton.addEventListener('click', () => {
+                this._showLayoutSettingsDialog();
+            });
+        }
     }
 
     _showLayoutSettingsDialog() {
         const layoutPlugin = this.space.plugins.getPlugin('LayoutPlugin');
-        if (!layoutPlugin?.layoutManager) return console.warn('UIManager: LayoutPlugin not available.');
+        if (!layoutPlugin?.layoutManager) {
+            console.warn('UIManager: LayoutPlugin not available for layout settings.');
+            return;
+        }
 
-        this.layoutSettingsDialogElement = this.layoutSettingsDialogElement || document.createElement('div');
-        this.layoutSettingsDialogElement.id = 'layout-settings-dialog';
-        this.layoutSettingsDialogElement.className = 'dialog';
-        this.layoutSettingsDialogElement.addEventListener('pointerdown', (e) => e.stopPropagation());
-        if (!this.layoutSettingsDialogElement.parentNode) document.body.appendChild(this.layoutSettingsDialogElement);
+        if (!this.layoutSettingsDialogElement) {
+            this.layoutSettingsDialogElement = document.createElement('div');
+            this.layoutSettingsDialogElement.id = 'layout-settings-dialog';
+            this.layoutSettingsDialogElement.className = 'dialog';
+            this.layoutSettingsDialogElement.addEventListener('pointerdown', (e) => e.stopPropagation());
+            document.body.appendChild(this.layoutSettingsDialogElement);
+        }
 
         const currentLayoutName = layoutPlugin.layoutManager.getActiveLayoutName();
         const availableLayouts = [...layoutPlugin.layoutManager.layouts.keys()];
 
-        this.layoutSettingsDialogElement.innerHTML = `
+        let dialogHTML = `
             <h2>Layout Settings</h2>
             <div>
                 <label for="layout-select">Current Layout: </label>
                 <select id="layout-select">
-                    ${availableLayouts.map(name => `<option value="${name}" ${name === currentLayoutName ? 'selected' : ''}>${name.charAt(0).toUpperCase() + name.slice(1)}</option>`).join('')}
+        `;
+        availableLayouts.forEach(name => {
+            const displayName = name.charAt(0).toUpperCase() + name.slice(1);
+            dialogHTML += `<option value="${name}" ${name === currentLayoutName ? 'selected' : ''}>${displayName}</option>`;
+        });
+        dialogHTML += `
                 </select>
             </div>
-            <div class="layout-options-container">
+            <div class="layout-options-container" style="margin-top: 15px; min-height: 50px;">
                 <p><em>Layout-specific options will be available here in a future update.</em></p>
             </div>
-            <button id="apply-layout-button">Apply Layout</button>
+            <button id="apply-layout-button" style="margin-right: 10px;">Apply Layout</button>
             <button id="close-layout-dialog">Close</button>
         `;
 
+        this.layoutSettingsDialogElement.innerHTML = dialogHTML;
+
         $('#apply-layout-button', this.layoutSettingsDialogElement)?.addEventListener('click', () => {
             const selectedLayout = $('#layout-select', this.layoutSettingsDialogElement)?.value;
-            selectedLayout && this.space.emit('ui:request:applyLayout', selectedLayout);
-            setTimeout(() => this._updateLayoutSettingsDialogContent(layoutPlugin), 100);
+            if (selectedLayout) {
+                this.space.emit('ui:request:applyLayout', selectedLayout);
+                setTimeout(() => this._updateLayoutSettingsDialogContent(layoutPlugin), 100);
+            }
         });
-        $('#close-layout-dialog', this.layoutSettingsDialogElement)?.addEventListener('click', this._hideLayoutSettingsDialog);
+
+        $('#close-layout-dialog', this.layoutSettingsDialogElement)?.addEventListener('click', () => {
+            this._hideLayoutSettingsDialog();
+        });
 
         this.layoutSettingsDialogElement.style.display = 'block';
         this.space.emit('ui:layoutsettings:shown');
     }
 
     _updateLayoutSettingsDialogContent(layoutPlugin) {
-        if (!this.layoutSettingsDialogElement || this.layoutSettingsDialogElement.style.display === 'none' || !layoutPlugin?.layoutManager) return;
-        $('#layout-select', this.layoutSettingsDialogElement).value = layoutPlugin.layoutManager.getActiveLayoutName();
+        if (!this.layoutSettingsDialogElement || this.layoutSettingsDialogElement.style.display === 'none') return;
+        if (!layoutPlugin?.layoutManager) return;
+
+        const currentLayoutName = layoutPlugin.layoutManager.getActiveLayoutName();
+        const selectElement = $('#layout-select', this.layoutSettingsDialogElement);
+        selectElement && (selectElement.value = currentLayoutName);
     }
 
     _hideLayoutSettingsDialog = () => {
@@ -184,24 +236,44 @@ export class UIManager {
     }
 
     _showKeyboardShortcutsDialog() {
-        this.keyboardShortcutsDialogElement = this.keyboardShortcutsDialogElement || document.createElement('div');
-        this.keyboardShortcutsDialogElement.id = 'keyboard-shortcuts-dialog';
-        this.keyboardShortcutsDialogElement.className = 'dialog';
-        this.keyboardShortcutsDialogElement.addEventListener('pointerdown', (e) => e.stopPropagation());
-        if (!this.keyboardShortcutsDialogElement.parentNode) document.body.appendChild(this.keyboardShortcutsDialogElement);
+        if (!this.keyboardShortcutsDialogElement) {
+            this.keyboardShortcutsDialogElement = document.createElement('div');
+            this.keyboardShortcutsDialogElement.id = 'keyboard-shortcuts-dialog';
+            this.keyboardShortcutsDialogElement.className = 'dialog';
+            this.keyboardShortcutsDialogElement.addEventListener('pointerdown', (e) => e.stopPropagation());
 
-        this.keyboardShortcutsDialogElement.innerHTML = `
-            <h2>Keyboard Shortcuts</h2>
-            <table class="shortcuts-table">
-                <thead><tr><th>Key(s)</th><th>Action</th></tr></thead>
-                <tbody>
-                    ${this.keyboardShortcuts.map(s => `<tr><td>${s.keys.map(k => `<kbd>${k}</kbd>`).join(' / ')}</td><td>${s.description}</td></tr>`).join('')}
-                </tbody>
-            </table>
-            <button id="close-shortcuts-dialog">Close</button>
-        `;
-        $('#close-shortcuts-dialog', this.keyboardShortcutsDialogElement)?.addEventListener('click', this._hideKeyboardShortcutsDialog);
 
+            let tableHTML = `
+                <h2>Keyboard Shortcuts</h2>
+                <table class="shortcuts-table">
+                    <thead>
+                        <tr>
+                            <th>Key(s)</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            this.keyboardShortcuts.forEach(shortcut => {
+                tableHTML += `
+                    <tr>
+                        <td>${shortcut.keys.map(key => `<kbd>${key}</kbd>`).join(' / ')}</td>
+                        <td>${shortcut.description}</td>
+                    </tr>
+                `;
+            });
+            tableHTML += `
+                    </tbody>
+                </table>
+                <button id="close-shortcuts-dialog">Close</button>
+            `;
+            this.keyboardShortcutsDialogElement.innerHTML = tableHTML;
+            document.body.appendChild(this.keyboardShortcutsDialogElement);
+
+            $('#close-shortcuts-dialog', this.keyboardShortcutsDialogElement)?.addEventListener('click', () => {
+                this._hideKeyboardShortcutsDialog();
+            });
+        }
         this.keyboardShortcutsDialogElement.style.display = 'block';
         this.space.emit('ui:keyboardshortcuts:shown');
     }
@@ -214,7 +286,9 @@ export class UIManager {
     }
 
     _applySavedTheme() {
-        document.body.classList.toggle('theme-light', localStorage.getItem('spacegraph-theme') === 'light');
+        localStorage.getItem('spacegraph-theme') === 'light'
+            ? document.body.classList.add('theme-light')
+            : document.body.classList.remove('theme-light');
     }
 
     _setupToolbar() {
@@ -239,15 +313,31 @@ export class UIManager {
     _handleToolbarAction(action) {
         switch (action) {
             case 'addNode': {
-                const cam = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
-                const nodePos = cam
-                    ? new THREE.Vector3().copy(cam.position).add(new THREE.Vector3().copy(cam.getWorldDirection(new THREE.Vector3())).multiplyScalar(300)).setZ(0)
-                    : { x: Math.random() * 200 - 100, y: Math.random() * 200 - 100, z: 0 };
-                this.space.emit('ui:request:createNode', { type: 'html', position: nodePos, data: { label: 'New Node', content: 'Edit me!' } });
+                const camPlugin = this.space.plugins.getPlugin('CameraPlugin');
+                const cam = camPlugin?.getCameraInstance();
+                let nodePos = { x: Math.random() * 200 - 100, y: Math.random() * 200 - 100, z: 0 };
+                if (cam) {
+                    const camPos = new THREE.Vector3();
+                    const camDir = new THREE.Vector3();
+                    cam.getWorldPosition(camPos);
+                    cam.getWorldDirection(camDir);
+                    const distanceInFront = 300;
+                    const targetPos = camPos.add(camDir.multiplyScalar(distanceInFront));
+                    nodePos = { x: targetPos.x, y: targetPos.y, z: 0 };
+                }
+                this.space.emit('ui:request:createNode', {
+                    type: 'html',
+                    position: nodePos,
+                    data: { label: 'New Node', content: 'Edit me!' },
+                });
                 break;
             }
-            case 'centerView': this.space.emit('ui:request:centerView'); break;
-            case 'resetView': this.space.emit('ui:request:resetView'); break;
+            case 'centerView':
+                this.space.emit('ui:request:centerView');
+                break;
+            case 'resetView':
+                this.space.emit('ui:request:resetView');
+                break;
             case 'toggleTheme': {
                 document.body.classList.toggle('theme-light');
                 const currentTheme = document.body.classList.contains('theme-light') ? 'light' : 'dark';
@@ -255,7 +345,8 @@ export class UIManager {
                 this.space.emit('theme:changed', { theme: currentTheme });
                 break;
             }
-            default: console.warn('UIManager: Unknown toolbar action:', action);
+            default:
+                console.warn('UIManager: Unknown toolbar action:', action);
         }
     }
 
@@ -288,24 +379,35 @@ export class UIManager {
 
     _updateHudCameraMode(mode) {
         if (this.hudModeIndicator?.tagName === 'SELECT') {
-            this.hudModeIndicator.value = mode || this.space.plugins.getPlugin('CameraPlugin')?.getCameraMode() || 'orbit';
+            const cameraMode = mode || this.space.plugins.getPlugin('CameraPlugin')?.getCameraMode() || 'orbit';
+            this.hudModeIndicator.value = cameraMode;
         }
     }
 
     _updateHudSelectionInfo() {
         if (!this.hudSelectionInfo) return;
-        const uiPlugin = this.space.plugins.getPlugin('UIPlugin');
-        if (!uiPlugin) { this.hudSelectionInfo.textContent = 'Selected: N/A'; return; }
 
+        const uiPlugin = this.space.plugins.getPlugin('UIPlugin');
+        if (!uiPlugin) {
+            this.hudSelectionInfo.textContent = 'Selected: N/A';
+            return;
+        }
         const selectedNodes = uiPlugin.getSelectedNodes();
         const selectedEdges = uiPlugin.getSelectedEdges();
 
-        this.hudSelectionInfo.textContent =
-            selectedNodes.size === 1 ? `Selected: Node ${selectedNodes.values().next().value.data.label || selectedNodes.values().next().value.id.substring(0, 8)}` :
-            selectedNodes.size > 1 ? `Selected: ${selectedNodes.size} Nodes` :
-            selectedEdges.size === 1 ? `Selected: Edge ${selectedEdges.values().next().value.id.substring(0, 8)}` :
-            selectedEdges.size > 1 ? `Selected: ${selectedEdges.size} Edges` :
-            'Selected: None';
+        if (selectedNodes.size === 1) {
+            const node = selectedNodes.values().next().value;
+            this.hudSelectionInfo.textContent = `Selected: Node ${node.data.label || node.id.substring(0, 8)}`;
+        } else if (selectedNodes.size > 1) {
+            this.hudSelectionInfo.textContent = `Selected: ${selectedNodes.size} Nodes`;
+        } else if (selectedEdges.size === 1) {
+            const edge = selectedEdges.values().next().value;
+            this.hudSelectionInfo.textContent = `Selected: Edge ${edge.id.substring(0, 8)}`;
+        } else if (selectedEdges.size > 1) {
+            this.hudSelectionInfo.textContent = `Selected: ${selectedEdges.size} Edges`;
+        } else {
+            this.hudSelectionInfo.textContent = 'Selected: None';
+        }
     }
 
     _updateNormalizedPointerState(e, isDownEvent = undefined) {
@@ -327,30 +429,36 @@ export class UIManager {
         if (this.pointerState.down && !this.pointerState.isDraggingThresholdMet) {
             const dx = this.pointerState.clientX - this.pointerState.startClientX;
             const dy = this.pointerState.clientY - this.pointerState.startClientY;
-            this.pointerState.isDraggingThresholdMet = Math.sqrt(dx * dx + dy * dy) > this.pointerState.DRAG_THRESHOLD;
+            if (Math.sqrt(dx * dx + dy * dy) > this.pointerState.DRAG_THRESHOLD) {
+                this.pointerState.isDraggingThresholdMet = true;
+            }
         }
     }
 
     _transitionToState(newState, data = {}) {
         if (this.currentState === newState) return;
 
+        console.log(`UIManager: Exiting state: ${this.currentState}, transitioning to ${newState}`);
         switch (this.currentState) {
             case InteractionState.DRAGGING_NODE:
                 this.draggedNode?.endDrag();
+                this.container.style.cursor = 'grab';
                 this.draggedNode = null;
                 break;
             case InteractionState.RESIZING_NODE:
                 this.resizedNode?.endResize();
+                this.container.style.cursor = 'grab';
                 this.resizedNode = null;
                 break;
             case InteractionState.PANNING:
                 this.space.plugins.getPlugin('CameraPlugin')?.endPan();
+                this.container.style.cursor = 'grab';
                 break;
             case InteractionState.LINKING_NODE:
+                this.container.style.cursor = 'grab';
                 $$('.node-common.linking-target').forEach((el) => el.classList.remove('linking-target'));
                 break;
         }
-        this.container.style.cursor = 'grab';
 
         this.currentState = newState;
 
@@ -359,7 +467,12 @@ export class UIManager {
                 this.draggedNode = data.node;
                 this.draggedNodeInitialZ = this.draggedNode.position.z;
                 this.draggedNode.startDrag();
-                const worldPos = this.space.screenToWorld(this.pointerState.clientX, this.pointerState.clientY, this.draggedNodeInitialZ);
+
+                const worldPos = this.space.screenToWorld(
+                    this.pointerState.clientX,
+                    this.pointerState.clientY,
+                    this.draggedNodeInitialZ
+                );
                 this.dragOffset = worldPos ? worldPos.sub(this.draggedNode.position) : new THREE.Vector3();
                 this.container.style.cursor = 'grabbing';
                 break;
@@ -369,34 +482,66 @@ export class UIManager {
                 this.resizedNode.startResize();
                 this.resizeStartNodeSize = { ...this.resizedNode.size };
                 this.resizeStartPointerPos = { x: this.pointerState.clientX, y: this.pointerState.clientY };
+                this.container.style.cursor = 'nwse-resize';
 
-                const cam = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
-                if (this.resizedNode.cssObject && cam) {
-                    const worldOrigin = new THREE.Vector3().applyMatrix4(this.resizedNode.cssObject.matrixWorld);
-                    const worldOffsetX = new THREE.Vector3(1, 0, 0).applyMatrix4(this.resizedNode.cssObject.matrixWorld);
-                    const worldOffsetY = new THREE.Vector3(0, 1, 0).applyMatrix4(this.resizedNode.cssObject.matrixWorld);
+                // Calculate initial screen scale for resizing:
+                const node = this.resizedNode;
+                const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
+                const cam = cameraPlugin?.getCameraInstance();
 
-                    const screenOriginPx = this.space.worldToScreen(worldOrigin.x, worldOrigin.y, worldOrigin.z);
-                    const screenOffsetXPx = this.space.worldToScreen(worldOffsetX.x, worldOffsetX.y, worldOffsetX.z);
-                    const screenOffsetYPx = this.space.worldToScreen(worldOffsetY.x, worldOffsetY.y, worldOffsetY.z);
+                if (node && cam && node.cssObject) {
+                    const localOrigin = new THREE.Vector3(0, 0, 0);
+                    const localOffsetX = new THREE.Vector3(1, 0, 0); // For width scaling
+                    const localOffsetY = new THREE.Vector3(0, 1, 0); // For height scaling
 
-                    this.resizeNodeScreenScaleX = Math.abs(screenOffsetXPx.x - screenOriginPx.x) || 0.001;
-                    this.resizeNodeScreenScaleY = Math.abs(screenOffsetYPx.y - screenOriginPx.y) || 0.001;
+                    const worldOrigin = localOrigin.clone().applyMatrix4(node.cssObject.matrixWorld);
+                    const worldOffsetX = localOffsetX.clone().applyMatrix4(node.cssObject.matrixWorld);
+                    const worldOffsetY = localOffsetY.clone().applyMatrix4(node.cssObject.matrixWorld);
+
+                    const screenOriginNDC = worldOrigin.clone().project(cam);
+                    const screenOffsetXNDC = worldOffsetX.clone().project(cam);
+                    const screenOffsetYNDC = worldOffsetY.clone().project(cam);
+
+                    const halfW = window.innerWidth / 2;
+                    const halfH = window.innerHeight / 2;
+
+                    const screenOriginPx = {
+                        x: screenOriginNDC.x * halfW + halfW,
+                        y: -screenOriginNDC.y * halfH + halfH,
+                    };
+                    const screenOffsetXPx = {
+                        x: screenOffsetXNDC.x * halfW + halfW,
+                        y: -screenOffsetXNDC.y * halfH + halfH,
+                    };
+                    const screenOffsetYPx = {
+                        x: screenOffsetYNDC.x * halfW + halfW,
+                        y: -screenOffsetYNDC.y * halfH + halfH,
+                    };
+
+                    this.resizeNodeScreenScaleX = Math.abs(screenOffsetXPx.x - screenOriginPx.x);
+                    this.resizeNodeScreenScaleY = Math.abs(screenOffsetYPx.y - screenOriginPx.y);
+
+                    if (this.resizeNodeScreenScaleX < 0.001) this.resizeNodeScreenScaleX = 0.001;
+                    if (this.resizeNodeScreenScaleY < 0.001) this.resizeNodeScreenScaleY = 0.001;
                 } else {
+                    // Fallback to direct scaling if camera or node info is missing
                     this.resizeNodeScreenScaleX = 1;
                     this.resizeNodeScreenScaleY = 1;
                 }
-                this.container.style.cursor = 'nwse-resize';
                 break;
 
             case InteractionState.PANNING:
-                this.space.plugins.getPlugin('CameraPlugin')?.startPan(this.pointerState.clientX, this.pointerState.clientY);
+                this.space.plugins
+                    .getPlugin('CameraPlugin')
+                    ?.startPan(this.pointerState.clientX, this.pointerState.clientY);
                 this.container.style.cursor = 'grabbing';
                 break;
-
             case InteractionState.LINKING_NODE:
                 this.container.style.cursor = 'crosshair';
                 this._createTempLinkLine(data.sourceNode);
+                break;
+            case InteractionState.IDLE:
+                this.container.style.cursor = 'grab';
                 break;
         }
         this.space.emit('interaction:stateChanged', { newState, oldState: this.currentState, data });
@@ -410,23 +555,29 @@ export class UIManager {
         const targetInfo = this._getTargetInfo(e);
 
         const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
-        if (cameraPlugin?.getCameraMode() === 'free' && cameraPlugin.getControls()?.isPointerLocked && this.pointerState.button === 0) return;
+        if (cameraPlugin?.getCameraMode() === 'free' && cameraPlugin.getControls()?.isPointerLocked && this.pointerState.button === 0) {
+            return;
+        }
 
         if (this.pointerState.button === 1) {
             e.preventDefault();
-            targetInfo.node && this.space.emit('ui:request:autoZoomNode', targetInfo.node);
+            if (targetInfo.node) {
+                this.space.emit('ui:request:autoZoomNode', targetInfo.node);
+            }
             return;
         }
 
         if (this.pointerState.button === 0) {
             if (targetInfo.nodeControls) {
-                e.preventDefault(); e.stopPropagation();
+                e.preventDefault();
+                e.stopPropagation();
                 this._handleNodeControlButtonClick(targetInfo.nodeControls, targetInfo.node);
                 return;
             }
 
             if (targetInfo.resizeHandle && targetInfo.node instanceof HtmlNode) {
-                e.preventDefault(); e.stopPropagation();
+                e.preventDefault();
+                e.stopPropagation();
                 this._transitionToState(InteractionState.RESIZING_NODE, { node: targetInfo.node });
                 this.space.emit('ui:request:setSelectedNode', targetInfo.node, false);
                 this._hideContextMenu();
@@ -456,7 +607,9 @@ export class UIManager {
 
             this._transitionToState(InteractionState.PANNING);
             this._hideContextMenu();
-            if (!e.shiftKey) this.space.emit('ui:request:setSelectedNode', null, false);
+            if (!e.shiftKey) {
+                 this.space.emit('ui:request:setSelectedNode', null, false);
+            }
         }
     };
 
@@ -477,37 +630,59 @@ export class UIManager {
 
             case InteractionState.DRAGGING_NODE:
                 e.preventDefault();
-                if (!this.draggedNode) break;
-                let targetZ = this.draggedNodeInitialZ;
-                if (e.altKey) { targetZ -= dy * 1.0; this.draggedNodeInitialZ = targetZ; }
+                if (this.draggedNode) {
+                    let targetZ = this.draggedNodeInitialZ;
+                    if (e.altKey) {
+                        targetZ -= dy * 1.0;
+                        this.draggedNodeInitialZ = targetZ;
+                    }
 
-                const worldPos = this.space.screenToWorld(this.pointerState.clientX, this.pointerState.clientY, targetZ);
-                if (!worldPos) break;
+                    const worldPos = this.space.screenToWorld(this.pointerState.clientX, this.pointerState.clientY, targetZ);
+                    if (worldPos) {
+                        const primaryNodeNewCalculatedPos = worldPos.clone().sub(this.dragOffset);
+                        primaryNodeNewCalculatedPos.z = targetZ;
 
-                const primaryNodeNewCalculatedPos = worldPos.clone().sub(this.dragOffset).setZ(targetZ);
-                const uiPlugin = this.space.plugins.getPlugin('UIPlugin');
-                const selectedNodes = uiPlugin?.getSelectedNodes();
+                        const dragDelta = primaryNodeNewCalculatedPos.clone().sub(this.draggedNode.position);
+                        const uiPlugin = this.space.plugins.getPlugin('UIPlugin');
+                        const selectedNodes = uiPlugin?.getSelectedNodes();
 
-                if (selectedNodes?.size > 0 && selectedNodes.has(this.draggedNode)) {
-                    const dragDelta = primaryNodeNewCalculatedPos.clone().sub(this.draggedNode.position);
-                    selectedNodes.forEach((sNode) => sNode === this.draggedNode ? sNode.drag(primaryNodeNewCalculatedPos) : sNode.drag(sNode.position.clone().add(dragDelta).setZ(sNode.position.z)));
-                } else {
-                    this.draggedNode.drag(primaryNodeNewCalculatedPos);
+                        if (selectedNodes?.size > 0 && selectedNodes.has(this.draggedNode)) {
+                            selectedNodes.forEach((sNode) => {
+                                if (sNode === this.draggedNode) {
+                                    sNode.drag(primaryNodeNewCalculatedPos);
+                                } else {
+                                    const sNodeTargetPos = sNode.position.clone().add(dragDelta);
+                                    sNodeTargetPos.z = sNode.position.z;
+                                    sNode.drag(sNodeTargetPos);
+                                }
+                            });
+                        } else {
+                            this.draggedNode.drag(primaryNodeNewCalculatedPos);
+                        }
+                        this.space.emit('graph:node:dragged', {node: this.draggedNode, position: primaryNodeNewCalculatedPos});
+                    }
                 }
-                this.space.emit('graph:node:dragged', {node: this.draggedNode, position: primaryNodeNewCalculatedPos});
                 break;
 
             case InteractionState.RESIZING_NODE:
                 e.preventDefault();
-                if (!this.resizedNode) break;
-                const totalDx_screen = this.pointerState.clientX - this.resizeStartPointerPos.x;
-                const totalDy_screen = this.pointerState.clientY - this.resizeStartPointerPos.y;
+                if (this.resizedNode) {
+                    const totalDx_screen = this.pointerState.clientX - this.resizeStartPointerPos.x;
+                    const totalDy_screen = this.pointerState.clientY - this.resizeStartPointerPos.y;
 
-                const newWidth = Math.max(HtmlNode.MIN_SIZE.width, this.resizeStartNodeSize.width + totalDx_screen / this.resizeNodeScreenScaleX);
-                const newHeight = Math.max(HtmlNode.MIN_SIZE.height, this.resizeStartNodeSize.height + totalDy_screen / this.resizeNodeScreenScaleY);
+                    const deltaWidth_local = totalDx_screen / (this.resizeNodeScreenScaleX || 1);
+                    const deltaHeight_local = totalDy_screen / (this.resizeNodeScreenScaleY || 1);
 
-                this.resizedNode.resize(newWidth, newHeight);
-                this.space.emit('graph:node:resized', {node: this.resizedNode, size: { ...this.resizedNode.size }});
+                    const newWidth = this.resizeStartNodeSize.width + deltaWidth_local;
+                    const newHeight = this.resizeStartNodeSize.height + deltaHeight_local;
+
+                    // Use MIN_SIZE from HtmlNode static property for consistency
+                    this.resizedNode.resize(
+                        Math.max(HtmlNode.MIN_SIZE.width, newWidth),
+                        Math.max(HtmlNode.MIN_SIZE.height, newHeight)
+                    );
+                    this.space.emit('graph:node:resized', {node: this.resizedNode, size: { ...this.resizedNode.size }});
+                }
                 break;
 
             case InteractionState.PANNING:
@@ -531,9 +706,17 @@ export class UIManager {
 
     _onPointerUp = (e) => {
         if (e.pointerId !== this.activePointerId) return;
-        this._updateNormalizedPointerState(e, false);
 
-        if (this.currentState === InteractionState.LINKING_NODE && e.button === 0) {
+        this._updateNormalizedPointerState(e, false);
+        const currentInteractionState = this.currentState;
+
+        if (!this.pointerState.isDraggingThresholdMet && e.button === 0) {
+            const targetInfo = this._getTargetInfo(e);
+            if (targetInfo.node instanceof HtmlNode && targetInfo.node.data.editable && targetInfo.element?.closest('.node-content') === targetInfo.node.htmlElement.querySelector('.node-content')) {
+            }
+        }
+
+        if (currentInteractionState === InteractionState.LINKING_NODE && e.button === 0) {
             this.space.emit('ui:request:completeLinking', this.pointerState.clientX, this.pointerState.clientY);
         }
         this._transitionToState(InteractionState.IDLE);
@@ -543,17 +726,29 @@ export class UIManager {
     _handleNodeControlButtonClick(buttonEl, node) {
         if (!(node instanceof HtmlNode)) return;
 
-        const action = [...buttonEl.classList].find((cls) => cls.startsWith('node-') && !cls.includes('button'))?.substring('node-'.length);
+        const actionClass = [...buttonEl.classList].find((cls) => cls.startsWith('node-') && !cls.includes('button'));
+        const action = actionClass?.substring('node-'.length);
 
         switch (action) {
             case 'delete':
-                this._showConfirmDialog(`Delete node "${node.id.substring(0, 10)}..."?`, () => this.space.emit('ui:request:removeNode', node.id));
+                this._showConfirmDialog(`Delete node "${node.id.substring(0, 10)}..."?`, () =>
+                    this.space.emit('ui:request:removeNode', node.id)
+                );
                 break;
-            case 'content-zoom-in': this.space.emit('ui:request:adjustContentScale', node, 1.15); break;
-            case 'content-zoom-out': this.space.emit('ui:request:adjustContentScale', node, 1 / 1.15); break;
-            case 'grow': this.space.emit('ui:request:adjustNodeSize', node, 1.2); break;
-            case 'shrink': this.space.emit('ui:request:adjustNodeSize', node, 1 / 1.2); break;
-            default: console.warn('Unknown node control action:', action);
+            case 'content-zoom-in':
+                this.space.emit('ui:request:adjustContentScale', node, 1.15);
+                break;
+            case 'content-zoom-out':
+                this.space.emit('ui:request:adjustContentScale', node, 1 / 1.15);
+                break;
+            case 'grow':
+                this.space.emit('ui:request:adjustNodeSize', node, 1.2);
+                break;
+            case 'shrink':
+                this.space.emit('ui:request:adjustNodeSize', node, 1 / 1.2);
+                break;
+            default:
+                console.warn('Unknown node control action:', action);
         }
     }
 
@@ -568,30 +763,45 @@ export class UIManager {
 
         if (targetInfo.node) {
             contextTarget = targetInfo.node;
-            if (!e.shiftKey) this.space.emit('ui:request:setSelectedNode', contextTarget, false);
+            if (!e.shiftKey) {
+                this.space.emit('ui:request:setSelectedNode', contextTarget, false);
+            }
             menuItems = this._getContextMenuItemsForNode(contextTarget);
         } else if (targetInfo.intersectedEdge) {
             contextTarget = targetInfo.intersectedEdge;
-            if (!e.shiftKey) this.space.emit('ui:request:setSelectedEdge', contextTarget, false);
+            if (!e.shiftKey) {
+                this.space.emit('ui:request:setSelectedEdge', contextTarget, false);
+            }
             menuItems = this._getContextMenuItemsForEdge(contextTarget);
         } else {
-            if (!e.shiftKey) this.space.emit('ui:request:setSelectedNode', null, false);
-            menuItems = this._getContextMenuItemsForBackground(this.space.screenToWorld(e.clientX, e.clientY, 0));
+            if (!e.shiftKey) {
+                 this.space.emit('ui:request:setSelectedNode', null, false);
+            }
+            const worldPos = this.space.screenToWorld(e.clientX, e.clientY, 0);
+            menuItems = this._getContextMenuItemsForBackground(worldPos);
         }
 
-        menuItems.length > 0 && this._showContextMenu(e.clientX, e.clientY, menuItems);
+        if (menuItems.length > 0) {
+            this._showContextMenu(e.clientX, e.clientY, menuItems);
+        }
     };
 
     _onDocumentClick = (e) => {
         if (this.contextMenuElement.contains(e.target) || this.contextMenuElement.style.display === 'none') return;
-        if (this.edgeMenuObject?.element?.contains(e.target) || this.confirmDialogElement.contains(e.target)) return;
+        if (this.edgeMenuObject?.element?.contains(e.target)) return;
+        if (this.confirmDialogElement.contains(e.target)) return;
 
         this._hideContextMenu();
 
         if (this.edgeMenuObject) {
+            const targetInfo = this._getTargetInfo(e);
             const uiPlugin = this.space.plugins.getPlugin('UIPlugin');
-            const clickedSelectedEdge = this._getTargetInfo(e).intersectedEdge && uiPlugin?.getSelectedEdges().has(this._getTargetInfo(e).intersectedEdge);
-            if (!clickedSelectedEdge) this.space.emit('ui:request:setSelectedEdge', null, false);
+            const selectedEdges = uiPlugin?.getSelectedEdges();
+            const clickedSelectedEdge = targetInfo.intersectedEdge && selectedEdges?.has(targetInfo.intersectedEdge);
+
+            if (!clickedSelectedEdge) {
+                 this.space.emit('ui:request:setSelectedEdge', null, false);
+            }
         }
     };
 
@@ -611,36 +821,89 @@ export class UIManager {
         const targetEdge = edgeId ? edgePlugin?.getEdgeById(edgeId) : null;
 
         switch (action) {
-            case 'edit-node-content': targetNode instanceof HtmlNode && targetNode.data.editable && targetNode.htmlElement?.querySelector('.node-content')?.focus(); break;
-            case 'delete-node': targetNode && this._showConfirmDialog(`Delete node "${targetNode.id.substring(0, 10)}..."?`, () => this.space.emit('ui:request:removeNode', targetNode.id)); break;
-            case 'start-linking-node': targetNode && this.space.emit('ui:request:startLinking', targetNode); break;
-            case 'autozoom-node': targetNode && this.space.emit('ui:request:autoZoomNode', targetNode); break;
-            case 'toggle-pin-node': targetNode && this.space.togglePinNode(targetNode.id); break;
+            case 'edit-node-content':
+                if (targetNode instanceof HtmlNode && targetNode.data.editable) {
+                    targetNode.htmlElement?.querySelector('.node-content')?.focus();
+                }
+                break;
+            case 'delete-node':
+                if (targetNode) {
+                    this._showConfirmDialog(`Delete node "${targetNode.id.substring(0, 10)}..."?`, () =>
+                        this.space.emit('ui:request:removeNode', targetNode.id)
+                    );
+                }
+                break;
+            case 'start-linking-node':
+                if (targetNode) {
+                    this.space.emit('ui:request:startLinking', targetNode);
+                }
+                break;
+            case 'autozoom-node':
+                if (targetNode) {
+                    this.space.emit('ui:request:autoZoomNode', targetNode);
+                }
+                break;
+            case 'toggle-pin-node':
+                if (targetNode) {
+                    this.space.togglePinNode(targetNode.id);
+                }
+                break;
 
-            case 'edit-edge-style': targetEdge && this.space.emit('ui:request:setSelectedEdge', targetEdge, false); break;
-            case 'reverse-edge-direction': targetEdge && this.space.emit('ui:request:reverseEdge', targetEdge.id); break;
-            case 'delete-edge': targetEdge && this._showConfirmDialog(`Delete edge "${targetEdge.id.substring(0, 10)}..."?`, () => this.space.emit('ui:request:removeEdge', targetEdge.id)); break;
+            case 'edit-edge-style':
+                if (targetEdge) {
+                    this.space.emit('ui:request:setSelectedEdge', targetEdge, false);
+                }
+                break;
+            case 'reverse-edge-direction':
+                if (targetEdge) {
+                    this.space.emit('ui:request:reverseEdge', targetEdge.id);
+                }
+                break;
+            case 'delete-edge':
+                if (targetEdge) {
+                    this._showConfirmDialog(`Delete edge "${targetEdge.id.substring(0, 10)}..."?`, () =>
+                        this.space.emit('ui:request:removeEdge', targetEdge.id)
+                    );
+                }
+                break;
 
-            case 'create-html-node': worldPos && this.space.emit('ui:request:createNode', { type: 'html', position: worldPos, data: { label: 'New Node', content: 'Edit me!' } }); break;
-            case 'create-note-node': worldPos && this.space.emit('ui:request:createNode', { type: 'note', position: worldPos, data: { content: 'New Note ✨' } }); break;
-            case 'create-shape-node-box': worldPos && this.space.emit('ui:request:createNode', { type: 'shape', position: worldPos, data: { label: 'Box Node 📦', shape: 'box', size: 60, color: Math.random() * 0xffffff } }); break;
-            case 'create-shape-node-sphere': worldPos && this.space.emit('ui:request:createNode', { type: 'shape', position: worldPos, data: { label: 'Sphere Node 🌐', shape: 'sphere', size: 60, color: Math.random() * 0xffffff } }); break;
+            case 'create-html-node':
+                worldPos && this.space.emit('ui:request:createNode', { type: 'html', position: worldPos, data: { label: 'New Node', content: 'Edit me!' } });
+                break;
+            case 'create-note-node':
+                 worldPos && this.space.emit('ui:request:createNode', { type: 'note', position: worldPos, data: { content: 'New Note ✨' } });
+                break;
+            case 'create-shape-node-box':
+                 worldPos && this.space.emit('ui:request:createNode', { type: 'shape', position: worldPos, data: { label: 'Box Node 📦', shape: 'box', size: 60, color: Math.random() * 0xffffff } });
+                break;
+           case 'create-shape-node-sphere':
+                 worldPos && this.space.emit('ui:request:createNode', { type: 'shape', position: worldPos, data: { label: 'Sphere Node 🌐', shape: 'sphere', size: 60, color: Math.random() * 0xffffff } });
+                break;
 
-            case 'center-camera-view': this.space.emit('ui:request:centerView'); break;
-            case 'reset-camera-view': this.space.emit('ui:request:resetView'); break;
+            case 'center-camera-view':
+                this.space.emit('ui:request:centerView');
+                break;
+            case 'reset-camera-view':
+                this.space.emit('ui:request:resetView');
+                break;
             case 'toggle-background-visibility': {
                 const renderingPlugin = this.space.plugins.getPlugin('RenderingPlugin');
-                if (!renderingPlugin) break;
-                const newAlpha = renderingPlugin.background.alpha === 0 ? 1.0 : 0;
-                const newColor = newAlpha === 0 ? 0x000000 : (document.body.classList.contains('theme-light') ? 0xf4f4f4 : 0x1a1a1d) ;
-                this.space.emit('ui:request:toggleBackground', newColor, newAlpha);
+                if (renderingPlugin) {
+                    const newAlpha = renderingPlugin.background.alpha === 0 ? 1.0 : 0;
+                    const newColor = newAlpha === 0 ? 0x000000 : (document.body.classList.contains('theme-light') ? 0xf4f4f4 : 0x1a1a1d) ;
+                    this.space.emit('ui:request:toggleBackground', newColor, newAlpha);
+                }
                 break;
             }
-            default: console.warn('Unknown context menu action:', action);
+            default:
+                console.warn('Unknown context menu action:', action);
         }
     };
 
-    _onConfirmYes = () => { this.confirmCallback?.(); this._hideConfirmDialog(); };
+    _onConfirmYes = () => {
+        this.confirmCallback?.();
+        this._hideConfirmDialog();
+    };
     _onConfirmNo = () => this._hideConfirmDialog();
 
     _onKeyDown = (e) => {
@@ -662,12 +925,18 @@ export class UIManager {
             case 'Delete':
             case 'Backspace':
                 if (primarySelectedNode) {
-                    this._showConfirmDialog(`Delete ${selectedNodes.size > 1 ? `${selectedNodes.size} selected nodes` : `node "${primarySelectedNode.id.substring(0, 10)}..."`}?`, () =>
+                    const message = selectedNodes.size > 1
+                        ? `Delete ${selectedNodes.size} selected nodes?`
+                        : `Delete node "${primarySelectedNode.id.substring(0, 10)}..."?`;
+                    this._showConfirmDialog(message, () =>
                         selectedNodes.forEach(node => this.space.emit('ui:request:removeNode', node.id))
                     );
                     handled = true;
                 } else if (primarySelectedEdge) {
-                    this._showConfirmDialog(`Delete ${selectedEdges.size > 1 ? `${selectedEdges.size} selected edges` : `edge "${primarySelectedEdge.id.substring(0, 10)}..."`}?`, () =>
+                    const message = selectedEdges.size > 1
+                        ? `Delete ${selectedEdges.size} selected edges?`
+                        : `Delete edge "${primarySelectedEdge.id.substring(0, 10)}..."?`;
+                    this._showConfirmDialog(message, () =>
                         selectedEdges.forEach(edge => this.space.emit('ui:request:removeEdge', edge.id))
                     );
                     handled = true;
@@ -675,17 +944,33 @@ export class UIManager {
                 break;
 
             case 'Escape':
-                if (uiPlugin.getIsLinking()) this.space.emit('ui:request:cancelLinking');
-                else if (this.layoutSettingsDialogElement?.style.display === 'block') this._hideLayoutSettingsDialog();
-                else if (this.keyboardShortcutsDialogElement?.style.display === 'block') this._hideKeyboardShortcutsDialog();
-                else if (this.contextMenuElement.style.display === 'block') this._hideContextMenu();
-                else if (this.confirmDialogElement.style.display === 'block') this._hideConfirmDialog();
-                else if (this.edgeMenuObject) this.space.emit('ui:request:setSelectedEdge', null, false);
-                else if (selectedNodes.size > 0 || selectedEdges.size > 0) this.space.emit('ui:request:setSelectedNode', null, false);
-                
+                if (uiPlugin.getIsLinking()) {
+                    this.space.emit('ui:request:cancelLinking');
+                    handled = true;
+                } else if (this.layoutSettingsDialogElement?.style.display === 'block') {
+                    this._hideLayoutSettingsDialog();
+                    handled = true;
+                } else if (this.keyboardShortcutsDialogElement?.style.display === 'block') {
+                    this._hideKeyboardShortcutsDialog();
+                    handled = true;
+                } else if (this.contextMenuElement.style.display === 'block') {
+                    this._hideContextMenu();
+                    handled = true;
+                } else if (this.confirmDialogElement.style.display === 'block') {
+                    this._hideConfirmDialog();
+                    handled = true;
+                } else if (this.edgeMenuObject) {
+                    this.space.emit('ui:request:setSelectedEdge', null, false);
+                    handled = true;
+                } else if (selectedNodes.size > 0 || selectedEdges.size > 0) {
+                    this.space.emit('ui:request:setSelectedNode', null, false);
+                    handled = true;
+                }
                 const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
-                if (cameraPlugin?.getCameraMode() === 'free' && cameraPlugin.getControls()?.isPointerLocked) cameraPlugin.exitPointerLock();
-                handled = true;
+                if (cameraPlugin?.getCameraMode() === 'free' && cameraPlugin.getControls()?.isPointerLocked) {
+                    cameraPlugin.exitPointerLock();
+                    handled = true;
+                }
                 break;
 
             case 'Enter':
@@ -697,10 +982,18 @@ export class UIManager {
 
             case '+':
             case '=':
+                if (primarySelectedNode instanceof HtmlNode) {
+                    const factor = e.key === '+' || e.key === '=' ? 1.15 : 1.2;
+                    (e.ctrlKey || e.metaKey)
+                        ? this.space.emit('ui:request:adjustNodeSize', primarySelectedNode, factor)
+                        : this.space.emit('ui:request:adjustContentScale', primarySelectedNode, factor);
+                    handled = true;
+                }
+                break;
             case '-':
             case '_':
                  if (primarySelectedNode instanceof HtmlNode) {
-                    const factor = (e.key === '+' || e.key === '=') ? 1.15 : (1 / 1.15);
+                    const factor = e.key === '-' || e.key === '_' ? 1 / 1.15 : 1 / 1.2;
                     (e.ctrlKey || e.metaKey)
                         ? this.space.emit('ui:request:adjustNodeSize', primarySelectedNode, factor)
                         : this.space.emit('ui:request:adjustContentScale', primarySelectedNode, factor);
@@ -709,19 +1002,27 @@ export class UIManager {
                 break;
 
             case ' ':
-                if (primarySelectedNode) this.space.emit('ui:request:focusOnNode', primarySelectedNode, 0.5, true);
-                else if (primarySelectedEdge) {
+                if (primarySelectedNode) {
+                    this.space.emit('ui:request:focusOnNode', primarySelectedNode, 0.5, true);
+                    handled = true;
+                } else if (primarySelectedEdge) {
                     const midPoint = new THREE.Vector3().lerpVectors(primarySelectedEdge.source.position, primarySelectedEdge.target.position, 0.5);
                     const dist = primarySelectedEdge.source.position.distanceTo(primarySelectedEdge.target.position);
                     const camPlugin = this.space.plugins.getPlugin('CameraPlugin');
                     camPlugin?.pushState();
                     camPlugin?.moveTo(midPoint.x, midPoint.y, midPoint.z + dist * 0.6 + 100, 0.5, midPoint);
-                } else this.space.emit('ui:request:centerView');
-                handled = true;
+                    handled = true;
+                } else {
+                    this.space.emit('ui:request:centerView');
+                    handled = true;
+                }
                 break;
         }
 
-        if (handled) { e.preventDefault(); e.stopPropagation(); }
+        if (handled) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
     };
 
     _onWheel = (e) => {
@@ -731,8 +1032,10 @@ export class UIManager {
         if (targetInfo.element?.closest('.edge-menu-frame input[type="range"]')) return;
 
         if ((e.ctrlKey || e.metaKey) && targetInfo.node instanceof HtmlNode) {
-            e.preventDefault(); e.stopPropagation();
-            this.space.emit('ui:request:adjustContentScale', targetInfo.node, e.deltaY < 0 ? 1.1 : 1 / 1.1);
+            e.preventDefault();
+            e.stopPropagation();
+            const scaleFactor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+            this.space.emit('ui:request:adjustContentScale', targetInfo.node, scaleFactor);
         } else {
             e.preventDefault();
             this.space.emit('ui:request:zoomCamera', e.deltaY);
@@ -751,43 +1054,69 @@ export class UIManager {
         let graphNode = nodeElement ? this.space.plugins.getPlugin('NodePlugin')?.getNodeById(nodeElement.dataset.nodeId) : null;
         let intersectedEdge = null;
 
-        if (!resizeHandle && !nodeControlsButton && !contentEditableEl && !interactiveEl) {
+        const needsRaycast = !resizeHandle && !nodeControlsButton && !contentEditableEl && !interactiveEl;
+
+        if (needsRaycast) {
             const intersectedObjectResult = this.space.intersectedObjects(event.clientX, event.clientY);
-            graphNode ??= intersectedObjectResult?.node;
-            intersectedEdge = intersectedObjectResult?.edge || null;
+            if (intersectedObjectResult) {
+                if (intersectedObjectResult.node && !graphNode) {
+                    graphNode = intersectedObjectResult.node;
+                }
+                intersectedEdge = intersectedObjectResult.edge || null;
+            }
         }
 
-        return { element, nodeElement, resizeHandle, nodeControls: nodeControlsButton, contentEditable: contentEditableEl, interactiveElement: interactiveEl, node: graphNode, intersectedEdge };
+        return {
+            element,
+            nodeElement,
+            resizeHandle,
+            nodeControls: nodeControlsButton,
+            contentEditable: contentEditableEl,
+            interactiveElement: interactiveEl,
+            node: graphNode,
+            intersectedEdge,
+        };
     }
 
     _handleHover(e) {
         if (this.pointerState.down || this.currentState !== InteractionState.IDLE) {
             if (this.hoveredEdge) {
                 const uiPlugin = this.space.plugins.getPlugin('UIPlugin');
-                if (!uiPlugin?.getSelectedEdges().has(this.hoveredEdge)) this.hoveredEdge.setHighlight(false);
+                if (!uiPlugin?.getSelectedEdges().has(this.hoveredEdge)) {
+                    this.hoveredEdge.setHighlight(false);
+                }
                 this.hoveredEdge = null;
             }
             return;
         }
 
-        const newHoveredEdge = this._getTargetInfo(e).intersectedEdge;
-        if (this.hoveredEdge === newHoveredEdge) return;
+        const targetInfo = this._getTargetInfo(e);
+        const newHoveredEdge = targetInfo.intersectedEdge;
 
-        const uiPlugin = this.space.plugins.getPlugin('UIPlugin');
-        const selectedEdges = uiPlugin?.getSelectedEdges();
+        if (this.hoveredEdge !== newHoveredEdge) {
+            const uiPlugin = this.space.plugins.getPlugin('UIPlugin');
+            const selectedEdges = uiPlugin?.getSelectedEdges();
 
-        if (this.hoveredEdge && !selectedEdges?.has(this.hoveredEdge)) this.hoveredEdge.setHighlight(false);
-        this.hoveredEdge = newHoveredEdge;
-        if (this.hoveredEdge && !selectedEdges?.has(this.hoveredEdge)) this.hoveredEdge.setHighlight(true);
+            if (this.hoveredEdge && !selectedEdges?.has(this.hoveredEdge)) {
+                this.hoveredEdge.setHighlight(false);
+            }
+            this.hoveredEdge = newHoveredEdge;
+            if (this.hoveredEdge && !selectedEdges?.has(this.hoveredEdge)) {
+                this.hoveredEdge.setHighlight(true);
+            }
+        }
     }
 
     _getContextMenuItemsForNode(node) {
         const items = [];
-        if (node instanceof HtmlNode && node.data.editable) items.push({ label: '📝 Edit Content', action: 'edit-node-content', nodeId: node.id });
+        if (node instanceof HtmlNode && node.data.editable) {
+            items.push({ label: '📝 Edit Content', action: 'edit-node-content', nodeId: node.id });
+        }
         items.push({ label: '🔗 Start Link', action: 'start-linking-node', nodeId: node.id });
         items.push({ label: '🔎 Auto Zoom', action: 'autozoom-node', nodeId: node.id });
 
-        const isPinned = this.space.plugins.getPlugin('LayoutPlugin')?.isNodePinned(node.id) || false;
+        const layoutPlugin = this.space.plugins.getPlugin('LayoutPlugin');
+        const isPinned = layoutPlugin?.isNodePinned(node.id) || false;
         items.push({ label: isPinned ? '📌 Unpin' : '📌 Pin', action: 'toggle-pin-node', nodeId: node.id });
 
         items.push({ type: 'separator' });
@@ -839,11 +1168,11 @@ export class UIManager {
                 li.className = 'separator';
             } else {
                 li.textContent = itemData.label;
-                for (const key in itemData) {
+                Object.keys(itemData).forEach(key => {
                     if (key !== 'label' && key !== 'type' && key !== 'isDestructive' && itemData[key] !== undefined && itemData[key] !== null) {
                         li.dataset[key] = String(itemData[key]);
                     }
-                }
+                });
                 itemData.disabled && li.classList.add('disabled');
                 itemData.isDestructive && li.classList.add('destructive');
             }
@@ -854,9 +1183,13 @@ export class UIManager {
         const { offsetWidth: menuWidth, offsetHeight: menuHeight } = cm;
         const margin = 5;
         let finalX = x + margin;
-        if (finalX + menuWidth > window.innerWidth - margin) finalX = x - menuWidth - margin;
+        if (finalX + menuWidth > window.innerWidth - margin) {
+            finalX = x - menuWidth - margin;
+        }
         let finalY = y + margin;
-        if (finalY + menuHeight > window.innerHeight - margin) finalY = y - menuHeight - margin;
+        if (finalY + menuHeight > window.innerHeight - margin) {
+            finalY = y - menuHeight - margin;
+        }
         cm.style.left = `${Math.max(margin, finalX)}px`;
         cm.style.top = `${Math.max(margin, finalY)}px`;
         cm.style.display = 'block';
@@ -873,7 +1206,8 @@ export class UIManager {
     };
 
     _showConfirmDialog(message, onConfirm) {
-        $('#confirm-message', this.confirmDialogElement).textContent = message;
+        const messageEl = $('#confirm-message', this.confirmDialogElement);
+        messageEl && (messageEl.textContent = message);
         this.confirmCallback = onConfirm;
         this.confirmDialogElement.style.display = 'block';
         this.space.emit('ui:confirmdialog:shown', { message });
@@ -890,11 +1224,20 @@ export class UIManager {
     _createTempLinkLine(sourceNode) {
         this._removeTempLinkLine();
         const material = new THREE.LineDashedMaterial({
-            color: 0xffaa00, linewidth: 2, dashSize: 8, gapSize: 4, transparent: true, opacity: 0.9, depthTest: false,
+            color: 0xffaa00,
+            linewidth: 2,
+            dashSize: 8,
+            gapSize: 4,
+            transparent: true,
+            opacity: 0.9,
+            depthTest: false,
         });
-        this.tempLinkLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([sourceNode.position.clone(), sourceNode.position.clone()]), material);
+        const points = [sourceNode.position.clone(), sourceNode.position.clone()];
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        this.tempLinkLine = new THREE.Line(geometry, material);
         this.tempLinkLine.computeLineDistances();
         this.tempLinkLine.renderOrder = 1;
+
         this.space.plugins.getPlugin('RenderingPlugin')?.getWebGLScene()?.add(this.tempLinkLine);
     }
 
@@ -906,8 +1249,9 @@ export class UIManager {
         const targetPos = this.space.screenToWorld(screenX, screenY, sourceNode.position.z);
 
         if (targetPos) {
-            this.tempLinkLine.geometry.attributes.position.setXYZ(1, targetPos.x, targetPos.y, targetPos.z);
-            this.tempLinkLine.geometry.attributes.position.needsUpdate = true;
+            const positions = this.tempLinkLine.geometry.attributes.position;
+            positions.setXYZ(1, targetPos.x, targetPos.y, targetPos.z);
+            positions.needsUpdate = true;
             this.tempLinkLine.geometry.computeBoundingSphere();
             this.tempLinkLine.computeLineDistances();
         }
@@ -926,7 +1270,8 @@ export class UIManager {
         if (!edge) return;
         this.hideEdgeMenu();
 
-        this.edgeMenuObject = new CSS3DObject(this._createEdgeMenuElement(edge));
+        const menuElement = this._createEdgeMenuElement(edge);
+        this.edgeMenuObject = new CSS3DObject(menuElement);
         this.space.plugins.getPlugin('RenderingPlugin')?.getCSS3DScene()?.add(this.edgeMenuObject);
         this.updateEdgeMenuPosition();
         this.space.emit('ui:edgemenu:shown', { edge });
@@ -937,29 +1282,40 @@ export class UIManager {
         menu.className = 'edge-menu-frame';
         menu.dataset.edgeId = edge.id;
 
-        const edgeColorHex = `#${(edge.data.color || 0xffffff).toString(16).padStart(6, '0')}`;
+        const edgeColorHex = `#${edge.data.color?.toString(16).padStart(6, '0') || 'ffffff'}`;
 
         menu.innerHTML = `
             <input type="color" value="${edgeColorHex}" title="Edge Color" data-property="color">
             <input type="range" min="0.5" max="10" step="0.1" value="${edge.data.thickness || 1}" title="Edge Thickness" data-property="thickness">
             <select title="Constraint Type" data-property="constraintType">
-                ${['elastic', 'rigid', 'weld', 'none'].map(type => `<option value="${type}" ${edge.data.constraintType === type ? 'selected' : ''}>${type.charAt(0).toUpperCase() + type.slice(1)}</option>`).join('')}
+                ${['elastic', 'rigid', 'weld', 'none'].map(type =>
+                    `<option value="${type}" ${edge.data.constraintType === type ? 'selected' : ''}>${type.charAt(0).toUpperCase() + type.slice(1)}</option>`
+                ).join('')}
             </select>
             <button title="Delete Edge" class="delete-button" data-action="delete-edge">×</button>
         `;
 
         menu.addEventListener('input', (e) => {
-            if (!(e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement)) return;
-            const property = e.target.dataset.property;
-            if (!property) return;
+            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) {
+                const property = e.target.dataset.property;
+                if (!property) return;
 
-            const value = e.target.type === 'color' ? parseInt(e.target.value.substring(1), 16) : parseFloat(e.target.value);
-            this.space.emit('ui:request:updateEdge', edge.id, property, value);
+                let value = e.target.value;
+                if (e.target.type === 'color') {
+                    value = parseInt(value.substring(1), 16);
+                } else if (e.target.type === 'range') {
+                    value = parseFloat(value);
+                }
+
+                this.space.emit('ui:request:updateEdge', edge.id, property, value);
+            }
         });
 
         menu.addEventListener('click', (e) => {
             if (e.target.closest('button[data-action="delete-edge"]')) {
-                this._showConfirmDialog(`Delete edge "${edge.id.substring(0, 10)}..."?`, () => this.space.emit('ui:request:removeEdge', edge.id));
+                this._showConfirmDialog(`Delete edge "${edge.id.substring(0, 10)}..."?`, () =>
+                    this.space.emit('ui:request:removeEdge', edge.id)
+                );
             }
         });
 
@@ -983,10 +1339,14 @@ export class UIManager {
         if (!this.edgeMenuObject || !this.edgeMenuObject.element?.parentNode || !uiPlugin) return;
 
         const selectedEdges = uiPlugin.getSelectedEdges();
-        if (selectedEdges.size !== 1) { this.hideEdgeMenu(); return; }
+        if (selectedEdges.size !== 1) {
+            this.hideEdgeMenu();
+            return;
+        }
         const edge = selectedEdges.values().next().value;
 
-        this.edgeMenuObject.position.copy(new THREE.Vector3().lerpVectors(edge.source.position, edge.target.position, 0.5));
+        const midPoint = new THREE.Vector3().lerpVectors(edge.source.position, edge.target.position, 0.5);
+        this.edgeMenuObject.position.copy(midPoint);
 
         const camInstance = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
         camInstance && this.edgeMenuObject.lookAt(camInstance.position);
@@ -995,14 +1355,18 @@ export class UIManager {
 
     _onSelectionChanged = (payload) => {
         const uiPlugin = this.space.plugins.getPlugin('UIPlugin');
-        if (!uiPlugin) return;
-        const selectedEdges = uiPlugin.getSelectedEdges();
-        if (selectedEdges.size === 1) {
-            const edge = selectedEdges.values().next().value;
-            if (!this.edgeMenuObject || this.edgeMenuObject.element.dataset.edgeId !== edge.id) this.showEdgeMenu(edge);
-            else this.updateEdgeMenuPosition();
-        } else {
-            this.hideEdgeMenu();
+        if (uiPlugin) {
+            const selectedEdges = uiPlugin.getSelectedEdges();
+            if (selectedEdges.size === 1) {
+                const edge = selectedEdges.values().next().value;
+                if (!this.edgeMenuObject || this.edgeMenuObject.element.dataset.edgeId !== edge.id) {
+                    this.showEdgeMenu(edge);
+                } else {
+                     this.updateEdgeMenuPosition();
+                }
+            } else {
+                this.hideEdgeMenu();
+            }
         }
         this._updateHudSelectionInfo();
     };
@@ -1013,12 +1377,16 @@ export class UIManager {
 
     _onLinkingCancelled = (_data) => {
         this._removeTempLinkLine();
-        if (this.currentState === InteractionState.LINKING_NODE) this._transitionToState(InteractionState.IDLE);
+        if (this.currentState === InteractionState.LINKING_NODE) {
+            this._transitionToState(InteractionState.IDLE);
+        }
     };
 
     _onLinkingCompleted = (_data) => {
         this._removeTempLinkLine();
-        if (this.currentState === InteractionState.LINKING_NODE) this._transitionToState(InteractionState.IDLE);
+        if (this.currentState === InteractionState.LINKING_NODE) {
+            this._transitionToState(InteractionState.IDLE);
+        }
     };
 
     dispose() {
@@ -1061,5 +1429,7 @@ export class UIManager {
         this.resizedNode = null;
         this.hoveredEdge = null;
         this.confirmCallback = null;
+
+        console.log('UIManager disposed.');
     }
 }
