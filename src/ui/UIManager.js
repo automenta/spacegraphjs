@@ -1117,8 +1117,8 @@ export class UIManager {
         items.push({ label: '🔗 Start Link', action: 'start-linking-node', nodeId: node.id });
         items.push({ label: '🔎 Auto Zoom', action: 'autozoom-node', nodeId: node.id });
 
-        const layoutPlugin = this.space.plugins.getPlugin('LayoutPlugin');
-        const isPinned = layoutPlugin?.isNodePinned(node.id) || false;
+        // Corrected: Access isPinned directly from the node object
+        const isPinned = node.isPinned || false;
         items.push({ label: isPinned ? '📌 Unpin' : '📌 Pin', action: 'toggle-pin-node', nodeId: node.id });
 
         items.push({ type: 'separator' });
