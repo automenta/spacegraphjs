@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { CSS3DRenderer } from 'three/addons/renderers/CSS3DRenderer.js';
 import { Plugin } from '../core/Plugin.js';
-import { $ } from '../utils.js';
+import { $ } from '../utils.js'; // Added import for $
 import {
     EffectComposer, RenderPass, EffectPass, BloomEffect, OutlineEffect, Selection, KernelSize, SSAOEffect, NormalPass, BlendFunction,
 } from 'postprocessing';
@@ -123,7 +123,11 @@ export class RenderingPlugin extends Plugin {
 
         this.webglCanvas = $('#webgl-canvas') || document.createElement('canvas');
         this.webglCanvas.id = 'webgl-canvas';
-        this.space.container.appendChild(this.webglCanvas);
+        // Only append if it's a newly created canvas, or if it's not already a child
+        if (!this.webglCanvas.parentNode) {
+            this.space.container.appendChild(this.webglCanvas);
+        }
+
 
         this.renderGL = new THREE.WebGLRenderer({
             canvas: this.webglCanvas, powerPreference: 'high-performance', antialias: false, stencil: true, depth: true, alpha: true,
@@ -140,13 +144,20 @@ export class RenderingPlugin extends Plugin {
 
         this.renderCSS3D = new CSS3DRenderer();
         this.renderCSS3D.setSize(window.innerWidth, window.innerHeight);
-        this.css3dContainer = document.createElement('div');
-        this.css3dContainer.id = 'css3d-container';
-        Object.assign(this.css3dContainer.style, {
+
+        // Use existing css3d-container if available, otherwise create and append
+        this.css3dContainer = $('#css3d-container');
+        if (!this.css3dContainer) {
+            this.css3dContainer = document.createElement('div');
+            this.css3dContainer.id = 'css3d-container';
+            this.space.container.appendChild(this.css3dContainer);
+        }
+        // Append the CSS3DRenderer's DOM element to the container
+        this.css3dContainer.appendChild(this.renderCSS3D.domElement);
+
+        Object.assign(this.renderCSS3D.domElement.style, {
             position: 'absolute', top: '0', left: '0', width: '100%', height: '100%', pointerEvents: 'none',
         });
-        this.css3dContainer.appendChild(this.renderCSS3D.domElement);
-        this.space.container.appendChild(this.css3dContainer);
     }
 
     _rebuildEffectPasses() {
@@ -354,8 +365,4 @@ export class RenderingPlugin extends Plugin {
         this.scene?.clear();
         this.cssScene?.clear();
 
-        this.scene = null; this.cssScene = null; this.renderGL = null; this.renderCSS3D = null;
-        this.composer = null; this.clock = null; this.effectsConfig = null;
-        this.webglCanvas = null; this.css3dContainer = null;
-    }
-}
+        this.scene = null; this.cssScene = null; this.renderGL = null;
