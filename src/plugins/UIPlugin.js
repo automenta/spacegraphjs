@@ -1,5 +1,5 @@
 import { Plugin } from '../core/Plugin.js';
-import { UIManager } from '../ui/UIManager.js'; // Import the actual UIManager
+import { UIManager } from '../ui/UIManager.js';
 
 export class UIPlugin extends Plugin {
     uiManager = null;
@@ -8,32 +8,12 @@ export class UIPlugin extends Plugin {
     linkSourceNode = null;
     isLinking = false;
 
-    constructor(spaceGraph, pluginManager) {
+    constructor(spaceGraph, pluginManager, contextMenuElement, confirmDialogElement) {
         super(spaceGraph, pluginManager);
-    }
-
-    getName() {
-        return 'UIPlugin';
-    }
-
-    init() {
-        super.init();
-
-        // Get UI elements from SpaceGraph options
-        const contextMenuEl = this.space.options.ui?.contextMenuElement;
-        const confirmDialogEl = this.space.options.ui?.confirmDialogElement;
-
-        if (!contextMenuEl || !confirmDialogEl) {
-            console.error('UIPlugin: Missing required UI elements in SpaceGraph options.');
-            return;
-        }
-
-        // Instantiate the UIManager, passing necessary dependencies and callbacks
         this.uiManager = new UIManager(
-            this.space,
-            contextMenuEl,
-            confirmDialogEl,
-            // Pass callbacks for UIManager to update UIPlugin's state or query it
+            spaceGraph,
+            contextMenuElement,
+            confirmDialogElement,
             {
                 setSelectedNode: this.setSelectedNode.bind(this),
                 setSelectedEdge: this.setSelectedEdge.bind(this),
@@ -45,128 +25,159 @@ export class UIPlugin extends Plugin {
                 completeLinking: this.completeLinking.bind(this),
             }
         );
-
-        // The UIManager constructor already handles its own event binding and initial setup.
-        // No need to call them here explicitly after UIManager is instantiated.
     }
 
-    // Public methods for other plugins/SpaceGraph to interact with UI state
-    getSelectedNodes() {
-        return this.selectedNodes;
+    getName() {
+        return 'UIPlugin';
     }
 
-    getSelectedEdges() {
-        return this.selectedEdges;
+    init() {
+        super.init();
+        // Removed redundant lines that were causing TypeError: Cannot read properties of undefined (reading 'ui')
+        // const contextMenuEl = this.space.options.ui?.contextMenuElement;
+        // const confirmDialogEl = this.space.options.ui?.confirmDialogElement;
+        this.uiManager.init(); // Call init on UIManager
+        this._subscribeToEvents();
+    }
+
+    _subscribeToEvents() {
+        this.space.on('node:removed', this._onNodeRemoved);
+        this.space.on('edge:removed', this._onEdgeRemoved);
+        this.space.on('ui:request:startLinking', this.startLinking);
+        this.space.on('ui:request:applyLayout', this._onApplyLayout);
+    }
+
+    _onNodeRemoved = (nodeId) => {
+        const node = this.selectedNodes.get(nodeId);
+        if (node) this.selectedNodes.delete(node);
+        if (this.linkSourceNode?.id === nodeId) this.cancelLinking();
+        this._emitSelectionChange();
+    };
+
+    _onEdgeRemoved = (edgeId) => {
+        const edge = this.selectedEdges.get(edgeId);
+        if (edge) this.selectedEdges.delete(edge);
+        this._emitSelectionChange();
+    };
+
+    _onApplyLayout = (layoutName) => {
+        const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin');
+        if (layoutPlugin) {
+            layoutPlugin.layoutManager.setActiveLayout(layoutName);
+            layoutPlugin.kick();
+        }
+    };
+
+    setSelectedNode(node, multiSelect = false) {
+        if (!multiSelect) {
+            this.selectedNodes.forEach((n) => n.setSelectedStyle(false));
+            this.selectedNodes.clear();
+            this.selectedEdges.forEach((e) => e.setHighlight(false));
+            this.selectedEdges.clear();
+        }
+
+        if (node) {
+            if (this.selectedNodes.has(node)) {
+                this.selectedNodes.delete(node);
+                node.setSelectedStyle(false);
+            } else {
+                this.selectedNodes.add(node);
+                node.setSelectedStyle(true);
+            }
+        } else if (!multiSelect) {
+            this.selectedNodes.forEach((n) => n.setSelectedStyle(false));
+            this.selectedNodes.clear();
+        }
+        this._emitSelectionChange();
+    }
+
+    setSelectedEdge(edge, multiSelect = false) {
+        if (!multiSelect) {
+            this.selectedEdges.forEach((e) => e.setHighlight(false));
+            this.selectedEdges.clear();
+            this.selectedNodes.forEach((n) => n.setSelectedStyle(false));
+            this.selectedNodes.clear();
+        }
+
+        if (edge) {
+            if (this.selectedEdges.has(edge)) {
+                this.selectedEdges.delete(edge);
+                edge.setHighlight(false);
+            } else {
+                this.selectedEdges.add(edge);
+                edge.setHighlight(true);
+            }
+        } else if (!multiSelect) {
+            this.selectedEdges.forEach((e) => e.setHighlight(false));
+            this.selectedEdges.clear();
+        }
+        this._emitSelectionChange();
+    }
+
+    _emitSelectionChange() {
+        const selectedItems = new Set([...this.selectedNodes, ...this.selectedEdges]);
+        const type = this.selectedNodes.size > 0 ? 'node' : (this.selectedEdges.size > 0 ? 'edge' : 'none');
+        this.space.emit('selection:changed', { selected: selectedItems, type });
     }
 
     getSelectedNode() {
         return this.selectedNodes.values().next().value || null;
     }
 
-    setSelectedNode(node, multiSelect = false) {
-        const oldSelection = new Set(this.selectedNodes);
-        if (!multiSelect) this.selectedNodes.clear();
-
-        if (node) {
-            if (this.selectedNodes.has(node) && multiSelect) {
-                this.selectedNodes.delete(node);
-            } else {
-                this.selectedNodes.add(node);
-            }
-        }
-
-        this.selectedEdges.clear(); // Clear edge selection when node is selected
-
-        this._updateSelectionHighlights(oldSelection, this.selectedNodes, this.space.plugins.getPlugin('NodePlugin')?.getNodes());
-        this._updateSelectionHighlights(new Set(), this.selectedEdges, this.space.plugins.getPlugin('EdgePlugin')?.getEdges());
-
-        this.space.emit('selection:changed', {
-            selected: this.selectedNodes,
-            deselected: oldSelection,
-            type: 'node',
-        });
+    getSelectedNodes() {
+        return this.selectedNodes;
     }
 
-    setSelectedEdge(edge, multiSelect = false) {
-        const oldSelection = new Set(this.selectedEdges);
-        if (!multiSelect) this.selectedEdges.clear();
-
-        if (edge) {
-            if (this.selectedEdges.has(edge) && multiSelect) {
-                this.selectedEdges.delete(edge);
-            } else {
-                this.selectedEdges.add(edge);
-            }
-        }
-
-        this.selectedNodes.clear(); // Clear node selection when edge is selected
-
-        this._updateSelectionHighlights(oldSelection, this.selectedEdges, this.space.plugins.getPlugin('EdgePlugin')?.getEdges());
-        this._updateSelectionHighlights(new Set(), this.selectedNodes, this.space.plugins.getPlugin('NodePlugin')?.getNodes());
-
-        this.space.emit('selection:changed', {
-            selected: this.selectedEdges,
-            deselected: oldSelection,
-            type: 'edge',
-        });
+    getSelectedEdge() {
+        return this.selectedEdges.values().next().value || null;
     }
 
-    _updateSelectionHighlights(oldSelection, newSelection, allItemsMap) {
-        allItemsMap?.forEach((item) => {
-            const isSelected = newSelection.has(item);
-            const wasSelected = oldSelection.has(item);
-            if (isSelected && !wasSelected) {
-                item.setSelected?.(true);
-            } else if (!isSelected && wasSelected) {
-                item.setSelected?.(false);
-            }
-        });
+    getSelectedEdges() {
+        return this.selectedEdges;
     }
 
-    startLinking(sourceNode) {
-        if (this.isLinking) this.cancelLinking();
+    startLinking = (sourceNode) => {
+        if (!sourceNode) return;
         this.linkSourceNode = sourceNode;
         this.isLinking = true;
         this.space.emit('linking:started', { sourceNode });
-    }
+    };
 
-    cancelLinking() {
-        if (!this.isLinking) return;
+    cancelLinking = () => {
         this.linkSourceNode = null;
         this.isLinking = false;
         this.space.emit('linking:cancelled');
-    }
+    };
 
-    getIsLinking() {
-        return this.isLinking;
-    }
-
-    getLinkSourceNode() {
-        return this.linkSourceNode;
-    }
-
-    async completeLinking(screenX, screenY) {
+    completeLinking = (screenX, screenY) => {
         if (!this.isLinking || !this.linkSourceNode) return;
 
-        const targetInfo = this.uiManager._getTargetInfo({ clientX: screenX, clientY: screenY });
-        const targetNode = targetInfo.node;
+        const targetInfo = this.space.intersectedObjects(screenX, screenY);
+        const targetNode = targetInfo?.node;
 
         if (targetNode && targetNode !== this.linkSourceNode) {
-            const edgePlugin = this.pluginManager.getPlugin('EdgePlugin');
-            const newEdge = edgePlugin?.addEdge(this.linkSourceNode, targetNode);
-            if (newEdge) {
-                this.space.emit('linking:succeeded', { source: this.linkSourceNode, target: targetNode, edge: newEdge });
-            } else {
-                this.space.emit('linking:failed', { source: this.linkSourceNode, target: targetNode, reason: 'Edge creation failed' });
-            }
+            this.space.emit('ui:request:addEdge', this.linkSourceNode, targetNode);
+            this.space.emit('linking:succeeded', { source: this.linkSourceNode, target: targetNode });
         } else {
-            this.space.emit('linking:failed', { source: this.linkSourceNode, target: targetNode, reason: 'Invalid target node' });
+            this.space.emit('linking:failed');
         }
         this.cancelLinking();
+    };
+
+    getIsLinking = () => this.isLinking;
+    getLinkSourceNode = () => this.linkSourceNode;
+
+    update() {
+        this.uiManager?.updateEdgeMenuPosition();
     }
 
     dispose() {
         super.dispose();
+        this.space.off('node:removed', this._onNodeRemoved);
+        this.space.off('edge:removed', this._onEdgeRemoved);
+        this.space.off('ui:request:startLinking', this.startLinking);
+        this.space.off('ui:request:applyLayout', this._onApplyLayout);
+
         this.uiManager?.dispose();
         this.uiManager = null;
         this.selectedNodes.clear();

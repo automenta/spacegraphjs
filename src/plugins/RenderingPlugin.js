@@ -98,7 +98,8 @@ export class RenderingPlugin extends Plugin {
         const cam = this.pluginManager?.getPlugin('CameraPlugin')?.getCameraInstance();
         const deltaTime = this.clock.getDelta();
 
-        if (cam && this.composer) {
+        // Defensive check for composer and its renderer
+        if (cam && this.composer && this.composer.renderer) {
             this.composer.render(deltaTime);
             this.renderCSS3D?.render(this.cssScene, cam);
         } else if (cam && this.renderGL) {
@@ -158,7 +159,7 @@ export class RenderingPlugin extends Plugin {
     }
 
     _rebuildEffectPasses() {
-        if (!this.composer || !this.renderPass) return;
+        if (!this.composer || !this.renderPass || !this.composer.renderer) return; // Added defensive check for composer.renderer
 
         const cam = this.pluginManager?.getPlugin('CameraPlugin')?.getCameraInstance();
         if (!cam) return;

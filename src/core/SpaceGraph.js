@@ -14,11 +14,13 @@ export class SpaceGraph {
     _cam = null;
     _listeners = new Map();
     plugins = null;
+    options = {}; // Added to store options
 
     constructor(containerElement, options = {}) {
         if (!containerElement) throw new Error('SpaceGraph requires a valid HTML container element.');
 
         this.container = containerElement;
+        this.options = options; // Store the options
         this.plugins = new PluginManager(this);
 
         const uiOptions = options.ui || {};
