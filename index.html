@@ -87,7 +87,9 @@
                 }
 
                 // Clear previous graph content
-                space.clearAll(); // Assuming a method like clearAll exists
+                // space.clearAll(); // Method does not exist
+                await space.importGraphFromJSON({ nodes: [], edges: [] });
+
 
                 if (hudEl) {
                     hudEl.innerHTML = page.description;
