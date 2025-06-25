@@ -164,7 +164,7 @@ export class ShapeNode extends BaseNode {
                 });
             },
             undefined,
-            (_error) => {
+            () => {
                 const fallbackSize = levelConfig.size || this.size || 20;
                 const fallbackColor = levelConfig.color || this.color || 0xff0000;
                 const fallbackMesh = this._createMeshForLevel({

@@ -108,7 +108,7 @@ export class ImageNode extends BaseNode {
                 this.space?.emit('node:updated', { node: this, property: 'mesh' });
             },
             undefined,
-            (_error) => {
+            () => {
                 this.mesh.material.color.set(0xff0000);
             }
         );

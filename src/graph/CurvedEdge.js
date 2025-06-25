@@ -93,8 +93,6 @@ export class CurvedEdge extends Edge {
 
         const positions = [];
         points.forEach((p) => {
-            if (isNaN(p.x) || isNaN(p.y) || isNaN(p.z)) {
-            }
             positions.push(p.x, p.y, p.z);
         });
 

@@ -51,13 +51,13 @@ export class BaseNode {
     setSelectedStyle(_selected) {}
 
     setPosition(x, y, z) {
-        if (typeof x === 'object' && x !== null) { // Allow setting position with a Vector3-like object
+        if (typeof x === 'object' && x !== null) {
             if (!isFinite(x.x) || !isFinite(x.y) || !isFinite(x.z)) {
                 console.warn(`BaseNode.setPosition: Attempted to set invalid position for node ${this.id}:`, x);
                 return;
             }
             this.position.set(x.x, x.y, x.z);
-        } else { // Assume x, y, z are numbers
+        } else {
             if (!isFinite(x) || !isFinite(y) || !isFinite(z)) {
                 console.warn(`BaseNode.setPosition: Attempted to set invalid position for node ${this.id}:`, { x, y, z });
                 return;

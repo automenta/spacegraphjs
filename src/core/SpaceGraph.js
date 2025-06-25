@@ -5,8 +5,8 @@ import { RenderingPlugin } from '../plugins/RenderingPlugin.js';
 import { CameraPlugin } from '../plugins/CameraPlugin.js';
 import { NodePlugin } from '../plugins/NodePlugin.js';
 import { EdgePlugin } from '../plugins/EdgePlugin.js';
-import { LayoutPlugin } from '../plugins/LayoutPlugin.js'; // Already here, good.
-import { UIPlugin } from '../plugins/UIPlugin.js'; // Already here, good.
+import { LayoutPlugin } from '../plugins/LayoutPlugin.js';
+import { UIPlugin } from '../plugins/UIPlugin.js';
 import { MinimapPlugin } from '../plugins/MinimapPlugin.js';
 import { DataPlugin } from '../plugins/DataPlugin.js';
 
@@ -14,8 +14,6 @@ export class SpaceGraph {
     _cam = null;
     _listeners = new Map();
     plugins = null;
-    // contextMenuElement and confirmDialogElement are no longer stored directly on SpaceGraph instance.
-    // They are passed to UIPlugin via options.
 
     constructor(containerElement, options = {}) {
         if (!containerElement) throw new Error('SpaceGraph requires a valid HTML container element.');
@@ -26,7 +24,6 @@ export class SpaceGraph {
         const uiOptions = options.ui || {};
         const contextMenuElement = uiOptions.contextMenuElement;
         const confirmDialogElement = uiOptions.confirmDialogElement;
-        // UIPlugin will handle errors if these elements are missing but it needs them.
 
         this.plugins.add(new CameraPlugin(this, this.plugins));
         this.plugins.add(new RenderingPlugin(this, this.plugins));
@@ -102,7 +99,7 @@ export class SpaceGraph {
             this.plugins.getPlugin('EdgePlugin')?.addEdge(sourceNode, targetNode, data);
         });
 
-        this.on('edge:added', (_addedEdge) => {});
+        this.on('edge:added', () => {});
 
         this.on('ui:request:removeEdge', (edgeId) => {
             this.plugins.getPlugin('EdgePlugin')?.removeEdge(edgeId);

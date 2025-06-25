@@ -173,9 +173,6 @@ export class GroupNode extends HtmlNode {
     }
 
     getBoundingSphereRadius() {
-        if (this.isCollapsed) {
-            return super.getBoundingSphereRadius();
-        }
         return super.getBoundingSphereRadius();
     }
 

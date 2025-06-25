@@ -147,8 +147,6 @@ export class Edge {
             posAttribute.array.length >= expectedMinLength && posAttribute.array.length % 3 === 0) {
 
             this.line.geometry.setColors(colors);
-            if (this.line.geometry.attributes.instanceColorStart) this.line.geometry.attributes.instanceColorStart.needsUpdate = true;
-            if (this.line.geometry.attributes.instanceColorEnd) this.line.geometry.attributes.instanceColorEnd.needsUpdate = true;
         }
     }
 
