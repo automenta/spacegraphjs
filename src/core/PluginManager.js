@@ -26,9 +26,7 @@ export class PluginManager {
     async initPlugins() {
         for (const plugin of this.plugins) {
             try {
-                if (typeof plugin.init === 'function') {
-                    await plugin.init();
-                }
+                plugin.init?.();
             } catch (error) {
                 console.error(`PluginManager: Error initializing plugin "${plugin.getName()}":`, error);
             }
@@ -38,9 +36,7 @@ export class PluginManager {
     updatePlugins() {
         for (const plugin of this.plugins) {
             try {
-                if (typeof plugin.update === 'function') {
-                    plugin.update();
-                }
+                plugin.update?.();
             } catch (error) {
                 console.error(`PluginManager: Error updating plugin "${plugin.getName()}":`, error);
             }

@@ -145,7 +145,7 @@ export class HtmlNode extends BaseNode {
     }
 
     _applyLabelLOD(space) {
-        if (!this.htmlElement || !this.data.labelLod || this.data.labelLod.length === 0) {
+        if (!this.htmlElement || !this.data.labelLod?.length) {
             this.htmlElement.style.visibility = '';
             const contentEl = $('.node-content', this.htmlElement);
             if (contentEl) contentEl.style.transform = `scale(${this.data.contentScale ?? 1.0})`;

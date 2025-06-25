@@ -3,7 +3,7 @@ import { ShapeNode } from './ShapeNode.js';
 import { ImageNode } from './ImageNode.js';
 import { VideoNode } from './VideoNode.js';
 import { IFrameNode } from './IFrameNode.js';
-import { GroupNode } from './GroupNode.js';
+import { GroupNode } => './GroupNode.js';
 import { DataNode } from './DataNode.js';
 
 export class NodeFactory {
@@ -25,9 +25,7 @@ export class NodeFactory {
     }
 
     registerNodeType(typeName, nodeClass) {
-        if (this.nodeTypes.has(typeName)) {
-            return;
-        }
+        if (this.nodeTypes.has(typeName)) return;
         this.nodeTypes.set(typeName, nodeClass);
     }
 

@@ -47,12 +47,10 @@ export class ShapeNode extends BaseNode {
     }
 
     _setupLODLevels() {
-        if (this.lodData && this.lodData.length > 0) {
+        if (this.lodData?.length) {
             this.lodData.forEach((levelConf) => {
                 const levelMesh = this._createRepresentationForLevel(levelConf);
-                if (levelMesh) {
-                    this.mesh.addLevel(levelMesh, levelConf.distance);
-                }
+                if (levelMesh) this.mesh.addLevel(levelMesh, levelConf.distance);
             });
         } else {
             const mainRepresentation = this._createRepresentationForLevel({
@@ -62,9 +60,7 @@ export class ShapeNode extends BaseNode {
                 size: this.size,
                 color: this.color,
             });
-            if (mainRepresentation) {
-                this.mesh.addLevel(mainRepresentation, 0);
-            }
+            if (mainRepresentation) this.mesh.addLevel(mainRepresentation, 0);
 
             const placeholderSize = Math.max(10, (this.size || 50) / 3);
             const placeholder = this._createMeshForLevel({
@@ -72,22 +68,21 @@ export class ShapeNode extends BaseNode {
                 size: placeholderSize,
                 color: this.color,
             });
-            if (placeholder) {
-                this.mesh.addLevel(placeholder, this.data.lodDistanceSimple ?? 700);
-            }
+            if (placeholder) this.mesh.addLevel(placeholder, this.data.lodDistanceSimple ?? 700);
             this.mesh.addLevel(new THREE.Object3D(), this.data.lodDistanceHide ?? 1500);
         }
     }
 
     _createRepresentationForLevel(levelConfig) {
-        if (levelConfig.shape === 'gltf' && levelConfig.gltfUrl) {
-            const gltfGroup = new THREE.Group();
-            gltfGroup.castShadow = true;
-            gltfGroup.receiveShadow = true;
-            this._loadGltfModelForLevel(levelConfig, gltfGroup);
-            return gltfGroup;
-        }
-        return levelConfig.shape ? this._createMeshForLevel(levelConfig) : null;
+        return (levelConfig.shape === 'gltf' && levelConfig.gltfUrl)
+            ? (() => {
+                const gltfGroup = new THREE.Group();
+                glttfGroup.castShadow = true;
+                gltfGroup.receiveShadow = true;
+                this._loadGltfModelForLevel(levelConfig, gltfGroup);
+                return gltfGroup;
+            })()
+            : (levelConfig.shape ? this._createMeshForLevel(levelConfig) : null);
     }
 
     _createMeshForLevel(levelConfig) {
@@ -144,15 +139,11 @@ export class ShapeNode extends BaseNode {
                 const center = box.getCenter(new THREE.Vector3());
                 modelScene.position.sub(center.multiplyScalar(scale));
 
-                while (targetGroup.children.length > 0) {
-                    targetGroup.remove(targetGroup.children[0]);
-                }
+                while (targetGroup.children.length > 0) targetGroup.remove(targetGroup.children[0]);
                 targetGroup.add(modelScene);
 
                 const lodLevelEntry = this.mesh.levels.find((l) => l.object === targetGroup);
-                if (lodLevelEntry && lodLevelEntry.distance === 0) {
-                    this.updateBoundingSphere();
-                }
+                if (lodLevelEntry?.distance === 0) this.updateBoundingSphere();
                 this.space?.emit('node:updated', {
                     node: this,
                     property: 'mesh_lod_level_loaded',
@@ -170,9 +161,7 @@ export class ShapeNode extends BaseNode {
                 });
                 targetGroup.add(fallbackMesh);
                 const lodLevelEntry = this.mesh.levels.find((l) => l.object === targetGroup);
-                if (lodLevelEntry && lodLevelEntry.distance === 0) {
-                    this.updateBoundingSphere();
-                }
+                if (lodLevelEntry?.distance === 0) this.updateBoundingSphere();
             }
         );
     }
@@ -220,15 +209,13 @@ export class ShapeNode extends BaseNode {
         if (this.labelObject) {
             const offset = this.getBoundingSphereRadius() * 1.1 + 10;
             this.labelObject.position.copy(this.position).y += offset;
-            if (space?.camera?._cam) {
-                this.labelObject.quaternion.copy(space.camera._cam.quaternion);
-            }
+            if (space?.camera?._cam) this.labelObject.quaternion.copy(space.camera._cam.quaternion);
             this._applyLabelLOD(space);
         }
     }
 
     _applyLabelLOD(space) {
-        if (!this.labelObject?.element || !this.data.labelLod || this.data.labelLod.length === 0) {
+        if (!this.labelObject?.element || !this.data.labelLod?.length) {
             if (this.labelObject?.element) this.labelObject.element.style.visibility = '';
             return;
         }
@@ -247,9 +234,7 @@ export class ShapeNode extends BaseNode {
                 break;
             }
         }
-        if (!visibilityApplied) {
-            this.labelObject.element.style.visibility = '';
-        }
+        if (!visibilityApplied) this.labelObject.element.style.visibility = '';
     }
 
     getBoundingSphereRadius() {
@@ -295,8 +280,6 @@ export class ShapeNode extends BaseNode {
                 });
             });
         }
-        if (!this.isSelected) {
-            this.labelObject?.element?.classList.toggle('hovered', hovered);
-        }
+        if (!this.isSelected) this.labelObject?.element?.classList.toggle('hovered', hovered);
     }
 }

@@ -17,9 +17,7 @@ export class EdgeFactory {
     }
 
     registerEdgeType(typeName, edgeClass) {
-        if (this.edgeTypes.has(typeName)) {
-            return;
-        }
+        if (this.edgeTypes.has(typeName)) return;
         this.edgeTypes.set(typeName, edgeClass);
     }
 

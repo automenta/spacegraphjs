@@ -37,10 +37,12 @@ export class IFrameNode extends BaseNode {
         el.className = 'node-iframe node-common';
         el.id = `node-iframe-${this.id}`;
         el.dataset.nodeId = this.id;
-        el.style.width = `${this.size.width}px`;
-        el.style.height = `${this.size.height}px`;
-        el.style.backgroundColor = this.data.backgroundColor;
-        el.style.border = `1px solid ${this.data.borderColor}`;
+        Object.assign(el.style, {
+            width: `${this.size.width}px`,
+            height: `${this.size.height}px`,
+            backgroundColor: this.data.backgroundColor,
+            border: `1px solid ${this.data.borderColor}`,
+        });
         el.draggable = false;
         el.ondragstart = (e) => e.preventDefault();
 
@@ -62,17 +64,15 @@ export class IFrameNode extends BaseNode {
         });
 
         this.iframeElement = document.createElement('iframe');
-        this.iframeElement.style.width = '100%';
-        this.iframeElement.style.height = '100%';
-        this.iframeElement.style.border = 'none';
+        Object.assign(this.iframeElement.style, {
+            width: '100%',
+            height: '100%',
+            border: 'none',
+            pointerEvents: 'auto',
+        });
 
-        if (this.data.sandbox) {
-            this.iframeElement.sandbox = this.data.sandbox;
-        }
-
+        if (this.data.sandbox) this.iframeElement.sandbox = this.data.sandbox;
         this.iframeElement.src = this.data.iframeUrl;
-
-        this.iframeElement.style.pointerEvents = 'auto';
 
         this.iframeElement.addEventListener('pointerdown', (e) => e.stopPropagation());
         this.iframeElement.addEventListener('wheel', (e) => e.stopPropagation(), { passive: false });
@@ -84,9 +84,7 @@ export class IFrameNode extends BaseNode {
 
     setIframeUrl(url) {
         this.data.iframeUrl = url;
-        if (this.iframeElement) {
-            this.iframeElement.src = url;
-        }
+        if (this.iframeElement) this.iframeElement.src = url;
     }
 
     update(space) {
@@ -108,9 +106,7 @@ export class IFrameNode extends BaseNode {
     }
 
     dispose() {
-        if (this.iframeElement) {
-            this.iframeElement.src = 'about:blank';
-        }
+        if (this.iframeElement) this.iframeElement.src = 'about:blank';
         super.dispose();
     }
 }

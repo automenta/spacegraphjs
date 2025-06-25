@@ -51,7 +51,7 @@ export class Edge {
         this.isInstanced = false;
         this.instanceId = null;
 
-        if (this.data.gradientColors && this.data.gradientColors.length === 2) {
+        if (this.data.gradientColors?.length === 2) {
             this.data.color = null;
         } else if (this.data.color === null) {
             this.data.color = defaultData.color;
@@ -66,25 +66,17 @@ export class Edge {
         const arrowheadOpt = this.data.arrowhead;
         if (arrowheadOpt === true || arrowheadOpt === 'target' || arrowheadOpt === 'both') {
             this.arrowheads.target = this._createSingleArrowhead('target');
-            if (this.line?.parent) this.line.parent.add(this.arrowheads.target);
+            this.line?.parent?.add(this.arrowheads.target);
         }
         if (arrowheadOpt === 'source' || arrowheadOpt === 'both') {
             this.arrowheads.source = this._createSingleArrowhead('source');
-            if (this.line?.parent) this.line.parent.add(this.arrowheads.source);
+            this.line?.parent?.add(this.arrowheads.source);
         }
     }
 
     _createLine() {
         const geometry = new LineGeometry();
-        const placeholderPositions = [0,0,0, 0,0,0.001];
-        geometry.setPositions(placeholderPositions);
-
-        if (this.data.gradientColors && this.data.gradientColors.length === 2) {
-            const colorStart = new THREE.Color(this.data.gradientColors[0]);
-            const colorEnd = new THREE.Color(this.data.gradientColors[1]);
-            const placeholderColors = [colorStart.r, colorStart.g, colorStart.b, colorEnd.r, colorEnd.g, colorEnd.b];
-            geometry.setColors(placeholderColors);
-        }
+        geometry.setPositions([0,0,0, 0,0,0.001]);
 
         const materialConfig = {
             linewidth: this.data.thickness,
@@ -98,28 +90,28 @@ export class Edge {
             gapSize: this.data.gapSize ?? 1,
         };
 
-        if (this.data.gradientColors && this.data.gradientColors.length === 2) {
+        if (this.data.gradientColors?.length === 2) {
             materialConfig.vertexColors = true;
+            const colorStart = new THREE.Color(this.data.gradientColors[0]);
+            const colorEnd = new THREE.Color(this.data.gradientColors[1]);
+            geometry.setColors([colorStart.r, colorStart.g, colorStart.b, colorEnd.r, colorEnd.g, colorEnd.b]);
         } else {
             materialConfig.vertexColors = false;
             materialConfig.color = this.data.color || 0x00d0ff;
         }
 
         const material = new LineMaterial(materialConfig);
-
         const line = new Line2(geometry, material);
 
-        if (material.dashed) {
-            line.computeLineDistances();
-        }
+        if (material.dashed) line.computeLineDistances();
         line.renderOrder = -1;
         line.userData = { edgeId: this.id };
         return line;
     }
 
     _setGradientColors() {
-        if (!this.line || !this.data.gradientColors || this.data.gradientColors.length !== 2) {
-            if (this.line && this.line.material.vertexColors) {
+        if (!this.line || !this.data.gradientColors?.length === 2) {
+            if (this.line?.material.vertexColors) {
                 this.line.material.vertexColors = false;
                 this.line.material.color.set(this.data.color || 0x00d0ff);
                 this.line.material.needsUpdate = true;
@@ -156,27 +148,22 @@ export class Edge {
             return;
         }
 
-        const positions = [
+        this.line.geometry.setPositions([
             sourcePos.x, sourcePos.y, sourcePos.z,
             targetPos.x, targetPos.y, targetPos.z,
-        ];
-        this.line.geometry.setPositions(positions);
+        ]);
 
         if (this.line.geometry.attributes.position.count === 0) return;
 
-        if (this.data.gradientColors && this.data.gradientColors.length === 2) {
+        if (this.data.gradientColors?.length === 2) {
             this._setGradientColors();
         } else {
-            if (this.line.material.vertexColors) {
-                this.line.material.vertexColors = false;
-                this.line.material.needsUpdate = true;
-            }
+            this.line.material.vertexColors = false;
+            this.line.material.needsUpdate = true;
             this.line.material.color.set(this.data.color);
         }
 
-        if (this.line.material.dashed) {
-            this.line.computeLineDistances();
-        }
+        if (this.line.material.dashed) this.line.computeLineDistances();
         this.line.geometry.computeBoundingSphere();
 
         this._updateArrowheads();
@@ -230,12 +217,10 @@ export class Edge {
         const mat = this.line.material;
         mat.opacity = highlight ? Edge.HIGHLIGHT_OPACITY : Edge.DEFAULT_OPACITY;
 
-        const thicknessMultiplier = (this.data.gradientColors && this.data.gradientColors.length === 2 && mat.vertexColors) ? 2.0 : 1.5;
+        const thicknessMultiplier = (this.data.gradientColors?.length === 2 && mat.vertexColors) ? 2.0 : 1.5;
         mat.linewidth = highlight ? this.data.thickness * thicknessMultiplier : this.data.thickness;
 
-        if (!mat.vertexColors) {
-            mat.color.set(highlight ? Edge.HIGHLIGHT_COLOR : this.data.color);
-        }
+        if (!mat.vertexColors) mat.color.set(highlight ? Edge.HIGHLIGHT_COLOR : this.data.color);
         mat.needsUpdate = true;
 
         const highlightArrowhead = (arrowhead) => {
@@ -277,25 +262,19 @@ export class Edge {
     }
 
     updateResolution(width, height) {
-        if (this.line?.material) {
-            this.line.material.resolution.set(width, height);
-        }
+        if (this.line?.material) this.line.material.resolution.set(width, height);
     }
 
     dispose() {
-        if (this.line) {
-            this.line.geometry?.dispose();
-            this.line.material?.dispose();
-            this.line.parent?.remove(this.line);
-            this.line = null;
-        }
+        this.line?.geometry?.dispose();
+        this.line?.material?.dispose();
+        this.line?.parent?.remove(this.line);
+        this.line = null;
 
         const disposeArrowhead = (arrowhead) => {
-            if (arrowhead) {
-                arrowhead.geometry?.dispose();
-                arrowhead.material?.dispose();
-                arrowhead.parent?.remove(arrowhead);
-            }
+            arrowhead?.geometry?.dispose();
+            arrowhead?.material?.dispose();
+            arrowhead?.parent?.remove(arrowhead);
         };
         disposeArrowhead(this.arrowheads.source);
         this.arrowheads.source = null;

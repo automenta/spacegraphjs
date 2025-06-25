@@ -18,9 +18,7 @@ export class DataNode extends BaseNode {
         this._setupCanvas();
         this._createChartMesh();
 
-        if (this.data.label) {
-            this.labelObject = this._createLabel();
-        }
+        if (this.data.label) this.labelObject = this._createLabel();
         this.update();
         this.updateBoundingSphere();
     }
@@ -81,7 +79,7 @@ export class DataNode extends BaseNode {
         this.ctx.font = '16px Arial';
         this.ctx.textAlign = 'center';
 
-        if (!chartData || chartData.length === 0) {
+        if (!chartData?.length) {
             this.ctx.fillText('No Data', width / 2, height / 2);
             this.texture.needsUpdate = true;
             return;
@@ -150,17 +148,13 @@ export class DataNode extends BaseNode {
         if (this.labelObject) {
             const offset = this.getBoundingSphereRadius() * 1.1 + 15;
             this.labelObject.position.copy(this.position).y += offset;
-            if (space?.camera?._cam) {
-                this.labelObject.quaternion.copy(space.camera._cam.quaternion);
-            }
+            if (space?.camera?._cam) this.labelObject.quaternion.copy(space.camera._cam.quaternion);
         }
     }
 
     updateBoundingSphere() {
         if (!this.mesh) return;
-        if (!this.mesh.geometry.boundingSphere) {
-            this.mesh.geometry.computeBoundingSphere();
-        }
+        if (!this.mesh.geometry.boundingSphere) this.mesh.geometry.computeBoundingSphere();
         this._boundingSphere = this.mesh.geometry.boundingSphere.clone();
         this._boundingSphere.center.copy(this.position);
         this._boundingSphere.radius = (this.size / 2) * Math.sqrt(2);
@@ -172,9 +166,7 @@ export class DataNode extends BaseNode {
     }
 
     setSelectedStyle(selected) {
-        if (this.mesh?.material) {
-            this.mesh.material.emissive?.setHex(selected ? 0x333300 : 0x000000);
-        }
+        if (this.mesh?.material) this.mesh.material.emissive?.setHex(selected ? 0x333300 : 0x000000);
         this.labelObject?.element?.classList.toggle('selected', selected);
     }
 

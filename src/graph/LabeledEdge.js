@@ -8,9 +8,7 @@ export class LabeledEdge extends Edge {
     constructor(id, sourceNode, targetNode, data = {}) {
         super(id, sourceNode, targetNode, data);
         this.labelText = this.data.label || '';
-        if (this.labelText) {
-            this.labelObject = this._createLabel();
-        }
+        if (this.labelText) this.labelObject = this._createLabel();
         this.update();
     }
 
@@ -43,15 +41,13 @@ export class LabeledEdge extends Edge {
 
             this.labelObject.position.addVectors(sourcePos, targetPos).multiplyScalar(0.5);
 
-            if (this.space?.camera?._cam) {
-                this.labelObject.quaternion.copy(this.space.camera._cam.quaternion);
-            }
+            if (this.space?.camera?._cam) this.labelObject.quaternion.copy(this.space.camera._cam.quaternion);
             this._applyLabelLOD();
         }
     }
 
     _applyLabelLOD() {
-        if (!this.labelObject?.element || !this.data.labelLod || this.data.labelLod.length === 0) {
+        if (!this.labelObject?.element || !this.data.labelLod?.length) {
             if (this.labelObject?.element) this.labelObject.element.style.visibility = '';
             return;
         }
@@ -70,24 +66,18 @@ export class LabeledEdge extends Edge {
                 break;
             }
         }
-        if (!visibilityApplied) {
-            this.labelObject.element.style.visibility = '';
-        }
+        if (!visibilityApplied) this.labelObject.element.style.visibility = '';
     }
 
     setHighlight(highlight) {
         super.setHighlight(highlight);
-        if (this.labelObject?.element) {
-            this.labelObject.element.classList.toggle('selected', highlight);
-        }
+        this.labelObject?.element?.classList.toggle('selected', highlight);
     }
 
     dispose() {
-        if (this.labelObject) {
-            this.labelObject.element?.remove();
-            this.labelObject.parent?.remove(this.labelObject);
-            this.labelObject = null;
-        }
+        this.labelObject?.element?.remove();
+        this.labelObject?.parent?.remove(this.labelObject);
+        this.labelObject = null;
         super.dispose();
     }
 }

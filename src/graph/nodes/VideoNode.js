@@ -1,6 +1,5 @@
 import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
 import { BaseNode } from './BaseNode.js';
-import { Utils, $ } from '../../utils.js';
 
 export class VideoNode extends BaseNode {
     static DEFAULT_WIDTH = 320;
@@ -42,15 +41,19 @@ export class VideoNode extends BaseNode {
         el.className = 'node-video node-common';
         el.id = `node-video-${this.id}`;
         el.dataset.nodeId = this.id;
-        el.style.width = `${this.size.width}px`;
-        el.style.height = `${this.size.height}px`;
-        el.style.backgroundColor = this.data.backgroundColor;
+        Object.assign(el.style, {
+            width: `${this.size.width}px`,
+            height: `${this.size.height}px`,
+            backgroundColor: this.data.backgroundColor,
+        });
         el.draggable = false;
         el.ondragstart = (e) => e.preventDefault();
 
         this.videoElement = document.createElement('video');
-        this.videoElement.style.width = '100%';
-        this.videoElement.style.height = '100%';
+        Object.assign(this.videoElement.style, {
+            width: '100%',
+            height: '100%',
+        });
         this.videoElement.src = this.data.videoUrl;
         this.videoElement.type = this.data.videoType;
 

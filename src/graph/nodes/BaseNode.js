@@ -46,13 +46,13 @@ export class BaseNode {
 
     setSelectedStyle(_selected) {}
 
-    setPosition(pos) {
-        const { x, y, z } = typeof pos === 'object' && pos !== null ? pos : { x: pos, y: arguments[1], z: arguments[2] };
-        if (!isFinite(x) || !isFinite(y) || !isFinite(z)) {
-            console.warn(`BaseNode.setPosition: Attempted to set invalid position for node ${this.id}:`, { x, y, z });
+    setPosition(pos, y, z) {
+        const { x, _y, _z } = typeof pos === 'object' && pos !== null ? pos : { x: pos, _y: y, _z: z };
+        if (!isFinite(x) || !isFinite(_y) || !isFinite(_z)) {
+            console.warn(`BaseNode.setPosition: Attempted to set invalid position for node ${this.id}:`, { x, y: _y, z: _z });
             return;
         }
-        this.position.set(x, y, z);
+        this.position.set(x, _y, _z);
     }
 
     startDrag() {

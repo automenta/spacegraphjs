@@ -24,7 +24,7 @@ export class GroupNode extends HtmlNode {
         super(id, position, groupData, mass);
 
         this.isCollapsed = groupData.defaultCollapsed;
-        (groupData.children || []).forEach((childId) => this.childNodeIds.add(childId));
+        groupData.children.forEach((childId) => this.childNodeIds.add(childId));
 
         this._setupGroupElement();
         this.updateGroupAppearance();
@@ -49,8 +49,7 @@ export class GroupNode extends HtmlNode {
     }
 
     _setupGroupElement() {
-        const controls = $('.node-controls', this.htmlElement);
-        if (controls) controls.remove();
+        $('.node-controls', this.htmlElement)?.remove();
 
         const contentDiv = $('.node-content', this.htmlElement);
         if (contentDiv) {
@@ -112,7 +111,7 @@ export class GroupNode extends HtmlNode {
         this._updateChildNodeVisibility();
 
         this.space?.emit('node:group:stateChanged', { groupNode: this, isCollapsed: this.isCollapsed });
-        this.space?.layout?.kick();
+        this.space?.plugins.getPlugin('LayoutPlugin')?.kick();
     }
 
     updateGroupAppearance() {

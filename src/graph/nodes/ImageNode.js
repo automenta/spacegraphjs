@@ -29,9 +29,7 @@ export class ImageNode extends BaseNode {
             this.mesh.material = new THREE.MeshStandardMaterial({ color: 0x555555, side: THREE.DoubleSide });
         }
 
-        if (this.data.label) {
-            this.labelObject = this._createLabel();
-        }
+        if (this.data.label) this.labelObject = this._createLabel();
         this.update();
         this.updateBoundingSphere();
     }
@@ -74,30 +72,13 @@ export class ImageNode extends BaseNode {
 
                 if (typeof this.data.size === 'number') {
                     const maxDim = this.data.size;
-                    if (imgAspect >= 1) {
-                        planeWidth = maxDim;
-                        planeHeight = maxDim / imgAspect;
-                    } else {
-                        planeHeight = maxDim;
-                        planeWidth = maxDim * imgAspect;
-                    }
+                    [planeWidth, planeHeight] = imgAspect >= 1 ? [maxDim, maxDim / imgAspect] : [maxDim * imgAspect, maxDim];
                 } else {
                     planeWidth = this.imageSize.width;
                     planeHeight = this.imageSize.height;
-                    if (
-                        imgAspect >= 1 &&
-                        this.imageSize.width === this.imageSize.height &&
-                        this.imageSize.width === (this.data.size || 100)
-                    ) {
-                        planeWidth = this.imageSize.width;
-                        planeHeight = this.imageSize.width / imgAspect;
-                    } else if (
-                        imgAspect < 1 &&
-                        this.imageSize.width === this.imageSize.height &&
-                        this.imageSize.width === (this.data.size || 100)
-                    ) {
-                        planeHeight = this.imageSize.height;
-                        planeWidth = this.imageSize.height * imgAspect;
+                    const defaultSize = this.data.size || 100;
+                    if (this.imageSize.width === this.imageSize.height && this.imageSize.width === defaultSize) {
+                        [planeWidth, planeHeight] = imgAspect >= 1 ? [defaultSize, defaultSize / imgAspect] : [defaultSize * imgAspect, defaultSize];
                     }
                 }
 
@@ -117,8 +98,7 @@ export class ImageNode extends BaseNode {
     updateBoundingSphere() {
         if (this.mesh) {
             if (!this._boundingSphere) this._boundingSphere = new THREE.Sphere();
-            const width = this.mesh.scale.x;
-            const height = this.mesh.scale.y;
+            const { x: width, y: height } = this.mesh.scale;
             this._boundingSphere.radius = Math.sqrt(width * width + height * height) / 2;
             this._boundingSphere.center.copy(this.position);
         }
@@ -138,9 +118,7 @@ export class ImageNode extends BaseNode {
             const labelOffset = this.mesh.scale.y / 2 + 20;
             this.labelObject.position.copy(this.position);
             this.labelObject.position.y += labelOffset;
-            if (space?.camera?._cam) {
-                this.labelObject.quaternion.copy(space.camera._cam.quaternion);
-            }
+            if (space?.camera?._cam) this.labelObject.quaternion.copy(space.camera._cam.quaternion);
         }
     }
 
@@ -150,9 +128,7 @@ export class ImageNode extends BaseNode {
     }
 
     dispose() {
-        if (this.mesh?.material?.map) {
-            this.mesh.material.map.dispose();
-        }
+        this.mesh?.material?.map?.dispose();
         super.dispose();
     }
 }

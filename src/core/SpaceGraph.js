@@ -22,8 +22,7 @@ export class SpaceGraph {
         this.plugins = new PluginManager(this);
 
         const uiOptions = options.ui || {};
-        const contextMenuElement = uiOptions.contextMenuElement;
-        const confirmDialogElement = uiOptions.confirmDialogElement;
+        const { contextMenuElement, confirmDialogElement } = uiOptions;
 
         this.plugins.add(new CameraPlugin(this, this.plugins));
         this.plugins.add(new RenderingPlugin(this, this.plugins));
@@ -39,10 +38,8 @@ export class SpaceGraph {
         await this.plugins.initPlugins();
 
         const cameraPlugin = this.plugins.getPlugin('CameraPlugin');
-        if (cameraPlugin) {
-            cameraPlugin.centerView(null, 0);
-            cameraPlugin.setInitialState();
-        }
+        cameraPlugin?.centerView(null, 0);
+        cameraPlugin?.setInitialState();
 
         this._setupEventListeners();
     }
@@ -55,20 +52,16 @@ export class SpaceGraph {
     }
 
     off(eventName, callback) {
-        if (this._listeners.has(eventName)) {
-            this._listeners.get(eventName).delete(callback);
-        }
+        this._listeners.get(eventName)?.delete(callback);
     }
 
     emit(eventName, ...args) {
-        if (this._listeners.has(eventName)) {
-            this._listeners.get(eventName).forEach((callback) => {
-                try {
-                    callback(...args);
-                } catch (error) {
-                }
-            });
-        }
+        this._listeners.get(eventName)?.forEach((callback) => {
+            try {
+                callback(...args);
+            } catch (error) {
+            }
+        });
     }
 
     _setupEventListeners() {
@@ -111,8 +104,7 @@ export class SpaceGraph {
             this.plugins.getPlugin('CameraPlugin')?.resetView();
         });
         this.on('ui:request:toggleBackground', (color, alpha) => {
-            const renderingPlugin = this.plugins.getPlugin('RenderingPlugin');
-            renderingPlugin?.setBackground(color, alpha);
+            this.plugins.getPlugin('RenderingPlugin')?.setBackground(color, alpha);
         });
 
         this.on('ui:request:reverseEdge', (edgeId) => {
@@ -173,42 +165,25 @@ export class SpaceGraph {
     addNode(nodeInstance) {
         const nodePlugin = this.plugins.getPlugin('NodePlugin');
         const layoutPlugin = this.plugins.getPlugin('LayoutPlugin');
-        if (nodePlugin) {
-            const addedNode = nodePlugin.addNode(nodeInstance);
-            if (addedNode && layoutPlugin) {
-                layoutPlugin.kick();
-            }
-            return addedNode;
-        }
-        return undefined;
+        const addedNode = nodePlugin?.addNode(nodeInstance);
+        if (addedNode && layoutPlugin) layoutPlugin.kick();
+        return addedNode;
     }
 
     addEdge(sourceNode, targetNode, data = {}) {
         const edgePlugin = this.plugins.getPlugin('EdgePlugin');
         const layoutPlugin = this.plugins.getPlugin('LayoutPlugin');
-        if (edgePlugin) {
-            const addedEdge = edgePlugin.addEdge(sourceNode, targetNode, data);
-            if (addedEdge && layoutPlugin) {
-                layoutPlugin.kick();
-            }
-            return addedEdge;
-        }
-        return undefined;
+        const addedEdge = edgePlugin?.addEdge(sourceNode, targetNode, data);
+        if (addedEdge && layoutPlugin) layoutPlugin.kick();
+        return addedEdge;
     }
 
     createNode(nodeConfig) {
-        const nodePlugin = this.plugins.getPlugin('NodePlugin');
-        if (nodePlugin) {
-            return nodePlugin.createAndAddNode(nodeConfig);
-        }
-        return undefined;
+        return this.plugins.getPlugin('NodePlugin')?.createAndAddNode(nodeConfig);
     }
 
     togglePinNode(nodeId) {
-        const layoutPlugin = this.plugins.getPlugin('LayoutPlugin');
-        if (layoutPlugin && typeof layoutPlugin.togglePinNode === 'function') {
-            layoutPlugin.togglePinNode(nodeId);
-        }
+        this.plugins.getPlugin('LayoutPlugin')?.layoutManager?.togglePinNode(nodeId);
     }
 
     centerView(targetPosition = null, duration = 0.7) {
@@ -328,9 +303,11 @@ export class SpaceGraph {
             }
         }
 
-        if (closestIntersect?.type === 'node') return { node: closestIntersect.node, distance: closestIntersect.distance };
-        if (closestIntersect?.type === 'edge') return { edge: closestIntersect.edge, distance: closestIntersect.distance };
-        return null;
+        return closestIntersect?.type === 'node'
+            ? { node: closestIntersect.node, distance: closestIntersect.distance }
+            : closestIntersect?.type === 'edge'
+            ? { edge: closestIntersect.edge, distance: closestIntersect.distance }
+            : null;
     }
 
     animate() {
@@ -347,12 +324,10 @@ export class SpaceGraph {
     }
 
     exportGraphToJSON(options) {
-        const dataPlugin = this.plugins.getPlugin('DataPlugin');
-        return dataPlugin ? dataPlugin.exportGraphToJSON(options) : null;
+        return this.plugins.getPlugin('DataPlugin')?.exportGraphToJSON(options) || null;
     }
 
     async importGraphFromJSON(jsonData, options) {
-        const dataPlugin = this.plugins.getPlugin('DataPlugin');
-        return dataPlugin ? await dataPlugin.importGraphFromJSON(jsonData, options) : false;
+        return (await this.plugins.getPlugin('DataPlugin')?.importGraphFromJSON(jsonData, options)) || false;
     }
 }

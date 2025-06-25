@@ -15,9 +15,7 @@ export class CurvedEdge extends Edge {
             ? this.data.curvature
             : 0.3;
 
-        if (this.data.label) {
-            this.labelObject = this._createLabel();
-        }
+        if (this.data.label) this.labelObject = this._createLabel();
         this.update();
     }
 
@@ -43,9 +41,7 @@ export class CurvedEdge extends Edge {
     update() {
         if (!this.line || !this.source || !this.target) return;
 
-        if (typeof this.numPoints !== 'number' || isNaN(this.numPoints) || this.numPoints <= 0) {
-            this.numPoints = 20;
-        }
+        this.numPoints = Math.max(1, Math.floor(this.numPoints));
 
         const sourcePos = this.source.position;
         const targetPos = this.target.position;
@@ -65,9 +61,7 @@ export class CurvedEdge extends Edge {
             const viewDirection = new THREE.Vector3();
             this.space?.camera?._cam?.getWorldDirection(viewDirection);
             perpendicular.set(-viewDirection.y, viewDirection.x, 0);
-            if (perpendicular.lengthSq() < 1e-8) {
-                perpendicular.set(1, 0, 0);
-            }
+            if (perpendicular.lengthSq() < 1e-8) perpendicular.set(1, 0, 0);
         }
         perpendicular.normalize();
 
@@ -98,43 +92,34 @@ export class CurvedEdge extends Edge {
         this.line.geometry.setPositions(positions);
 
         const posAttribute = this.line.geometry.attributes.position;
-        if (!posAttribute || posAttribute.count === 0) {
-            return;
-        }
+        if (!posAttribute || posAttribute.count === 0) return;
 
-        const actualNumPointsInGeometry = posAttribute.count;
+        if (this.data.gradientColors?.length === 2) {
+            this.line.material.vertexColors = true;
+            this.line.material.needsUpdate = true;
 
-        if (this.data.gradientColors && this.data.gradientColors.length === 2) {
-            if (!this.line.material.vertexColors) {
-                this.line.material.vertexColors = true;
-                this.line.material.needsUpdate = true;
-            }
             const colorStart = new THREE.Color(this.data.gradientColors[0]);
             const colorEnd = new THREE.Color(this.data.gradientColors[1]);
             const curveColors = [];
 
-            const effectiveNumSegmentsForColor = Math.max(1, actualNumPointsInGeometry - 1);
+            const effectiveNumSegmentsForColor = Math.max(1, posAttribute.count - 1);
 
-            for (let i = 0; i < actualNumPointsInGeometry; i++) {
+            for (let i = 0; i < posAttribute.count; i++) {
                 const t = (effectiveNumSegmentsForColor === 0) ? 0 : (i / effectiveNumSegmentsForColor);
                 const interpolatedColor = new THREE.Color().lerpColors(colorStart, colorEnd, t);
                 curveColors.push(interpolatedColor.r, interpolatedColor.g, interpolatedColor.b);
             }
 
-            if (posAttribute.array && posAttribute.array.length > 0 && posAttribute.array.length === curveColors.length) {
+            if (posAttribute.array.length === curveColors.length) {
                 this.line.geometry.setColors(curveColors);
             }
         } else {
-            if (this.line.material.vertexColors) {
-                this.line.material.vertexColors = false;
-                this.line.material.needsUpdate = true;
-            }
+            this.line.material.vertexColors = false;
+            this.line.material.needsUpdate = true;
             this.line.material.color.set(this.data.color || 0x00d0ff);
         }
 
-        if (this.line.material.dashed) {
-            this.line.computeLineDistances();
-        }
+        if (this.line.material.dashed) this.line.computeLineDistances();
         this.line.geometry.computeBoundingSphere();
 
         this._updateArrowheadsAlongCurve(points);
@@ -164,19 +149,17 @@ export class CurvedEdge extends Edge {
     }
 
     _updateLabelAlongCurve(points) {
-        if (this.labelObject && points && points.length > 0) {
+        if (this.labelObject && points?.length > 0) {
             const midPointIndex = Math.floor(points.length / 2);
             this.labelObject.position.copy(points[midPointIndex]);
 
-            if (this.space?.camera?._cam) {
-                this.labelObject.quaternion.copy(this.space.camera._cam.quaternion);
-            }
+            if (this.space?.camera?._cam) this.labelObject.quaternion.copy(this.space.camera._cam.quaternion);
             this._applyLabelLOD();
         }
     }
 
     _applyLabelLOD() {
-        if (!this.labelObject?.element || !this.data.labelLod || this.data.labelLod.length === 0) {
+        if (!this.labelObject?.element || !this.data.labelLod?.length) {
             if (this.labelObject?.element) this.labelObject.element.style.visibility = '';
             return;
         }
@@ -195,24 +178,18 @@ export class CurvedEdge extends Edge {
                 break;
             }
         }
-        if (!visibilityApplied) {
-            this.labelObject.element.style.visibility = '';
-        }
+        if (!visibilityApplied) this.labelObject.element.style.visibility = '';
     }
 
     setHighlight(highlight) {
         super.setHighlight(highlight);
-        if (this.labelObject?.element) {
-            this.labelObject.element.classList.toggle('selected', highlight);
-        }
+        this.labelObject?.element?.classList.toggle('selected', highlight);
     }
 
     dispose() {
-        if (this.labelObject) {
-            this.labelObject.element?.remove();
-            this.labelObject.parent?.remove(this.labelObject);
-            this.labelObject = null;
-        }
+        this.labelObject?.element?.remove();
+        this.labelObject?.parent?.remove(this.labelObject);
+        this.labelObject = null;
         super.dispose();
     }
 }
