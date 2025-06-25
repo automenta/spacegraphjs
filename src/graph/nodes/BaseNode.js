@@ -14,11 +14,7 @@ export class BaseNode {
 
     constructor(id, position = { x: 0, y: 0, z: 0 }, data = {}, mass = 1.0) {
         this.id = id ?? Utils.generateId('node');
-        if (!isFinite(position.x) || !isFinite(position.y) || !isFinite(position.z)) {
-            this.position.set(0, 0, 0);
-        } else {
-            this.position.set(position.x, position.y, position.z);
-        }
+        this.setPosition(position);
         this.data = Utils.mergeDeep({}, this.getDefaultData(), data);
         this.mass = Math.max(0.1, mass);
         this.isPinned = this.data.isPinned ?? false;
@@ -50,20 +46,13 @@ export class BaseNode {
 
     setSelectedStyle(_selected) {}
 
-    setPosition(x, y, z) {
-        if (typeof x === 'object' && x !== null) {
-            if (!isFinite(x.x) || !isFinite(x.y) || !isFinite(x.z)) {
-                console.warn(`BaseNode.setPosition: Attempted to set invalid position for node ${this.id}:`, x);
-                return;
-            }
-            this.position.set(x.x, x.y, x.z);
-        } else {
-            if (!isFinite(x) || !isFinite(y) || !isFinite(z)) {
-                console.warn(`BaseNode.setPosition: Attempted to set invalid position for node ${this.id}:`, { x, y, z });
-                return;
-            }
-            this.position.set(x, y, z);
+    setPosition(pos) {
+        const { x, y, z } = typeof pos === 'object' && pos !== null ? pos : { x: pos, y: arguments[1], z: arguments[2] };
+        if (!isFinite(x) || !isFinite(y) || !isFinite(z)) {
+            console.warn(`BaseNode.setPosition: Attempted to set invalid position for node ${this.id}:`, { x, y, z });
+            return;
         }
+        this.position.set(x, y, z);
     }
 
     startDrag() {

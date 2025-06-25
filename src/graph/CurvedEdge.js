@@ -10,12 +10,7 @@ export class CurvedEdge extends Edge {
     constructor(id, sourceNode, targetNode, data = {}) {
         super(id, sourceNode, targetNode, data);
 
-        let requestedNumPoints = this.data.numCurvePoints;
-        if (typeof requestedNumPoints !== 'number' || isNaN(requestedNumPoints) || requestedNumPoints <= 0) {
-            requestedNumPoints = 20;
-        }
-        this.numPoints = Math.max(1, Math.floor(requestedNumPoints));
-
+        this.numPoints = Math.max(1, Math.floor(this.data.numCurvePoints || 20));
         this.curvature = (typeof this.data.curvature === 'number' && isFinite(this.data.curvature))
             ? this.data.curvature
             : 0.3;
@@ -68,10 +63,8 @@ export class CurvedEdge extends Edge {
 
         if (perpendicular.lengthSq() < 1e-8) {
             const viewDirection = new THREE.Vector3();
-            if (this.space?.camera?._cam) {
-                this.space.camera._cam.getWorldDirection(viewDirection);
-                perpendicular.set(-viewDirection.y, viewDirection.x, 0);
-            }
+            this.space?.camera?._cam?.getWorldDirection(viewDirection);
+            perpendicular.set(-viewDirection.y, viewDirection.x, 0);
             if (perpendicular.lengthSq() < 1e-8) {
                 perpendicular.set(1, 0, 0);
             }
@@ -194,19 +187,15 @@ export class CurvedEdge extends Edge {
         const distanceToCamera = this.labelObject.position.distanceTo(camera.position);
         const sortedLodLevels = [...this.data.labelLod].sort((a, b) => (b.distance || 0) - (a.distance || 0));
 
-        let appliedRule = false;
+        let visibilityApplied = false;
         for (const level of sortedLodLevels) {
             if (distanceToCamera >= (level.distance || 0)) {
-                if (level.style && level.style.includes('visibility:hidden')) {
-                    this.labelObject.element.style.visibility = 'hidden';
-                } else {
-                    this.labelObject.element.style.visibility = '';
-                }
-                appliedRule = true;
+                this.labelObject.element.style.visibility = level.style?.includes('visibility:hidden') ? 'hidden' : '';
+                visibilityApplied = true;
                 break;
             }
         }
-        if (!appliedRule) {
+        if (!visibilityApplied) {
             this.labelObject.element.style.visibility = '';
         }
     }

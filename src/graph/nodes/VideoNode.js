@@ -66,11 +66,13 @@ export class VideoNode extends BaseNode {
         const titleDiv = document.createElement('div');
         titleDiv.className = 'node-title';
         titleDiv.textContent = this.data.label;
-        titleDiv.style.textAlign = 'center';
-        titleDiv.style.padding = '2px';
-        titleDiv.style.fontSize = '12px';
-        titleDiv.style.color = 'var(--sg-node-text-light, #eee)';
-        titleDiv.style.backgroundColor = 'rgba(0,0,0,0.3)';
+        Object.assign(titleDiv.style, {
+            textAlign: 'center',
+            padding: '2px',
+            fontSize: '12px',
+            color: 'var(--sg-node-text-light, #eee)',
+            backgroundColor: 'rgba(0,0,0,0.3)',
+        });
 
         el.appendChild(titleDiv);
         el.appendChild(this.videoElement);

@@ -33,11 +33,9 @@ export class NodeFactory {
 
     createNode(id, type, position, data = {}, mass = 1.0) {
         const NodeClass = this.nodeTypes.get(type) || this.nodeTypes.get(data.type) || this.nodeTypes.get('default');
+        if (!NodeClass) return null;
 
-        if (NodeClass) {
-            const nodeInstance = new NodeClass(id, position, data, mass);
-            return nodeInstance;
-        }
-        return null;
+        const nodeInstance = new NodeClass(id, position, data, mass);
+        return nodeInstance;
     }
 }

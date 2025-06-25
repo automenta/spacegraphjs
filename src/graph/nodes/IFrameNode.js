@@ -104,11 +104,7 @@ export class IFrameNode extends BaseNode {
 
     setSelectedStyle(selected) {
         this.htmlElement?.classList.toggle('selected', selected);
-        if (selected) {
-            this.htmlElement.style.borderColor = 'var(--sg-selected-color1, #00ffff)';
-        } else {
-            this.htmlElement.style.borderColor = this.data.borderColor;
-        }
+        this.htmlElement.style.borderColor = selected ? 'var(--sg-selected-color1, #00ffff)' : this.data.borderColor;
     }
 
     dispose() {

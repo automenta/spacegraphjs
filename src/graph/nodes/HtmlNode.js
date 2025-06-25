@@ -147,6 +147,8 @@ export class HtmlNode extends BaseNode {
     _applyLabelLOD(space) {
         if (!this.htmlElement || !this.data.labelLod || this.data.labelLod.length === 0) {
             this.htmlElement.style.visibility = '';
+            const contentEl = $('.node-content', this.htmlElement);
+            if (contentEl) contentEl.style.transform = `scale(${this.data.contentScale ?? 1.0})`;
             return;
         }
 
@@ -154,47 +156,26 @@ export class HtmlNode extends BaseNode {
         if (!camera) return;
 
         const distanceToCamera = this.position.distanceTo(camera.position);
-
         const sortedLodLevels = [...this.data.labelLod].sort((a, b) => (b.distance || 0) - (a.distance || 0));
 
-        let appliedRule = false;
+        let ruleApplied = false;
         for (const level of sortedLodLevels) {
             if (distanceToCamera >= (level.distance || 0)) {
-                if (level.style) {
-                    if (level.style.includes('visibility:hidden')) {
-                        this.htmlElement.style.visibility = 'hidden';
-                    } else {
-                        this.htmlElement.style.visibility = '';
-                    }
-                } else {
-                    this.htmlElement.style.visibility = '';
+                this.htmlElement.style.visibility = level.style?.includes('visibility:hidden') ? 'hidden' : '';
+                const contentEl = $('.node-content', this.htmlElement);
+                if (contentEl) {
+                    const baseScale = this.data.contentScale ?? 1.0;
+                    contentEl.style.transform = `scale(${baseScale * (level.scale ?? 1.0)})`;
                 }
-
-                if (level.scale !== undefined) {
-                    const contentEl = $('.node-content', this.htmlElement);
-                    if (contentEl) {
-                        const baseScale = this.data.contentScale ?? 1.0;
-                        contentEl.style.transform = `scale(${baseScale * level.scale})`;
-                    }
-                } else {
-                    const contentEl = $('.node-content', this.htmlElement);
-                    if (contentEl) {
-                        const baseScale = this.data.contentScale ?? 1.0;
-                        contentEl.style.transform = `scale(${baseScale})`;
-                    }
-                }
-                appliedRule = true;
+                ruleApplied = true;
                 break;
             }
         }
 
-        if (!appliedRule) {
+        if (!ruleApplied) {
             this.htmlElement.style.visibility = '';
             const contentEl = $('.node-content', this.htmlElement);
-            if (contentEl) {
-                const baseScale = this.data.contentScale ?? 1.0;
-                contentEl.style.transform = `scale(${baseScale})`;
-            }
+            if (contentEl) contentEl.style.transform = `scale(${this.data.contentScale ?? 1.0})`;
         }
     }
 
@@ -219,10 +200,7 @@ export class HtmlNode extends BaseNode {
     endResize() {
         this.htmlElement?.classList.remove('resizing');
         try {
-            const activeLayout = this.space?.plugins?.getPlugin('LayoutPlugin')?.layoutManager?.getActiveLayout();
-            if (activeLayout && typeof activeLayout.releaseNode === 'function') {
-                activeLayout.releaseNode(this);
-            }
+            this.space?.plugins?.getPlugin('LayoutPlugin')?.layoutManager?.getActiveLayout()?.releaseNode(this);
         } catch (error) {
             console.error("Error releasing node during resize:", error);
         }

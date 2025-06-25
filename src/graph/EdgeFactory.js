@@ -25,12 +25,10 @@ export class EdgeFactory {
 
     createEdge(id, type, sourceNode, targetNode, data = {}) {
         const EdgeClass = this.edgeTypes.get(type) || this.edgeTypes.get(data.type) || this.edgeTypes.get('default');
+        if (!EdgeClass) return null;
 
-        if (EdgeClass) {
-            const edgeInstance = new EdgeClass(id, sourceNode, targetNode, data);
-            edgeInstance.space = this.space;
-            return edgeInstance;
-        }
-        return null;
+        const edgeInstance = new EdgeClass(id, sourceNode, targetNode, data);
+        edgeInstance.space = this.space;
+        return edgeInstance;
     }
 }

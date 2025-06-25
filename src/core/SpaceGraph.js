@@ -328,13 +328,8 @@ export class SpaceGraph {
             }
         }
 
-        if (closestIntersect) {
-            if (closestIntersect.type === 'node')
-                return { node: closestIntersect.node, distance: closestIntersect.distance };
-            if (closestIntersect.type === 'edge')
-                return { edge: closestIntersect.edge, distance: closestIntersect.distance };
-        }
-
+        if (closestIntersect?.type === 'node') return { node: closestIntersect.node, distance: closestIntersect.distance };
+        if (closestIntersect?.type === 'edge') return { edge: closestIntersect.edge, distance: closestIntersect.distance };
         return null;
     }
 
@@ -353,17 +348,11 @@ export class SpaceGraph {
 
     exportGraphToJSON(options) {
         const dataPlugin = this.plugins.getPlugin('DataPlugin');
-        if (dataPlugin) {
-            return dataPlugin.exportGraphToJSON(options);
-        }
-        return null;
+        return dataPlugin ? dataPlugin.exportGraphToJSON(options) : null;
     }
 
     async importGraphFromJSON(jsonData, options) {
         const dataPlugin = this.plugins.getPlugin('DataPlugin');
-        if (dataPlugin) {
-            return await dataPlugin.importGraphFromJSON(jsonData, options);
-        }
-        return false;
+        return dataPlugin ? await dataPlugin.importGraphFromJSON(jsonData, options) : false;
     }
 }

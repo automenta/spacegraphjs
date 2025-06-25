@@ -102,11 +102,7 @@ export class GroupNode extends HtmlNode {
         }
 
         const innerWrapper = $('.node-inner-wrapper', this.htmlElement);
-        if (innerWrapper) {
-            innerWrapper.insertBefore(header, innerWrapper.firstChild);
-        } else {
-            this.htmlElement.insertBefore(header, this.htmlElement.firstChild);
-        }
+        innerWrapper ? innerWrapper.insertBefore(header, innerWrapper.firstChild) : this.htmlElement.insertBefore(header, this.htmlElement.firstChild);
     }
 
     toggleCollapse() {
@@ -162,10 +158,7 @@ export class GroupNode extends HtmlNode {
 
     getChildNodes() {
         const nodePlugin = this.space?.plugins.getPlugin('NodePlugin');
-        if (!nodePlugin) return [];
-        return Array.from(this.childNodeIds)
-            .map((id) => nodePlugin.getNodeById(id))
-            .filter((node) => node != null);
+        return nodePlugin ? Array.from(this.childNodeIds).map((id) => nodePlugin.getNodeById(id)).filter((node) => node != null) : [];
     }
 
     update(space) {

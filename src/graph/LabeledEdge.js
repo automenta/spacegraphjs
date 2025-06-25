@@ -62,19 +62,15 @@ export class LabeledEdge extends Edge {
         const distanceToCamera = this.labelObject.position.distanceTo(camera.position);
         const sortedLodLevels = [...this.data.labelLod].sort((a, b) => (b.distance || 0) - (a.distance || 0));
 
-        let appliedRule = false;
+        let visibilityApplied = false;
         for (const level of sortedLodLevels) {
             if (distanceToCamera >= (level.distance || 0)) {
-                if (level.style && level.style.includes('visibility:hidden')) {
-                    this.labelObject.element.style.visibility = 'hidden';
-                } else {
-                    this.labelObject.element.style.visibility = '';
-                }
-                appliedRule = true;
+                this.labelObject.element.style.visibility = level.style?.includes('visibility:hidden') ? 'hidden' : '';
+                visibilityApplied = true;
                 break;
             }
         }
-        if (!appliedRule) {
+        if (!visibilityApplied) {
             this.labelObject.element.style.visibility = '';
         }
     }

@@ -140,12 +140,7 @@ export class Edge {
         colors.push(colorEnd.r, colorEnd.g, colorEnd.b);
 
         const posAttribute = this.line.geometry.attributes.position;
-        const expectedMinLength = 6;
-
-        if (posAttribute && typeof posAttribute.count === 'number' && posAttribute.count >= 2 &&
-            posAttribute.array && typeof posAttribute.array.length === 'number' &&
-            posAttribute.array.length >= expectedMinLength && posAttribute.array.length % 3 === 0) {
-
+        if (posAttribute?.array?.length >= 6 && posAttribute.array.length === colors.length) {
             this.line.geometry.setColors(colors);
         }
     }
@@ -235,33 +230,24 @@ export class Edge {
         const mat = this.line.material;
         mat.opacity = highlight ? Edge.HIGHLIGHT_OPACITY : Edge.DEFAULT_OPACITY;
 
-        let thicknessMultiplier = 1.5;
-        if (this.data.gradientColors && this.data.gradientColors.length === 2 && mat.vertexColors) {
-            thicknessMultiplier = 2.0;
-        }
+        const thicknessMultiplier = (this.data.gradientColors && this.data.gradientColors.length === 2 && mat.vertexColors) ? 2.0 : 1.5;
         mat.linewidth = highlight ? this.data.thickness * thicknessMultiplier : this.data.thickness;
 
         if (!mat.vertexColors) {
             mat.color.set(highlight ? Edge.HIGHLIGHT_COLOR : this.data.color);
         }
-
         mat.needsUpdate = true;
 
         const highlightArrowhead = (arrowhead) => {
             if (arrowhead?.material) {
-                arrowhead.material.color.set(
-                    highlight ? Edge.HIGHLIGHT_COLOR : this.data.arrowheadColor || this.data.color
-                );
+                arrowhead.material.color.set(highlight ? Edge.HIGHLIGHT_COLOR : this.data.arrowheadColor || this.data.color);
                 arrowhead.material.opacity = highlight ? Edge.HIGHLIGHT_OPACITY : Edge.DEFAULT_OPACITY;
             }
         };
-
         highlightArrowhead(this.arrowheads.source);
         highlightArrowhead(this.arrowheads.target);
 
-        if (highlight && this.isHovered) {
-            this.setHoverStyle(false, true);
-        }
+        if (highlight && this.isHovered) this.setHoverStyle(false, true);
     }
 
     setHoverStyle(hovered, force = false) {
@@ -274,25 +260,16 @@ export class Edge {
         const baseOpacity = Edge.DEFAULT_OPACITY;
         const baseThickness = this.data.thickness;
 
-        if (hovered) {
-            mat.opacity = Math.min(1.0, baseOpacity + Edge.DEFAULT_HOVER_OPACITY_BOOST);
-            mat.linewidth = baseThickness * Edge.DEFAULT_HOVER_THICKNESS_MULTIPLIER;
-        } else {
-            mat.opacity = baseOpacity;
-            mat.linewidth = baseThickness;
-        }
-
+        mat.opacity = hovered ? Math.min(1.0, baseOpacity + Edge.DEFAULT_HOVER_OPACITY_BOOST) : baseOpacity;
+        mat.linewidth = hovered ? baseThickness * Edge.DEFAULT_HOVER_THICKNESS_MULTIPLIER : baseThickness;
         mat.needsUpdate = true;
 
         const hoverArrowhead = (arrowhead) => {
             if (arrowhead?.material) {
                 const arrowBaseOpacity = Edge.DEFAULT_OPACITY;
-                arrowhead.material.opacity = hovered
-                    ? Math.min(1.0, arrowBaseOpacity + Edge.DEFAULT_HOVER_OPACITY_BOOST)
-                    : arrowBaseOpacity;
+                arrowhead.material.opacity = hovered ? Math.min(1.0, arrowBaseOpacity + Edge.DEFAULT_HOVER_OPACITY_BOOST) : arrowBaseOpacity;
             }
         };
-
         if (!this.isHighlighted) {
             hoverArrowhead(this.arrowheads.source);
             hoverArrowhead(this.arrowheads.target);
@@ -320,7 +297,6 @@ export class Edge {
                 arrowhead.parent?.remove(arrowhead);
             }
         };
-
         disposeArrowhead(this.arrowheads.source);
         this.arrowheads.source = null;
         disposeArrowhead(this.arrowheads.target);

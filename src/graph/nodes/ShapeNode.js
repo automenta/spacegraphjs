@@ -86,10 +86,8 @@ export class ShapeNode extends BaseNode {
             gltfGroup.receiveShadow = true;
             this._loadGltfModelForLevel(levelConfig, gltfGroup);
             return gltfGroup;
-        } else if (levelConfig.shape) {
-            return this._createMeshForLevel(levelConfig);
         }
-        return null;
+        return levelConfig.shape ? this._createMeshForLevel(levelConfig) : null;
     }
 
     _createMeshForLevel(levelConfig) {
@@ -119,9 +117,7 @@ export class ShapeNode extends BaseNode {
     }
 
     _loadGltfModelForLevel(levelConfig, targetGroup) {
-        if (!levelConfig.gltfUrl || !targetGroup) {
-            return;
-        }
+        if (!levelConfig.gltfUrl || !targetGroup) return;
 
         const loader = new GLTFLoader();
         loader.load(
@@ -182,54 +178,33 @@ export class ShapeNode extends BaseNode {
     }
 
     updateBoundingSphere() {
+        if (!this._boundingSphere) this._boundingSphere = new THREE.Sphere();
+
         if (this.mesh.levels.length > 0) {
             const primaryRepresentation = this.mesh.levels[0].object;
             if (primaryRepresentation) {
                 const box = new THREE.Box3();
-
                 if (primaryRepresentation.children.length > 0) {
                     box.setFromObject(primaryRepresentation, true);
                 } else if (primaryRepresentation.geometry) {
-                    if (!primaryRepresentation.geometry.boundingBox) {
-                        primaryRepresentation.geometry.computeBoundingBox();
-                    }
-                    if (primaryRepresentation.geometry.boundingBox) {
-                        box.copy(primaryRepresentation.geometry.boundingBox).applyMatrix4(
-                            primaryRepresentation.matrixWorld
-                        );
-                    } else {
-                        box.setFromCenterAndSize(
-                            primaryRepresentation.position,
-                            new THREE.Vector3(this.size, this.size, this.size)
-                        );
-                    }
+                    if (!primaryRepresentation.geometry.boundingBox) primaryRepresentation.geometry.computeBoundingBox();
+                    box.copy(primaryRepresentation.geometry.boundingBox).applyMatrix4(primaryRepresentation.matrixWorld);
                 } else {
-                    const lodPosition = this.mesh.getWorldPosition(new THREE.Vector3());
-                    box.setFromCenterAndSize(lodPosition, new THREE.Vector3(this.size, this.size, this.size));
+                    box.setFromCenterAndSize(this.mesh.getWorldPosition(new THREE.Vector3()), new THREE.Vector3(this.size, this.size, this.size));
                 }
-
-                if (!this._boundingSphere) this._boundingSphere = new THREE.Sphere();
 
                 if (!box.isEmpty()) {
                     box.getBoundingSphere(this._boundingSphere);
                 } else {
-                    this._boundingSphere.center.copy(this.position);
                     this._boundingSphere.radius = (this.size || 50) / 2;
                 }
             } else {
-                if (!this._boundingSphere) this._boundingSphere = new THREE.Sphere();
-                this._boundingSphere.center.copy(this.position);
                 this._boundingSphere.radius = (this.size || 50) / 2;
             }
         } else {
-            if (!this._boundingSphere) this._boundingSphere = new THREE.Sphere();
-            this._boundingSphere.center.copy(this.position);
             this._boundingSphere.radius = (this.size || 50) / 2;
         }
-
-        if (this._boundingSphere) {
-            this._boundingSphere.center.copy(this.position);
-        }
+        this._boundingSphere.center.copy(this.position);
     }
 
     _createLabel() {
@@ -264,19 +239,15 @@ export class ShapeNode extends BaseNode {
         const distanceToCamera = this.position.distanceTo(camera.position);
         const sortedLodLevels = [...this.data.labelLod].sort((a, b) => (b.distance || 0) - (a.distance || 0));
 
-        let appliedRule = false;
+        let visibilityApplied = false;
         for (const level of sortedLodLevels) {
             if (distanceToCamera >= (level.distance || 0)) {
-                if (level.style && level.style.includes('visibility:hidden')) {
-                    this.labelObject.element.style.visibility = 'hidden';
-                } else {
-                    this.labelObject.element.style.visibility = '';
-                }
-                appliedRule = true;
+                this.labelObject.element.style.visibility = level.style?.includes('visibility:hidden') ? 'hidden' : '';
+                visibilityApplied = true;
                 break;
             }
         }
-        if (!appliedRule) {
+        if (!visibilityApplied) {
             this.labelObject.element.style.visibility = '';
         }
     }
@@ -292,32 +263,19 @@ export class ShapeNode extends BaseNode {
     }
 
     setSelectedStyle(selected) {
+        this.isSelected = selected;
         if (this.mesh instanceof THREE.LOD) {
             this.mesh.levels.forEach((level) => {
-                const object = level.object;
-                if (object) {
-                    object.traverse((child) => {
-                        if (child.isMesh && child.material) {
-                            child.material.emissive?.setHex(selected ? 0xFFFF00 : 0x000000);
-                            if (child.material.emissiveMap && child.material.emissive) {
-                                child.material.emissiveIntensity = (selected && child.material.emissive.getHex() !== 0x000000) ? 1.0 : 0.0;
-                            } else if (child.material.emissive) {
-                                child.material.emissiveIntensity = selected ? 1.0 : 0.0;
-                            }
-                        }
-                    });
-                }
+                level.object?.traverse((child) => {
+                    if (child.isMesh && child.material) {
+                        child.material.emissive?.setHex(selected ? 0xFFFF00 : 0x000000);
+                        child.material.emissiveIntensity = (selected && child.material.emissive?.getHex() !== 0x000000) ? 1.0 : 0.0;
+                    }
+                });
             });
         }
-
         this.labelObject?.element?.classList.toggle('selected', selected);
-
-        if (selected) {
-            this.labelObject?.element?.classList.remove('hovered');
-            if (this.isHovered) {
-                 this.setHoverStyle(false, true);
-            }
-        }
+        if (selected && this.isHovered) this.setHoverStyle(false, true);
     }
 
     setHoverStyle(hovered, force = false) {
@@ -327,22 +285,14 @@ export class ShapeNode extends BaseNode {
 
         if (this.mesh instanceof THREE.LOD) {
             this.mesh.levels.forEach((level) => {
-                const object = level.object;
-                if (object) {
-                    object.traverse((child) => {
-                        if (child.isMesh && child.material) {
-                            const targetEmissive = hovered && !this.isSelected ? 0x222200 : 0x000000;
-                            const targetIntensity = hovered && !this.isSelected ? 0.4 : 0.0;
-
-                            child.material.emissive?.setHex(targetEmissive);
-                            if (child.material.emissiveMap && child.material.emissive) {
-                                child.material.emissiveIntensity = (targetEmissive !== 0x000000) ? targetIntensity : 0.0;
-                            } else if (child.material.emissive) {
-                                child.material.emissiveIntensity = targetIntensity;
-                            }
-                        }
-                    });
-                }
+                level.object?.traverse((child) => {
+                    if (child.isMesh && child.material) {
+                        const targetEmissive = hovered && !this.isSelected ? 0x222200 : 0x000000;
+                        const targetIntensity = hovered && !this.isSelected ? 0.4 : 0.0;
+                        child.material.emissive?.setHex(targetEmissive);
+                        child.material.emissiveIntensity = (targetEmissive !== 0x000000) ? targetIntensity : 0.0;
+                    }
+                });
             });
         }
         if (!this.isSelected) {

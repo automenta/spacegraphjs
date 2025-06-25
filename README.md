@@ -91,12 +91,12 @@ SpaceGraphJS relies on ES modules and modern browser features. You'll need to im
     ```javascript
     import {
         SpaceGraph,
-        NoteNode, // Still useful if users want to create node instances directly
-        ShapeNode, // Still useful if users want to create node instances directly
+        NoteNode,
+        ShapeNode,
         $,
-    } from './path/to/src/index.js'; // Main library entry point
+    } from './path/to/src/index.js';
 
-    document.addEventListener('DOMContentLoaded', async () => { // Added async for space.init()
+    document.addEventListener('DOMContentLoaded', async () => {
         const graphContainer = $('#graph-container');
         const contextMenuEl = $('#context-menu');
         const confirmDialogEl = $('#confirm-dialog');
@@ -106,7 +106,6 @@ SpaceGraphJS relies on ES modules and modern browser features. You'll need to im
             return;
         }
 
-        // Initialize SpaceGraph with options for UI elements
         const space = new SpaceGraph(graphContainer, {
             ui: {
                 contextMenuElement: contextMenuEl,
@@ -114,11 +113,8 @@ SpaceGraphJS relies on ES modules and modern browser features. You'll need to im
             },
         });
 
-        // Initialize SpaceGraph and its plugins
         await space.init();
 
-        // Create nodes using space.createNode for a cleaner API
-        // (Assumes 'note' and 'shape' types are registered in NodeFactory by default)
         const node1 = space.createNode({
             id: 'node1',
             type: 'note',
@@ -142,18 +138,14 @@ SpaceGraphJS relies on ES modules and modern browser features. You'll need to im
             }
         });
 
-        // Add an edge if both nodes were created successfully
         if (node1 && node2) {
             space.addEdge(node1, node2);
         }
 
-        // The layout is managed internally by LayoutPlugin and runs via the animation loop.
-        // Call centerView to position the camera appropriately.
         space.centerView();
-        // Start the animation loop which also updates layouts.
         space.animate();
 
-        window.mySpaceGraph = space; // Expose for easy debugging
+        window.mySpaceGraph = space;
     });
     ```
 
