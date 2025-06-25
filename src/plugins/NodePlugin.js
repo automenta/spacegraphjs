@@ -19,48 +19,31 @@ export class NodePlugin extends Plugin {
 
     init() {
         super.init();
-        const renderingPlugin = this.pluginManager.getPlugin('RenderingPlugin');
-        if (renderingPlugin && typeof renderingPlugin.getInstancedMeshManager === 'function') {
-            this.instancedMeshManager = renderingPlugin.getInstancedMeshManager();
-        } else {
-            console.warn('NodePlugin: InstancedMeshManager not available from RenderingPlugin.');
-        }
+        this.instancedMeshManager = this.pluginManager.getPlugin('RenderingPlugin')?.getInstancedMeshManager();
     }
 
     addNode(nodeInstance) {
-        if (!nodeInstance.id) nodeInstance.id = Utils.generateId('node');
+        nodeInstance.id ??= Utils.generateId('node');
         if (this.nodes.has(nodeInstance.id)) {
-            console.warn(`NodePlugin: Node with ID ${nodeInstance.id} already exists.`);
+            console.warn(`NodePlugin: Node ${nodeInstance.id} already exists.`);
             return this.nodes.get(nodeInstance.id);
         }
 
         this.nodes.set(nodeInstance.id, nodeInstance);
         nodeInstance.space = this.space;
 
+        const renderingPlugin = this.pluginManager.getPlugin('RenderingPlugin');
+        const cssScene = renderingPlugin?.getCSS3DScene();
+        const webglScene = renderingPlugin?.getWebGLScene();
+
         let successfullyInstanced = false;
         if (this.instancedMeshManager && nodeInstance instanceof ShapeNode && nodeInstance.data.shape === 'sphere') {
-            if (this.instancedMeshManager.addNode(nodeInstance)) {
-                successfullyInstanced = true;
-            }
+            successfullyInstanced = this.instancedMeshManager.addNode(nodeInstance);
         }
 
-        const renderingPlugin = this.pluginManager.getPlugin('RenderingPlugin');
-        if (renderingPlugin) {
-            const cssScene = renderingPlugin.getCSS3DScene();
-            if (nodeInstance.cssObject && cssScene) cssScene.add(nodeInstance.cssObject);
-            if (nodeInstance.labelObject && cssScene) cssScene.add(nodeInstance.labelObject);
-
-            if (!successfullyInstanced && nodeInstance.mesh) {
-                const webglScene = renderingPlugin.getWebGLScene();
-                if (webglScene) {
-                    webglScene.add(nodeInstance.mesh);
-                } else {
-                    console.warn('NodePlugin: WebGLScene not available for non-instanced mesh.');
-                }
-            }
-        } else {
-            console.warn('NodePlugin: RenderingPlugin not available to add node to scenes.');
-        }
+        if (nodeInstance.cssObject && cssScene) cssScene.add(nodeInstance.cssObject);
+        if (nodeInstance.labelObject && cssScene) cssScene.add(nodeInstance.labelObject);
+        if (!successfullyInstanced && nodeInstance.mesh && webglScene) webglScene.add(nodeInstance.mesh);
 
         this.space.emit('node:added', nodeInstance);
         return nodeInstance;
@@ -69,48 +52,29 @@ export class NodePlugin extends Plugin {
     createAndAddNode({ id, type, position, data = {}, mass = 1.0 }) {
         const nodeId = id || Utils.generateId('node');
         if (!type || !position) {
-            console.error('NodePlugin: Node type and position are required to create a node.');
+            console.error('NodePlugin: Type and position required.');
             return undefined;
         }
 
         const nodeInstance = this.nodeFactory.createNode(nodeId, type, position, data, mass);
-
-        if (nodeInstance) {
-            return this.addNode(nodeInstance);
-        }
-        return undefined;
+        return nodeInstance ? this.addNode(nodeInstance) : undefined;
     }
 
     removeNode(nodeId) {
         const node = this.nodes.get(nodeId);
-        if (!node) {
-            console.warn(`NodePlugin: Node with ID ${nodeId} not found for removal.`);
-            return;
-        }
+        if (!node) return console.warn(`NodePlugin: Node ${nodeId} not found.`);
 
         const uiPlugin = this.pluginManager.getPlugin('UIPlugin');
-        if (uiPlugin?.getSelectedNode() === node) {
-            uiPlugin.setSelectedNode(null);
-        }
-        if (uiPlugin?.getLinkSourceNode() === node) {
-            uiPlugin.cancelLinking();
-        }
+        if (uiPlugin?.getSelectedNode() === node) uiPlugin.setSelectedNode(null);
+        if (uiPlugin?.getLinkSourceNode() === node) uiPlugin.cancelLinking();
 
-        const edgePlugin = this.pluginManager.getPlugin('EdgePlugin');
-        if (edgePlugin && typeof edgePlugin.getEdgesForNode === 'function') {
-            edgePlugin.getEdgesForNode(node).forEach((edge) => edgePlugin.removeEdge(edge.id));
-        } else {
-            console.warn(
-                `NodePlugin: EdgePlugin not available or functional during removeNode(${nodeId}). Connected edges may remain.`
-            );
-        }
+        this.pluginManager.getPlugin('EdgePlugin')?.getEdgesForNode(node).forEach((edge) =>
+            this.pluginManager.getPlugin('EdgePlugin')?.removeEdge(edge.id)
+        );
 
-        const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin');
-        layoutPlugin?.removeNodeFromLayout(node);
+        this.pluginManager.getPlugin('LayoutPlugin')?.removeNodeFromLayout(node);
 
-        if (node.isInstanced && this.instancedMeshManager) {
-            this.instancedMeshManager.removeNode(node);
-        }
+        if (node.isInstanced && this.instancedMeshManager) this.instancedMeshManager.removeNode(node);
         node.dispose();
         this.nodes.delete(nodeId);
         this.space.emit('node:removed', nodeId, node);
@@ -126,12 +90,8 @@ export class NodePlugin extends Plugin {
 
     update() {
         this.nodes.forEach((node) => {
-            if (node.isInstanced && this.instancedMeshManager) {
-                this.instancedMeshManager.updateNode(node);
-            }
-            if (node.update && typeof node.update === 'function') {
-                node.update(this.space);
-            }
+            if (node.isInstanced && this.instancedMeshManager) this.instancedMeshManager.updateNode(node);
+            node.update?.(this.space);
         });
     }
 

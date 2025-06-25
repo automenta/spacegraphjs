@@ -21,20 +21,11 @@ export class LayoutPlugin extends Plugin {
     async init() {
         super.init();
 
-        const forceLayout = new ForceLayout(this.space);
-        this.layoutManager.registerLayout('force', forceLayout);
-
-        const gridLayout = new GridLayout();
-        this.layoutManager.registerLayout('grid', gridLayout);
-
-        const circularLayout = new CircularLayout();
-        this.layoutManager.registerLayout('circular', circularLayout);
-
-        const sphericalLayout = new SphericalLayout();
-        this.layoutManager.registerLayout('spherical', sphericalLayout);
-
-        const hierarchicalLayout = new HierarchicalLayout();
-        this.layoutManager.registerLayout('hierarchical', hierarchicalLayout);
+        this.layoutManager.registerLayout('force', new ForceLayout());
+        this.layoutManager.registerLayout('grid', new GridLayout());
+        this.layoutManager.registerLayout('circular', new CircularLayout());
+        this.layoutManager.registerLayout('spherical', new SphericalLayout());
+        this.layoutManager.registerLayout('hierarchical', new HierarchicalLayout());
 
         await this.layoutManager.applyLayout('force');
         this._setupEventListeners();
@@ -44,32 +35,24 @@ export class LayoutPlugin extends Plugin {
         if (!this.space || !this.layoutManager) return;
         const uiPlugin = this.pluginManager.getPlugin('UIPlugin');
 
-        this.space.on('ui:request:applyLayout', (layoutName) => {
-            this.applyLayout(layoutName);
-        });
+        this.space.on('ui:request:applyLayout', (layoutName) => this.applyLayout(layoutName));
 
         this.space.on('node:dragstart', (draggedNodeInstance) => {
             const currentLayout = this.layoutManager.getActiveLayout();
-            if (currentLayout && typeof currentLayout.fixNode === 'function') {
-                const selectedNodes = uiPlugin?.getSelectedNodes();
-                if (selectedNodes && selectedNodes.has(draggedNodeInstance)) {
-                    selectedNodes.forEach((sNode) => currentLayout.fixNode(sNode));
-                } else {
-                    currentLayout.fixNode(draggedNodeInstance);
-                }
-            }
+            if (!currentLayout || typeof currentLayout.fixNode !== 'function') return;
+            const selectedNodes = uiPlugin?.getSelectedNodes();
+            selectedNodes?.has(draggedNodeInstance)
+                ? selectedNodes.forEach((sNode) => currentLayout.fixNode(sNode))
+                : currentLayout.fixNode(draggedNodeInstance);
         });
 
         this.space.on('node:dragend', (draggedNodeInstance) => {
             const currentLayout = this.layoutManager.getActiveLayout();
-            if (currentLayout && typeof currentLayout.releaseNode === 'function') {
-                const selectedNodes = uiPlugin?.getSelectedNodes();
-                if (selectedNodes && selectedNodes.has(draggedNodeInstance)) {
-                    selectedNodes.forEach((sNode) => currentLayout.releaseNode(sNode));
-                } else {
-                    currentLayout.releaseNode(draggedNodeInstance);
-                }
-            }
+            if (!currentLayout || typeof currentLayout.releaseNode !== 'function') return;
+            const selectedNodes = uiPlugin?.getSelectedNodes();
+            selectedNodes?.has(draggedNodeInstance)
+                ? selectedNodes.forEach((sNode) => currentLayout.releaseNode(sNode))
+                : currentLayout.releaseNode(draggedNodeInstance);
             this.kick();
         });
 
@@ -78,7 +61,7 @@ export class LayoutPlugin extends Plugin {
             this.kick();
         });
         this.space.on('node:removed', (nodeId, node) => {
-            if (node) this.removeNodeFromLayout(node);
+            node && this.removeNodeFromLayout(node);
             this.kick();
         });
         this.space.on('edge:added', (edge) => {
@@ -86,7 +69,7 @@ export class LayoutPlugin extends Plugin {
             this.kick();
         });
         this.space.on('edge:removed', (edgeId, edge) => {
-            if (edge) this.removeEdgeFromLayout(edge);
+            edge && this.removeEdgeFromLayout(edge);
             this.kick();
         });
     }
@@ -116,27 +99,19 @@ export class LayoutPlugin extends Plugin {
     }
 
     async applyLayout(name, config = {}) {
-        if (this.layoutManager) {
-            return await this.layoutManager.applyLayout(name, config);
-        }
-        console.error('LayoutPlugin: LayoutManager not available to apply layout.');
-        return false;
+        return this.layoutManager?.applyLayout(name, config) || false;
     }
 
     togglePinNode(nodeId) {
-        const nodePlugin = this.pluginManager.getPlugin('NodePlugin');
-        const node = nodePlugin?.getNodeById(nodeId);
-        if (!node) {
-            console.warn(`LayoutPlugin: Node with ID ${nodeId} not found for pinning.`);
-            return;
-        }
+        const node = this.pluginManager.getPlugin('NodePlugin')?.getNodeById(nodeId);
+        if (!node) return console.warn(`LayoutPlugin: Node ${nodeId} not found.`);
 
         const currentLayout = this.layoutManager?.getActiveLayout();
         if (currentLayout && typeof currentLayout.setPinState === 'function') {
             currentLayout.setPinState(node, !node.isPinned);
             this.space.emit('node:pinned', { node, isPinned: node.isPinned });
         } else {
-            console.warn(`LayoutPlugin: Active layout does not support pinning or setPinState method.`);
+            console.warn(`LayoutPlugin: Active layout does not support pinning.`);
         }
     }
 

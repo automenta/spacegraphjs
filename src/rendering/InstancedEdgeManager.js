@@ -14,9 +14,7 @@ class InstancedEdgeGroup {
 
         this.instancedMesh = new THREE.InstancedMesh(this.geometry, this.material, MAX_INSTANCED_EDGES);
         this.instancedMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-        if (this.instancedMesh.instanceColor) {
-            this.instancedMesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
-        }
+        this.instancedMesh.instanceColor?.setUsage(THREE.DynamicDrawUsage);
         this.instancedMesh.castShadow = false;
         this.instancedMesh.receiveShadow = true;
 
@@ -42,8 +40,7 @@ class InstancedEdgeGroup {
         return instanceId;
     }
 
-    updateEdgeTransform(edge, instanceIdOverride = null) {
-        const instanceId = instanceIdOverride ?? this.edgeIdToInstanceId.get(edge.id);
+    updateEdgeTransform(edge, instanceId = this.edgeIdToInstanceId.get(edge.id)) {
         if (instanceId === undefined) return;
 
         const sourcePos = edge.source.position;
@@ -59,9 +56,7 @@ class InstancedEdgeGroup {
         const up = new THREE.Vector3(0, 1, 0);
         if (!direction.equals(new THREE.Vector3(0, 0, 0))) {
             if (up.dot(direction) > 0.9999 || up.dot(direction) < -0.9999) {
-                if (up.dot(direction) < -0.9999) {
-                    quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
-                }
+                if (up.dot(direction) < -0.9999) quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
             } else {
                 quaternion.setFromUnitVectors(up, direction);
             }
@@ -75,8 +70,7 @@ class InstancedEdgeGroup {
         this.instancedMesh.instanceMatrix.needsUpdate = true;
     }
 
-    updateEdgeColor(edge, instanceIdOverride = null) {
-        const instanceId = instanceIdOverride ?? this.edgeIdToInstanceId.get(edge.id);
+    updateEdgeColor(edge, instanceId = this.edgeIdToInstanceId.get(edge.id)) {
         if (instanceId === undefined || !this.instancedMesh.instanceColor) return;
 
         const color = new THREE.Color(edge.data?.color ?? 0x888888);
@@ -88,8 +82,7 @@ class InstancedEdgeGroup {
         const instanceId = this.edgeIdToInstanceId.get(edge.id);
         if (instanceId === undefined) return;
 
-        const matrix = new THREE.Matrix4().makeScale(0, 0, 0);
-        this.instancedMesh.setMatrixAt(instanceId, matrix);
+        this.instancedMesh.setMatrixAt(instanceId, new THREE.Matrix4().makeScale(0, 0, 0));
         this.instancedMesh.instanceMatrix.needsUpdate = true;
 
         this.edgeIdToInstanceId.delete(edge.id);
@@ -100,20 +93,11 @@ class InstancedEdgeGroup {
         if (!this.instancedMesh || this.activeInstances === 0) return null;
 
         const intersection = raycaster.intersectObject(this.instancedMesh);
-        if (intersection.length > 0) {
-            const instanceId = intersection[0].instanceId;
-            const edgeId = this.instanceIdToEdgeId.get(instanceId);
-            if (edgeId) {
-                return {
-                    object: this.instancedMesh,
-                    point: intersection[0].point,
-                    distance: intersection[0].distance,
-                    instanceId: instanceId,
-                    edgeId: edgeId,
-                };
-            }
-        }
-        return null;
+        if (intersection.length === 0) return null;
+
+        const instanceId = intersection[0].instanceId;
+        const edgeId = this.instanceIdToEdgeId.get(instanceId);
+        return edgeId ? { ...intersection[0], edgeId } : null;
     }
 
     dispose() {
@@ -132,32 +116,29 @@ export class InstancedEdgeManager {
     }
 
     addEdge(edge) {
-        if (this.edgeGroup) {
-            const instanceId = this.edgeGroup.addEdge(edge);
-            if (instanceId !== null) {
-                edge.isInstanced = true;
-                edge.instanceId = instanceId;
-                if (edge.line) edge.line.visible = false;
-                if (edge.arrowheads) {
-                    if (edge.arrowheads.source) edge.arrowheads.source.visible = false;
-                    if (edge.arrowheads.target) edge.arrowheads.target.visible = false;
-                }
-                return true;
-            }
+        const instanceId = this.edgeGroup?.addEdge(edge);
+        if (instanceId === null) {
+            edge.isInstanced = false;
+            return false;
         }
-        edge.isInstanced = false;
-        return false;
+        edge.isInstanced = true;
+        edge.instanceId = instanceId;
+        if (edge.line) edge.line.visible = false;
+        if (edge.arrowheads) {
+            if (edge.arrowheads.source) edge.arrowheads.source.visible = false;
+            if (edge.arrowheads.target) edge.arrowheads.target.visible = false;
+        }
+        return true;
     }
 
     updateEdge(edge) {
-        if (!edge.isInstanced || !this.edgeGroup) return;
-        this.edgeGroup.updateEdgeTransform(edge);
-        this.edgeGroup.updateEdgeColor(edge);
+        if (edge.isInstanced) this.edgeGroup?.updateEdgeTransform(edge);
+        this.edgeGroup?.updateEdgeColor(edge);
     }
 
     removeEdge(edge) {
-        if (!edge.isInstanced || !this.edgeGroup) return;
-        this.edgeGroup.removeEdge(edge);
+        if (!edge.isInstanced) return;
+        this.edgeGroup?.removeEdge(edge);
         edge.isInstanced = false;
     }
 

@@ -1,21 +1,19 @@
-// src/layout/CircularLayout.js
-import * as THREE from 'three'; // For Vector3 math if needed, though positions are set directly
+import * as THREE from 'three';
 
 export class CircularLayout {
     space = null;
     pluginManager = null;
     nodes = [];
     settings = {
-        radius: 200, // Default radius
-        plane: 'xy', // 'xy', 'xz', 'yz'
-        startAngle: 0, // In radians
-        angularSpacing: 0, // If > 0, overrides automatic even spacing. In radians.
+        radius: 200,
+        plane: 'xy',
+        startAngle: 0,
+        angularSpacing: 0,
         center: { x: 0, y: 0, z: 0 },
         animate: true,
     };
 
-    constructor(space, config = {}) {
-        // space and pluginManager are set by LayoutManager via setContext
+    constructor(config = {}) {
         this.settings = { ...this.settings, ...config };
     }
 
@@ -29,9 +27,7 @@ export class CircularLayout {
     }
 
     init(nodes, edges, config = {}) {
-        if (config) {
-            this.updateConfig(config);
-        }
+        if (config) this.updateConfig(config);
         this.nodes = [...nodes];
 
         if (this.nodes.length === 0) return;
@@ -40,38 +36,26 @@ export class CircularLayout {
         const { radius, plane, startAngle, center } = this.settings;
         let angularSpacing = this.settings.angularSpacing;
 
-        if (numNodes === 0) return;
-
-        if (angularSpacing <= 0) {
-            angularSpacing = (2 * Math.PI) / numNodes;
-        }
+        if (angularSpacing <= 0) angularSpacing = (2 * Math.PI) / numNodes;
 
         let dynamicRadius = radius;
         if (radius <= 0) {
-            // Auto-calculate radius based on node sizes and count
             let totalCircumference = 0;
             this.nodes.forEach((node) => {
-                // Approximate node size for circumference calculation
-                const nodeRadius = node.getBoundingSphereRadius ? node.getBoundingSphereRadius() : 25;
-                totalCircumference += nodeRadius * 2 * 1.5; // Diameter + 50% padding
+                const nodeRadius = node.getBoundingSphereRadius?.() || 25;
+                totalCircumference += nodeRadius * 2 * 1.5;
             });
             dynamicRadius = Math.max(100, totalCircumference / (2 * Math.PI));
         }
 
         this.nodes.forEach((node, index) => {
             const angle = startAngle + index * angularSpacing;
-            let x = center.x + dynamicRadius * Math.cos(angle);
-            let y = center.y + dynamicRadius * Math.sin(angle);
-            let z = center.z;
+            const x = center.x + dynamicRadius * Math.cos(angle);
+            const y = center.y + dynamicRadius * Math.sin(angle);
 
-            if (plane === 'xy') {
-                node.position.set(x, y, center.z);
-            } else if (plane === 'xz') {
-                node.position.set(x, center.y, y); // y from calculation becomes z
-            } else {
-                // 'yz'
-                node.position.set(center.x, x, y); // x from calculation becomes y, y becomes z
-            }
+            if (plane === 'xy') node.position.set(x, y, center.z);
+            else if (plane === 'xz') node.position.set(x, center.y, y);
+            else node.position.set(center.x, x, y);
         });
     }
 

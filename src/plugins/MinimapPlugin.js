@@ -34,10 +34,7 @@ export class MinimapPlugin extends Plugin {
         this.space.on('node:added', this._addNodeProxy.bind(this));
         this.space.on('node:removed', this._removeNodeProxy.bind(this));
 
-        const nodePlugin = this.pluginManager.getPlugin('NodePlugin');
-        if (nodePlugin) {
-            nodePlugin.getNodes().forEach((node) => this._addNodeProxy(node));
-        }
+        this.pluginManager.getPlugin('NodePlugin')?.getNodes().forEach((node) => this._addNodeProxy(node));
     }
 
     _setupMinimapCamera() {
@@ -57,8 +54,7 @@ export class MinimapPlugin extends Plugin {
     }
 
     _setupFrustumHelper() {
-        const mainCameraPlugin = this.pluginManager.getPlugin('CameraPlugin');
-        const mainCamera = mainCameraPlugin?.getCameraInstance();
+        const mainCamera = this.pluginManager.getPlugin('CameraPlugin')?.getCameraInstance();
         if (mainCamera) {
             const frustumGeometry = new THREE.BufferGeometry();
             const frustumMaterial = new THREE.LineBasicMaterial({ color: FRUSTUM_COLOR, linewidth: 2 });
@@ -111,8 +107,7 @@ export class MinimapPlugin extends Plugin {
     }
 
     _updateFrustumHelper() {
-        const mainCameraPlugin = this.pluginManager.getPlugin('CameraPlugin');
-        const mainCamera = mainCameraPlugin?.getCameraInstance();
+        const mainCamera = this.pluginManager.getPlugin('CameraPlugin')?.getCameraInstance();
         if (!this.frustumHelper || !mainCamera) return;
 
         mainCamera.updateMatrixWorld();

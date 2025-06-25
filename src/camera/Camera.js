@@ -64,9 +64,7 @@ export class Camera {
     _isManuallyControlled = false;
 
     constructor(space) {
-        if (!space?._cam || !space.container) {
-            throw new Error('Camera requires SpaceGraph instance with initialized _cam and container.');
-        }
+        if (!space?._cam || !space.container) throw new Error('Camera requires SpaceGraph instance.');
         this.space = space;
         this._cam = space._cam;
         this.domElement = space.container;
@@ -101,20 +99,17 @@ export class Camera {
     }
 
     setFreeCameraMovement(direction, isActive) {
-        if (this.cameraMode !== CAMERA_MODES.FREE) return;
-        if (direction in this.moveState) {
+        if (this.cameraMode === CAMERA_MODES.FREE && direction in this.moveState) {
             this.moveState[direction] = isActive;
         }
     }
 
     setInitialState() {
-        if (!this.initialState) {
-            this.initialState = {
-                position: this.targetPosition.clone(),
-                lookAt: this.targetLookAt.clone(),
-                mode: this.cameraMode
-            };
-        }
+        this.initialState ??= {
+            position: this.targetPosition.clone(),
+            lookAt: this.targetLookAt.clone(),
+            mode: this.cameraMode
+        };
     }
 
     startPan(startX, startY) {
@@ -138,13 +133,14 @@ export class Camera {
         const visibleHeight = 2 * Math.tan(vFOV / 2) * Math.max(1, cameraDist);
         const worldUnitsPerPixel = visibleHeight / viewHeight;
 
-        const panX = -deltaX * worldUnitsPerPixel * this.panSpeed;
-        const panY = deltaY * worldUnitsPerPixel * this.panSpeed;
-
-        const right = new THREE.Vector3().setFromMatrixColumn(this._cam.matrixWorld, 0);
-        const up = new THREE.Vector3().setFromMatrixColumn(this._cam.matrixWorld, 1);
-
-        const panOffset = right.multiplyScalar(panX).add(up.multiplyScalar(panY));
+        const panOffset = new THREE.Vector3()
+            .setFromMatrixColumn(this._cam.matrixWorld, 0)
+            .multiplyScalar(-deltaX * worldUnitsPerPixel * this.panSpeed)
+            .add(
+                new THREE.Vector3()
+                    .setFromMatrixColumn(this._cam.matrixWorld, 1)
+                    .multiplyScalar(deltaY * worldUnitsPerPixel * this.panSpeed)
+            );
         this.targetPosition.add(panOffset);
         this.targetLookAt.add(panOffset);
     }
@@ -166,15 +162,8 @@ export class Camera {
 
         const zoomFactor = Math.pow(0.95, deltaY * 0.025 * this.zoomSpeed);
         const lookAtToCam = new THREE.Vector3().subVectors(this.targetPosition, this.targetLookAt);
-        let currentDist = lookAtToCam.length();
-        let newDist = Utils.clamp(currentDist * zoomFactor, this.minZoomDistance, this.maxZoomDistance);
-
-        if ((deltaY > 0 && currentDist <= this.minZoomDistance + 0.1) || (deltaY < 0 && currentDist >= this.maxZoomDistance - 0.1)) {
-             if ( (deltaY < 0 && currentDist * zoomFactor > currentDist) || (deltaY > 0 && currentDist * zoomFactor < currentDist) ) {
-             } else {
-                 newDist = currentDist;
-             }
-        }
+        const currentDist = lookAtToCam.length();
+        const newDist = Utils.clamp(currentDist * zoomFactor, this.minZoomDistance, this.maxZoomDistance);
 
         this.targetPosition.copy(this.targetLookAt).addScaledVector(lookAtToCam.normalize(), newDist);
     }
@@ -190,34 +179,24 @@ export class Camera {
         gsap.killTweensOf(this.targetPosition);
         gsap.killTweensOf(this.targetLookAt);
 
-        const ease = 'power3.out';
         const onComplete = () => { this._isManuallyControlled = false; };
 
-        gsap.to(this.targetPosition, { x: targetPos.x, y: targetPos.y, z: targetPos.z, duration, ease, overwrite: true });
-        gsap.to(this.targetLookAt, { x: targetLook.x, y: targetLook.y, z: targetLook.z, duration, ease, overwrite: true, onComplete });
+        gsap.to(this.targetPosition, { x: targetPos.x, y: targetPos.y, z: targetPos.z, duration, ease: 'power3.out', overwrite: true });
+        gsap.to(this.targetLookAt, { x: targetLook.x, y: targetLook.y, z: targetLook.z, duration, ease: 'power3.out', overwrite: true, onComplete });
 
-        if (newCameraMode && newCameraMode !== this.cameraMode) {
-            this.setCameraMode(newCameraMode, true);
-        }
+        if (newCameraMode && newCameraMode !== this.cameraMode) this.setCameraMode(newCameraMode, true);
     }
 
     resetView(duration = 0.7) {
-        if (this.initialState) {
-            this.moveTo(
-                this.initialState.position.x, this.initialState.position.y, this.initialState.position.z,
-                duration, this.initialState.lookAt, this.initialState.mode || CAMERA_MODES.ORBIT
-            );
-        } else {
-            this.moveTo(0, 0, 700, duration, new THREE.Vector3(0, 0, 0), CAMERA_MODES.ORBIT);
-        }
+        this.initialState
+            ? this.moveTo(this.initialState.position.x, this.initialState.position.y, this.initialState.position.z, duration, this.initialState.lookAt, this.initialState.mode || CAMERA_MODES.ORBIT)
+            : this.moveTo(0, 0, 700, duration, new THREE.Vector3(0, 0, 0), CAMERA_MODES.ORBIT);
         this.viewHistory = [];
         this.currentTargetNodeId = null;
     }
 
     pushState() {
-        if (this.viewHistory.length >= this.maxHistory) {
-            this.viewHistory.shift();
-        }
+        if (this.viewHistory.length >= this.maxHistory) this.viewHistory.shift();
         this.viewHistory.push({
             position: this.targetPosition.clone(),
             lookAt: this.targetLookAt.clone(),
@@ -228,12 +207,10 @@ export class Camera {
 
     popState(duration = 0.6) {
         const prevState = this.viewHistory.pop();
-        if (prevState) {
-            this.moveTo(prevState.position.x, prevState.position.y, prevState.position.z, duration, prevState.lookAt, prevState.mode);
-            this.currentTargetNodeId = prevState.targetNodeId;
-        } else {
-            this.resetView(duration);
-        }
+        prevState
+            ? this.moveTo(prevState.position.x, prevState.position.y, prevState.position.z, duration, prevState.lookAt, prevState.mode)
+            : this.resetView(duration);
+        this.currentTargetNodeId = prevState?.targetNodeId || null;
     }
 
     getCurrentTargetNodeId = () => this.currentTargetNodeId;
@@ -248,7 +225,7 @@ export class Camera {
         const delta = (time - this.prevTime) / 1000;
         this.prevTime = time;
 
-        let needsLerp = false;
+        let needsLerp = true;
 
         if (this.cameraMode === CAMERA_MODES.FREE && this.isPointerLocked) {
             const moveSpeed = this.freeCameraSpeed * delta;
@@ -268,20 +245,12 @@ export class Camera {
                 this.targetLookAt.copy(this._cam.position).add(lookDirection);
                 this.currentPosition.copy(this._cam.position);
                 this.currentLookAt.copy(this.targetLookAt);
+                needsLerp = false;
             }
-             needsLerp = false;
-        } else {
-             needsLerp = true;
         }
 
         if (this.isFollowing && this.followTargetObject && !this._isManuallyControlled) {
-            let targetActualPosition;
-            if (this.followTargetObject.isVector3) {
-                targetActualPosition = this.followTargetObject;
-            } else if (this.followTargetObject.position?.isVector3) {
-                targetActualPosition = this.followTargetObject.position;
-            }
-
+            const targetActualPosition = this.followTargetObject.isVector3 ? this.followTargetObject : this.followTargetObject.position;
             if (targetActualPosition) {
                 const desiredLookAt = targetActualPosition.clone().add(this.followOptions.offset);
                 this.targetLookAt.lerp(desiredLookAt, this.followOptions.damping);
@@ -294,21 +263,12 @@ export class Camera {
         }
 
         if (needsLerp) {
-            const posDelta = this.currentPosition.distanceTo(this.targetPosition);
-            const lookAtDelta = this.currentLookAt.distanceTo(this.targetLookAt);
             const epsilon = 0.001;
+            this.currentPosition.lerp(this.targetPosition, this.dampingFactor);
+            this.currentLookAt.lerp(this.targetLookAt, this.dampingFactor);
 
-            if (posDelta > epsilon) {
-                this.currentPosition.lerp(this.targetPosition, this.dampingFactor);
-            } else {
-                this.currentPosition.copy(this.targetPosition);
-            }
-
-            if (lookAtDelta > epsilon) {
-                this.currentLookAt.lerp(this.targetLookAt, this.dampingFactor);
-            } else {
-                this.currentLookAt.copy(this.targetLookAt);
-            }
+            if (this.currentPosition.distanceTo(this.targetPosition) <= epsilon) this.currentPosition.copy(this.targetPosition);
+            if (this.currentLookAt.distanceTo(this.targetLookAt) <= epsilon) this.currentLookAt.copy(this.targetLookAt);
 
             this._cam.position.copy(this.currentPosition);
             this._cam.lookAt(this.currentLookAt);
@@ -399,32 +359,26 @@ export class Camera {
 
     restoreNamedView(name, duration = 0.7) {
         const view = this.namedViews.get(name);
-        if (view) {
-            this.moveTo(view.position.x, view.position.y, view.position.z, duration, view.lookAt, view.mode);
-            this.setCurrentTargetNodeId(view.targetNodeId);
-            this.space.emit('camera:namedViewRestored', { name, view });
-            return true;
-        }
-        return false;
+        if (!view) return false;
+        this.moveTo(view.position.x, view.position.y, view.position.z, duration, view.lookAt, view.mode);
+        this.setCurrentTargetNodeId(view.targetNodeId);
+        this.space.emit('camera:namedViewRestored', { name, view });
+        return true;
     }
 
     deleteNamedView(name) {
-        if (this.namedViews.has(name)) {
-            this.namedViews.delete(name);
-            this._saveNamedViewsToStorage();
-            this.space.emit('camera:namedViewDeleted', { name });
-            return true;
-        }
-        return false;
+        if (!this.namedViews.has(name)) return false;
+        this.namedViews.delete(name);
+        this._saveNamedViewsToStorage();
+        this.space.emit('camera:namedViewDeleted', { name });
+        return true;
     }
 
     getNamedViews = () => Array.from(this.namedViews.keys());
     hasNamedView = (name) => this.namedViews.has(name);
 
     setCameraMode(mode, calledInternally = false) {
-        if (mode !== CAMERA_MODES.ORBIT && mode !== CAMERA_MODES.FREE) {
-            return;
-        }
+        if (mode !== CAMERA_MODES.ORBIT && mode !== CAMERA_MODES.FREE) return;
         if (this.cameraMode === mode && !calledInternally) return;
 
         const oldMode = this.cameraMode;
@@ -434,10 +388,8 @@ export class Camera {
         if (this.cameraMode === CAMERA_MODES.ORBIT) {
             if (this.isPointerLocked) this.pointerLockControls.unlock();
             this.domElement.style.cursor = 'grab';
-            if (oldMode === CAMERA_MODES.FREE) {
-                 this.targetLookAt.set(this.currentPosition.x, this.currentPosition.y, 0);
-            }
-        } else if (this.cameraMode === CAMERA_MODES.FREE) {
+            if (oldMode === CAMERA_MODES.FREE) this.targetLookAt.set(this.currentPosition.x, this.currentPosition.y, 0);
+        } else {
             this.domElement.style.cursor = 'crosshair';
             this.targetPosition.copy(this.currentPosition);
             const lookDirection = new THREE.Vector3(0, 0, -1).applyQuaternion(this._cam.quaternion);
@@ -450,14 +402,10 @@ export class Camera {
     getCameraMode = () => this.cameraMode;
 
     requestPointerLock() {
-        if (this.cameraMode === CAMERA_MODES.FREE && !this.isPointerLocked) {
-            this.pointerLockControls.lock();
-        }
+        if (this.cameraMode === CAMERA_MODES.FREE && !this.isPointerLocked) this.pointerLockControls.lock();
     }
 
     exitPointerLock() {
-        if (this.isPointerLocked) {
-            this.pointerLockControls.unlock();
-        }
+        if (this.isPointerLocked) this.pointerLockControls.unlock();
     }
 }

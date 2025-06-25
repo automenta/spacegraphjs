@@ -9,7 +9,7 @@ export const Utils = {
     isObject: (item) => item && typeof item === 'object' && !Array.isArray(item),
     mergeDeep: (target, ...sources) => {
         sources.forEach((source) => {
-            Object.keys(source).forEach((key) => {
+            for (const key in source) {
                 const targetValue = target[key];
                 const sourceValue = source[key];
                 if (Utils.isObject(targetValue) && Utils.isObject(sourceValue)) {
@@ -17,7 +17,7 @@ export const Utils = {
                 } else {
                     target[key] = sourceValue;
                 }
-            });
+            }
         });
         return target;
     },

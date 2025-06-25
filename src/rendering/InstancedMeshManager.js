@@ -10,21 +10,18 @@ class InstancedMeshGroup {
 
         this.instancedMesh = new THREE.InstancedMesh(this.geometry, this.material, MAX_INSTANCES_PER_TYPE);
         this.instancedMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-        if (this.instancedMesh.instanceColor) {
-            this.instancedMesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
-        }
+        this.instancedMesh.instanceColor?.setUsage(THREE.DynamicDrawUsage);
 
         scene.add(this.instancedMesh);
 
         this.nodeIdToInstanceId = new Map();
         this.instanceIdToNodeId = new Map();
         this.activeInstances = 0;
-        this.availableInstanceSlots = [];
     }
 
     addNode(node) {
         if (this.activeInstances >= MAX_INSTANCES_PER_TYPE) {
-            console.warn('InstancedMeshManager: Max instances reached for this type.');
+            console.warn('InstancedMeshManager: Max instances reached.');
             return null;
         }
 
@@ -38,14 +35,12 @@ class InstancedMeshGroup {
         return instanceId;
     }
 
-    updateNodeTransform(node, instanceIdOverride = null) {
-        const instanceId = instanceIdOverride ?? this.nodeIdToInstanceId.get(node.id);
+    updateNodeTransform(node, instanceId = this.nodeIdToInstanceId.get(node.id)) {
         if (instanceId === undefined) return;
 
         const matrix = new THREE.Matrix4();
         const position = node.position;
         const rotation = node.mesh?.quaternion || new THREE.Quaternion();
-
         const scale = new THREE.Vector3(node.size, node.size, node.size);
 
         matrix.compose(position, rotation, scale);
@@ -53,8 +48,7 @@ class InstancedMeshGroup {
         this.instancedMesh.instanceMatrix.needsUpdate = true;
     }
 
-    updateNodeColor(node, instanceIdOverride = null) {
-        const instanceId = instanceIdOverride ?? this.nodeIdToInstanceId.get(node.id);
+    updateNodeColor(node, instanceId = this.nodeIdToInstanceId.get(node.id)) {
         if (instanceId === undefined || !this.instancedMesh.instanceColor) return;
 
         const color = new THREE.Color(node.data.color || 0xffffff);
@@ -66,8 +60,7 @@ class InstancedMeshGroup {
         const instanceId = this.nodeIdToInstanceId.get(node.id);
         if (instanceId === undefined) return;
 
-        const matrix = new THREE.Matrix4().makeScale(0, 0, 0);
-        this.instancedMesh.setMatrixAt(instanceId, matrix);
+        this.instancedMesh.setMatrixAt(instanceId, new THREE.Matrix4().makeScale(0, 0, 0));
         this.instancedMesh.instanceMatrix.needsUpdate = true;
 
         this.nodeIdToInstanceId.delete(node.id);
@@ -78,20 +71,11 @@ class InstancedMeshGroup {
         if (!this.instancedMesh || this.activeInstances === 0) return null;
 
         const intersection = raycaster.intersectObject(this.instancedMesh);
-        if (intersection.length > 0) {
-            const instanceId = intersection[0].instanceId;
-            const nodeId = this.instanceIdToNodeId.get(instanceId);
-            if (nodeId) {
-                return {
-                    object: this.instancedMesh,
-                    point: intersection[0].point,
-                    distance: intersection[0].distance,
-                    instanceId: instanceId,
-                    nodeId: nodeId,
-                };
-            }
-        }
-        return null;
+        if (intersection.length === 0) return null;
+
+        const instanceId = intersection[0].instanceId;
+        const nodeId = this.instanceIdToNodeId.get(instanceId);
+        return nodeId ? { ...intersection[0], nodeId } : null;
     }
 
     dispose() {
@@ -120,25 +104,24 @@ export class InstancedMeshManager {
     }
 
     getNodeGroup(node) {
-        if (node.data.shape === 'sphere') {
-            return this.meshGroups.get('sphere');
-        }
-        return null;
+        return node.data.shape === 'sphere' ? this.meshGroups.get('sphere') : null;
     }
 
     addNode(node) {
         const group = this.getNodeGroup(node);
-        if (group) {
-            const instanceId = group.addNode(node);
-            if (instanceId !== null) {
-                node.isInstanced = true;
-                node.instanceId = instanceId;
-                if (node.mesh) node.mesh.visible = false;
-                return true;
-            }
+        if (!group) {
+            node.isInstanced = false;
+            return false;
         }
-        node.isInstanced = false;
-        return false;
+        const instanceId = group.addNode(node);
+        if (instanceId === null) {
+            node.isInstanced = false;
+            return false;
+        }
+        node.isInstanced = true;
+        node.instanceId = instanceId;
+        if (node.mesh) node.mesh.visible = false;
+        return true;
     }
 
     updateNode(node) {
@@ -163,10 +146,8 @@ export class InstancedMeshManager {
         let closestIntersection = null;
         for (const group of this.meshGroups.values()) {
             const intersection = group.getRaycastIntersection(raycaster);
-            if (intersection) {
-                if (!closestIntersection || intersection.distance < closestIntersection.distance) {
-                    closestIntersection = intersection;
-                }
+            if (intersection && (!closestIntersection || intersection.distance < closestIntersection.distance)) {
+                closestIntersection = intersection;
             }
         }
         return closestIntersection;

@@ -25,18 +25,16 @@ export class EdgePlugin extends Plugin {
         this.space.on('renderer:resize', this.handleRendererResize.bind(this));
 
         const renderingPlugin = this.pluginManager.getPlugin('RenderingPlugin');
-        if (renderingPlugin && renderingPlugin.getWebGLScene()) {
-            this.instancedEdgeManager = new InstancedEdgeManager(renderingPlugin.getWebGLScene());
-        } else {
-            console.error('EdgePlugin: RenderingPlugin or its scene not available for InstancedEdgeManager setup.');
+        if (!renderingPlugin?.getWebGLScene()) {
+            console.error('EdgePlugin: RenderingPlugin or scene not available.');
+            return;
         }
+        this.instancedEdgeManager = new InstancedEdgeManager(renderingPlugin.getWebGLScene());
     }
 
     handleRendererResize({ width, height }) {
         this.edges.forEach((edge) => {
-            if (!edge.isInstanced && edge.updateResolution) {
-                edge.updateResolution(width, height);
-            }
+            if (!edge.isInstanced && edge.updateResolution) edge.updateResolution(width, height);
         });
     }
 
@@ -45,7 +43,6 @@ export class EdgePlugin extends Plugin {
         if (this.useInstancedEdges === shouldUseInstancing) return;
 
         this.useInstancedEdges = shouldUseInstancing;
-        console.log(`EdgePlugin: Switching instancing mode. Now using instanced edges: ${this.useInstancedEdges}`);
 
         const renderingPlugin = this.pluginManager.getPlugin('RenderingPlugin');
         if (!renderingPlugin || !this.instancedEdgeManager) return;
@@ -55,84 +52,58 @@ export class EdgePlugin extends Plugin {
 
         this.edges.forEach((edge) => {
             if (edge.isInstanced) {
+                // If it was instanced, it's already handled by InstancedEdgeManager
             } else {
-                if (edge.line) webglScene?.remove(edge.line);
-                if (edge.arrowheads?.source) webglScene?.remove(edge.arrowheads.source);
-                if (edge.arrowheads?.target) webglScene?.remove(edge.arrowheads.target);
-                if (edge.labelObject) cssScene?.remove(edge.labelObject);
+                webglScene?.remove(edge.line);
+                webglScene?.remove(edge.arrowheads?.source);
+                webglScene?.remove(edge.arrowheads?.target);
+                cssScene?.remove(edge.labelObject);
             }
 
             if (this.useInstancedEdges) {
                 this.instancedEdgeManager.addEdge(edge);
             } else {
                 edge.isInstanced = false;
-                if (edge.line) {
-                    edge.line.visible = true;
-                    webglScene?.add(edge.line);
-                }
-                if (edge.arrowheads?.source) {
-                    edge.arrowheads.source.visible = true;
-                    webglScene?.add(edge.arrowheads.source);
-                }
-                if (edge.arrowheads?.target) {
-                    edge.arrowheads.target.visible = true;
-                    webglScene?.add(edge.arrowheads.target);
-                }
-                if (edge.labelObject) {
-                    cssScene?.add(edge.labelObject);
-                }
+                if (edge.line) webglScene?.add(edge.line);
+                if (edge.arrowheads?.source) webglScene?.add(edge.arrowheads.source);
+                if (edge.arrowheads?.target) webglScene?.add(edge.arrowheads.target);
+                if (edge.labelObject) cssScene?.add(edge.labelObject);
             }
         });
     }
 
     addEdge(sourceNode, targetNode, data = {}) {
         if (!sourceNode || !targetNode || sourceNode === targetNode) {
-            console.warn('EdgePlugin: Attempted to add edge with invalid source or target.');
+            console.warn('EdgePlugin: Invalid source or target.');
             return null;
         }
         for (const existingEdge of this.edges.values()) {
-            if (
-                (existingEdge.source === sourceNode && existingEdge.target === targetNode) ||
-                (existingEdge.source === targetNode && existingEdge.target === sourceNode)
-            ) {
+            if ((existingEdge.source === sourceNode && existingEdge.target === targetNode) ||
+                (existingEdge.source === targetNode && existingEdge.target === sourceNode)) {
                 console.warn(`EdgePlugin: Duplicate edge ignored between ${sourceNode.id} and ${targetNode.id}.`);
                 return existingEdge;
             }
         }
 
-        const edgeId = Utils.generateId('edge');
-        const edgeType = data.type || 'default';
-        const edge = this.edgeFactory.createEdge(edgeId, edgeType, sourceNode, targetNode, data);
+        const edge = this.edgeFactory.createEdge(Utils.generateId('edge'), data.type || 'default', sourceNode, targetNode, data);
         if (!edge) {
-            console.error(`EdgePlugin: Failed to create edge of type "${edgeType}".`);
+            console.error(`EdgePlugin: Failed to create edge type "${data.type || 'default'}".`);
             return null;
         }
         this.edges.set(edge.id, edge);
 
         const currentlyShouldUseInstancing = this.edges.size >= INSTANCE_THRESHOLD;
-        if (this.useInstancedEdges !== currentlyShouldUseInstancing) {
-            this.useInstancedEdges = currentlyShouldUseInstancing;
-            console.log(`EdgePlugin: Instancing mode is now: ${this.useInstancedEdges} (checked at addEdge)`);
-        }
+        if (this.useInstancedEdges !== currentlyShouldUseInstancing) this.useInstancedEdges = currentlyShouldUseInstancing;
 
+        const renderingPlugin = this.pluginManager.getPlugin('RenderingPlugin');
         if (this.useInstancedEdges && this.instancedEdgeManager) {
             this.instancedEdgeManager.addEdge(edge);
-            if (edge.labelObject) {
-                const renderingPlugin = this.pluginManager.getPlugin('RenderingPlugin');
-                renderingPlugin?.getCSS3DScene()?.add(edge.labelObject);
-            }
+            renderingPlugin?.getCSS3DScene()?.add(edge.labelObject);
         } else {
-            const renderingPlugin = this.pluginManager.getPlugin('RenderingPlugin');
-            if (renderingPlugin) {
-                const webglScene = renderingPlugin.getWebGLScene();
-                const cssScene = renderingPlugin.getCSS3DScene();
-                if (edge.line) webglScene?.add(edge.line);
-                if (edge.arrowheads?.source) webglScene?.add(edge.arrowheads.source);
-                if (edge.arrowheads?.target) webglScene?.add(edge.arrowheads.target);
-                if (edge.labelObject) cssScene?.add(edge.labelObject);
-            } else {
-                console.warn('EdgePlugin: RenderingPlugin not available for standard edge.');
-            }
+            renderingPlugin?.getWebGLScene()?.add(edge.line);
+            renderingPlugin?.getWebGLScene()?.add(edge.arrowheads?.source);
+            renderingPlugin?.getWebGLScene()?.add(edge.arrowheads?.target);
+            renderingPlugin?.getCSS3DScene()?.add(edge.labelObject);
         }
 
         this.space.emit('edge:added', edge);
@@ -141,20 +112,14 @@ export class EdgePlugin extends Plugin {
 
     removeEdge(edgeId) {
         const edge = this.edges.get(edgeId);
-        if (!edge) {
-            console.warn(`EdgePlugin: Edge with ID ${edgeId} not found for removal.`);
-            return;
-        }
+        if (!edge) return console.warn(`EdgePlugin: Edge ${edgeId} not found.`);
 
-        const uiPlugin = this.pluginManager.getPlugin('UIPlugin');
-        if (uiPlugin?.getSelectedEdge() === edge) uiPlugin.setSelectedEdge(null);
+        this.pluginManager.getPlugin('UIPlugin')?.getSelectedEdge() === edge &&
+            this.pluginManager.getPlugin('UIPlugin').setSelectedEdge(null);
 
-        const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin');
-        layoutPlugin?.removeEdgeFromLayout(edge);
+        this.pluginManager.getPlugin('LayoutPlugin')?.removeEdgeFromLayout(edge);
 
-        if (edge.isInstanced && this.instancedEdgeManager) {
-            this.instancedEdgeManager.removeEdge(edge);
-        }
+        if (edge.isInstanced && this.instancedEdgeManager) this.instancedEdgeManager.removeEdge(edge);
         edge.dispose();
         this.edges.delete(edgeId);
         this.space.emit('edge:removed', edgeId, edge);
@@ -177,14 +142,9 @@ export class EdgePlugin extends Plugin {
 
     update() {
         this.edges.forEach((edge) => {
-            if (edge.isInstanced && this.instancedEdgeManager) {
-                this.instancedEdgeManager.updateEdge(edge);
-            } else if (edge.update && typeof edge.update === 'function') {
-                edge.update();
-            }
-            if (edge.updateLabelPosition && typeof edge.updateLabelPosition === 'function') {
-                edge.updateLabelPosition();
-            }
+            if (edge.isInstanced && this.instancedEdgeManager) this.instancedEdgeManager.updateEdge(edge);
+            else edge.update?.();
+            edge.updateLabelPosition?.();
         });
     }
 

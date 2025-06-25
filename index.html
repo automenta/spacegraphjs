@@ -44,11 +44,8 @@
                 const confirmDialogEl = S.$('#confirm-dialog');
 
                 if (!container || !contextMenuEl || !confirmDialogEl) {
-                    console.error(
-                        'Initialization Failed: Missing required DOM elements (#mindmap-container, #context-menu, #confirm-dialog).'
-                    );
-                    container.innerHTML =
-                        "<p style='color:red; padding: 20px;'>Error: Missing required HTML elements.</p>";
+                    console.error('Init Failed: Missing DOM elements.');
+                    container.innerHTML = "<p style='color:red; padding: 20px;'>Error: Missing HTML elements.</p>";
                     return;
                 }
 
@@ -68,28 +65,22 @@
                     const activeLayout = layoutManager?.getActiveLayout();
 
                     if (activeLayout && layoutManager) {
-                        console.log('Kicking layout for initial settling after example graph creation.');
                         layoutManager.kick?.();
                     } else {
-                        console.error('LayoutPlugin or activeLayout not available after SpaceGraph initialization. Cannot kick.');
+                        console.error('LayoutPlugin or activeLayout not available.');
                     }
 
                     space.centerView(null, 0.8);
                     space.animate();
 
                     window.space = space;
-                    console.log('Mind Map Initialized Successfully.');
                 } catch (error) {
-                    console.error('Initialization Failed:', error);
-                    container.innerHTML = `<div style="color: red; padding: 20px;">Error initializing Mind Map: ${error.message}<br><pre>${error.stack}</pre></div>`;
+                    console.error('Init Failed:', error);
+                    container.innerHTML = `<div style="color: red; padding: 20px;">Error initializing: ${error.message}<br><pre>${error.stack}</pre></div>`;
                 }
             }
 
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', init);
-            } else {
-                init();
-            }
+            document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', init) : init();
         </script>
     </body>
 </html>
