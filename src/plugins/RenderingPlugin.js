@@ -232,9 +232,16 @@ export class RenderingPlugin extends Plugin {
             case 'directional':
                 light = new THREE.DirectionalLight(color, intensity);
                 light.position.set(options.position?.x ?? 50, options.position?.y ?? 100, options.position?.z ?? 75);
-                light.target = options.target instanceof THREE.Object3D ? options.target : new THREE.Object3D().position.set(0, 0, 0);
-                this.scene.add(light.target);
-
+                // Corrected: Ensure light.target is an Object3D and its position is set correctly
+                if (options.target instanceof THREE.Object3D) {
+                    light.target = options.target;
+                } else if (options.target instanceof THREE.Vector3) {
+                    light.target.position.copy(options.target);
+                } else {
+                    // Default target position is (0,0,0), no change needed unless specified
+                    light.target.position.set(0, 0, 0);
+                }
+                this.scene.add(light.target); // Add the target object to the scene
                 if (options.castShadow !== false) {
                     light.castShadow = true;
                     light.shadow.mapSize.width = options.shadowMapSizeWidth ?? 2048;
