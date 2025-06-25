@@ -3,7 +3,7 @@ import { ShapeNode } from './ShapeNode.js';
 import { ImageNode } from './ImageNode.js';
 import { VideoNode } from './VideoNode.js';
 import { IFrameNode } from './IFrameNode.js';
-import { GroupNode } => './GroupNode.js';
+import { GroupNode } from './GroupNode.js';
 import { DataNode } from './DataNode.js';
 
 export class NodeFactory {
