@@ -33,10 +33,9 @@ export class UIPlugin extends Plugin {
 
     init() {
         super.init();
-        // Removed redundant lines that were causing TypeError: Cannot read properties of undefined (reading 'ui')
-        // const contextMenuEl = this.space.options.ui?.contextMenuElement;
-        // const confirmDialogEl = this.space.options.ui?.confirmDialogElement;
-        this.uiManager.init(); // Call init on UIManager
+        // The UIManager constructor already handles its own initialization.
+        // Calling init() here is redundant and causes a TypeError as UIManager has no such method.
+        // this.uiManager.init();
         this._subscribeToEvents();
     }
 

@@ -6,6 +6,7 @@ import {
     EffectComposer, RenderPass, EffectPass, BloomEffect, OutlineEffect, Selection, KernelSize, SSAOEffect, NormalPass, BlendFunction,
 } from 'postprocessing';
 import { InstancedMeshManager } from '../rendering/InstancedMeshManager.js';
+import { Line2 } from 'three/addons/lines/Line2.js'; // Import Line2 for instanceof check
 
 export class RenderingPlugin extends Plugin {
     scene = null;
@@ -80,8 +81,14 @@ export class RenderingPlugin extends Plugin {
 
         this.selection.clear();
         payload.selected?.forEach((selectedItem) => {
-            const object = selectedItem.item?.mesh || selectedItem.item?.line;
-            if (object && this._isObjectInMainScene(object)) this.selection.add(object);
+            // Corrected: selectedItem is the node or edge instance directly
+            const object = selectedItem.mesh || selectedItem.line;
+            if (object && this._isObjectInMainScene(object)) {
+                // Ensure the object is a WebGL renderable type that OutlineEffect can process
+                if (object instanceof THREE.Mesh || object instanceof Line2 || object instanceof THREE.Line) {
+                    this.selection.add(object);
+                }
+            }
         });
     }
 

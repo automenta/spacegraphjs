@@ -184,16 +184,6 @@ export class Edge {
         }
     }
 
-    _orientArrowhead(arrowheadMesh, direction) {
-        if (!arrowheadMesh) return;
-        if (direction.lengthSq() > 0.0001) {
-            const quaternion = new THREE.Quaternion();
-            const up = new THREE.Vector3(0, 1, 0);
-            quaternion.setFromUnitVectors(up, direction);
-            arrowheadMesh.quaternion.copy(quaternion);
-        }
-    }
-
     _createSingleArrowhead(_type) {
         const size = this.data.arrowheadSize || 10;
         const geometry = new THREE.ConeGeometry(size / 2, size, 8);
