@@ -186,6 +186,7 @@ export class Edge {
 
     _createSingleArrowhead(_type) {
         const size = this.data.arrowheadSize || 10;
+        // ConeGeometry is typically oriented along the Y-axis by default
         const geometry = new THREE.ConeGeometry(size / 2, size, 8);
         const material = new THREE.MeshBasicMaterial({
             color: this.data.arrowheadColor || this.data.color,
@@ -197,6 +198,12 @@ export class Edge {
         arrowhead.renderOrder = this.line.renderOrder + 1;
         arrowhead.userData = { edgeId: this.id, type: 'edge-arrowhead' };
         return arrowhead;
+    }
+
+    _orientArrowhead(arrowhead, direction) {
+        // Assuming the cone's default orientation is along its Y-axis (height)
+        const coneUp = new THREE.Vector3(0, 1, 0);
+        arrowhead.quaternion.setFromUnitVectors(coneUp, direction);
     }
 
     setHighlight(highlight) {
