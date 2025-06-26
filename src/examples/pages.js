@@ -763,7 +763,7 @@ export const pages = [
 
             space.createNode({
                 id: 'audioNode1', type: 'audio', position: { x: xPos, y: 0, z: 0 },
-                data: { label: 'Audio Clip 🎵', audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', color: 0x00ccff, size: 50 }, // FIX: Updated audioUrl
+                data: { label: 'Audio Clip 🎵', audioUrl: 'https://www.learningcontainer.com/wp-content/uploads/2020/02/Kalimba.mp3', color: 0x00ccff, size: 50 },
                 ...commonProps
             });
 
