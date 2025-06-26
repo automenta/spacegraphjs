@@ -1,4 +1,4 @@
-import { $ } from '../utils.js';
+import { $ } from '../../utils.js';
 import * as THREE from 'three';
 import { HtmlNode } from '../../graph/nodes/HtmlNode.js';
 
