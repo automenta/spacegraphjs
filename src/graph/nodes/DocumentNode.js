@@ -1,53 +1,89 @@
 import {Node} from './Node.js';
 import * as THREE from 'three';
+import {createCSS3DLabelObject, applyLabelLOD} from '../../utils/labelUtils.js';
 
 export class DocumentNode extends Node {
     static typeName = 'document';
+    labelObject = null;
 
     constructor(id, position, data = {}, mass = 1.0) {
         super(id, position, data, mass);
-        // Future: Initialize document specific properties, e.g., preview, icon
+        this.mesh = this.createMesh();
+        this.mesh.userData = { nodeId: this.id, type: DocumentNode.typeName };
+
+        if (this.data.label || this.data.icon) {
+            this.labelObject = this._createLabel();
+        }
+        this.update();
     }
 
     getDefaultData() {
         return {
             ...super.getDefaultData(),
             label: 'Document Node',
-            documentUrl: '', // URL to the document
-            icon: '📄', // Simple text icon for now
+            documentUrl: '',
+            icon: '📄',
             color: 0xffcc00,
             size: 50,
+            labelLod: [],
         };
     }
 
-    // Future: Could render as a plane with a document icon or a simple HTML representation
     createMesh() {
         if (this.mesh) return this.mesh;
+        // A simple 3D "sheet" representation
         const geometry = new THREE.BoxGeometry(this.data.size, this.data.size * 1.2, 5);
-        const material = new THREE.MeshBasicMaterial({ color: this.data.color });
+        const material = new THREE.MeshStandardMaterial({ color: this.data.color, roughness: 0.7, metalness: 0.1 });
         this.mesh = new THREE.Mesh(geometry, material);
-        this.mesh.userData = { nodeId: this.id, type: DocumentNode.typeName };
+        this.mesh.castShadow = true;
+        this.mesh.receiveShadow = true;
         return this.mesh;
     }
 
-    // createCSSObject() {
-    //     // Example: Show a simple HTML representation or icon
-    //     if (this.cssObject) return this.cssObject;
-    //     const element = document.createElement('div');
-    //     element.style.width = `${this.data.size}px`;
-    //     element.style.height = `${this.data.size * 1.2}px`;
-    //     element.style.backgroundColor = 'rgba(255, 204, 0, 0.1)';
-    //     element.style.border = '1px solid #ffcc00';
-    //     element.style.textAlign = 'center';
-    //     element.style.fontSize = `${this.data.size * 0.6}px`;
-    //     element.innerHTML = `<span title="${this.data.documentUrl || ''}">${this.data.icon}</span>`;
-    //     this.cssObject = new CSS3DObject(element);
-    //     this.cssObject.userData = { nodeId: this.id, type: DocumentNode.typeName };
-    //     return this.cssObject;
-    // }
+    _createLabel() {
+        const labelText = this.data.icon ? `${this.data.icon} ${this.data.label}` : this.data.label;
+        const styleData = {
+            color: 'var(--sg-node-text)',
+            backgroundColor: 'var(--sg-label-bg, rgba(10, 10, 20, 0.75))',
+            fontSize: '14px',
+            padding: '5px 10px',
+            borderRadius: '5px',
+        };
+        return createCSS3DLabelObject(labelText, this.id, 'node-label-3d', styleData, 'document-label');
+    }
 
+    update(space) {
+        super.update(space);
+        if (this.labelObject && this.mesh) {
+            const offset = this.getBoundingSphereRadius() * 1.1 + 10;
+            this.labelObject.position.copy(this.position).y += offset;
+            if (space?._cam) this.labelObject.quaternion.copy(space._cam.quaternion);
+            applyLabelLOD(this.labelObject, this.data.labelLod, space);
+        }
+    }
+
+    getBoundingSphereRadius() {
+        return Math.sqrt((this.data.size / 2) ** 2 + (this.data.size * 1.2 / 2) ** 2);
+    }
+
+    viewDocument() {
+        if (this.data.documentUrl) {
+            this.space?.emit('node:document:view', { node: this, url: this.data.documentUrl });
+            console.log(`DocumentNode: Request to view document at ${this.data.documentUrl}`);
+        } else {
+            console.warn(`DocumentNode: No documentUrl specified for node ${this.id}`);
+        }
+    }
+
+    setSelectedStyle(selected) {
+        if (this.mesh?.material) this.mesh.material.emissive?.setHex(selected ? 0x333300 : 0x000000);
+        this.labelObject?.element?.classList.toggle('selected', selected);
+    }
 
     dispose() {
+        this.labelObject?.element?.remove();
+        this.labelObject?.parent?.remove(this.labelObject);
+        this.labelObject = null;
         super.dispose();
     }
 }

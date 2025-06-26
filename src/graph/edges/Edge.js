@@ -19,6 +19,10 @@ export class Edge {
     isHighlighted = false;
     isHovered = false;
 
+    // Pre-allocate THREE.Color instances for performance
+    _colorStart = new THREE.Color();
+    _colorEnd = new THREE.Color();
+
     data = {
         color: 0x00d0ff,
         gradientColors: null,
@@ -53,9 +57,9 @@ export class Edge {
         this.instanceId = null;
 
         if (this.data.gradientColors?.length === 2) {
-            this.data.color = null;
+            this.data.color = null; // Ensure color is null if gradient is used
         } else if (this.data.color === null) {
-            this.data.color = defaultData.color;
+            this.data.color = defaultData.color; // Fallback if color is explicitly null but no gradient
         }
 
         this.line = this._createLine();
@@ -91,9 +95,9 @@ export class Edge {
 
         if (this.data.gradientColors?.length === 2) {
             materialConfig.vertexColors = true;
-            const colorStart = new THREE.Color(this.data.gradientColors[0]);
-            const colorEnd = new THREE.Color(this.data.gradientColors[1]);
-            geometry.setColors([colorStart.r, colorStart.g, colorStart.b, colorEnd.r, colorEnd.g, colorEnd.b]);
+            this._colorStart.set(this.data.gradientColors[0]);
+            this._colorEnd.set(this.data.gradientColors[1]);
+            geometry.setColors([this._colorStart.r, this._colorStart.g, this._colorStart.b, this._colorEnd.r, this._colorEnd.g, this._colorEnd.b]);
         } else {
             materialConfig.vertexColors = false;
             materialConfig.color = this.data.color || 0x00d0ff;
@@ -109,30 +113,48 @@ export class Edge {
     }
 
     _setGradientColors() {
-        if (!this.line || !this.data.gradientColors?.length === 2) {
-            if (this.line?.material.vertexColors) {
-                this.line.material.vertexColors = false;
-                this.line.material.color.set(this.data.color || 0x00d0ff);
+        if (!this.line || !this.line.material) return;
+
+        if (this.data.gradientColors?.length === 2) {
+            if (!this.line.material.vertexColors) {
+                this.line.material.vertexColors = true;
                 this.line.material.needsUpdate = true;
             }
-            return;
-        }
 
-        if (!this.line.material.vertexColors) {
-            this.line.material.vertexColors = true;
-            this.line.material.needsUpdate = true;
-        }
+            this._colorStart.set(this.data.gradientColors[0]);
+            this._colorEnd.set(this.data.gradientColors[1]);
 
-        const colorStart = new THREE.Color(this.data.gradientColors[0]);
-        const colorEnd = new THREE.Color(this.data.gradientColors[1]);
-
-        const colors = [];
-        colors.push(colorStart.r, colorStart.g, colorStart.b);
-        colors.push(colorEnd.r, colorEnd.g, colorEnd.b);
-
-        const posAttribute = this.line.geometry.attributes.position;
-        if (posAttribute?.array?.length >= 6 && posAttribute.array.length === colors.length) {
-            this.line.geometry.setColors(colors);
+            const colors = this.line.geometry.attributes.color?.array || [];
+            if (colors.length >= 6) { // Ensure array is large enough for at least 2 points (6 components)
+                colors[0] = this._colorStart.r;
+                colors[1] = this._colorStart.g;
+                colors[2] = this._colorStart.b;
+                colors[3] = this._colorEnd.r;
+                colors[4] = this._colorEnd.g;
+                colors[5] = this._colorEnd.b;
+                this.line.geometry.attributes.color.needsUpdate = true;
+            } else {
+                // If geometry has more points, interpolate colors for all points
+                const posAttribute = this.line.geometry.attributes.position;
+                if (posAttribute) {
+                    const numPoints = posAttribute.count;
+                    const newColors = new Float32Array(numPoints * 3);
+                    for (let i = 0; i < numPoints; i++) {
+                        const t = numPoints > 1 ? i / (numPoints - 1) : 0;
+                        const interpolatedColor = this._colorStart.clone().lerp(this._colorEnd, t);
+                        newColors[i * 3] = interpolatedColor.r;
+                        newColors[i * 3 + 1] = interpolatedColor.g;
+                        newColors[i * 3 + 2] = interpolatedColor.b;
+                    }
+                    this.line.geometry.setColors(newColors);
+                }
+            }
+        } else {
+            if (this.line.material.vertexColors) {
+                this.line.material.vertexColors = false;
+                this.line.material.needsUpdate = true;
+            }
+            this.line.material.color.set(this.data.color || 0x00d0ff);
         }
     }
 
@@ -154,13 +176,7 @@ export class Edge {
 
         if (this.line.geometry.attributes.position.count === 0) return;
 
-        if (this.data.gradientColors?.length === 2) {
-            this._setGradientColors();
-        } else {
-            this.line.material.vertexColors = false;
-            this.line.material.needsUpdate = true;
-            this.line.material.color.set(this.data.color);
-        }
+        this._setGradientColors(); // Call the optimized method
 
         if (this.line.material.dashed) this.line.computeLineDistances();
         this.line.geometry.computeBoundingSphere();
@@ -187,7 +203,6 @@ export class Edge {
 
     _createSingleArrowhead(_type) {
         const size = this.data.arrowheadSize || 10;
-        // ConeGeometry is typically oriented along the Y-axis by default
         const geometry = new THREE.ConeGeometry(size / 2, size, 8);
         const material = new THREE.MeshBasicMaterial({
             color: this.data.arrowheadColor || this.data.color,
@@ -202,7 +217,6 @@ export class Edge {
     }
 
     _orientArrowhead(arrowhead, direction) {
-        // Assuming the cone's default orientation is along its Y-axis (height)
         const coneUp = new THREE.Vector3(0, 1, 0);
         arrowhead.quaternion.setFromUnitVectors(coneUp, direction);
     }

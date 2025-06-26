@@ -1,47 +1,28 @@
+import { BaseFactory } from '../core/BaseFactory.js'; // Import BaseFactory
 import {Edge} from './edges/Edge.js';
 import {CurvedEdge} from './edges/CurvedEdge.js';
 import {LabeledEdge} from './edges/LabeledEdge.js';
-import {DottedEdge} from './edges/DottedEdge.js'; // Added DottedEdge
-import {DynamicThicknessEdge} from './edges/DynamicThicknessEdge.js'; // Added DynamicThicknessEdge
+import {DottedEdge} from './edges/DottedEdge.js';
+import {DynamicThicknessEdge} from './edges/DynamicThicknessEdge.js';
 
-export class EdgeFactory {
+export class EdgeFactory extends BaseFactory { // Extend BaseFactory
     constructor(space) {
+        super(); // Call BaseFactory constructor
         this.space = space;
-        this.edgeTypes = new Map();
-        // _registerDefaultEdgeTypes will be called by EdgePlugin now
-
-
-    // This method could be removed if EdgePlugin calls registerEdgeType directly for each
-    // Or kept if it's a convenient way to register a common set. For now, assume EdgePlugin calls directly.
-    // registerCoreEdgeTypes() {
-    //     // Register existing types using static typeName
-    //     this.registerEdgeType(Edge.typeName, Edge); // 'straight'
-        this.registerEdgeType(CurvedEdge.typeName, CurvedEdge); // 'curved'
-        this.registerEdgeType(LabeledEdge.typeName, LabeledEdge); // 'labeled'
-
-        // Register new types
-        this.registerEdgeType(DottedEdge.typeName, DottedEdge); // 'dotted'
-        this.registerEdgeType(DynamicThicknessEdge.typeName, DynamicThicknessEdge); // 'dynamicThickness'
-
-        // Set default edge type
-        this.registerEdgeType('default', Edge); // Default to basic straight edge
     }
 
-    registerEdgeType(typeName, edgeClass) {
-        if (!typeName) {
-            console.warn('EdgeFactory: Attempted to register an edge class without a typeName.', edgeClass);
-            return;
-        }
-        if (this.edgeTypes.has(typeName)) {
-            // console.warn(`EdgeFactory: Edge type "${typeName}" already registered. Overwriting.`);
-            // Allow overwriting
-        }
-        this.edgeTypes.set(typeName, edgeClass);
+    registerCoreEdgeTypes() {
+        this.registerType(Edge.typeName, Edge);
+        this.registerType(CurvedEdge.typeName, CurvedEdge);
+        this.registerType(LabeledEdge.typeName, LabeledEdge);
+        this.registerType(DottedEdge.typeName, DottedEdge);
+        this.registerType(DynamicThicknessEdge.typeName, DynamicThicknessEdge);
+
+        this.registerType('default', Edge);
     }
 
     /**
      * Creates a new edge instance of a given type.
-     * The actual registration of types is typically handled by the EdgePlugin.
      * @param {string} id - The unique ID for the edge.
      * @param {string} type - The typeName of the edge to create.
      * @param {Node} sourceNode - The source node instance.
@@ -50,17 +31,11 @@ export class EdgeFactory {
      * @returns {Edge|null} The created edge instance, or null if the type is not found.
      */
     createEdge(id, type, sourceNode, targetNode, data = {}) {
-        // Allow data.type to override the explicit type parameter
         const effectiveType = data?.type || type;
-        const EdgeClass = this.edgeTypes.get(effectiveType) || this.edgeTypes.get('default');
-
-        if (!EdgeClass) {
-            console.warn(`EdgeFactory: Edge type "${effectiveType}" not found and no default available for ID "${id}".`);
-            return null;
+        const edgeInstance = this.create(effectiveType, [id, sourceNode, targetNode, data], 'default');
+        if (edgeInstance) {
+            edgeInstance.space = this.space;
         }
-
-        const edgeInstance = new EdgeClass(id, sourceNode, targetNode, data);
-        edgeInstance.space = this.space; // Ensure space context is set
         return edgeInstance;
     }
 }

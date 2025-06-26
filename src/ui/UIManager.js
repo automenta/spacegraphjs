@@ -32,8 +32,8 @@ export class UIManager {
     resizedNode = null;
     resizeStartPointerPos = { x: 0, y: 0 };
     resizeStartNodeSize = { width: 0, height: 0 };
-    resizeNodeScreenScaleX = 1; // Added for resize calculation
-    resizeNodeScreenScaleY = 1; // Added for resize calculation
+    resizeNodeScreenScaleX = 1;
+    resizeNodeScreenScaleY = 1;
 
     hoveredEdge = null;
 
@@ -98,7 +98,6 @@ export class UIManager {
         window.addEventListener('keydown', this._onKeyDown);
         this.container.addEventListener('wheel', this._onWheel, passiveFalse);
 
-        // Listen for confirm dialog requests from other UI components
         this.space.on('ui:request:confirm', this._onRequestConfirm);
     }
 
@@ -120,8 +119,6 @@ export class UIManager {
     };
 
     _onSelectionChanged = (payload) => {
-        // This event is emitted by UIPlugin, so UIManager just needs to react
-        // and update its own display based on the new selection state.
         const selectedEdges = payload.selected.size > 0 && payload.type === 'edge' ? payload.selected : new Set();
         if (selectedEdges.size === 1) {
             const edge = selectedEdges.values().next().value;
@@ -210,15 +207,14 @@ export class UIManager {
                 this.resizeStartPointerPos = { x: this.pointerState.clientX, y: this.pointerState.clientY };
                 this.container.style.cursor = 'nwse-resize';
 
-                // Calculate initial screen scale for resizing:
                 const node = this.resizedNode;
                 const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
                 const cam = cameraPlugin?.getCameraInstance();
 
                 if (node && cam && node.cssObject) {
                     const localOrigin = new THREE.Vector3(0, 0, 0);
-                    const localOffsetX = new THREE.Vector3(1, 0, 0); // For width scaling
-                    const localOffsetY = new THREE.Vector3(0, 1, 0); // For height scaling
+                    const localOffsetX = new THREE.Vector3(1, 0, 0);
+                    const localOffsetY = new THREE.Vector3(0, 1, 0);
 
                     const worldOrigin = localOrigin.clone().applyMatrix4(node.cssObject.matrixWorld);
                     const worldOffsetX = localOffsetX.clone().applyMatrix4(node.cssObject.matrixWorld);
@@ -240,7 +236,7 @@ export class UIManager {
                         y: -screenOffsetXNDC.y * halfH + halfH,
                     };
                     const screenOffsetYPx = {
-                        x: screenOffsetYNDC.x * halfW + halfW,
+                        x: screenOffsetYNDC.x * halfW + halfH,
                         y: -screenOffsetYNDC.y * halfH + halfH,
                     };
 
@@ -250,7 +246,6 @@ export class UIManager {
                     if (this.resizeNodeScreenScaleX < 0.001) this.resizeNodeScreenScaleX = 0.001;
                     if (this.resizeNodeScreenScaleY < 0.001) this.resizeNodeScreenScaleY = 0.001;
                 } else {
-                    // Fallback to direct scaling if camera or node info is missing
                     this.resizeNodeScreenScaleX = 1;
                     this.resizeNodeScreenScaleY = 1;
                 }
@@ -285,7 +280,7 @@ export class UIManager {
             return;
         }
 
-        if (this.pointerState.button === 1) { // Middle mouse button
+        if (this.pointerState.button === 1) {
             e.preventDefault();
             if (targetInfo.node) {
                 this.space.emit('ui:request:autoZoomNode', targetInfo.node);
@@ -293,7 +288,7 @@ export class UIManager {
             return;
         }
 
-        if (this.pointerState.button === 0) { // Left mouse button
+        if (this.pointerState.button === 0) {
             if (targetInfo.nodeControls) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -401,7 +396,6 @@ export class UIManager {
                     const newWidth = this.resizeStartNodeSize.width + deltaWidth_local;
                     const newHeight = this.resizeStartNodeSize.height + deltaHeight_local;
 
-                    // Use MIN_SIZE from HtmlNode static property for consistency
                     this.resizedNode.resize(
                         Math.max(HtmlNode.MIN_SIZE.width, newWidth),
                         Math.max(HtmlNode.MIN_SIZE.height, newHeight)
@@ -437,7 +431,6 @@ export class UIManager {
         if (!this.pointerState.isDraggingThresholdMet && e.button === 0) {
             const targetInfo = this._getTargetInfo(e);
             if (targetInfo.node instanceof HtmlNode && targetInfo.node.data.editable && targetInfo.element?.closest('.node-content') === targetInfo.node.htmlElement.querySelector('.node-content')) {
-                // Allow click to focus editable content
             }
         }
 
@@ -481,7 +474,7 @@ export class UIManager {
     _onContextMenu = (e) => {
         e.preventDefault();
         this._updateNormalizedPointerState(e);
-        this.contextMenu.hide(); // Ensure it's hidden before showing new one
+        this.contextMenu.hide();
 
         const targetInfo = this._getTargetInfo(e);
         this.contextMenu.show(e.clientX, e.clientY, {
@@ -492,7 +485,6 @@ export class UIManager {
     };
 
     _onDocumentClick = (e) => {
-        // Check if click is inside any managed UI element that should prevent closing
         if (this.contextMenu.contextMenuElement.contains(e.target) || this.contextMenu.contextMenuElement.style.display === 'none') return;
         if (this.edgeMenu.edgeMenuObject?.element?.contains(e.target)) return;
         if (this.confirmDialog.confirmDialogElement.contains(e.target)) return;
@@ -501,7 +493,6 @@ export class UIManager {
 
         this.contextMenu.hide();
 
-        // If an edge menu is open and the click is not on a selected edge, deselect edges
         if (this.edgeMenu.edgeMenuObject) {
             const targetInfo = this._getTargetInfo(e);
             const selectedEdges = this._uiPluginCallbacks.getSelectedEdges();
@@ -660,6 +651,9 @@ export class UIManager {
         let graphNode = nodeElement ? this.space.plugins.getPlugin('NodePlugin')?.getNodeById(nodeElement.dataset.nodeId) : null;
         let intersectedEdge = null;
 
+        // Prioritize HTML element interactions before raycasting into the 3D scene.
+        // Raycasting can be a performance bottleneck on very dense graphs,
+        // so minimizing its calls or optimizing the objects it checks is important.
         const needsRaycast = !resizeHandle && !nodeControlsButton && !contentEditableEl && !interactiveEl;
 
         if (needsRaycast) {
@@ -794,7 +788,6 @@ export class UIManager {
 
         this._removeTempLinkLine();
 
-        // Dispose decomposed components
         this.confirmDialog.dispose();
         this.contextMenu.dispose();
         this.edgeMenu.dispose();
