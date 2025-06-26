@@ -16,7 +16,8 @@ export class ShapeNode extends Node {
     constructor(id, position, data = {}, mass = 1.5) {
         super(id, position, data, mass);
         this.shape = this.data.shape ?? 'sphere';
-        this.size = this.data.size ?? 50;
+        // Ensure size is a finite number, default to 50 if not
+        this.size = Number.isFinite(this.data.size) ? this.data.size : 50;
         this.color = this.data.color ?? 0xffffff;
         this.gltfUrl = this.data.gltfUrl ?? null;
         this.lodData = this.data.lodLevels ?? [];
@@ -87,7 +88,9 @@ export class ShapeNode extends Node {
 
     _createMeshForLevel(levelConfig) {
         let geometry;
-        const effectiveSize = Math.max(5, levelConfig.size || this.size);
+        // Ensure levelConfig.size is a finite number, default to this.size if not
+        const effectiveLevelSize = Number.isFinite(levelConfig.size) ? levelConfig.size : this.size;
+        const effectiveSize = Math.max(5, effectiveLevelSize); // Ensure minimum size
         const shapeType = levelConfig.shape || 'sphere';
         const color = levelConfig.color || this.color;
 
@@ -144,8 +147,11 @@ export class ShapeNode extends Node {
                 const maxDim = Math.max(modelSize.x, modelSize.y, modelSize.z);
                 let scale = 1;
                 if (maxDim > 0) {
-                    // Prioritize gltfScale from levelConfig, then data, then fall back to size
-                    const targetDimension = levelConfig.gltfScale ?? this.data.gltfScale ?? levelConfig.size ?? this.size;
+                    let targetDimension = levelConfig.gltfScale ?? this.data.gltfScale ?? levelConfig.size ?? this.size;
+                    // Ensure targetDimension is a finite and positive number, default to 50 if not
+                    if (!Number.isFinite(targetDimension) || targetDimension <= 0) {
+                        targetDimension = 50; // Fallback to a reasonable default
+                    }
                     scale = targetDimension / maxDim;
                 }
                 modelScene.scale.set(scale, scale, scale);
