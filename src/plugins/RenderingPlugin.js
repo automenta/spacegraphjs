@@ -351,6 +351,66 @@ export class RenderingPlugin extends Plugin {
         this.space.emit('renderer:resize', { width: iw, height: ih });
     };
 
+    _updateFrustumHelper() {
+        const mainCamera = this.pluginManager.getPlugin('CameraPlugin')?.getCameraInstance();
+        if (!this.frustumHelper || !mainCamera) {
+            if (this.frustumHelper) this.frustumHelper.visible = false;
+            return;
+        }
+
+        mainCamera.updateMatrixWorld();
+        mainCamera.updateProjectionMatrix();
+
+        const corners = [];
+        // NDC coordinates for near and far planes
+        const ndcCorners = [
+            new THREE.Vector3(-1, -1, -1), // Near bottom left
+            new THREE.Vector3( 1, -1, -1), // Near bottom right
+            new THREE.Vector3( 1,  1, -1), // Near top right
+            new THREE.Vector3(-1,  1, -1), // Near top left
+            new THREE.Vector3(-1, -1,  1), // Far bottom left
+            new THREE.Vector3( 1, -1,  1), // Far bottom right
+            new THREE.Vector3( 1,  1,  1), // Far top right
+            new THREE.Vector3(-1,  1,  1)  // Far top left
+        ];
+
+        for (let i = 0; i < 8; i++) {
+            corners.push(ndcCorners[i].clone().unproject(mainCamera));
+        }
+
+        // Project these corners onto the XY plane (Z=0)
+        const projectedCorners = corners.map(p => new THREE.Vector3(p.x, p.y, 0));
+
+        // Determine the bounding box of the projected corners
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        projectedCorners.forEach(p => {
+            minX = Math.min(minX, p.x);
+            maxX = Math.max(maxX, p.x);
+            minY = Math.min(minY, p.y);
+            maxY = Math.max(maxY, p.y);
+        });
+
+        // Define the rectangle vertices for the frustum helper
+        const p = [
+            minX, minY, 0,
+            maxX, minY, 0,
+            maxX, maxY, 0,
+            minX, maxY, 0
+        ];
+
+        const vertices = new Float32Array([
+            p[0], p[1], p[2], p[3], p[4], p[5],
+            p[3], p[4], p[5], p[6], p[7], p[8],
+            p[6], p[7], p[8], p[9], p[10], p[11],
+            p[9], p[10], p[11], p[0], p[1], p[2],
+        ]);
+
+        this.frustumHelper.geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+        this.frustumHelper.geometry.attributes.position.needsUpdate = true;
+        this.frustumHelper.geometry.computeBoundingSphere();
+        this.frustumHelper.visible = true; // Ensure it's visible
+    }
+
     getWebGLScene() { return this.scene; }
     getCSS3DScene() { return this.cssScene; }
     getInstancedMeshManager() { return this.instancedMeshManager; }
