@@ -487,7 +487,19 @@ export const pages = [
             const n4 = space.createNode({ id: 'n4', position: { x: 200, y: 0, z: 50 }, data: { ...commonProps.data, label: 'N4', color: 0xffcc00 }, ...commonProps });
             const n5 = space.createNode({ id: 'n5', position: { x: -200, y: -200, z: -30 }, data: { ...commonProps.data, label: 'N5', color: 0xcc88ff }, ...commonProps });
             const n6 = space.createNode({ id: 'n6', position: { x: 200, y: -200, z: -30 }, data: { ...commonProps.data, label: 'N6', color: 0x88ccff }, ...commonProps });
-            const n7 = space.createNode({ id: 'n7', position: { x: 0, y: 100, z: 100 }, data: { ...commonProps.data, label: 'N7 (HTML)', type:'note', content:'Node for Edges', width:150, height:80, backgroundColor:'#333' }, mass:1.2});
+            const n7 = space.createNode({ // FIX: Moved type to top level and removed commonProps.data from data object
+                id: 'n7',
+                type: 'note',
+                position: { x: 0, y: 100, z: 100 },
+                data: {
+                    label: 'N7 (HTML)',
+                    content: 'Node for Edges',
+                    width: 150,
+                    height: 80,
+                    backgroundColor: '#333'
+                },
+                mass: 1.2
+            });
             const n8 = space.createNode({ id: 'n8', position: { x: 0, y: -100, z: -80 }, data: { ...commonProps.data, label: 'N8 (Box)', shape:'box', size:50, color: 0xffaabb }, ...commonProps });
 
 
@@ -596,8 +608,8 @@ export const pages = [
 
             // Apply a layout after a short delay to allow nodes to be created
             setTimeout(() => {
-                space.getPlugin('LayoutPlugin')?.applyLayout('force', { repulsion: 4000, centerStrength: 0.001 });
-                const uiPlugin = space.getPlugin('UIPlugin');
+                space.plugins.getPlugin('LayoutPlugin')?.applyLayout('force', { repulsion: 4000, centerStrength: 0.001 });
+                const uiPlugin = space.plugins.getPlugin('UIPlugin');
                 if (uiPlugin && uiPlugin.showNotification) {
                    uiPlugin.showNotification('FileSystem (left) and Object (right) graphs generated.', 'info', 6000);
                 } else {
@@ -626,8 +638,8 @@ export const pages = [
             space.addEdge(n1, n3);
 
             setTimeout(() => {
-                space.getPlugin('LayoutPlugin')?.applyLayout('force');
-                const uiPlugin = space.getPlugin('UIPlugin');
+                space.plugins.getPlugin('LayoutPlugin')?.applyLayout('force');
+                const uiPlugin = space.plugins.getPlugin('UIPlugin');
                 if (uiPlugin && uiPlugin.showNotification) {
                    uiPlugin.showNotification('Use UI to test TopDown or FirstPerson camera modes.', 'info', 5000);
                 } else {
@@ -657,7 +669,7 @@ export const pages = [
                         label: `Node ${i}`,
                         shape: 'box',
                         size: Math.random() * 30 + 20, // For treemap areaProperty
-                        color: new THREE.Color(Math.random() * 0xffffff).getHex(), // FIX: Use directly imported THREE
+                        color: new THREE.Color(Math.random() * 0xffffff).getHex(),
                         // For radial layout, could add parent/child relationships
                         // parentId: i > 0 ? `n_layout_${Math.floor(Math.random() * i)}` : null
                     }
@@ -675,9 +687,9 @@ export const pages = [
 
             // Initial layout can be anything, user will switch via UI
             setTimeout(() => {
-                 space.getPlugin('LayoutPlugin')?.applyLayout('force');
+                 space.plugins.getPlugin('LayoutPlugin')?.applyLayout('force');
                  // Instruct user to try new layouts from UI
-                 const uiPlugin = space.getPlugin('UIPlugin');
+                 const uiPlugin = space.plugins.getPlugin('UIPlugin');
                  if (uiPlugin && uiPlugin.showNotification) {
                     uiPlugin.showNotification('Try "treemap" or "radial" layouts from the UI dropdown!', 'info', 5000);
                  } else {
@@ -731,7 +743,7 @@ export const pages = [
             //        console.log(`Dynamic edge value set to ${newValue}`);
             //    }
             // }, 3000);
-             setTimeout(() => space.getPlugin('LayoutPlugin')?.applyLayout('grid', {columns: 2, padding: {x:400, y:200}}), 100);
+             setTimeout(() => space.plugins.getPlugin('LayoutPlugin')?.applyLayout('grid', {columns: 2, padding: {x:400, y:200}}), 100);
         }
     },
     {
@@ -751,7 +763,8 @@ export const pages = [
 
             space.createNode({
                 id: 'audioNode1', type: 'audio', position: { x: xPos, y: 0, z: 0 },
-                data: { label: 'Audio Clip 🎵', audioUrl: 'some_sound.mp3', color: 0x00ccff, size: 50 }, ...commonProps
+                data: { label: 'Audio Clip 🎵', audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', color: 0x00ccff, size: 50 }, // FIX: Updated audioUrl
+                ...commonProps
             });
 
             xPos += xIncrement;
@@ -779,7 +792,7 @@ export const pages = [
             // });
 
             // Apply a simple layout for visibility
-            setTimeout(() => space.getPlugin('LayoutPlugin')?.applyLayout('grid', {columns: 3, padding: {x:200, y:100}}), 100);
+            setTimeout(() => space.plugins.getPlugin('LayoutPlugin')?.applyLayout('grid', {columns: 3, padding: {x:200, y:100}}), 100);
         }
     },
 ];
