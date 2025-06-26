@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { Edge } from './Edge.js';
-import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
+import {Edge} from './Edge.js';
+import {CSS3DObject} from 'three/addons/renderers/CSS3DRenderer.js';
 
 export class CurvedEdge extends Edge {
     static typeName = 'curved';

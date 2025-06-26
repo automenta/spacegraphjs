@@ -1,5 +1,3 @@
-import * as THREE from 'three';
-
 export class TreeMapLayout {
     static layoutName = 'treemap';
     space = null;

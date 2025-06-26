@@ -1,12 +1,12 @@
 import * as THREE from 'three';
-import { BaseNode } from './BaseNode.js';
-import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
+import {Node} from './Node.js';
+import {CSS3DObject} from 'three/addons/renderers/CSS3DRenderer.js';
 
 const DEFAULT_NODE_SIZE = 100;
 const DEFAULT_CHART_BG_COLOR = '#222227';
 const DEFAULT_CHART_TEXT_COLOR = '#eeeeee';
 
-export class DataNode extends BaseNode {
+export class DataNode extends Node {
     static typeName = 'data';
     canvas = null;
     ctx = null;
@@ -140,8 +140,7 @@ export class DataNode extends BaseNode {
         div.className = 'node-label-3d node-common';
         div.textContent = this.data.label || '';
         div.dataset.nodeId = this.id;
-        const labelObj = new CSS3DObject(div);
-        return labelObj;
+        return new CSS3DObject(div);
     }
 
     update(space) {

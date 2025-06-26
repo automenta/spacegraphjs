@@ -1,5 +1,5 @@
-import { Plugin } from '../core/Plugin.js';
-import { UIManager } from '../ui/UIManager.js';
+import {Plugin} from '../core/Plugin.js';
+import {UIManager} from '../ui/UIManager.js';
 
 export class UIPlugin extends Plugin {
     uiManager = null;

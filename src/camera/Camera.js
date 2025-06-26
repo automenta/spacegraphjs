@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { gsap } from 'gsap';
-import { Utils } from '../utils.js';
-import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+import {gsap} from 'gsap';
+import {Utils} from '../utils.js';
+import {PointerLockControls} from 'three/addons/controls/PointerLockControls.js';
 
 const CAMERA_MODES = {
     ORBIT: 'orbit',

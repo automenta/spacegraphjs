@@ -1,5 +1,3 @@
-import * as THREE from 'three';
-
 export class CircularLayout {
     space = null;
     pluginManager = null;

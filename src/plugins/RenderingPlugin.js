@@ -1,12 +1,21 @@
 import * as THREE from 'three';
-import { CSS3DRenderer } from 'three/addons/renderers/CSS3DRenderer.js';
-import { Plugin } from '../core/Plugin.js';
-import { $ } from '../utils.js';
+import {CSS3DRenderer} from 'three/addons/renderers/CSS3DRenderer.js';
+import {Plugin} from '../core/Plugin.js';
+import {$} from '../utils.js';
 import {
-    EffectComposer, RenderPass, EffectPass, BloomEffect, OutlineEffect, Selection, KernelSize, SSAOEffect, NormalPass, BlendFunction,
+    BlendFunction,
+    BloomEffect,
+    EffectComposer,
+    EffectPass,
+    KernelSize,
+    NormalPass,
+    OutlineEffect,
+    RenderPass,
+    Selection,
+    SSAOEffect,
 } from 'postprocessing';
-import { InstancedMeshManager } from '../rendering/InstancedMeshManager.js';
-import { Line2 } from 'three/addons/lines/Line2.js'; // Import Line2 for instanceof check
+import {InstancedMeshManager} from '../rendering/InstancedMeshManager.js';
+import {Line2} from 'three/addons/lines/Line2.js'; // Import Line2 for instanceof check
 
 export class RenderingPlugin extends Plugin {
     scene = null;

@@ -1,14 +1,14 @@
-import { HtmlNode } from './HtmlNode.js';
-import { ShapeNode } from './ShapeNode.js';
-import { ImageNode } from './ImageNode.js';
-import { VideoNode } from './VideoNode.js';
-import { IFrameNode } from './IFrameNode.js';
-import { GroupNode } from './GroupNode.js';
-import { DataNode } from './DataNode.js';
-import { NoteNode } from './NoteNode.js'; // Added NoteNode
-import { AudioNode } from './AudioNode.js'; // Added AudioNode
-import { DocumentNode } from './DocumentNode.js'; // Added DocumentNode
-import { ChartNode } from './ChartNode.js'; // Added ChartNode
+import {HtmlNode} from './nodes/HtmlNode.js';
+import {ShapeNode} from './nodes/ShapeNode.js';
+import {ImageNode} from './nodes/ImageNode.js';
+import {VideoNode} from './nodes/VideoNode.js';
+import {IFrameNode} from './nodes/IFrameNode.js';
+import {GroupNode} from './nodes/GroupNode.js';
+import {DataNode} from './nodes/DataNode.js';
+import {NoteNode} from './nodes/NoteNode.js'; // Added NoteNode
+import {AudioNode} from './nodes/AudioNode.js'; // Added AudioNode
+import {DocumentNode} from './nodes/DocumentNode.js'; // Added DocumentNode
+import {ChartNode} from './nodes/ChartNode.js'; // Added ChartNode
 
 export class NodeFactory {
     constructor(space) {
@@ -58,7 +58,7 @@ export class NodeFactory {
      * @param {object} position - An object with x, y, z coordinates.
      * @param {object} [data={}] - Custom data for the node.
      * @param {number} [mass=1.0] - The mass of the node.
-     * @returns {BaseNode|null} The created node instance, or null if the type is not found.
+     * @returns {Node|null} The created node instance, or null if the type is not found.
      */
     createNode(id, type, position, data = {}, mass = 1.0) {
         // Allow data.type to override the explicit type parameter for flexibility
@@ -70,10 +70,9 @@ export class NodeFactory {
             return null;
         }
 
-        const nodeInstance = new NodeClass(id, position, data, mass);
         // Ensure the space property is set, BaseNode constructor doesn't do this.
         // It's typically set when the node is added to the space/plugin.
         // nodeInstance.space = this.space;
-        return nodeInstance;
+        return new NodeClass(id, position, data, mass);
     }
 }

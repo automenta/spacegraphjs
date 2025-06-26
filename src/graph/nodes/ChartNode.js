@@ -1,4 +1,4 @@
-import { HtmlNode } from './HtmlNode.js'; // Assuming HtmlNode can render complex HTML/JS
+import {HtmlNode} from './HtmlNode.js'; // Assuming HtmlNode can render complex HTML/JS
 // Or BaseNode if we want a 3D representation primarily
 
 export class ChartNode extends HtmlNode { // Or extends BaseNode for a 3D chart

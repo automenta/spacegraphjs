@@ -1,5 +1,5 @@
-import { Edge } from './Edge.js';
-import { Utils } from '../utils.js';
+import {Edge} from './Edge.js';
+import {Utils} from '../../utils.js';
 import * as THREE from 'three';
 
 export class DynamicThicknessEdge extends Edge {

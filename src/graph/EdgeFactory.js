@@ -1,8 +1,8 @@
-import { Edge } from './Edge.js';
-import { CurvedEdge } from './CurvedEdge.js';
-import { LabeledEdge } from './LabeledEdge.js';
-import { DottedEdge } from './DottedEdge.js'; // Added DottedEdge
-import { DynamicThicknessEdge } from './DynamicThicknessEdge.js'; // Added DynamicThicknessEdge
+import {Edge} from './edges/Edge.js';
+import {CurvedEdge} from './edges/CurvedEdge.js';
+import {LabeledEdge} from './edges/LabeledEdge.js';
+import {DottedEdge} from './edges/DottedEdge.js'; // Added DottedEdge
+import {DynamicThicknessEdge} from './edges/DynamicThicknessEdge.js'; // Added DynamicThicknessEdge
 
 export class EdgeFactory {
     constructor(space) {
@@ -44,8 +44,8 @@ export class EdgeFactory {
      * The actual registration of types is typically handled by the EdgePlugin.
      * @param {string} id - The unique ID for the edge.
      * @param {string} type - The typeName of the edge to create.
-     * @param {BaseNode} sourceNode - The source node instance.
-     * @param {BaseNode} targetNode - The target node instance.
+     * @param {Node} sourceNode - The source node instance.
+     * @param {Node} targetNode - The target node instance.
      * @param {object} [data={}] - Custom data for the edge.
      * @returns {Edge|null} The created edge instance, or null if the type is not found.
      */

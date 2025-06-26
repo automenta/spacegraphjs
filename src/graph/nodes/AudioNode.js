@@ -1,7 +1,7 @@
-import { BaseNode } from './BaseNode.js';
+import {Node} from './Node.js';
 import * as THREE from 'three';
 
-export class AudioNode extends BaseNode {
+export class AudioNode extends Node {
     static typeName = 'audio';
 
     constructor(id, position, data = {}, mass = 1.0) {

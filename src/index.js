@@ -22,18 +22,18 @@ export * from './layout/GridLayout.js';
 export * from './layout/HierarchicalLayout.js';
 export * from './layout/SphericalLayout.js';
 
-export * from './graph/CurvedEdge.js';
-export * from './graph/Edge.js';
+export * from './graph/edges/CurvedEdge.js';
+export * from './graph/edges/Edge.js';
 export * from './graph/EdgeFactory.js';
-export * from './graph/LabeledEdge.js';
+export * from './graph/edges/LabeledEdge.js';
 
-export * from './graph/nodes/BaseNode.js';
+export * from './graph/nodes/Node.js';
 export * from './graph/nodes/DataNode.js';
 export * from './graph/nodes/GroupNode.js';
 export * from './graph/nodes/HtmlNode.js';
 export * from './graph/nodes/IFrameNode.js';
 export * from './graph/nodes/ImageNode.js';
-export * from './graph/nodes/NodeFactory.js';
+export * from './graph/NodeFactory.js';
 export * from './graph/nodes/NoteNode.js';
 export * from './graph/nodes/ShapeNode.js';
 export * from './graph/nodes/VideoNode.js';

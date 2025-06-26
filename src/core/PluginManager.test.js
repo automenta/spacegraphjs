@@ -1,6 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
-import { PluginManager } from './PluginManager.js';
-import { Plugin } from './Plugin.js';
+import {describe, expect, it, vi} from 'vitest';
+import {PluginManager} from './PluginManager.js';
+import {Plugin} from './Plugin.js';
 
 const mockSpaceGraph = {
     emit: vi.fn(),

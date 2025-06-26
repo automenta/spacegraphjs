@@ -1,9 +1,7 @@
 import * as THREE from 'three';
-import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
-import { $, $$ } from '../utils.js';
-import { HtmlNode } from '../graph/nodes/HtmlNode.js';
-import { NoteNode } from '../graph/nodes/NoteNode.js';
-import { ShapeNode } from '../graph/nodes/ShapeNode.js';
+import {CSS3DObject} from 'three/addons/renderers/CSS3DRenderer.js';
+import {$, $$} from '../utils.js';
+import {HtmlNode} from '../graph/nodes/HtmlNode.js';
 
 const InteractionState = {
     IDLE: 'IDLE',
@@ -393,8 +391,7 @@ export class UIManager {
 
     _updateHudCameraMode(mode) {
         if (this.hudModeIndicator?.tagName === 'SELECT') {
-            const cameraMode = mode || this.space.plugins.getPlugin('CameraPlugin')?.getCameraMode() || 'orbit';
-            this.hudModeIndicator.value = cameraMode;
+            this.hudModeIndicator.value = mode || this.space.plugins.getPlugin('CameraPlugin')?.getCameraMode() || 'orbit';
         }
     }
 

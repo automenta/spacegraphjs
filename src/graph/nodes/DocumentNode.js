@@ -1,7 +1,7 @@
-import { BaseNode } from './BaseNode.js';
+import {Node} from './Node.js';
 import * as THREE from 'three';
 
-export class DocumentNode extends BaseNode {
+export class DocumentNode extends Node {
     static typeName = 'document';
 
     constructor(id, position, data = {}, mass = 1.0) {

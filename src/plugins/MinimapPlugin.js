@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Plugin } from '../core/Plugin.js';
+import {Plugin} from '../core/Plugin.js';
 
 const MINIMAP_SIZE = 200;
 const MINIMAP_MARGIN = 10;

@@ -1,5 +1,5 @@
-import { Utils } from '../../utils.js';
-import { HtmlNode } from './HtmlNode.js';
+import {Utils} from '../../utils.js';
+import {HtmlNode} from './HtmlNode.js';
 
 export class NoteNode extends HtmlNode {
     static typeName = 'note';

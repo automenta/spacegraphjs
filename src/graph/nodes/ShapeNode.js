@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { BaseNode } from './BaseNode.js';
+import {CSS3DObject} from 'three/addons/renderers/CSS3DRenderer.js';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {Node} from './Node.js';
 
-export class ShapeNode extends BaseNode {
+export class ShapeNode extends Node {
     static typeName = 'shape';
     shape = 'sphere';
     size = 50;

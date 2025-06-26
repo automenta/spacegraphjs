@@ -1,4 +1,4 @@
-import { Plugin } from '../core/Plugin.js';
+import {Plugin} from '../core/Plugin.js';
 
 export class DataPlugin extends Plugin {
     constructor(spaceGraph, pluginManager) {

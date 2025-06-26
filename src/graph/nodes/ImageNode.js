@@ -1,10 +1,10 @@
 import * as THREE from 'three';
-import { BaseNode } from './BaseNode.js';
-import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
+import {Node} from './Node.js';
+import {CSS3DObject} from 'three/addons/renderers/CSS3DRenderer.js';
 
 const loader = new THREE.TextureLoader();
 
-export class ImageNode extends BaseNode {
+export class ImageNode extends Node {
     static typeName = 'image';
     imageUrl = null;
     imageSize = { width: 100, height: 100 };

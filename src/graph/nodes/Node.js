@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { Utils } from '../../utils.js';
+import {Utils} from '../../utils.js';
 
-export class BaseNode {
+export class Node {
     space = null;
     position = new THREE.Vector3();
     data = {};

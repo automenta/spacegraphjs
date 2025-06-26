@@ -1,14 +1,14 @@
 import * as THREE from 'three';
-import { HtmlNode } from '../graph/nodes/HtmlNode.js';
-import { PluginManager } from './PluginManager.js';
-import { RenderingPlugin } from '../plugins/RenderingPlugin.js';
-import { CameraPlugin } from '../plugins/CameraPlugin.js';
-import { NodePlugin } from '../plugins/NodePlugin.js';
-import { EdgePlugin } from '../plugins/EdgePlugin.js';
-import { LayoutPlugin } from '../plugins/LayoutPlugin.js';
-import { UIPlugin } from '../plugins/UIPlugin.js';
-import { MinimapPlugin } from '../plugins/MinimapPlugin.js';
-import { DataPlugin } from '../plugins/DataPlugin.js';
+import {HtmlNode} from '../graph/nodes/HtmlNode.js';
+import {PluginManager} from './PluginManager.js';
+import {RenderingPlugin} from '../plugins/RenderingPlugin.js';
+import {CameraPlugin} from '../plugins/CameraPlugin.js';
+import {NodePlugin} from '../plugins/NodePlugin.js';
+import {EdgePlugin} from '../plugins/EdgePlugin.js';
+import {LayoutPlugin} from '../plugins/LayoutPlugin.js';
+import {UIPlugin} from '../plugins/UIPlugin.js';
+import {MinimapPlugin} from '../plugins/MinimapPlugin.js';
+import {DataPlugin} from '../plugins/DataPlugin.js';
 
 export class SpaceGraph {
     _cam = null;

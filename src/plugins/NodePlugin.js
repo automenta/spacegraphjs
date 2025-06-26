@@ -1,20 +1,19 @@
-import { Plugin } from '../core/Plugin.js';
-import { Utils } from '../utils.js';
-import { NodeFactory } from '../graph/nodes/NodeFactory.js';
+import {Plugin} from '../core/Plugin.js';
+import {Utils} from '../utils.js';
+import {NodeFactory} from '../graph/NodeFactory.js';
 
 // Import all node types
-import { BaseNode } from '../graph/nodes/BaseNode.js'; // Though not directly registered by typeName
-import { HtmlNode } from '../graph/nodes/HtmlNode.js';
-import { ShapeNode } from '../graph/nodes/ShapeNode.js';
-import { ImageNode } from '../graph/nodes/ImageNode.js';
-import { VideoNode } from '../graph/nodes/VideoNode.js';
-import { IFrameNode } from '../graph/nodes/IFrameNode.js';
-import { GroupNode } from '../graph/nodes/GroupNode.js';
-import { DataNode } from '../graph/nodes/DataNode.js';
-import { NoteNode } from '../graph/nodes/NoteNode.js';
-import { AudioNode } from '../graph/nodes/AudioNode.js';
-import { DocumentNode } from '../graph/nodes/DocumentNode.js';
-import { ChartNode } from '../graph/nodes/ChartNode.js';
+import {HtmlNode} from '../graph/nodes/HtmlNode.js';
+import {ShapeNode} from '../graph/nodes/ShapeNode.js';
+import {ImageNode} from '../graph/nodes/ImageNode.js';
+import {VideoNode} from '../graph/nodes/VideoNode.js';
+import {IFrameNode} from '../graph/nodes/IFrameNode.js';
+import {GroupNode} from '../graph/nodes/GroupNode.js';
+import {DataNode} from '../graph/nodes/DataNode.js';
+import {NoteNode} from '../graph/nodes/NoteNode.js';
+import {AudioNode} from '../graph/nodes/AudioNode.js';
+import {DocumentNode} from '../graph/nodes/DocumentNode.js';
+import {ChartNode} from '../graph/nodes/ChartNode.js';
 
 
 export class NodePlugin extends Plugin {

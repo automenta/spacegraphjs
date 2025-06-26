@@ -1,5 +1,3 @@
-import * as THREE from 'three';
-
 export class SphericalLayout {
     space = null;
     pluginManager = null;

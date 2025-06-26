@@ -1,7 +1,7 @@
-import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
-import { BaseNode } from './BaseNode.js';
+import {CSS3DObject} from 'three/addons/renderers/CSS3DRenderer.js';
+import {Node} from './Node.js';
 
-export class IFrameNode extends BaseNode {
+export class IFrameNode extends Node {
     static typeName = 'iframe';
     static DEFAULT_WIDTH = 480;
     static DEFAULT_HEIGHT = 360;
