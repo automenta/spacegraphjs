@@ -158,7 +158,7 @@ export class CameraPlugin extends Plugin {
     }
 
     getCameraMode() {
-        return this.cameraControls?.getCameraMode();
+        return this.cameraControls?.cameraMode; // Corrected: Access property directly
     }
 
     startFollowing(target, options = {}) {
