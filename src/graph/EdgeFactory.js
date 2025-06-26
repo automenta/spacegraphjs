@@ -9,7 +9,7 @@ export class EdgeFactory {
         this.space = space;
         this.edgeTypes = new Map();
         // _registerDefaultEdgeTypes will be called by EdgePlugin now
-    }
+
 
     // This method could be removed if EdgePlugin calls registerEdgeType directly for each
     // Or kept if it's a convenient way to register a common set. For now, assume EdgePlugin calls directly.

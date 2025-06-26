@@ -3,19 +3,6 @@ import { Utils } from '../utils.js';
 import { EdgeFactory } from '../graph/EdgeFactory.js';
 import { InstancedEdgeManager } from '../rendering/InstancedEdgeManager.js';
 
-const INSTANCE_THRESHOLD = 50;
-
-export class EdgePlugin extends Plugin {
-    edges = new Map();
-    edgeFactory = null;
-    instancedEdgeManager = null;
-    useInstancedEdges = false;
-
-import { Plugin } from '../core/Plugin.js';
-import { Utils } from '../utils.js';
-import { EdgeFactory } from '../graph/EdgeFactory.js';
-import { InstancedEdgeManager } from '../rendering/InstancedEdgeManager.js';
-
 // Import all edge types
 import { Edge } from '../graph/Edge.js';
 import { CurvedEdge } from '../graph/CurvedEdge.js';

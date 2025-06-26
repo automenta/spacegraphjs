@@ -1,7 +1,5 @@
 import * as S from '../index.js'; // Assuming S is the SpaceGraph library import
 
-import * as S from '../index.js'; // Assuming S is the SpaceGraph library import
-
 /**
  * Generates a graph representation of a JavaScript object's properties.
  * Recursively traverses an object and creates nodes for keys and values,

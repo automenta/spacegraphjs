@@ -1,7 +1,5 @@
 import * as S from '../index.js'; // Assuming S is the SpaceGraph library import
 
-import * as S from '../index.js'; // Assuming S is the SpaceGraph library import
-
 /**
  * Generates a graph representation of a file system structure.
  * Takes a JSON-like object describing directories and files and converts it
