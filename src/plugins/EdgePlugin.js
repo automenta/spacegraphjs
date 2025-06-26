@@ -31,16 +31,16 @@ export class EdgePlugin extends Plugin {
      * 1. Create your edge class (e.g., MyCustomEdge extends Edge).
      * 2. Ensure it has a static `typeName` property (e.g., static typeName = 'myCustomEdge').
      * 3. Import it into this file (EdgePlugin.js).
-     * 4. Add a line here: `this.edgeFactory.registerEdgeType(MyCustomEdge.typeName, MyCustomEdge);`
+     * 4. Add a line here: `this.edgeFactory.registerType(MyCustomEdge.typeName, MyCustomEdge);`
      */
     _registerEdgeTypes() {
-        this.edgeFactory.registerEdgeType(Edge.typeName, Edge);
-        this.edgeFactory.registerEdgeType(CurvedEdge.typeName, CurvedEdge);
-        this.edgeFactory.registerEdgeType(LabeledEdge.typeName, LabeledEdge);
-        this.edgeFactory.registerEdgeType(DottedEdge.typeName, DottedEdge);
-        this.edgeFactory.registerEdgeType(DynamicThicknessEdge.typeName, DynamicThicknessEdge);
+        this.edgeFactory.registerType(Edge.typeName, Edge);
+        this.edgeFactory.registerType(CurvedEdge.typeName, CurvedEdge);
+        this.edgeFactory.registerType(LabeledEdge.typeName, LabeledEdge);
+        this.edgeFactory.registerType(DottedEdge.typeName, DottedEdge);
+        this.edgeFactory.registerType(DynamicThicknessEdge.typeName, DynamicThicknessEdge);
 
-        this.edgeFactory.registerEdgeType('default', Edge);
+        this.edgeFactory.registerType('default', Edge);
     }
 
     getName() {
