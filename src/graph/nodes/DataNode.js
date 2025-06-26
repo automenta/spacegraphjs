@@ -149,7 +149,7 @@ export class DataNode extends BaseNode {
         if (this.labelObject) {
             const offset = this.getBoundingSphereRadius() * 1.1 + 15;
             this.labelObject.position.copy(this.position).y += offset;
-            if (space?.camera?._cam) this.labelObject.quaternion.copy(space.camera._cam.quaternion);
+            if (space?._cam) this.labelObject.quaternion.copy(space._cam.quaternion);
         }
     }
 
@@ -159,11 +159,6 @@ export class DataNode extends BaseNode {
         this._boundingSphere = this.mesh.geometry.boundingSphere.clone();
         this._boundingSphere.center.copy(this.position);
         this._boundingSphere.radius = (this.size / 2) * Math.sqrt(2);
-    }
-
-    getBoundingSphereRadius() {
-        if (!this._boundingSphere) this.updateBoundingSphere();
-        return this._boundingSphere?.radius ?? (this.size / 2) * Math.sqrt(2);
     }
 
     setSelectedStyle(selected) {

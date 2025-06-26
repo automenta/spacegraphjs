@@ -119,7 +119,7 @@ export class ImageNode extends BaseNode {
             const labelOffset = this.mesh.scale.y / 2 + 20;
             this.labelObject.position.copy(this.position);
             this.labelObject.position.y += labelOffset;
-            if (space?.camera?._cam) this.labelObject.quaternion.copy(space.camera._cam.quaternion);
+            if (space?._cam) this.labelObject.quaternion.copy(space._cam.quaternion);
         }
     }
 

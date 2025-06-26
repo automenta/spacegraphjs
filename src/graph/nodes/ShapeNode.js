@@ -210,7 +210,7 @@ export class ShapeNode extends BaseNode {
         if (this.labelObject) {
             const offset = this.getBoundingSphereRadius() * 1.1 + 10;
             this.labelObject.position.copy(this.position).y += offset;
-            if (space?.camera?._cam) this.labelObject.quaternion.copy(space.camera._cam.quaternion);
+            if (space?._cam) this.labelObject.quaternion.copy(space._cam.quaternion);
             this._applyLabelLOD(space);
         }
     }

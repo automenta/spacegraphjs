@@ -60,7 +60,7 @@ export class CurvedEdge extends Edge {
 
         if (perpendicular.lengthSq() < 1e-8) {
             const viewDirection = new THREE.Vector3();
-            this.space?.camera?._cam?.getWorldDirection(viewDirection);
+            this.space?._cam?.getWorldDirection(viewDirection);
             perpendicular.set(-viewDirection.y, viewDirection.x, 0);
             if (perpendicular.lengthSq() < 1e-8) perpendicular.set(1, 0, 0);
         }
@@ -154,7 +154,7 @@ export class CurvedEdge extends Edge {
             const midPointIndex = Math.floor(points.length / 2);
             this.labelObject.position.copy(points[midPointIndex]);
 
-            if (this.space?.camera?._cam) this.labelObject.quaternion.copy(this.space.camera._cam.quaternion);
+            if (this.space?._cam) this.labelObject.quaternion.copy(this.space._cam.quaternion);
             this._applyLabelLOD();
         }
     }

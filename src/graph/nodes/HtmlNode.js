@@ -138,8 +138,8 @@ export class HtmlNode extends BaseNode {
     update(space) {
         if (this.cssObject) {
             this.cssObject.position.copy(this.position);
-            if (this.billboard && space?.camera?._cam) {
-                this.cssObject.quaternion.copy(space.camera._cam.quaternion);
+            if (this.billboard && space?._cam) {
+                this.cssObject.quaternion.copy(space._cam.quaternion);
             }
             this._applyLabelLOD(space);
         }

@@ -43,28 +43,17 @@ export class UIPlugin extends Plugin {
         this.space.on('node:removed', this._onNodeRemoved);
         this.space.on('edge:removed', this._onEdgeRemoved);
         this.space.on('ui:request:startLinking', this.startLinking);
-        this.space.on('ui:request:applyLayout', this._onApplyLayout);
     }
 
-    _onNodeRemoved = (nodeId) => {
-        const node = this.selectedNodes.get(nodeId);
+    _onNodeRemoved = (nodeId, node) => {
         if (node) this.selectedNodes.delete(node);
         if (this.linkSourceNode?.id === nodeId) this.cancelLinking();
         this._emitSelectionChange();
     };
 
-    _onEdgeRemoved = (edgeId) => {
-        const edge = this.selectedEdges.get(edgeId);
+    _onEdgeRemoved = (_edgeId, edge) => {
         if (edge) this.selectedEdges.delete(edge);
         this._emitSelectionChange();
-    };
-
-    _onApplyLayout = (layoutName) => {
-        const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin');
-        if (layoutPlugin) {
-            layoutPlugin.layoutManager.setActiveLayout(layoutName);
-            layoutPlugin.kick();
-        }
     };
 
     setSelectedNode(node, multiSelect = false) {
@@ -175,7 +164,6 @@ export class UIPlugin extends Plugin {
         this.space.off('node:removed', this._onNodeRemoved);
         this.space.off('edge:removed', this._onEdgeRemoved);
         this.space.off('ui:request:startLinking', this.startLinking);
-        this.space.off('ui:request:applyLayout', this._onApplyLayout);
 
         this.uiManager?.dispose();
         this.uiManager = null;

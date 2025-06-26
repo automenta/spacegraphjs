@@ -91,8 +91,8 @@ export class IFrameNode extends BaseNode {
     update(space) {
         if (this.cssObject) {
             this.cssObject.position.copy(this.position);
-            if (this.data.billboard && space?.camera?._cam) {
-                this.cssObject.quaternion.copy(space.camera._cam.quaternion);
+            if (this.data.billboard && space?._cam) {
+                this.cssObject.quaternion.copy(space._cam.quaternion);
             }
         }
     }
