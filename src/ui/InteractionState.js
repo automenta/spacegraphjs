@@ -1,0 +1,7 @@
+export const InteractionState = {
+    IDLE: 'IDLE',
+    PANNING: 'PANNING',
+    DRAGGING_NODE: 'DRAGGING_NODE',
+    RESIZING_NODE: 'RESIZING_NODE',
+    LINKING_NODE: 'LINKING_NODE',
+};
