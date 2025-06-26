@@ -156,7 +156,11 @@ export class UIPlugin extends Plugin {
     getLinkSourceNode = () => this.linkSourceNode;
 
     update() {
-        this.uiManager?.updateEdgeMenuPosition();
+        // If there's exactly one edge selected, update its menu position
+        if (this.selectedEdges.size === 1) {
+            const selectedEdge = this.selectedEdges.values().next().value;
+            this.uiManager?.edgeMenu?.updatePosition(selectedEdge);
+        }
     }
 
     dispose() {
