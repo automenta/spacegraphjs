@@ -21,4 +21,14 @@ export const Utils = {
         });
         return target;
     },
+    toHexColor: (numColor) => {
+        if (typeof numColor === 'string' && numColor.startsWith('#')) {
+            return numColor; // Already a hex string
+        }
+        if (typeof numColor !== 'number' || isNaN(numColor)) {
+            return '#ffffff'; // Default to white for invalid input
+        }
+        const hex = Math.floor(numColor).toString(16).padStart(6, '0');
+        return `#${hex}`;
+    },
 };

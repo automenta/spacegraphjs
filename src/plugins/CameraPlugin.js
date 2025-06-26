@@ -24,6 +24,8 @@ export class CameraPlugin extends Plugin {
             this.space._cam = this.perspectiveCamera;
         }
 
+        // The CameraControls class (imported as Camera) handles different camera modes (orbit, free, top_down, etc.)
+        // and their specific interaction logic. This plugin primarily acts as a wrapper and interface.
         this.cameraControls = new CameraControls(this.space);
         this._subscribeToEvents();
     }

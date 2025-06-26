@@ -2,6 +2,7 @@ import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
 import { BaseNode } from './BaseNode.js';
 
 export class VideoNode extends BaseNode {
+    static typeName = 'video';
     static DEFAULT_WIDTH = 320;
     static DEFAULT_HEIGHT = 240;
     htmlElement = null;

@@ -11,9 +11,49 @@ export class EdgePlugin extends Plugin {
     instancedEdgeManager = null;
     useInstancedEdges = false;
 
+import { Plugin } from '../core/Plugin.js';
+import { Utils } from '../utils.js';
+import { EdgeFactory } from '../graph/EdgeFactory.js';
+import { InstancedEdgeManager } from '../rendering/InstancedEdgeManager.js';
+
+// Import all edge types
+import { Edge } from '../graph/Edge.js';
+import { CurvedEdge } from '../graph/CurvedEdge.js';
+import { LabeledEdge } from '../graph/LabeledEdge.js';
+import { DottedEdge } from '../graph/DottedEdge.js';
+import { DynamicThicknessEdge } from '../graph/DynamicThicknessEdge.js';
+
+const INSTANCE_THRESHOLD = 50;
+
+export class EdgePlugin extends Plugin {
+    edges = new Map();
+    edgeFactory = null;
+    instancedEdgeManager = null;
+    useInstancedEdges = false;
+
     constructor(spaceGraph, pluginManager) {
         super(spaceGraph, pluginManager);
-        this.edgeFactory = new EdgeFactory(spaceGraph);
+        this.edgeFactory = new EdgeFactory(spaceGraph); // Factory for creating edge instances
+        this._registerEdgeTypes(); // Centralized registration of all known edge types
+    }
+
+    /**
+     * Registers all known edge types with the EdgeFactory.
+     * This method is called during plugin construction.
+     * To add a new edge type:
+     * 1. Create your edge class (e.g., MyCustomEdge extends Edge).
+     * 2. Ensure it has a static `typeName` property (e.g., static typeName = 'myCustomEdge').
+     * 3. Import it into this file (EdgePlugin.js).
+     * 4. Add a line here: `this.edgeFactory.registerEdgeType(MyCustomEdge.typeName, MyCustomEdge);`
+     */
+    _registerEdgeTypes() {
+        this.edgeFactory.registerEdgeType(Edge.typeName, Edge);
+        this.edgeFactory.registerEdgeType(CurvedEdge.typeName, CurvedEdge);
+        this.edgeFactory.registerEdgeType(LabeledEdge.typeName, LabeledEdge);
+        this.edgeFactory.registerEdgeType(DottedEdge.typeName, DottedEdge);
+        this.edgeFactory.registerEdgeType(DynamicThicknessEdge.typeName, DynamicThicknessEdge);
+
+        this.edgeFactory.registerEdgeType('default', Edge);
     }
 
     getName() {

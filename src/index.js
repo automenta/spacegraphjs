@@ -37,3 +37,7 @@ export * from './graph/nodes/NodeFactory.js';
 export * from './graph/nodes/NoteNode.js';
 export * from './graph/nodes/ShapeNode.js';
 export * from './graph/nodes/VideoNode.js';
+
+// Export Generators
+export * from './generators/FileSystemGenerator.js';
+export * from './generators/ObjectPropertyGenerator.js';

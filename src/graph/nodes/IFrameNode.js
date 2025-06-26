@@ -2,6 +2,7 @@ import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
 import { BaseNode } from './BaseNode.js';
 
 export class IFrameNode extends BaseNode {
+    static typeName = 'iframe';
     static DEFAULT_WIDTH = 480;
     static DEFAULT_HEIGHT = 360;
     htmlElement = null;

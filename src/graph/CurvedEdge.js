@@ -3,6 +3,7 @@ import { Edge } from './Edge.js';
 import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
 
 export class CurvedEdge extends Edge {
+    static typeName = 'curved';
     labelObject = null;
     numPoints = 20;
     curvature = 0.3;

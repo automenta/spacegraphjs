@@ -2,6 +2,7 @@ import { HtmlNode } from './HtmlNode.js';
 import { $ } from '../../utils.js';
 
 export class GroupNode extends HtmlNode {
+    static typeName = 'group';
     isCollapsed = false;
     childNodeIds = new Set();
 
