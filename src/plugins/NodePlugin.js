@@ -35,28 +35,28 @@ export class NodePlugin extends Plugin {
      * 1. Create your node class (e.g., MyCustomNode extends BaseNode).
      * 2. Ensure it has a static `typeName` property (e.g., static typeName = 'myCustom').
      * 3. Import it into this file (NodePlugin.js).
-     * 4. Add a line here: `this.nodeFactory.registerNodeType(MyCustomNode.typeName, MyCustomNode);`
+     * 4. Add a line here: `this.nodeFactory.registerType(MyCustomNode.typeName, MyCustomNode);`
      */
     _registerNodeTypes() {
         // Core types from NodeFactory's previous internal method
         // this.nodeFactory.registerCoreNodeTypes(); // If we kept the method in factory
 
         // Or register them directly here:
-        this.nodeFactory.registerNodeType(HtmlNode.typeName, HtmlNode);
-        this.nodeFactory.registerNodeType(ShapeNode.typeName, ShapeNode);
-        this.nodeFactory.registerNodeType(ImageNode.typeName, ImageNode);
-        this.nodeFactory.registerNodeType(VideoNode.typeName, VideoNode);
-        this.nodeFactory.registerNodeType(IFrameNode.typeName, IFrameNode);
-        this.nodeFactory.registerNodeType(GroupNode.typeName, GroupNode);
-        this.nodeFactory.registerNodeType(DataNode.typeName, DataNode);
-        this.nodeFactory.registerNodeType(NoteNode.typeName, NoteNode);
+        this.nodeFactory.registerType(HtmlNode.typeName, HtmlNode);
+        this.nodeFactory.registerType(ShapeNode.typeName, ShapeNode);
+        this.nodeFactory.registerType(ImageNode.typeName, ImageNode);
+        this.nodeFactory.registerType(VideoNode.typeName, VideoNode);
+        this.nodeFactory.registerType(IFrameNode.typeName, IFrameNode);
+        this.nodeFactory.registerType(GroupNode.typeName, GroupNode);
+        this.nodeFactory.registerType(DataNode.typeName, DataNode);
+        this.nodeFactory.registerType(NoteNode.typeName, NoteNode);
 
-        this.nodeFactory.registerNodeType(AudioNode.typeName, AudioNode);
-        this.nodeFactory.registerNodeType(DocumentNode.typeName, DocumentNode);
-        this.nodeFactory.registerNodeType(ChartNode.typeName, ChartNode);
+        this.nodeFactory.registerType(AudioNode.typeName, AudioNode);
+        this.nodeFactory.registerType(DocumentNode.typeName, DocumentNode);
+        this.nodeFactory.registerType(ChartNode.typeName, ChartNode);
 
         // Set default node type
-        this.nodeFactory.registerNodeType('default', ShapeNode);
+        this.nodeFactory.registerType('default', ShapeNode);
     }
 
     getName() {
