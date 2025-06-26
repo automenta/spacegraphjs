@@ -1,67 +1,66 @@
+import { Plugin } from './Plugin.js';
+
 export class PluginManager {
     space = null;
-    plugins = [];
-    pluginMap = new Map();
+    plugins = new Map(); // This map stores the plugin instances
 
-    constructor(spaceGraphInstance) {
-        this.space = spaceGraphInstance;
+    constructor(space) {
+        this.space = space;
     }
 
-    add(pluginInstance) {
-        if (!pluginInstance || typeof pluginInstance.getName !== 'function') {
-            console.error('PluginManager: Attempted to register an invalid plugin.', pluginInstance);
+    /**
+     * Adds a plugin to the manager.
+     * @param {Plugin} plugin The plugin instance to add.
+     */
+    add(plugin) {
+        if (!(plugin instanceof Plugin)) {
+            console.warn('PluginManager: Attempted to add a non-Plugin object.');
             return;
         }
-
-        const name = pluginInstance.getName();
-        if (this.pluginMap.has(name)) {
-            console.warn(`PluginManager: Plugin with name "${name}" is already registered. Skipping.`);
-            return;
+        if (this.plugins.has(plugin.getName())) {
+            console.warn(`PluginManager: Plugin "${plugin.getName()}" already registered. Overwriting.`);
         }
-
-        this.plugins.push(pluginInstance);
-        this.pluginMap.set(name, pluginInstance);
+        this.plugins.set(plugin.getName(), plugin);
     }
 
-    async initPlugins() {
-        for (const plugin of this.plugins) {
-            try {
-                plugin.init?.();
-            } catch (error) {
-                console.error(`PluginManager: Error initializing plugin "${plugin.getName()}":`, error);
-            }
-        }
-    }
-
-    updatePlugins() {
-        for (const plugin of this.plugins) {
-            try {
-                plugin.update?.();
-            } catch (error) {
-                console.error(`PluginManager: Error updating plugin "${plugin.getName()}":`, error);
-            }
-        }
-    }
-
-    disposePlugins() {
-        for (let i = this.plugins.length - 1; i >= 0; i--) {
-            const plugin = this.plugins[i];
-            try {
-                plugin.dispose();
-            } catch (error) {
-                console.error(`PluginManager: Error disposing plugin "${plugin.getName()}":`, error);
-            }
-        }
-        this.plugins = [];
-        this.pluginMap.clear();
-        this.space = null;
-    }
-
+    /**
+     * Retrieves a plugin by its name.
+     * @param {string} name The name of the plugin.
+     * @returns {Plugin|undefined} The plugin instance, or undefined if not found.
+     */
     getPlugin(name) {
-        return this.pluginMap.get(name);
+        // FIX: Corrected the map name from 'pluginMap' to 'plugins'
+        return this.plugins.get(name);
     }
 
-    getAllPlugins() {
-        return [...this.plugins];
+    /**
+     * Initializes all registered plugins by calling their init() method.
+     * Plugins are initialized in the order they were added.
+     */
+    async initPlugins() {
+        for (const plugin of this.plugins.values()) {
+            await plugin.init?.(); // Call init if it exists
+        }
+    }
+
+    /**
+     * Updates all registered plugins by calling their update() method.
+     * This is typically called once per animation frame.
+     */
+    updatePlugins() {
+        for (const plugin of this.plugins.values()) {
+            plugin.update?.(); // Call update if it exists
+        }
+    }
+
+    /**
+     * Disposes of all registered plugins by calling their dispose() method
+     * and clears the plugin map.
+     */
+    disposePlugins() {
+        for (const plugin of this.plugins.values()) {
+            plugin.dispose?.(); // Call dispose if it exists
+        }
+        this.plugins.clear();
     }
 }
