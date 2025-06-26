@@ -5,6 +5,7 @@ import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
 const loader = new THREE.TextureLoader();
 
 export class ImageNode extends BaseNode {
+    static typeName = 'image';
     imageUrl = null;
     imageSize = { width: 100, height: 100 };
 

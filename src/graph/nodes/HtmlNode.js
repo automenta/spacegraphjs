@@ -3,6 +3,7 @@ import { Utils, $ } from '../../utils.js';
 import { BaseNode } from './BaseNode.js';
 
 export class HtmlNode extends BaseNode {
+    static typeName = 'html';
     static MIN_SIZE = { width: 80, height: 40 };
     static CONTENT_SCALE_RANGE = { min: 0.3, max: 3.0 };
     htmlElement = null;

@@ -7,6 +7,7 @@ const DEFAULT_CHART_BG_COLOR = '#222227';
 const DEFAULT_CHART_TEXT_COLOR = '#eeeeee';
 
 export class DataNode extends BaseNode {
+    static typeName = 'data';
     canvas = null;
     ctx = null;
     texture = null;

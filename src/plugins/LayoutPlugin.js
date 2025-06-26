@@ -4,6 +4,8 @@ import { GridLayout } from '../layout/GridLayout.js';
 import { CircularLayout } from '../layout/CircularLayout.js';
 import { SphericalLayout } from '../layout/SphericalLayout.js';
 import { HierarchicalLayout } from '../layout/HierarchicalLayout.js';
+import { TreeMapLayout } from '../layout/TreeMapLayout.js'; // Added TreeMapLayout
+import { RadialLayout } from '../layout/RadialLayout.js'; // Added RadialLayout
 import { LayoutManager } from '../layout/LayoutManager.js';
 
 export class LayoutPlugin extends Plugin {
@@ -21,11 +23,21 @@ export class LayoutPlugin extends Plugin {
     async init() {
         super.init();
 
+        // To add a new layout:
+        // 1. Create your layout class (e.g., MyCustomLayout). It should adhere to the
+        //    common layout interface (init, run, stop, updateConfig, dispose, etc.).
+        // 2. Import it into this file (LayoutPlugin.js).
+        // 3. Instantiate and register it with the LayoutManager below.
+        //    Use a unique string key for the layout (e.g., MyCustomLayout.layoutName or 'myCustom').
+        //    Example: this.layoutManager.registerLayout('myCustom', new MyCustomLayout({ option: value }));
+
         this.layoutManager.registerLayout('force', new ForceLayout());
         this.layoutManager.registerLayout('grid', new GridLayout());
         this.layoutManager.registerLayout('circular', new CircularLayout());
         this.layoutManager.registerLayout('spherical', new SphericalLayout());
         this.layoutManager.registerLayout('hierarchical', new HierarchicalLayout());
+        this.layoutManager.registerLayout(TreeMapLayout.layoutName, new TreeMapLayout());
+        this.layoutManager.registerLayout(RadialLayout.layoutName, new RadialLayout());
 
         await this.layoutManager.applyLayout('force');
         this._setupEventListeners();

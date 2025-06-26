@@ -4,6 +4,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { BaseNode } from './BaseNode.js';
 
 export class ShapeNode extends BaseNode {
+    static typeName = 'shape';
     shape = 'sphere';
     size = 50;
     color = 0xffffff;

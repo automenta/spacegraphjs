@@ -2,6 +2,7 @@ import { Edge } from './Edge.js';
 import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
 
 export class LabeledEdge extends Edge {
+    static typeName = 'labeled';
     labelObject = null;
     labelText = '';
 

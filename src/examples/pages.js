@@ -528,4 +528,254 @@ export const pages = [
         }
     },
     // More pages will be added here
+    {
+        id: 'graph-generators',
+        title: 'Graph Generators',
+        description: `<h3>Graph Generators Showcase</h3>
+                      <p>This page demonstrates generators that create graphs from data structures.</p>
+                      <ul>
+                        <li><b>FileSystemGenerator:</b> Creates a graph from a JSON object representing a file directory structure.</li>
+                        <li><b>ObjectPropertyGenerator:</b> Visualizes a JavaScript object's properties as a graph.</li>
+                      </ul>
+                      <p>Each generator will create its graph below. They might be layered if generated simultaneously; consider refreshing or navigating to view them separately if needed, or if a UI to clear/regenerate is added.</p>`,
+        createGraph: function createGeneratorDemos(space) {
+            // 1. FileSystemGenerator Demo
+            const fsData = {
+                name: "ProjectRoot", type: "directory", children: [
+                    { name: "src", type: "directory", children: [
+                        { name: "index.js", type: "file", size: 1500 },
+                        { name: "utils.js", type: "file", size: 800 },
+                        { name: "components", type: "directory", children: [
+                            { name: "Button.js", type: "file", size: 500 },
+                            { name: "Card.js", type: "file", size: 700 }
+                        ]}
+                    ]},
+                    { name: "docs", type: "directory", children: [
+                        { name: "README.md", type: "file", size: 2000 }
+                    ]},
+                    { name: "package.json", type: "file", size: 600 }
+                ]
+            };
+            const fsGenerator = new S.FileSystemGenerator();
+            // Offset this graph slightly to avoid overlap with the next one initially
+            fsGenerator.generate(fsData, space, { rootPosition: { x: -300, y: 200, z: 0 } });
+
+            // 2. ObjectPropertyGenerator Demo
+            const complexObject = {
+                id: "user123",
+                name: "Alice Wonderland",
+                email: "alice@example.com",
+                isActive: true,
+                roles: ["admin", "editor", "viewer"],
+                preferences: {
+                    theme: "dark",
+                    notifications: {
+                        email: true,
+                        sms: false,
+                        push: { enabled: true, sound: "default" }
+                    },
+                    language: "en-US"
+                },
+                address: {
+                    street: "123 Main St",
+                    city: "Anytown",
+                    zip: "12345",
+                    countryDetails: { name: "Wonderland", code: "WL" }
+                },
+                metadata: null,
+                lastLogin: new Date().toISOString(),
+                friends: [ {id: "user456", name: "Bob"}, {id: "user789", name: "Charlie"} ]
+            };
+            const objGenerator = new S.ObjectPropertyGenerator();
+            // Offset this graph
+            objGenerator.generate(complexObject, space, { rootPosition: { x: 300, y: 200, z: -50 }, maxDepth: 4 });
+
+            // Apply a layout after a short delay to allow nodes to be created
+            setTimeout(() => {
+                space.getPlugin('LayoutPlugin')?.applyLayout('force', { repulsion: 4000, centerStrength: 0.001 });
+                const uiPlugin = space.getPlugin('UIPlugin');
+                if (uiPlugin && uiPlugin.showNotification) {
+                   uiPlugin.showNotification('FileSystem (left) and Object (right) graphs generated.', 'info', 6000);
+                } else {
+                   console.log("Demo: FileSystem and ObjectProperty graphs generated.");
+                }
+            }, 500);
+        }
+    },
+    {
+        id: 'camera-modes-info',
+        title: 'Camera Modes Info',
+        description: `<h3>New Camera Modes</h3>
+                      <p>New camera modes have been added to enhance navigation:</p>
+                      <ul>
+                        <li><b>TopDownCamera:</b> Provides a 2D-like top-down view of the graph. Pan (drag or arrow keys if configured) moves across the XZ plane, and zoom (scroll) adjusts the height (Y-axis). Rotation may be restricted.</li>
+                        <li><b>FirstPersonCamera:</b> A stub for a first-person perspective. Currently behaves like 'Free' camera mode (WASD for movement, mouse for looking, requires pointer lock). Future enhancements could include node attachment or physics-based movement.</li>
+                      </ul>
+                      <p>These modes can typically be selected from a camera controls UI element if available in the application.</p>
+                      <p>This demo page itself doesn't activate a specific new camera mode by default, but loads a simple graph. Use your application's UI to switch camera modes.</p>`,
+        createGraph: function createCameraModesInfoGraph(space) {
+            // Create a simple graph for context
+            const n1 = space.createNode({ id: 'cam_n1', type: 'shape', position: { x: 0, y: 0, z: 0 }, data: { label: 'Center', color: 0xcccccc } });
+            const n2 = space.createNode({ id: 'cam_n2', type: 'shape', position: { x: 150, y: 0, z: 50 }, data: { label: 'Node A', shape: 'box', color: 0xcc6666 } });
+            const n3 = space.createNode({ id: 'cam_n3', type: 'shape', position: { x: -100, y: 0, z: -80 }, data: { label: 'Node B', shape: 'sphere', color: 0x66cc66 } });
+            space.addEdge(n1, n2);
+            space.addEdge(n1, n3);
+
+            setTimeout(() => {
+                space.getPlugin('LayoutPlugin')?.applyLayout('force');
+                const uiPlugin = space.getPlugin('UIPlugin');
+                if (uiPlugin && uiPlugin.showNotification) {
+                   uiPlugin.showNotification('Use UI to test TopDown or FirstPerson camera modes.', 'info', 5000);
+                } else {
+                   console.log("Demo: Use UI to test TopDown or FirstPerson camera modes.");
+                }
+           }, 100);
+        }
+    },
+    {
+        id: 'new-layouts',
+        title: 'New Layouts',
+        description: `<h3>New Layout Algorithms</h3>
+                      <p>This page demonstrates new layout algorithms (currently stubs/basic implementations).</p>
+                      <ul>
+                        <li><b>TreeMapLayout:</b> Arranges nodes as nested rectangles (stub currently uses grid). Ideal for hierarchical data based on area.</li>
+                        <li><b>RadialLayout:</b> Arranges nodes in concentric circles around a central point (stub uses simple circle).</li>
+                      </ul>
+                      <p>Select the desired layout from the UI dropdown to see its effect.</p>`,
+        createGraph: function createNewLayoutsGraph(space) {
+            const numNodes = 12;
+            for (let i = 0; i < numNodes; i++) {
+                space.createNode({
+                    id: `n_layout_${i}`,
+                    type: 'shape',
+                    position: { x: Math.random() * 200 - 100, y: Math.random() * 200 - 100, z: Math.random() * 50 - 25 },
+                    data: {
+                        label: `Node ${i}`,
+                        shape: 'box',
+                        size: Math.random() * 30 + 20, // For treemap areaProperty
+                        color: new S.THREE.Color(Math.random() * 0xffffff).getHex(),
+                        // For radial layout, could add parent/child relationships
+                        // parentId: i > 0 ? `n_layout_${Math.floor(Math.random() * i)}` : null
+                    }
+                });
+            }
+
+            // Add some edges for radial layout if it were more sophisticated
+            // for (let i = 1; i < numNodes; i++) {
+            //     const sourceId = `n_layout_${i}`;
+            //     const targetId = `n_layout_${Math.floor(Math.random() * i)}`;
+            //     if (space.getNodeById(sourceId) && space.getNodeById(targetId)) {
+            //         space.addEdgeById(S.Utils.generateId('edge'),sourceId, targetId);
+            //     }
+            // }
+
+            // Initial layout can be anything, user will switch via UI
+            setTimeout(() => {
+                 space.getPlugin('LayoutPlugin')?.applyLayout('force');
+                 // Instruct user to try new layouts from UI
+                 const uiPlugin = space.getPlugin('UIPlugin');
+                 if (uiPlugin && uiPlugin.showNotification) {
+                    uiPlugin.showNotification('Try "treemap" or "radial" layouts from the UI dropdown!', 'info', 5000);
+                 } else {
+                    console.log("Demo: Try 'treemap' or 'radial' layouts from the UI dropdown!");
+                 }
+            }, 100);
+        }
+    },
+    {
+        id: 'new-edge-types',
+        title: 'New Edge Types',
+        description: `<h3>New Edge Types Showcase</h3>
+                      <p>This page demonstrates recently added specialized edge types.</p>
+                      <ul>
+                        <li><b>DottedEdge:</b> An edge styled with a dotted pattern.</li>
+                        <li><b>DynamicThicknessEdge:</b> An edge whose thickness can change based on a data value.</li>
+                      </ul>`,
+        createGraph: function createNewEdgeTypesGraph(space) {
+            const commonProps = { mass: 1.0, type: 'shape', data: { shape: 'sphere', size: 40 } };
+
+            const n1 = space.createNode({ id: 'n1e', position: { x: -250, y: 100, z: 0 }, data: { ...commonProps.data, label: 'N1', color: 0xff8888 }, ...commonProps });
+            const n2 = space.createNode({ id: 'n2e', position: { x: 250, y: 100, z: 0 }, data: { ...commonProps.data, label: 'N2', color: 0x88ff88 }, ...commonProps });
+            const n3 = space.createNode({ id: 'n3e', position: { x: -250, y: -100, z: 0 }, data: { ...commonProps.data, label: 'N3', color: 0x8888ff }, ...commonProps });
+            const n4 = space.createNode({ id: 'n4e', position: { x: 250, y: -100, z: 0 }, data: { ...commonProps.data, label: 'N4 (Data Value: 75)', color: 0xffcc00, value: 75 }, ...commonProps }); // Added value for dynamic thickness
+
+            // Dotted Edge
+            space.addEdge(n1, n2, { type: 'dotted', label: 'Dotted Edge', color: 0x00ffff, thickness: 2, dashSize: 2, gapSize: 3 });
+
+            // Dynamic Thickness Edge
+            // Default range for thicknessDataKey 'value' is 0-100, mapping to visual thickness 1-10.
+            // N4 has data.value = 75, so it should be 75% of the way from min to max thickness.
+            // (75/100 * (10-1)) + 1 = 0.75 * 9 + 1 = 6.75 + 1 = 7.75 thickness
+            const dynamicEdge = space.addEdge(n3, n4, {
+                type: 'dynamicThickness',
+                label: 'Dynamic Thickness (Value: 75)',
+                color: 0xffaa00,
+                thicknessDataKey: 'value', // Node N4 has 'value: 75' in its data
+                // thicknessRange: { min: 0, max: 100 }, // Default
+                // visualThicknessRange: { min: 1, max: 10 } // Default
+            });
+
+            // Example of how to update the dynamic edge's driving value (e.g., from UI or data change)
+            // setTimeout(() => {
+            //    if (dynamicEdge && typeof dynamicEdge.setValue === 'function') {
+            //        const newValue = Math.random() * 100;
+            //        n4.data.value = newValue; // Update node's data too if it's the source of truth
+            //        dynamicEdge.setValue(newValue);
+            //        dynamicEdge.data.label = `Dynamic Thickness (Value: ${newValue.toFixed(0)})`;
+            //        // If label is handled by LabeledEdge/CurvedEdge, you might need to update labelObject directly
+            //        if (dynamicEdge.labelObject?.element) dynamicEdge.labelObject.element.textContent = dynamicEdge.data.label;
+            //        console.log(`Dynamic edge value set to ${newValue}`);
+            //    }
+            // }, 3000);
+             setTimeout(() => space.getPlugin('LayoutPlugin')?.applyLayout('grid', {columns: 2, padding: {x:400, y:200}}), 100);
+        }
+    },
+    {
+        id: 'new-node-types',
+        title: 'New Node Types',
+        description: `<h3>New Node Types Showcase</h3>
+                      <p>This page demonstrates recently added specialized node types.</p>
+                      <ul>
+                        <li><b>AudioNode:</b> Represents an audio source. (Visual stub)</li>
+                        <li><b>DocumentNode:</b> Represents a document or file. (Visual stub)</li>
+                        <li><b>ChartNode:</b> Intended to display charts using HTML/JS. (Visual/HTML stub)</li>
+                      </ul>`,
+        createGraph: function createNewNodeTypesGraph(space) {
+            const commonProps = { mass: 1.0 };
+            let xPos = -300;
+            const xIncrement = 250;
+
+            space.createNode({
+                id: 'audioNode1', type: 'audio', position: { x: xPos, y: 0, z: 0 },
+                data: { label: 'Audio Clip 🎵', audioUrl: 'some_sound.mp3', color: 0x00ccff, size: 50 }, ...commonProps
+            });
+
+            xPos += xIncrement;
+            space.createNode({
+                id: 'docNode1', type: 'document', position: { x: xPos, y: 0, z: 0 },
+                data: { label: 'Report.pdf 📄', documentUrl: 'path/to/report.pdf', icon: '📄', color: 0xffaa00, size: 60 }, ...commonProps
+            });
+
+            xPos += xIncrement;
+            space.createNode({
+                id: 'chartNode1', type: 'chart', position: { x: xPos, y: 0, z: 0 },
+                data: {
+                    label: 'Sales Data 📊',
+                    width: 280, height: 180, // For HtmlNode base
+                    content: '<div style="padding:10px; background:#2a2a2b; border-radius:5px; color:white;">Chart Placeholder: Sales Q1</div>', // Simple HTML content for stub
+                    // chartType: 'bar', chartData: { /* ... */ } // For actual chart rendering
+                }, ...commonProps
+            });
+
+            // Example of a ChartNode based on BaseNode (3D mesh) if ChartNode was derived from BaseNode
+            // xPos += xIncrement;
+            // space.createNode({
+            //     id: 'chartNode2', type: 'chart', position: { x: xPos, y: 0, z: 0 },
+            //     data: { label: '3D Chart Stub', color: 0x33dd77, size: 70 }, ...commonProps
+            // });
+
+            // Apply a simple layout for visibility
+            setTimeout(() => space.getPlugin('LayoutPlugin')?.applyLayout('grid', {columns: 3, padding: {x:200, y:100}}), 100);
+        }
+    },
 ];
