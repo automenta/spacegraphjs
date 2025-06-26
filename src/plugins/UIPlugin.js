@@ -35,7 +35,7 @@ export class UIPlugin extends Plugin {
         super.init();
         // The UIManager constructor already handles its own initialization.
         // Calling init() here is redundant and causes a TypeError as UIManager has no such method.
-        // this.uiManager.init();
+        // this.uiManager.init(); // REMOVED THIS LINE
         this._subscribeToEvents();
     }
 

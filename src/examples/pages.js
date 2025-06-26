@@ -1,4 +1,5 @@
 import * as S from '../index.js';
+import * as THREE from 'three'; // Directly import THREE for use in this file
 
 // This is the original createExampleGraph function, now part of the first page.
 function createFullExampleGraph(space) {
@@ -305,8 +306,10 @@ function createFullExampleGraph(space) {
         data: { label: 'Child 2 (Sphere)', shape: 'sphere', size: 40, color: 0x66ff99 },
     });
 
+    // Declare n_group outside the if block to ensure its scope
+    let n_group = null; // FIX: Declare groupNode outside the if block
     if (gc1 && gc2) {
-        const n_group = space.createNode({
+        n_group = space.createNode({ // FIX: Assign to n_group
             id: 'groupNode1',
             type: 'group',
             position: { x: 250, y: 250, z: -10 }, // Group position
@@ -428,8 +431,9 @@ export const pages = [
                 data: { label: 'Child B', shape:'sphere', size:30, color:0xcc66ff }, mass: 0.5
             });
 
+            let groupNode = null; // FIX: Declare groupNode here
             if(groupChild1 && groupChild2) {
-                const groupNode = space.createNode({
+                groupNode = space.createNode({ // FIX: Assign to groupNode
                     id: 'groupNode', type: 'group', position: { x: xPosCol2, y: yPos, z: 0 },
                     data: {
                         label: 'GroupNode',
@@ -446,7 +450,7 @@ export const pages = [
             // Connect some nodes for visual structure if desired, or leave them separate
             if (noteNode && imageNode) space.addEdge(noteNode, imageNode, {label: 'related'});
             if (shapeNodeBox && noteNode) space.addEdge(shapeNodeBox, noteNode);
-            if (iframeNode && groupNode) space.addEdge(iframeNode, groupNode);
+            if (iframeNode && groupNode) space.addEdge(iframeNode, groupNode); // FIX: groupNode is now in scope
 
             // Add a central node to connect all demonstrated nodes for better initial layout
             const centralHub = space.createNode({
@@ -653,7 +657,7 @@ export const pages = [
                         label: `Node ${i}`,
                         shape: 'box',
                         size: Math.random() * 30 + 20, // For treemap areaProperty
-                        color: new S.THREE.Color(Math.random() * 0xffffff).getHex(),
+                        color: new THREE.Color(Math.random() * 0xffffff).getHex(), // FIX: Use directly imported THREE
                         // For radial layout, could add parent/child relationships
                         // parentId: i > 0 ? `n_layout_${Math.floor(Math.random() * i)}` : null
                     }

@@ -77,8 +77,8 @@ export class ShapeNode extends Node {
     _createRepresentationForLevel(levelConfig) {
         return (levelConfig.shape === 'gltf' && levelConfig.gltfUrl)
             ? (() => {
-                const gltfGroup = new THREE.Group();
-                glttfGroup.castShadow = true;
+                const gltfGroup = new THREE.Group(); // FIX: Corrected typo from glttfGroup
+                gltfGroup.castShadow = true;
                 gltfGroup.receiveShadow = true;
                 this._loadGltfModelForLevel(levelConfig, gltfGroup);
                 return gltfGroup;
@@ -98,7 +98,7 @@ export class ShapeNode extends Node {
                 break;
             case 'sphere':
             default:
-                geometry = new THREE.SphereGeometry(effectiveSize / 2, 8, 6);
+                geometry = new THREE.SphereGeometry(effectiveSize / 2, 32, 16); // FIX: Increased segments for smoother sphere
                 break;
         }
         const material = new THREE.MeshStandardMaterial({
@@ -152,7 +152,8 @@ export class ShapeNode extends Node {
                 });
             },
             undefined,
-            () => {
+            (error) => { // FIX: Added error parameter to callback
+                console.error(`ShapeNode: Failed to load GLTF model from ${levelConfig.gltfUrl}. Falling back to primitive shape.`, error); // FIX: More informative error
                 const fallbackSize = levelConfig.size || this.size || 20;
                 const fallbackColor = levelConfig.color || this.color || 0xff0000;
                 const fallbackMesh = this._createMeshForLevel({
