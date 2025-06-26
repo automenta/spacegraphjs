@@ -29,8 +29,16 @@ export class PluginManager {
      * @returns {Plugin|undefined} The plugin instance, or undefined if not found.
      */
     getPlugin(name) {
-        // FIX: Corrected the map name from 'pluginMap' to 'plugins'
+        // Corrected: The comment was about 'pluginMap' which doesn't exist, 'plugins' is the correct map.
         return this.plugins.get(name);
+    }
+
+    /**
+     * Retrieves all registered plugins as an array.
+     * @returns {Plugin[]} An array of all plugin instances.
+     */
+    getAllPlugins() {
+        return Array.from(this.plugins.values());
     }
 
     /**
@@ -58,6 +66,10 @@ export class PluginManager {
      * and clears the plugin map.
      */
     disposePlugins() {
+        // Iterate in reverse order for disposal if dependencies are a concern,
+        // but current implementation iterates in insertion order.
+        // For now, matching the current iteration order of Map.values()
+        // which is insertion order.
         for (const plugin of this.plugins.values()) {
             plugin.dispose?.(); // Call dispose if it exists
         }

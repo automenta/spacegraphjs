@@ -37,49 +37,48 @@ describe('PluginManager', () => {
     it('should correctly instantiate', () => {
         const pm = new PluginManager(mockSpaceGraph);
         expect(pm).toBeInstanceOf(PluginManager);
-        expect(pm.plugins).toEqual([]);
-        expect(pm.pluginMap.size).toBe(0);
+        expect(pm.plugins).toBeInstanceOf(Map); // Expect a Map, not an array
+        expect(pm.plugins.size).toBe(0);
     });
 
     it('should register a plugin', () => {
         const pm = new PluginManager(mockSpaceGraph);
         const plugin = new MockPlugin(mockSpaceGraph, pm);
         pm.add(plugin);
-        expect(pm.plugins).toContain(plugin);
-        expect(pm.pluginMap.get(plugin.getName())).toBe(plugin);
+        expect(pm.plugins.has(plugin.getName())).toBe(true); // Check if Map has the plugin
+        expect(pm.plugins.get(plugin.getName())).toBe(plugin);
+        expect(pm.plugins.size).toBe(1);
     });
 
-    it('should not register a plugin with a duplicate name', () => {
+    it('should warn and overwrite when registering a plugin with a duplicate name', () => {
         const pm = new PluginManager(mockSpaceGraph);
         const plugin1 = new MockPlugin(mockSpaceGraph, pm, 'DuplicateNamePlugin');
         const plugin2 = new MockPlugin(mockSpaceGraph, pm, 'DuplicateNamePlugin');
         const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
         pm.add(plugin1);
-        pm.add(plugin2);
+        pm.add(plugin2); // This should overwrite plugin1
 
-        expect(pm.plugins.length).toBe(1);
-        expect(pm.plugins[0]).toBe(plugin1);
-        expect(pm.pluginMap.size).toBe(1);
+        expect(pm.plugins.size).toBe(1);
+        expect(pm.plugins.get('DuplicateNamePlugin')).toBe(plugin2); // Expect plugin2 to have overwritten plugin1
         expect(consoleWarnSpy).toHaveBeenCalledWith(
-            'PluginManager: Plugin with name "DuplicateNamePlugin" is already registered. Skipping.'
+            'PluginManager: Plugin "DuplicateNamePlugin" already registered. Overwriting.'
         );
         consoleWarnSpy.mockRestore();
     });
 
-    it('should not register an invalid plugin object', () => {
+    it('should warn when registering an invalid plugin object', () => {
         const pm = new PluginManager(mockSpaceGraph);
         const invalidPlugin = { name: 'InvalidPlugin' };
-        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {}); // Expect warn, not error
 
         pm.add(invalidPlugin);
 
-        expect(pm.plugins.length).toBe(0);
-        expect(consoleErrorSpy).toHaveBeenCalledWith(
-            'PluginManager: Attempted to register an invalid plugin.',
-            invalidPlugin
+        expect(pm.plugins.size).toBe(0);
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+            'PluginManager: Attempted to add a non-Plugin object.' // Corrected message
         );
-        consoleErrorSpy.mockRestore();
+        consoleWarnSpy.mockRestore();
     });
 
     it('should initialize all registered plugins', async () => {
@@ -112,7 +111,7 @@ describe('PluginManager', () => {
         expect(plugin2.isUpdated).toBe(true);
     });
 
-    it('should dispose all registered plugins in reverse order', () => {
+    it('should dispose all registered plugins in insertion order', () => {
         const pm = new PluginManager(mockSpaceGraph);
         const plugin1 = new MockPlugin(mockSpaceGraph, pm, 'Plugin1');
         const plugin2 = new MockPlugin(mockSpaceGraph, pm, 'Plugin2');
@@ -135,9 +134,9 @@ describe('PluginManager', () => {
         expect(plugin1.isDisposed).toBe(true);
         expect(plugin2.dispose).toHaveBeenCalled();
         expect(plugin2.isDisposed).toBe(true);
-        expect(disposeOrder).toEqual(['Plugin2', 'Plugin1']);
-        expect(pm.plugins.length).toBe(0);
-        expect(pm.pluginMap.size).toBe(0);
+        // Map.values() iterates in insertion order
+        expect(disposeOrder).toEqual(['Plugin1', 'Plugin2']);
+        expect(pm.plugins.size).toBe(0);
     });
 
     it('should retrieve a plugin by name', () => {
