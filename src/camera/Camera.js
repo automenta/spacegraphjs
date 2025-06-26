@@ -10,17 +10,6 @@ const CAMERA_MODES = {
     FIRST_PERSON: 'first_person',
 };
 
-/**
- * Manages camera controls, movement, and different interaction modes.
- * Available modes:
- * - ORBIT: Standard orbit controls (pan, zoom, rotate around a target).
- * - FREE: First-person like movement with pointer lock (WASD + mouse look).
- * - TOP_DOWN: Fixed top-down view, pans on XZ plane, zooms along Y.
- * - FIRST_PERSON: Similar to FREE, intended for potential node attachment or specific FPS interactions.
- *
- * Mode switching is handled by `setCameraMode(modeName)`.
- * The actual control logic and state for each mode are managed within this class.
- */
 export class Camera {
     space = null;
     _cam = null;
@@ -126,7 +115,7 @@ export class Camera {
     }
 
     startPan(startX, startY) {
-        if (this.cameraMode !== CAMERA_MODES.ORBIT || this.isPanning) return;
+        if (this.cameraMode !== CAMERA_MODES.ORBIT && this.cameraMode !== CAMERA_MODES.TOP_DOWN || this.isPanning) return;
         this._isManuallyControlled = true;
         this.isPanning = true;
         this.panStart.set(startX, startY);
@@ -138,7 +127,7 @@ export class Camera {
     }
 
     pan(deltaX, deltaY) {
-        if (this.cameraMode !== CAMERA_MODES.ORBIT || !this.isPanning) return;
+        if (this.cameraMode !== CAMERA_MODES.ORBIT && this.cameraMode !== CAMERA_MODES.TOP_DOWN || !this.isPanning) return;
 
         const cameraDist = this.currentPosition.distanceTo(this.currentLookAt);
         const vFOV = this._cam.fov * Utils.DEG2RAD;
@@ -146,14 +135,19 @@ export class Camera {
         const visibleHeight = 2 * Math.tan(vFOV / 2) * Math.max(1, cameraDist);
         const worldUnitsPerPixel = visibleHeight / viewHeight;
 
-        const panOffset = new THREE.Vector3()
-            .setFromMatrixColumn(this._cam.matrixWorld, 0)
-            .multiplyScalar(-deltaX * worldUnitsPerPixel * this.panSpeed)
-            .add(
-                new THREE.Vector3()
-                    .setFromMatrixColumn(this._cam.matrixWorld, 1)
-                    .multiplyScalar(deltaY * worldUnitsPerPixel * this.panSpeed)
-            );
+        let panOffset;
+        if (this.cameraMode === CAMERA_MODES.TOP_DOWN) {
+            panOffset = new THREE.Vector3(-deltaX * worldUnitsPerPixel * this.panSpeed, 0, deltaY * worldUnitsPerPixel * this.panSpeed);
+        } else {
+            panOffset = new THREE.Vector3()
+                .setFromMatrixColumn(this._cam.matrixWorld, 0)
+                .multiplyScalar(-deltaX * worldUnitsPerPixel * this.panSpeed)
+                .add(
+                    new THREE.Vector3()
+                        .setFromMatrixColumn(this._cam.matrixWorld, 1)
+                        .multiplyScalar(deltaY * worldUnitsPerPixel * this.panSpeed)
+                );
+        }
         this.targetPosition.add(panOffset);
         this.targetLookAt.add(panOffset);
     }
@@ -174,11 +168,21 @@ export class Camera {
         this.currentTargetNodeId = null;
 
         const zoomFactor = Math.pow(0.95, deltaY * 0.025 * this.zoomSpeed);
-        const lookAtToCam = new THREE.Vector3().subVectors(this.targetPosition, this.targetLookAt);
-        const currentDist = lookAtToCam.length();
-        const newDist = Utils.clamp(currentDist * zoomFactor, this.minZoomDistance, this.maxZoomDistance);
-
-        this.targetPosition.copy(this.targetLookAt).addScaledVector(lookAtToCam.normalize(), newDist);
+        
+        if (this.cameraMode === CAMERA_MODES.TOP_DOWN) {
+            const currentY = this.targetPosition.y;
+            let newY = currentY * zoomFactor;
+            newY = Utils.clamp(newY, this.minZoomDistance, this.maxZoomDistance);
+            this.targetPosition.y = newY;
+            this.targetLookAt.x = this.targetPosition.x;
+            this.targetLookAt.z = this.targetPosition.z;
+            this.targetLookAt.y = 0;
+        } else {
+            const lookAtToCam = new THREE.Vector3().subVectors(this.targetPosition, this.targetLookAt);
+            const currentDist = lookAtToCam.length();
+            const newDist = Utils.clamp(currentDist * zoomFactor, this.minZoomDistance, this.maxZoomDistance);
+            this.targetPosition.copy(this.targetLookAt).addScaledVector(lookAtToCam.normalize(), newDist);
+        }
     }
 
     moveTo(x, y, z, duration = 0.7, lookAtTarget = null, newCameraMode = null) {
@@ -250,13 +254,10 @@ export class Camera {
             if (this.moveState.left) { this.pointerLockControls.moveRight(-moveSpeed); moved = true; }
             if (this.moveState.right) { this.pointerLockControls.moveRight(moveSpeed); moved = true; }
 
-            // For FIRST_PERSON, up/down movement might be locked or handled by jumping/crouching mechanics later.
-            // For FREE mode, it's allowed.
             if (this.cameraMode === CAMERA_MODES.FREE) {
                 if (this.moveState.up) { this._cam.position.y += verticalMoveSpeed; moved = true; }
                 if (this.moveState.down) { this._cam.position.y -= verticalMoveSpeed; moved = true; }
             }
-
 
             if (moved) {
                 this.targetPosition.copy(this._cam.position);
@@ -267,33 +268,24 @@ export class Camera {
                 needsLerp = false;
             }
         } else if (this.cameraMode === CAMERA_MODES.TOP_DOWN) {
-            // Ensure camera always looks straight down
-            // targetPosition.y is controlled by zoom
-            // targetPosition.x and .z are controlled by pan
-            // targetLookAt.x and .z should follow targetPosition
-            // targetLookAt.y should be on the ground (e.g., 0)
             this.targetLookAt.x = this.targetPosition.x;
             this.targetLookAt.z = this.targetPosition.z;
-            this.targetLookAt.y = 0; // Or a configurable ground plane setting
+            this.targetLookAt.y = 0;
 
-            // Force current camera to align if not already lerping there
-            // This is more of a hard lock for TOP_DOWN's orientation
             this.currentPosition.lerp(this.targetPosition, this.dampingFactor);
-            this.currentLookAt.lerp(this.targetLookAt, this.dampingFactor); // LookAt will also lerp to its XZ target
+            this.currentLookAt.lerp(this.targetLookAt, this.dampingFactor);
 
             this._cam.position.copy(this.currentPosition);
-            this._cam.lookAt(this.currentLookAt); // This enforces the downward look
+            this._cam.lookAt(this.currentLookAt);
 
-            // If we are close enough, snap to prevent jitter
             const epsilon = 0.001;
             if (this.currentPosition.distanceTo(this.targetPosition) < epsilon &&
                 this.currentLookAt.distanceTo(this.targetLookAt) < epsilon) {
                 this.currentPosition.copy(this.targetPosition);
                 this.currentLookAt.copy(this.targetLookAt);
             }
-            needsLerp = false; // Lerping is handled above for position, lookAt is forced
+            needsLerp = false;
         }
-
 
         if (this.isFollowing && this.followTargetObject && !this._isManuallyControlled) {
             const targetActualPosition = this.followTargetObject.isVector3 ? this.followTargetObject : this.followTargetObject.position;
@@ -424,103 +416,6 @@ export class Camera {
     hasNamedView = (name) => this.namedViews.has(name);
 
     setCameraMode(mode, calledInternally = false) {
-        if (mode !== CAMERA_MODES.ORBIT && mode !== CAMERA_MODES.FREE) return;
-        if (this.cameraMode === mode && !calledInternally) return;
-
-        const oldMode = this.cameraMode;
-        this.cameraMode = mode;
-        this._isManuallyControlled = true;
-
-        if (this.cameraMode === CAMERA_MODES.ORBIT) {
-            if (this.isPointerLocked) this.pointerLockControls.unlock();
-            this.domElement.style.cursor = 'grab';
-            if (oldMode === CAMERA_MODES.FREE) this.targetLookAt.set(this.currentPosition.x, this.currentPosition.y, 0);
-        } else {
-            this.domElement.style.cursor = 'crosshair';
-            this.targetPosition.copy(this.currentPosition);
-            const lookDirection = new THREE.Vector3(0, 0, -1).applyQuaternion(this._cam.quaternion);
-            this.targetLookAt.copy(this.currentPosition).add(lookDirection);
-        }
-        this.space.emit('camera:modeChanged', { newMode: this.cameraMode, oldMode });
-        setTimeout(() => this._isManuallyControlled = false, 50);
-    }
-
-    getCameraMode = () => this.cameraMode;
-
-    requestPointerLock() {
-        if (this.cameraMode === CAMERA_MODES.FREE && !this.isPointerLocked) this.pointerLockControls.lock();
-        // Could potentially enable pointer lock for FIRST_PERSON as well if it uses similar controls
-        else if (this.cameraMode === CAMERA_MODES.FIRST_PERSON && !this.isPointerLocked) this.pointerLockControls.lock();
-    }
-
-    exitPointerLock() {
-        if (this.isPointerLocked) this.pointerLockControls.unlock();
-    }
-
-    // Modify pan and zoom to respect TopDown constraints
-    pan(deltaX, deltaY) {
-        if (this.cameraMode === CAMERA_MODES.ORBIT || this.cameraMode === CAMERA_MODES.TOP_DOWN) {
-            if (!this.isPanning) return; // Should be called after startPan
-
-            const cameraDist = this.currentPosition.distanceTo(this.currentLookAt);
-            const vFOV = this._cam.fov * Utils.DEG2RAD;
-            const viewHeight = this.domElement.clientHeight || window.innerHeight;
-            const visibleHeight = 2 * Math.tan(vFOV / 2) * Math.max(1, cameraDist);
-            const worldUnitsPerPixel = visibleHeight / viewHeight;
-
-            let panOffset;
-            if (this.cameraMode === CAMERA_MODES.TOP_DOWN) {
-                // In top-down view, pan moves along X and Z axes relative to world
-                // Assuming default camera up is Y, right is X, forward is -Z
-                // We need to adjust based on current camera's orientation if it can rotate
-                // For a fixed top-down (no rotation), this is simpler:
-                panOffset = new THREE.Vector3(-deltaX * worldUnitsPerPixel * this.panSpeed, 0, deltaY * worldUnitsPerPixel * this.panSpeed);
-                // If top-down allows Y-axis rotation, need to use camera's matrix for X direction
-            } else { // ORBIT mode
-                panOffset = new THREE.Vector3()
-                    .setFromMatrixColumn(this._cam.matrixWorld, 0)
-                    .multiplyScalar(-deltaX * worldUnitsPerPixel * this.panSpeed)
-                    .add(
-                        new THREE.Vector3()
-                            .setFromMatrixColumn(this._cam.matrixWorld, 1)
-                            .multiplyScalar(deltaY * worldUnitsPerPixel * this.panSpeed)
-                    );
-            }
-            this.targetPosition.add(panOffset);
-            this.targetLookAt.add(panOffset);
-        }
-        // For FREE and FIRST_PERSON, pan might be disabled or handled differently (e.g., only if not pointer locked)
-    }
-
-    zoom(deltaY) {
-        this._isManuallyControlled = true;
-        gsap.killTweensOf(this.targetPosition);
-        gsap.killTweensOf(this.targetLookAt);
-        if (this.isFollowing && this.followOptions.autoEndOnManualControl) this.stopFollowing();
-        this.currentTargetNodeId = null;
-
-        const zoomFactor = Math.pow(0.95, deltaY * 0.025 * this.zoomSpeed);
-
-        if (this.cameraMode === CAMERA_MODES.TOP_DOWN) {
-            // Zoom changes Y position, lookAt.y stays the same (or follows targetPosition.y)
-            const currentY = this.targetPosition.y;
-            let newY = currentY * zoomFactor;
-            newY = Utils.clamp(newY, this.minZoomDistance, this.maxZoomDistance); // Use zoom distance for Y height
-            this.targetPosition.y = newY;
-            // targetLookAt.y should remain on the ground plane (e.g. 0) or follow targetPosition.y - newY
-            this.targetLookAt.x = this.targetPosition.x; // Keep XZ aligned
-            this.targetLookAt.z = this.targetPosition.z;
-            this.targetLookAt.y = 0; // Assuming looking at ground plane
-        } else {
-            const lookAtToCam = new THREE.Vector3().subVectors(this.targetPosition, this.targetLookAt);
-            const currentDist = lookAtToCam.length();
-            const newDist = Utils.clamp(currentDist * zoomFactor, this.minZoomDistance, this.maxZoomDistance);
-            this.targetPosition.copy(this.targetLookAt).addScaledVector(lookAtToCam.normalize(), newDist);
-        }
-    }
-
-
-    setCameraMode(mode, calledInternally = false) {
         if (!Object.values(CAMERA_MODES).includes(mode)) {
             console.warn(`Camera: Unknown mode "${mode}" requested.`);
             return;
@@ -529,53 +424,38 @@ export class Camera {
 
         const oldMode = this.cameraMode;
         this.cameraMode = mode;
-        this._isManuallyControlled = true; // Prevent lerping issues during transition
+        this._isManuallyControlled = true;
 
-        // Common cleanup for modes that use pointer lock
         if (oldMode === CAMERA_MODES.FREE || oldMode === CAMERA_MODES.FIRST_PERSON) {
             if (this.isPointerLocked) this.pointerLockControls.unlock();
         }
 
-        this.domElement.style.cursor = 'default'; // Reset cursor first
+        this.domElement.style.cursor = 'default';
 
         switch (this.cameraMode) {
             case CAMERA_MODES.ORBIT:
                 this.domElement.style.cursor = 'grab';
-                // If coming from a mode that doesn't use targetLookAt in the same way (e.g. FREE, FPS)
-                // we might need to re-evaluate targetLookAt based on current camera orientation.
-                // For now, assume it's reasonable or handled by moveTo if called.
-                if (oldMode === CAMERA_MODES.FREE || oldMode === CAMERA_MODES.FIRST_PERSON || oldMode === CAMERA_MODES.TOP_DOWN) {
-                    // A sensible default if switching from non-orbit modes
-                    // this.targetLookAt.set(this.currentPosition.x, this.currentPosition.y, 0); // Look towards scene center along Z=0
-                }
                 break;
             case CAMERA_MODES.FREE:
                 this.domElement.style.cursor = 'crosshair';
-                // Ensure targetPosition and targetLookAt are consistent with camera's current state
                 this.targetPosition.copy(this.currentPosition);
                 const lookDirectionFree = new THREE.Vector3(0, 0, -1).applyQuaternion(this._cam.quaternion);
                 this.targetLookAt.copy(this.currentPosition).add(lookDirectionFree);
                 break;
             case CAMERA_MODES.TOP_DOWN:
-                this.domElement.style.cursor = 'move'; // Or 'grab'
-                // Position camera directly above current targetLookAt.x, targetLookAt.z, at a certain height
+                this.domElement.style.cursor = 'move';
                 const height = this.currentPosition.y > this.minZoomDistance ? this.currentPosition.y : Math.max(this.minZoomDistance, 500);
                 this.targetPosition.set(this.currentLookAt.x, height, this.currentLookAt.z);
-                // Look straight down at the same XZ coordinates
-                this.targetLookAt.set(this.currentLookAt.x, 0, this.currentLookAt.z); // Look at y=0 plane
+                this.targetLookAt.set(this.currentLookAt.x, 0, this.currentLookAt.z);
                 break;
             case CAMERA_MODES.FIRST_PERSON:
                 this.domElement.style.cursor = 'crosshair';
-                // Similar to FREE, but might have different movement constraints or interactions
                 this.targetPosition.copy(this.currentPosition);
                 const lookDirectionFPS = new THREE.Vector3(0, 0, -1).applyQuaternion(this._cam.quaternion);
                 this.targetLookAt.copy(this.currentPosition).add(lookDirectionFPS);
-                // Could attach to a node, set specific height, etc.
-                // For now, it's like FREE mode.
                 break;
         }
         this.space.emit('camera:modeChanged', { newMode: this.cameraMode, oldMode });
-        // Short delay to allow any transition animations to start before re-enabling smooth lerping
         setTimeout(() => this._isManuallyControlled = false, 50);
     }
 }

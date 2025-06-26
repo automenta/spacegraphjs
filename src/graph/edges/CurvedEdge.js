@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {Edge} from './Edge.js';
-import {CSS3DObject} from 'three/addons/renderers/CSS3DRenderer.js';
+import {createCSS3DLabelObject, applyLabelLOD} from '../../utils/labelUtils.js';
 
 export class CurvedEdge extends Edge {
     static typeName = 'curved';
@@ -21,22 +21,14 @@ export class CurvedEdge extends Edge {
     }
 
     _createLabel() {
-        const div = document.createElement('div');
-        div.className = 'edge-label node-common';
-        div.textContent = this.data.label;
-        Object.assign(div.style, {
-            pointerEvents: 'none',
+        const styleData = {
             color: this.data.labelColor || 'var(--sg-edge-label-text, white)',
             backgroundColor: this.data.labelBackgroundColor || 'var(--sg-edge-label-bg, rgba(0,0,0,0.6))',
             padding: '2px 5px',
             borderRadius: '3px',
             fontSize: this.data.labelFontSize || '12px',
-            textAlign: 'center',
-            whiteSpace: 'nowrap',
-        });
-        const label = new CSS3DObject(div);
-        label.userData = { edgeId: this.id, type: 'edge-label-curved' };
-        return label;
+        };
+        return createCSS3DLabelObject(this.data.label, this.id, 'edge-label', styleData, 'edge-label-curved');
     }
 
     update() {
@@ -155,31 +147,8 @@ export class CurvedEdge extends Edge {
             this.labelObject.position.copy(points[midPointIndex]);
 
             if (this.space?._cam) this.labelObject.quaternion.copy(this.space._cam.quaternion);
-            this._applyLabelLOD();
+            applyLabelLOD(this.labelObject, this.data.labelLod, this.space);
         }
-    }
-
-    _applyLabelLOD() {
-        if (!this.labelObject?.element || !this.data.labelLod?.length) {
-            if (this.labelObject?.element) this.labelObject.element.style.visibility = '';
-            return;
-        }
-
-        const camera = this.space?.plugins?.getPlugin('CameraPlugin')?.getCameraInstance();
-        if (!camera) return;
-
-        const distanceToCamera = this.labelObject.position.distanceTo(camera.position);
-        const sortedLodLevels = [...this.data.labelLod].sort((a, b) => (b.distance || 0) - (a.distance || 0));
-
-        let visibilityApplied = false;
-        for (const level of sortedLodLevels) {
-            if (distanceToCamera >= (level.distance || 0)) {
-                this.labelObject.element.style.visibility = level.style?.includes('visibility:hidden') ? 'hidden' : '';
-                visibilityApplied = true;
-                break;
-            }
-        }
-        if (!visibilityApplied) this.labelObject.element.style.visibility = '';
     }
 
     setHighlight(highlight) {

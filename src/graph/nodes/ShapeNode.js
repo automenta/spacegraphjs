@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import {CSS3DObject} from 'three/addons/renderers/CSS3DRenderer.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {Node} from './Node.js';
+import {createCSS3DLabelObject, applyLabelLOD} from '../../utils/labelUtils.js';
 
 export class ShapeNode extends Node {
     static typeName = 'shape';
@@ -77,7 +77,7 @@ export class ShapeNode extends Node {
     _createRepresentationForLevel(levelConfig) {
         return (levelConfig.shape === 'gltf' && levelConfig.gltfUrl)
             ? (() => {
-                const gltfGroup = new THREE.Group(); // FIX: Corrected typo from glttfGroup
+                const gltfGroup = new THREE.Group();
                 gltfGroup.castShadow = true;
                 gltfGroup.receiveShadow = true;
                 this._loadGltfModelForLevel(levelConfig, gltfGroup);
@@ -98,7 +98,7 @@ export class ShapeNode extends Node {
                 break;
             case 'sphere':
             default:
-                geometry = new THREE.SphereGeometry(effectiveSize / 2, 32, 16); // FIX: Increased segments for smoother sphere
+                geometry = new THREE.SphereGeometry(effectiveSize / 2, 32, 16);
                 break;
         }
         const material = new THREE.MeshStandardMaterial({
@@ -152,8 +152,8 @@ export class ShapeNode extends Node {
                 });
             },
             undefined,
-            (error) => { // FIX: Added error parameter to callback
-                console.error(`ShapeNode: Failed to load GLTF model from ${levelConfig.gltfUrl}. Falling back to primitive shape.`, error); // FIX: More informative error
+            (error) => {
+                console.error(`ShapeNode: Failed to load GLTF model from ${levelConfig.gltfUrl}. Falling back to primitive shape.`, error);
                 const fallbackSize = levelConfig.size || this.size || 20;
                 const fallbackColor = levelConfig.color || this.color || 0xff0000;
                 const fallbackMesh = this._createMeshForLevel({
@@ -199,11 +199,12 @@ export class ShapeNode extends Node {
     }
 
     _createLabel() {
-        const div = document.createElement('div');
-        div.className = 'node-label-3d node-common';
-        div.textContent = this.data.label;
-        div.dataset.nodeId = this.id;
-        return new CSS3DObject(div);
+        const styleData = {
+            color: 'var(--sg-node-text)',
+            backgroundColor: 'var(--sg-label-bg, rgba(10, 10, 20, 0.75))',
+            fontSize: '14px',
+        };
+        return createCSS3DLabelObject(this.data.label, this.id, 'node-label-3d', styleData, 'shape-label');
     }
 
     update(space) {
@@ -212,31 +213,8 @@ export class ShapeNode extends Node {
             const offset = this.getBoundingSphereRadius() * 1.1 + 10;
             this.labelObject.position.copy(this.position).y += offset;
             if (space?._cam) this.labelObject.quaternion.copy(space._cam.quaternion);
-            this._applyLabelLOD(space);
+            applyLabelLOD(this.labelObject, this.data.labelLod, space);
         }
-    }
-
-    _applyLabelLOD(space) {
-        if (!this.labelObject?.element || !this.data.labelLod?.length) {
-            if (this.labelObject?.element) this.labelObject.element.style.visibility = '';
-            return;
-        }
-
-        const camera = space?.plugins?.getPlugin('CameraPlugin')?.getCameraInstance();
-        if (!camera) return;
-
-        const distanceToCamera = this.position.distanceTo(camera.position);
-        const sortedLodLevels = [...this.data.labelLod].sort((a, b) => (b.distance || 0) - (a.distance || 0));
-
-        let visibilityApplied = false;
-        for (const level of sortedLodLevels) {
-            if (distanceToCamera >= (level.distance || 0)) {
-                this.labelObject.element.style.visibility = level.style?.includes('visibility:hidden') ? 'hidden' : '';
-                visibilityApplied = true;
-                break;
-            }
-        }
-        if (!visibilityApplied) this.labelObject.element.style.visibility = '';
     }
 
     getBoundingSphereRadius() {

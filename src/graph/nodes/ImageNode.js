@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {Node} from './Node.js';
-import {CSS3DObject} from 'three/addons/renderers/CSS3DRenderer.js';
+import {createCSS3DLabelObject, applyLabelLOD} from '../../utils/labelUtils.js';
 
 const loader = new THREE.TextureLoader();
 
@@ -106,11 +106,12 @@ export class ImageNode extends Node {
     }
 
     _createLabel() {
-        const div = document.createElement('div');
-        div.className = 'node-label-3d node-common';
-        div.textContent = this.data.label;
-        div.dataset.nodeId = this.id;
-        return new CSS3DObject(div);
+        const styleData = {
+            color: 'var(--sg-node-text)',
+            backgroundColor: 'var(--sg-label-bg, rgba(10, 10, 20, 0.75))',
+            fontSize: '14px',
+        };
+        return createCSS3DLabelObject(this.data.label, this.id, 'node-label-3d', styleData, 'shape-label');
     }
 
     update(space) {
@@ -120,6 +121,7 @@ export class ImageNode extends Node {
             this.labelObject.position.copy(this.position);
             this.labelObject.position.y += labelOffset;
             if (space?._cam) this.labelObject.quaternion.copy(space._cam.quaternion);
+            applyLabelLOD(this.labelObject, this.data.labelLod, space);
         }
     }
 

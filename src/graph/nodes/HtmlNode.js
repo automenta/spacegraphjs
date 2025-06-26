@@ -1,6 +1,7 @@
 import {CSS3DObject} from 'three/addons/renderers/CSS3DRenderer.js';
 import {$, Utils} from '../../utils.js';
 import {Node} from './Node.js';
+import {applyLabelLOD} from '../../utils/labelUtils.js';
 
 export class HtmlNode extends Node {
     static typeName = 'html';
@@ -141,42 +142,7 @@ export class HtmlNode extends Node {
             if (this.billboard && space?._cam) {
                 this.cssObject.quaternion.copy(space._cam.quaternion);
             }
-            this._applyLabelLOD(space);
-        }
-    }
-
-    _applyLabelLOD(space) {
-        if (!this.htmlElement || !this.data.labelLod?.length) {
-            this.htmlElement.style.visibility = '';
-            const contentEl = $('.node-content', this.htmlElement);
-            if (contentEl) contentEl.style.transform = `scale(${this.data.contentScale ?? 1.0})`;
-            return;
-        }
-
-        const camera = space?.plugins?.getPlugin('CameraPlugin')?.getCameraInstance();
-        if (!camera) return;
-
-        const distanceToCamera = this.position.distanceTo(camera.position);
-        const sortedLodLevels = [...this.data.labelLod].sort((a, b) => (b.distance || 0) - (a.distance || 0));
-
-        let ruleApplied = false;
-        for (const level of sortedLodLevels) {
-            if (distanceToCamera >= (level.distance || 0)) {
-                this.htmlElement.style.visibility = level.style?.includes('visibility:hidden') ? 'hidden' : '';
-                const contentEl = $('.node-content', this.htmlElement);
-                if (contentEl) {
-                    const baseScale = this.data.contentScale ?? 1.0;
-                    contentEl.style.transform = `scale(${baseScale * (level.scale ?? 1.0)})`;
-                }
-                ruleApplied = true;
-                break;
-            }
-        }
-
-        if (!ruleApplied) {
-            this.htmlElement.style.visibility = '';
-            const contentEl = $('.node-content', this.htmlElement);
-            if (contentEl) contentEl.style.transform = `scale(${this.data.contentScale ?? 1.0})`;
+            applyLabelLOD(this.cssObject, this.data.labelLod, space, this.data.contentScale ?? 1.0);
         }
     }
 
