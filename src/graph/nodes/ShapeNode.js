@@ -30,9 +30,8 @@ export class ShapeNode extends Node {
             this.labelObject.userData = { nodeId: this.id, type: 'shape-label' };
         }
         this.update();
-        if (this.mesh.levels.length > 0 && this.mesh.levels[0].object) {
-            this.updateBoundingSphere();
-        }
+        // Initial bounding sphere update, will be re-updated on GLTF load
+        this.updateBoundingSphere();
     }
 
     getDefaultData() {
@@ -124,27 +123,45 @@ export class ShapeNode extends Node {
                     if (child.isMesh) {
                         child.castShadow = true;
                         child.receiveShadow = true;
+                        // Apply color if specified and material allows
+                        if (levelConfig.color && child.material) {
+                            if (Array.isArray(child.material)) {
+                                child.material.forEach(mat => {
+                                    if (mat.isMeshStandardMaterial || mat.isMeshBasicMaterial) {
+                                        mat.color.set(levelConfig.color);
+                                    }
+                                });
+                            } else if (child.material.isMeshStandardMaterial || child.material.isMeshBasicMaterial) {
+                                child.material.color.set(levelConfig.color);
+                            }
+                        }
                     }
                 });
 
-                const box = new THREE.Box3().setFromObject(modelScene);
-                const modelSize = box.getSize(new THREE.Vector3());
+                const bbox = new THREE.Box3().setFromObject(modelScene);
+                const modelSize = new THREE.Vector3();
+                bbox.getSize(modelSize);
                 const maxDim = Math.max(modelSize.x, modelSize.y, modelSize.z);
                 let scale = 1;
                 if (maxDim > 0) {
-                    const scaleFactor = levelConfig.gltfScale ?? this.data.gltfScale ?? levelConfig.size ?? this.size;
-                    scale = scaleFactor / maxDim;
+                    // Prioritize gltfScale from levelConfig, then data, then fall back to size
+                    const targetDimension = levelConfig.gltfScale ?? this.data.gltfScale ?? levelConfig.size ?? this.size;
+                    scale = targetDimension / maxDim;
                 }
                 modelScene.scale.set(scale, scale, scale);
 
-                const center = box.getCenter(new THREE.Vector3());
+                const center = new THREE.Vector3();
+                bbox.getCenter(center);
+                // Adjust position based on the original bounding box center, scaled
                 modelScene.position.sub(center.multiplyScalar(scale));
 
                 while (targetGroup.children.length > 0) targetGroup.remove(targetGroup.children[0]);
                 targetGroup.add(modelScene);
 
                 const lodLevelEntry = this.mesh.levels.find((l) => l.object === targetGroup);
-                if (lodLevelEntry?.distance === 0) this.updateBoundingSphere();
+                if (lodLevelEntry?.distance === 0) {
+                    this.updateBoundingSphere();
+                }
                 this.space?.emit('node:updated', {
                     node: this,
                     property: 'mesh_lod_level_loaded',
@@ -161,9 +178,13 @@ export class ShapeNode extends Node {
                     size: fallbackSize,
                     color: fallbackColor,
                 });
+                // Clear existing children before adding the fallback mesh
+                while (targetGroup.children.length > 0) targetGroup.remove(targetGroup.children[0]);
                 targetGroup.add(fallbackMesh);
                 const lodLevelEntry = this.mesh.levels.find((l) => l.object === targetGroup);
-                if (lodLevelEntry?.distance === 0) this.updateBoundingSphere();
+                if (lodLevelEntry?.distance === 0) {
+                    this.updateBoundingSphere();
+                }
             }
         );
     }
@@ -171,31 +192,35 @@ export class ShapeNode extends Node {
     updateBoundingSphere() {
         if (!this._boundingSphere) this._boundingSphere = new THREE.Sphere();
 
+        let objectToBound = null;
         if (this.mesh.levels.length > 0) {
-            const primaryRepresentation = this.mesh.levels[0].object;
-            if (primaryRepresentation) {
-                const box = new THREE.Box3();
-                if (primaryRepresentation.children.length > 0) {
-                    box.setFromObject(primaryRepresentation, true);
-                } else if (primaryRepresentation.geometry) {
-                    if (!primaryRepresentation.geometry.boundingBox) primaryRepresentation.geometry.computeBoundingBox();
-                    box.copy(primaryRepresentation.geometry.boundingBox).applyMatrix4(primaryRepresentation.matrixWorld);
-                } else {
-                    box.setFromCenterAndSize(this.mesh.getWorldPosition(new THREE.Vector3()), new THREE.Vector3(this.size, this.size, this.size));
-                }
+            objectToBound = this.mesh.levels[0].object;
+        }
 
-                if (!box.isEmpty()) {
-                    box.getBoundingSphere(this._boundingSphere);
-                } else {
-                    this._boundingSphere.radius = (this.size || 50) / 2;
-                }
+        if (objectToBound) {
+            const box = new THREE.Box3();
+            // Compute bounding box in world coordinates, traversing all children
+            box.setFromObject(objectToBound, true);
+
+            // Check if the computed box is valid (not empty or containing NaNs)
+            if (!box.isEmpty() && isFinite(box.min.x) && isFinite(box.max.x)) {
+                const size = new THREE.Vector3();
+                box.getSize(size);
+                // The radius should be half the length of the diagonal of the bounding box
+                this._boundingSphere.radius = size.length() / 2;
+                // The center of the bounding sphere should be the node's position
+                this._boundingSphere.center.copy(this.position);
             } else {
+                // Fallback if bounding box computation failed or resulted in invalid values
+                console.warn(`ShapeNode ${this.id}: Bounding box computation failed for object. Using fallback radius.`);
                 this._boundingSphere.radius = (this.size || 50) / 2;
+                this._boundingSphere.center.copy(this.position);
             }
         } else {
+            // Fallback if no mesh or LOD levels are available
             this._boundingSphere.radius = (this.size || 50) / 2;
+            this._boundingSphere.center.copy(this.position);
         }
-        this._boundingSphere.center.copy(this.position);
     }
 
     _createLabel() {
@@ -218,11 +243,9 @@ export class ShapeNode extends Node {
     }
 
     getBoundingSphereRadius() {
-        if (!this._boundingSphere || (this.shape === 'gltf' && this.mesh?.children.length === 0)) {
-            if (this.shape === 'gltf' && (!this._boundingSphere || this._boundingSphere.radius === 0)) {
-                return this.size / 2;
-            }
-            if (!this._boundingSphere) this.updateBoundingSphere();
+        // If bounding sphere hasn't been computed or is invalid for GLTF, recompute or use fallback
+        if (!this._boundingSphere || (this.shape === 'gltf' && this.mesh?.children.length === 0 && this._boundingSphere.radius === 0)) {
+            this.updateBoundingSphere();
         }
         return this._boundingSphere?.radius ?? this.size / 2;
     }
@@ -261,5 +284,36 @@ export class ShapeNode extends Node {
             });
         }
         if (!this.isSelected) this.labelObject?.element?.classList.toggle('hovered', hovered);
+    }
+
+    dispose() {
+        if (this.mesh) {
+            if (this.mesh instanceof THREE.LOD) {
+                this.mesh.levels.forEach((level) => {
+                    level.object?.traverse((child) => {
+                        if (child.isMesh) {
+                            child.geometry?.dispose();
+                            if (Array.isArray(child.material)) {
+                                child.material.forEach(mat => mat.dispose());
+                            } else {
+                                child.material?.dispose();
+                            }
+                        }
+                    });
+                });
+            } else {
+                this.mesh.geometry?.dispose();
+                if (Array.isArray(this.mesh.material)) {
+                    this.mesh.material.forEach(mat => mat.dispose());
+                } else {
+                    this.mesh.material?.dispose();
+                }
+            }
+            this.mesh.parent?.remove(this.mesh);
+            this.mesh = null;
+        }
+        this.labelObject?.element?.remove();
+        this.labelObject = null;
+        super.dispose();
     }
 }
