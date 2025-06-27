@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import {Node} from './Node.js';
-import {createCSS3DLabelObject, applyLabelLOD} from '../../utils/labelUtils.js';
+import { Node } from './Node.js';
+import { createCSS3DLabelObject, applyLabelLOD } from '../../utils/labelUtils.js';
 
 const loader = new THREE.TextureLoader();
 
@@ -73,13 +73,17 @@ export class ImageNode extends Node {
 
                 if (typeof this.data.size === 'number') {
                     const maxDim = this.data.size;
-                    [planeWidth, planeHeight] = imgAspect >= 1 ? [maxDim, maxDim / imgAspect] : [maxDim * imgAspect, maxDim];
+                    [planeWidth, planeHeight] =
+                        imgAspect >= 1 ? [maxDim, maxDim / imgAspect] : [maxDim * imgAspect, maxDim];
                 } else {
                     planeWidth = this.imageSize.width;
                     planeHeight = this.imageSize.height;
                     const defaultSize = this.data.size || 100;
                     if (this.imageSize.width === this.imageSize.height && this.imageSize.width === defaultSize) {
-                        [planeWidth, planeHeight] = imgAspect >= 1 ? [defaultSize, defaultSize / imgAspect] : [defaultSize * imgAspect, defaultSize];
+                        [planeWidth, planeHeight] =
+                            imgAspect >= 1
+                                ? [defaultSize, defaultSize / imgAspect]
+                                : [defaultSize * imgAspect, defaultSize];
                     }
                 }
 

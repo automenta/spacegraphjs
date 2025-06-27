@@ -34,7 +34,10 @@ function _calculateStepInWorker() {
 
             if (distSq < 1e-3) {
                 distSq = 1e-3;
-                delta = vecScalarMult(vecNormalize({ x: Math.random() - 0.5, y: Math.random() - 0.5, z: Math.random() - 0.5 }), 0.1);
+                delta = vecScalarMult(
+                    vecNormalize({ x: Math.random() - 0.5, y: Math.random() - 0.5, z: Math.random() - 0.5 }),
+                    0.1
+                );
             }
             const distance = Math.sqrt(distSq);
 
@@ -70,14 +73,20 @@ function _calculateStepInWorker() {
 
         switch (edge.constraintType) {
             case 'rigid':
-                forceMag = (params.stiffness ?? s.defaultRigidStiffness) * (distance - (params.distance ?? s.defaultElasticIdealLength));
+                forceMag =
+                    (params.stiffness ?? s.defaultRigidStiffness) *
+                    (distance - (params.distance ?? s.defaultElasticIdealLength));
                 break;
             case 'weld':
-                forceMag = (params.stiffness ?? s.defaultWeldStiffness) * (distance - (params.distance ?? (sourceNode.radius || 10) + (targetNode.radius || 10)));
+                forceMag =
+                    (params.stiffness ?? s.defaultWeldStiffness) *
+                    (distance - (params.distance ?? (sourceNode.radius || 10) + (targetNode.radius || 10)));
                 break;
             case 'elastic':
             default:
-                forceMag = (params.stiffness ?? s.defaultElasticStiffness) * (distance - (params.idealLength ?? s.defaultElasticIdealLength));
+                forceMag =
+                    (params.stiffness ?? s.defaultElasticStiffness) *
+                    (distance - (params.idealLength ?? s.defaultElasticIdealLength));
                 break;
         }
         let forceVec = vecScalarMult(vecNormalize(delta), forceMag);
@@ -101,7 +110,8 @@ function _calculateStepInWorker() {
         nodes.forEach((node) => {
             const clusterId = node.clusterId;
             if (clusterId === undefined || clusterId === null) return;
-            clusters.has(clusterId) || clusters.set(clusterId, { nodeIds: [], centerX: 0, centerY: 0, centerZ: 0, count: 0 });
+            clusters.has(clusterId) ||
+                clusters.set(clusterId, { nodeIds: [], centerX: 0, centerY: 0, centerZ: 0, count: 0 });
             const clusterData = clusters.get(clusterId);
             clusterData.nodeIds.push(node.id);
             clusterData.centerX += node.x;
@@ -130,7 +140,9 @@ function _calculateStepInWorker() {
     nodes.forEach((node) => {
         if (node.isFixed) return;
         const force = nodeForces.get(node.id);
-        node.vx = (node.vx || 0); node.vy = (node.vy || 0); node.vz = (node.vz || 0);
+        node.vx = node.vx || 0;
+        node.vy = node.vy || 0;
+        node.vz = node.vz || 0;
 
         const acceleration = vecScalarMult(force, 1.0 / (node.mass || 1.0));
 
@@ -139,14 +151,18 @@ function _calculateStepInWorker() {
         node.vz = (node.vz + acceleration.z) * damping;
 
         if (!isFinite(node.vx) || !isFinite(node.vy) || !isFinite(node.vz)) {
-            node.vx = 0; node.vy = 0; node.vz = 0;
+            node.vx = 0;
+            node.vy = 0;
+            node.vz = 0;
         }
 
         const speed = Math.sqrt(node.vx * node.vx + node.vy * node.vy + node.vz * node.vz);
         const maxSpeed = settings.maxSpeed || 100;
         if (speed > maxSpeed) {
             const factor = maxSpeed / speed;
-            node.vx *= factor; node.vy *= factor; node.vz *= factor;
+            node.vx *= factor;
+            node.vy *= factor;
+            node.vz *= factor;
         }
 
         node.x += node.vx;
@@ -154,8 +170,12 @@ function _calculateStepInWorker() {
         node.z += node.vz;
 
         if (!isFinite(node.x) || !isFinite(node.y) || !isFinite(node.z)) {
-            node.x = 0; node.y = 0; node.z = 0;
-            node.vx = 0; node.vy = 0; node.vz = 0;
+            node.x = 0;
+            node.y = 0;
+            node.z = 0;
+            node.vx = 0;
+            node.vy = 0;
+            node.vz = 0;
         }
 
         currentTotalEnergy += 0.5 * (node.mass || 1.0) * (node.vx * node.vx + node.vy * node.vy + node.vz * node.vz);
@@ -172,10 +192,18 @@ function startSimulation() {
         if (!isRunning) return;
         totalEnergy = _calculateStepInWorker();
 
-        self.postMessage({ type: 'positionsUpdate', positions: nodes.map((n) => ({ id: n.id, x: n.x, y: n.y, z: n.z })), energy: totalEnergy });
+        self.postMessage({
+            type: 'positionsUpdate',
+            positions: nodes.map((n) => ({ id: n.id, x: n.x, y: n.y, z: n.z })),
+            energy: totalEnergy,
+        });
 
         const timeSinceKick = Date.now() - lastKickTime;
-        if (settings.autoStopDelay && totalEnergy < settings.minEnergyThreshold && timeSinceKick > settings.autoStopDelay) {
+        if (
+            settings.autoStopDelay &&
+            totalEnergy < settings.minEnergyThreshold &&
+            timeSinceKick > settings.autoStopDelay
+        ) {
             stopSimulation();
         } else {
             setTimeout(loop, 16);
@@ -198,7 +226,11 @@ self.onmessage = function (event) {
             nodes = payload.nodes;
             edges = payload.edges;
             settings = payload.settings;
-            nodes.forEach((n) => { n.vx = n.vx || 0; n.vy = n.vy || 0; n.vz = n.vz || 0; });
+            nodes.forEach((n) => {
+                n.vx = n.vx || 0;
+                n.vy = n.vy || 0;
+                n.vz = n.vz || 0;
+            });
             break;
         case 'start':
             startSimulation();
@@ -226,7 +258,9 @@ self.onmessage = function (event) {
             break;
         case 'addNode': {
             const newNode = payload.node;
-            newNode.vx = 0; newNode.vy = 0; newNode.vz = 0;
+            newNode.vx = 0;
+            newNode.vy = 0;
+            newNode.vz = 0;
             nodes.push(newNode);
             if (!isRunning && nodes.length > 0) startSimulation();
             else if (isRunning) lastKickTime = Date.now();
@@ -253,7 +287,11 @@ self.onmessage = function (event) {
             node.isFixed = isFixed;
             node.isPinned = isPinned;
             if (isFixed) node.vx = node.vy = node.vz = 0;
-            if (position) { node.x = position.x; node.y = position.y; node.z = position.z; }
+            if (position) {
+                node.x = position.x;
+                node.y = position.y;
+                node.z = position.z;
+            }
             if (isRunning) lastKickTime = Date.now();
             break;
         }

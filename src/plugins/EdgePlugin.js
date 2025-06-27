@@ -1,14 +1,14 @@
-import {Plugin} from '../core/Plugin.js';
-import {Utils} from '../utils.js';
-import {EdgeFactory} from '../graph/EdgeFactory.js';
-import {InstancedEdgeManager} from '../rendering/InstancedEdgeManager.js';
+import { Plugin } from '../core/Plugin.js';
+import { Utils } from '../utils.js';
+import { EdgeFactory } from '../graph/EdgeFactory.js';
+import { InstancedEdgeManager } from '../rendering/InstancedEdgeManager.js';
 
 // Import all edge types
-import {Edge} from '../graph/edges/Edge.js';
-import {CurvedEdge} from '../graph/edges/CurvedEdge.js';
-import {LabeledEdge} from '../graph/edges/LabeledEdge.js';
-import {DottedEdge} from '../graph/edges/DottedEdge.js';
-import {DynamicThicknessEdge} from '../graph/edges/DynamicThicknessEdge.js';
+import { Edge } from '../graph/edges/Edge.js';
+import { CurvedEdge } from '../graph/edges/CurvedEdge.js';
+import { LabeledEdge } from '../graph/edges/LabeledEdge.js';
+import { DottedEdge } from '../graph/edges/DottedEdge.js';
+import { DynamicThicknessEdge } from '../graph/edges/DynamicThicknessEdge.js';
 
 const INSTANCE_THRESHOLD = 50;
 
@@ -109,14 +109,22 @@ export class EdgePlugin extends Plugin {
             return null;
         }
         for (const existingEdge of this.edges.values()) {
-            if ((existingEdge.source === sourceNode && existingEdge.target === targetNode) ||
-                (existingEdge.source === targetNode && existingEdge.target === sourceNode)) {
+            if (
+                (existingEdge.source === sourceNode && existingEdge.target === targetNode) ||
+                (existingEdge.source === targetNode && existingEdge.target === sourceNode)
+            ) {
                 console.warn(`EdgePlugin: Duplicate edge ignored between ${sourceNode.id} and ${targetNode.id}.`);
                 return existingEdge;
             }
         }
 
-        const edge = this.edgeFactory.createEdge(Utils.generateId('edge'), data.type || 'default', sourceNode, targetNode, data);
+        const edge = this.edgeFactory.createEdge(
+            Utils.generateId('edge'),
+            data.type || 'default',
+            sourceNode,
+            targetNode,
+            data
+        );
         if (!edge) {
             console.error(`EdgePlugin: Failed to create edge type "${data.type || 'default'}".`);
             return null;

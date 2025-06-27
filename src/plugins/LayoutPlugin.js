@@ -1,12 +1,12 @@
-import {Plugin} from '../core/Plugin.js';
-import {ForceLayout} from '../layout/ForceLayout.js';
-import {GridLayout} from '../layout/GridLayout.js';
-import {CircularLayout} from '../layout/CircularLayout.js';
-import {SphericalLayout} from '../layout/SphericalLayout.js';
-import {HierarchicalLayout} from '../layout/HierarchicalLayout.js';
-import {TreeMapLayout} from '../layout/TreeMapLayout.js'; // Added TreeMapLayout
-import {RadialLayout} from '../layout/RadialLayout.js'; // Added RadialLayout
-import {LayoutManager} from '../layout/LayoutManager.js';
+import { Plugin } from '../core/Plugin.js';
+import { ForceLayout } from '../layout/ForceLayout.js';
+import { GridLayout } from '../layout/GridLayout.js';
+import { CircularLayout } from '../layout/CircularLayout.js';
+import { SphericalLayout } from '../layout/SphericalLayout.js';
+import { HierarchicalLayout } from '../layout/HierarchicalLayout.js';
+import { TreeMapLayout } from '../layout/TreeMapLayout.js'; // Added TreeMapLayout
+import { RadialLayout } from '../layout/RadialLayout.js'; // Added RadialLayout
+import { LayoutManager } from '../layout/LayoutManager.js';
 
 export class LayoutPlugin extends Plugin {
     layoutManager = null;

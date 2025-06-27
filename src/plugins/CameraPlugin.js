@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import {Plugin} from '../core/Plugin.js';
-import {Camera as CameraControls} from '../camera/Camera.js';
-import {Utils} from '../utils.js';
+import { Plugin } from '../core/Plugin.js';
+import { Camera as CameraControls } from '../camera/Camera.js';
+import { Utils } from '../utils.js';
 
 export class CameraPlugin extends Plugin {
     perspectiveCamera = null;

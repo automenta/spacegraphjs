@@ -1,5 +1,5 @@
-import {HtmlNode} from './HtmlNode.js';
-import {$} from '../../utils.js';
+import { HtmlNode } from './HtmlNode.js';
+import { $ } from '../../utils.js';
 
 export class GroupNode extends HtmlNode {
     static typeName = 'group';
@@ -102,7 +102,9 @@ export class GroupNode extends HtmlNode {
         }
 
         const innerWrapper = $('.node-inner-wrapper', this.htmlElement);
-        innerWrapper ? innerWrapper.insertBefore(header, innerWrapper.firstChild) : this.htmlElement.insertBefore(header, this.htmlElement.firstChild);
+        innerWrapper
+            ? innerWrapper.insertBefore(header, innerWrapper.firstChild)
+            : this.htmlElement.insertBefore(header, this.htmlElement.firstChild);
     }
 
     toggleCollapse() {
@@ -158,7 +160,11 @@ export class GroupNode extends HtmlNode {
 
     getChildNodes() {
         const nodePlugin = this.space?.plugins.getPlugin('NodePlugin');
-        return nodePlugin ? Array.from(this.childNodeIds).map((id) => nodePlugin.getNodeById(id)).filter((node) => node != null) : [];
+        return nodePlugin
+            ? Array.from(this.childNodeIds)
+                  .map((id) => nodePlugin.getNodeById(id))
+                  .filter((node) => node != null)
+            : [];
     }
 
     update(space) {

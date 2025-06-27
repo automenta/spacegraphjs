@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
-import {Node} from './Node.js';
-import {createCSS3DLabelObject, applyLabelLOD} from '../../utils/labelUtils.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { Node } from './Node.js';
+import { createCSS3DLabelObject, applyLabelLOD } from '../../utils/labelUtils.js';
 
 export class ShapeNode extends Node {
     static typeName = 'shape';
@@ -75,15 +75,17 @@ export class ShapeNode extends Node {
     }
 
     _createRepresentationForLevel(levelConfig) {
-        return (levelConfig.shape === 'gltf' && levelConfig.gltfUrl)
+        return levelConfig.shape === 'gltf' && levelConfig.gltfUrl
             ? (() => {
-                const gltfGroup = new THREE.Group();
-                gltfGroup.castShadow = true;
-                gltfGroup.receiveShadow = true;
-                this._loadGltfModelForLevel(levelConfig, gltfGroup);
-                return gltfGroup;
-            })()
-            : (levelConfig.shape ? this._createMeshForLevel(levelConfig) : null);
+                  const gltfGroup = new THREE.Group();
+                  gltfGroup.castShadow = true;
+                  gltfGroup.receiveShadow = true;
+                  this._loadGltfModelForLevel(levelConfig, gltfGroup);
+                  return gltfGroup;
+              })()
+            : levelConfig.shape
+              ? this._createMeshForLevel(levelConfig)
+              : null;
     }
 
     _createMeshForLevel(levelConfig) {
@@ -129,7 +131,7 @@ export class ShapeNode extends Node {
                         // Apply color if specified and material allows
                         if (levelConfig.color && child.material) {
                             if (Array.isArray(child.material)) {
-                                child.material.forEach(mat => {
+                                child.material.forEach((mat) => {
                                     if (mat.isMeshStandardMaterial || mat.isMeshBasicMaterial) {
                                         mat.color.set(levelConfig.color);
                                     }
@@ -176,7 +178,10 @@ export class ShapeNode extends Node {
             },
             undefined,
             (error) => {
-                console.error(`ShapeNode: Failed to load GLTF model from ${levelConfig.gltfUrl}. Falling back to primitive shape.`, error);
+                console.error(
+                    `ShapeNode: Failed to load GLTF model from ${levelConfig.gltfUrl}. Falling back to primitive shape.`,
+                    error
+                );
                 const fallbackSize = levelConfig.size || this.size || 20;
                 const fallbackColor = levelConfig.color || this.color || 0xff0000;
                 const fallbackMesh = this._createMeshForLevel({
@@ -218,7 +223,9 @@ export class ShapeNode extends Node {
                 this._boundingSphere.center.copy(this.position);
             } else {
                 // Fallback if bounding box computation failed or resulted in invalid values
-                console.warn(`ShapeNode ${this.id}: Bounding box computation failed for object. Using fallback radius.`);
+                console.warn(
+                    `ShapeNode ${this.id}: Bounding box computation failed for object. Using fallback radius.`
+                );
                 this._boundingSphere.radius = (this.size || 50) / 2;
                 this._boundingSphere.center.copy(this.position);
             }
@@ -250,7 +257,10 @@ export class ShapeNode extends Node {
 
     getBoundingSphereRadius() {
         // If bounding sphere hasn't been computed or is invalid for GLTF, recompute or use fallback
-        if (!this._boundingSphere || (this.shape === 'gltf' && this.mesh?.children.length === 0 && this._boundingSphere.radius === 0)) {
+        if (
+            !this._boundingSphere ||
+            (this.shape === 'gltf' && this.mesh?.children.length === 0 && this._boundingSphere.radius === 0)
+        ) {
             this.updateBoundingSphere();
         }
         return this._boundingSphere?.radius ?? this.size / 2;
@@ -262,8 +272,9 @@ export class ShapeNode extends Node {
             this.mesh.levels.forEach((level) => {
                 level.object?.traverse((child) => {
                     if (child.isMesh && child.material) {
-                        child.material.emissive?.setHex(selected ? 0xFFFF00 : 0x000000);
-                        child.material.emissiveIntensity = (selected && child.material.emissive?.getHex() !== 0x000000) ? 1.0 : 0.0;
+                        child.material.emissive?.setHex(selected ? 0xffff00 : 0x000000);
+                        child.material.emissiveIntensity =
+                            selected && child.material.emissive?.getHex() !== 0x000000 ? 1.0 : 0.0;
                     }
                 });
             });
@@ -284,7 +295,7 @@ export class ShapeNode extends Node {
                         const targetEmissive = hovered && !this.isSelected ? 0x222200 : 0x000000;
                         const targetIntensity = hovered && !this.isSelected ? 0.4 : 0.0;
                         child.material.emissive?.setHex(targetEmissive);
-                        child.material.emissiveIntensity = (targetEmissive !== 0x000000) ? targetIntensity : 0.0;
+                        child.material.emissiveIntensity = targetEmissive !== 0x000000 ? targetIntensity : 0.0;
                     }
                 });
             });
@@ -300,7 +311,7 @@ export class ShapeNode extends Node {
                         if (child.isMesh) {
                             child.geometry?.dispose();
                             if (Array.isArray(child.material)) {
-                                child.material.forEach(mat => mat.dispose());
+                                child.material.forEach((mat) => mat.dispose());
                             } else {
                                 child.material?.dispose();
                             }
@@ -310,7 +321,7 @@ export class ShapeNode extends Node {
             } else {
                 this.mesh.geometry?.dispose();
                 if (Array.isArray(this.mesh.material)) {
-                    this.mesh.material.forEach(mat => mat.dispose());
+                    this.mesh.material.forEach((mat) => mat.dispose());
                 } else {
                     this.mesh.material?.dispose();
                 }

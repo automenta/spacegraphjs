@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import {Node} from './Node.js';
-import {CSS3DObject} from 'three/addons/renderers/CSS3DRenderer.js';
+import { Node } from './Node.js';
+import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
 
 const DEFAULT_NODE_SIZE = 100;
 const DEFAULT_CHART_BG_COLOR = '#222227';

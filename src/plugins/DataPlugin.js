@@ -1,4 +1,4 @@
-import {Plugin} from '../core/Plugin.js';
+import { Plugin } from '../core/Plugin.js';
 
 export class DataPlugin extends Plugin {
     constructor(spaceGraph, pluginManager) {
@@ -43,8 +43,16 @@ export class DataPlugin extends Plugin {
             const camControls = cameraPlugin.getControls();
             if (camControls) {
                 graphData.camera = {
-                    position: { x: camControls.targetPosition.x, y: camControls.targetPosition.y, z: camControls.targetPosition.z },
-                    lookAt: { x: camControls.targetLookAt.x, y: camControls.targetLookAt.y, z: camControls.targetLookAt.z },
+                    position: {
+                        x: camControls.targetPosition.x,
+                        y: camControls.targetPosition.y,
+                        z: camControls.targetPosition.z,
+                    },
+                    lookAt: {
+                        x: camControls.targetLookAt.x,
+                        y: camControls.targetLookAt.y,
+                        z: camControls.targetLookAt.z,
+                    },
                     mode: camControls.getCameraMode?.() || 'orbit',
                 };
             }
@@ -72,7 +80,12 @@ export class DataPlugin extends Plugin {
         let graphData;
         try {
             graphData = typeof jsonData === 'string' ? JSON.parse(jsonData) : jsonData;
-            if (!graphData?.nodes || !Array.isArray(graphData.nodes) || !graphData.edges || !Array.isArray(graphData.edges)) {
+            if (
+                !graphData?.nodes ||
+                !Array.isArray(graphData.nodes) ||
+                !graphData.edges ||
+                !Array.isArray(graphData.edges)
+            ) {
                 throw new Error('Invalid graph data structure.');
             }
         } catch (error) {
@@ -87,7 +100,11 @@ export class DataPlugin extends Plugin {
         const importedNodesMap = new Map();
         for (const nodeData of graphData.nodes) {
             const node = nodePlugin.createAndAddNode({
-                id: nodeData.id, type: nodeData.type, position: nodeData.position, data: nodeData.data, mass: nodeData.mass,
+                id: nodeData.id,
+                type: nodeData.type,
+                position: nodeData.position,
+                data: nodeData.data,
+                mass: nodeData.mass,
             });
             if (node) {
                 if (nodeData.isPinned) node.isPinned = true;

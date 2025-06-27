@@ -1,7 +1,7 @@
-import {CSS3DObject} from 'three/addons/renderers/CSS3DRenderer.js';
-import {$, Utils} from '../../utils.js';
-import {Node} from './Node.js';
-import {applyLabelLOD} from '../../utils/labelUtils.js';
+import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
+import { $, Utils } from '../../utils.js';
+import { Node } from './Node.js';
+import { applyLabelLOD } from '../../utils/labelUtils.js';
 
 export class HtmlNode extends Node {
     static typeName = 'html';
@@ -16,6 +16,7 @@ export class HtmlNode extends Node {
         const initialWidth = this.data.width ?? 160;
         const initialHeight = this.data.height ?? 70;
         this.size = { width: initialWidth, height: initialHeight };
+        this.initialSize = { width: initialWidth, height: initialHeight }; // Store initial size
         this.htmlElement = this._createElement();
         this.cssObject = new CSS3DObject(this.htmlElement);
         this.cssObject.userData = { nodeId: this.id, type: 'html-node' };
@@ -76,7 +77,11 @@ export class HtmlNode extends Node {
                 clearTimeout(debounceTimer);
                 debounceTimer = setTimeout(() => {
                     this.data.content = contentDiv.innerHTML;
-                     this.space?.emit('graph:node:dataChanged', { node: this, property: 'content', value: this.data.content });
+                    this.space?.emit('graph:node:dataChanged', {
+                        node: this,
+                        property: 'content',
+                        value: this.data.content,
+                    });
                 }, 300);
             });
             contentDiv.addEventListener('pointerdown', (e) => e.stopPropagation());
@@ -124,13 +129,21 @@ export class HtmlNode extends Node {
         this.data.contentScale = Utils.clamp(scale, HtmlNode.CONTENT_SCALE_RANGE.min, HtmlNode.CONTENT_SCALE_RANGE.max);
         const contentEl = $('.node-content', this.htmlElement);
         if (contentEl) contentEl.style.transform = `scale(${this.data.contentScale})`;
-        this.space?.emit('graph:node:dataChanged', { node: this, property: 'contentScale', value: this.data.contentScale });
+        this.space?.emit('graph:node:dataChanged', {
+            node: this,
+            property: 'contentScale',
+            value: this.data.contentScale,
+        });
     }
 
     setBackgroundColor(color) {
         this.data.backgroundColor = color;
         this.htmlElement?.style.setProperty('--node-bg', this.data.backgroundColor);
-        this.space?.emit('graph:node:dataChanged', { node: this, property: 'backgroundColor', value: this.data.backgroundColor });
+        this.space?.emit('graph:node:dataChanged', {
+            node: this,
+            property: 'backgroundColor',
+            value: this.data.backgroundColor,
+        });
     }
 
     adjustContentScale = (deltaFactor) => this.setContentScale(this.data.contentScale * deltaFactor);
@@ -160,7 +173,11 @@ export class HtmlNode extends Node {
         this.space?.emit('graph:node:resizestart', { node: this });
     }
 
-    resize(newWidth, newHeight) {
+    resize(newScale) {
+        super.resize(newScale);
+        // Calculate new width and height based on the initial size and the new scale
+        const newWidth = this.initialSize.width * newScale.x;
+        const newHeight = this.initialSize.height * newScale.y;
         this.setSize(newWidth, newHeight);
     }
 
@@ -169,7 +186,7 @@ export class HtmlNode extends Node {
         try {
             this.space?.plugins?.getPlugin('LayoutPlugin')?.layoutManager?.getActiveLayout()?.releaseNode(this);
         } catch (error) {
-            console.error("Error releasing node during resize:", error);
+            console.error('Error releasing node during resize:', error);
         }
         this.space?.emit('graph:node:resizeend', { node: this, finalSize: { ...this.size } });
     }

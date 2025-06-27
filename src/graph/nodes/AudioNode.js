@@ -1,4 +1,4 @@
-import {Node} from './Node.js';
+import { Node } from './Node.js';
 import * as THREE from 'three';
 
 export class AudioNode extends Node {
@@ -46,15 +46,15 @@ export class AudioNode extends Node {
         if (!url) return;
         this.audioContext = this.audioContext || new (window.AudioContext || window.webkitAudioContext)();
         fetch(url)
-            .then(response => response.arrayBuffer())
-            .then(arrayBuffer => this.audioContext.decodeAudioData(arrayBuffer))
-            .then(audioBuffer => {
+            .then((response) => response.arrayBuffer())
+            .then((arrayBuffer) => this.audioContext.decodeAudioData(arrayBuffer))
+            .then((audioBuffer) => {
                 this.audioBuffer = audioBuffer;
                 if (this.data.autoplay) {
                     this.play();
                 }
             })
-            .catch(e => console.error('Error loading audio:', e));
+            .catch((e) => console.error('Error loading audio:', e));
     }
 
     play() {

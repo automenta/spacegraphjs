@@ -2,7 +2,7 @@
 
 ### Vision
 
-SpaceGraph.js aims to be the premier open-source library for interactive 2D/3D zooming user interface. It will provide a modular, well-documented API that enables developers to create, explore, and share complex knowledge graphs with ease, featuring a delightful user experience through intuitive interactions and visually appealing rendering.
+SpaceGraph.js aims to be a revolutionary open-source library for creating truly spatial, intelligent, and collaborative user interfaces. Moving beyond traditional graph visualization, it will provide a modular, well-documented API that empowers developers to build new paradigms of interaction, leveraging 3D space, semantic zooming, and adaptive layouts to transform how users perceive and interact with information. It will foster a delightful user experience through fluid transitions, intuitive gestural controls, and visually compelling rendering, enabling a new era of spatial computing.
 
 ### Guiding Principles
 
@@ -106,9 +106,9 @@ SpaceGraph.js aims to be the premier open-source library for interactive 2D/3D z
 2.  **Expanded Content & Layouts (as Plugins)**
 
     - **Advanced Node Types:** `ImageNode`, `VideoNode`, `GroupNode` (collapsible container), `DataNode` (for charts), and `IFrameNode` (for embedding web content).
-        *   **Progress:** `AudioNode`, `DocumentNode`, and `ChartNode` have been enhanced beyond basic stubs to include more functional or representative implementations.
+        - **Progress:** `AudioNode`, `DocumentNode`, and `ChartNode` have been enhanced beyond basic stubs to include more functional or representative implementations.
     - **Additional Layouts:** `GridLayout` (2D/3D), `CircularLayout`/`SphericalLayout`, and `HierarchicalLayout` (for tree-like structures).
-        *   **Progress:** `TreeMapLayout` and `RadialLayout` have been enhanced beyond basic stubs to include more sophisticated (though still simplified) algorithms.
+        - **Progress:** `TreeMapLayout` and `RadialLayout` have been enhanced beyond basic stubs to include more sophisticated (though still simplified) algorithms.
 
 3.  **Advanced Camera & View Management**
 
@@ -133,23 +133,26 @@ SpaceGraph.js aims to be the premier open-source library for interactive 2D/3D z
     - **Touch Support:** Implement robust touch controls (pinch-to-zoom, two-finger pan, tap-to-select, long-press).
     - **Feedback:** Add subtle animations, tooltips, and optional, toggleable sound effects.
     - **Onboarding Plugin:** Create a built-in, optional tutorial plugin to provide an interactive tour of core features for new users.
-    *   **Current Status:** These remain future roadmap items.
+
+    * **Current Status:** These remain future roadmap items.
 
 2.  **Accessibility (A11y)**
 
     - **Screen Reader Support:** Add ARIA labels and roles to all nodes, edges, and UI controls.
     - **Keyboard Navigation:** Ensure the entire graph and UI can be navigated and operated via keyboard alone.
     - **High-Contrast Mode:** Implement a theme that meets WCAG contrast requirements.
-    *   **Current Status:** These remain future roadmap items.
+
+    * **Current Status:** These remain future roadmap items.
 
 3.  **Advanced Visualization & Diagnostics**
 
     - **Edge Bundling:** Offer an optional edge bundling feature to reduce visual clutter in dense graphs.
     - **Error Handling:** Implement a formal diagnostic system with custom error types and a configurable logger to improve developer debugging.
-    *   **Current Status:** These remain future roadmap items.
+
+    * **Current Status:** These remain future roadmap items.
 
 4.  **Developer Ecosystem**
     - **Complete Documentation:** Finalize API documentation, create tutorials for common use cases (e.g., "Creating a Custom Node Type"), and write migration guides.
     - **Live Playground:** Host an interactive playground (e.g., on CodeSandbox or StackBlitz) embedded in the documentation site.
     - **Plugin Infrastructure:** Create a `create-spacegraph-plugin` template and establish clear contribution guidelines to encourage community involvement.
-    *   **Current Status:** These remain future roadmap items.
+    * **Current Status:** These remain future roadmap items.

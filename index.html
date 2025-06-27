@@ -53,7 +53,7 @@
                 if (!pageSelectorEl) return;
                 pageSelectorEl.innerHTML = ''; // Clear existing buttons
 
-                pages.forEach(page => {
+                pages.forEach((page) => {
                     const button = document.createElement('button');
                     button.textContent = page.title;
                     button.dataset.pageId = page.id;
@@ -65,7 +65,7 @@
             function updateActiveButton(pageId) {
                 if (!pageSelectorEl) return;
                 const buttons = pageSelectorEl.querySelectorAll('button');
-                buttons.forEach(button => {
+                buttons.forEach((button) => {
                     if (button.dataset.pageId === pageId) {
                         button.classList.add('active');
                     } else {
@@ -80,7 +80,7 @@
                     return;
                 }
 
-                const page = pages.find(p => p.id === pageId);
+                const page = pages.find((p) => p.id === pageId);
                 if (!page) {
                     console.error(`Page with id "${pageId}" not found.`);
                     return;
@@ -89,7 +89,6 @@
                 // Clear previous graph content
                 // space.clearAll(); // Method does not exist
                 await space.importGraphFromJSON({ nodes: [], edges: [] });
-
 
                 if (hudEl) {
                     hudEl.innerHTML = page.description;
@@ -123,7 +122,9 @@
 
                 if (!container || !contextMenuEl || !confirmDialogEl || !pageSelectorEl || !hudEl) {
                     console.error('Init Failed: Missing DOM elements for graph, page selector, or HUD.');
-                    if (container) container.innerHTML = "<p style='color:red; padding: 20px;'>Error: Critical HTML elements are missing.</p>";
+                    if (container)
+                        container.innerHTML =
+                            "<p style='color:red; padding: 20px;'>Error: Critical HTML elements are missing.</p>";
                     return;
                 }
 
@@ -143,7 +144,7 @@
                         await loadPage(pages[0].id); // Load the first page by default
                     } else {
                         console.warn('No pages defined in pages.js');
-                        if (hudEl) hudEl.innerHTML = "<p>No pages available to display.</p>";
+                        if (hudEl) hudEl.innerHTML = '<p>No pages available to display.</p>';
                     }
 
                     space.animate(); // Start animation loop

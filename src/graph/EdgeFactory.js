@@ -1,11 +1,12 @@
 import { BaseFactory } from '../core/BaseFactory.js'; // Import BaseFactory
-import {Edge} from './edges/Edge.js';
-import {CurvedEdge} from './edges/CurvedEdge.js';
-import {LabeledEdge} from './edges/LabeledEdge.js';
-import {DottedEdge} from './edges/DottedEdge.js';
-import {DynamicThicknessEdge} from './edges/DynamicThicknessEdge.js';
+import { Edge } from './edges/Edge.js';
+import { CurvedEdge } from './edges/CurvedEdge.js';
+import { LabeledEdge } from './edges/LabeledEdge.js';
+import { DottedEdge } from './edges/DottedEdge.js';
+import { DynamicThicknessEdge } from './edges/DynamicThicknessEdge.js';
 
-export class EdgeFactory extends BaseFactory { // Extend BaseFactory
+export class EdgeFactory extends BaseFactory {
+    // Extend BaseFactory
     constructor(space) {
         super(); // Call BaseFactory constructor
         this.space = space;

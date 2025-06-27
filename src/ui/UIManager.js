@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import {CSS3DObject} from 'three/addons/renderers/CSS3DRenderer.js';
-import {$, $$} from '../utils.js';
-import {HtmlNode} from '../graph/nodes/HtmlNode.js';
+import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
+import { $, $$ } from '../utils.js';
+import { HtmlNode } from '../graph/nodes/HtmlNode.js';
 
 // Import decomposed modules
 import { InteractionState } from './InteractionState.js';
@@ -99,6 +99,8 @@ export class UIManager {
         this.container.addEventListener('wheel', this._onWheel, passiveFalse);
 
         this.space.on('ui:request:confirm', this._onRequestConfirm);
+        this.space.on('ui:request:editNode', this._onEditNodeRequest);
+        this.space.on('ui:request:deleteNode', this._onDeleteNodeRequest);
     }
 
     _subscribeToSpaceGraphEvents() {
@@ -118,6 +120,18 @@ export class UIManager {
         this.hudManager.updateHudCameraMode(data.newMode);
     };
 
+    _onEditNodeRequest = ({ node }) => {
+        // Emit a more specific event for other plugins to handle (e.g., opening a property editor)
+        this.space.emit('ui:node:editRequested', { node });
+    };
+
+    _onDeleteNodeRequest = ({ node }) => {
+        this.space.emit('ui:request:confirm', {
+            message: `Delete node "${node.id.substring(0, 10)}..."?`,
+            onConfirm: () => this.space.emit('ui:request:removeNode', node.id),
+        });
+    };
+
     _onSelectionChanged = (payload) => {
         const selectedEdges = payload.selected.size > 0 && payload.type === 'edge' ? payload.selected : new Set();
         if (selectedEdges.size === 1) {
@@ -125,7 +139,7 @@ export class UIManager {
             if (!this.edgeMenu.edgeMenuObject || this.edgeMenu.edgeMenuObject.element.dataset.edgeId !== edge.id) {
                 this.edgeMenu.show(edge);
             } else {
-                 this.edgeMenu.updatePosition(edge);
+                this.edgeMenu.updatePosition(edge);
             }
         } else {
             this.edgeMenu.hide();
@@ -186,7 +200,7 @@ export class UIManager {
         this.currentState = newState;
 
         switch (newState) {
-            case InteractionState.DRAGGING_NODE:
+            case InteractionState.DRAGGING_NODE: {
                 this.draggedNode = data.node;
                 this.draggedNodeInitialZ = this.draggedNode.position.z;
                 this.draggedNode.startDrag();
@@ -199,8 +213,8 @@ export class UIManager {
                 this.dragOffset = worldPos ? worldPos.sub(this.draggedNode.position) : new THREE.Vector3();
                 this.container.style.cursor = 'grabbing';
                 break;
-
-            case InteractionState.RESIZING_NODE:
+            }
+            case InteractionState.RESIZING_NODE: {
                 this.resizedNode = data.node;
                 this.resizedNode.startResize();
                 this.resizeStartNodeSize = { ...this.resizedNode.size };
@@ -250,20 +264,23 @@ export class UIManager {
                     this.resizeNodeScreenScaleY = 1;
                 }
                 break;
-
-            case InteractionState.PANNING:
+            }
+            case InteractionState.PANNING: {
                 this.space.plugins
                     .getPlugin('CameraPlugin')
                     ?.startPan(this.pointerState.clientX, this.pointerState.clientY);
                 this.container.style.cursor = 'grabbing';
                 break;
-            case InteractionState.LINKING_NODE:
+            }
+            case InteractionState.LINKING_NODE: {
                 this.container.style.cursor = 'crosshair';
                 this._createTempLinkLine(data.sourceNode);
                 break;
-            case InteractionState.IDLE:
+            }
+            case InteractionState.IDLE: {
                 this.container.style.cursor = 'grab';
                 break;
+            }
         }
         this.space.emit('interaction:stateChanged', { newState, oldState: this.currentState, data });
     }
@@ -276,7 +293,11 @@ export class UIManager {
         const targetInfo = this._getTargetInfo(e);
 
         const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
-        if (cameraPlugin?.getCameraMode() === 'free' && cameraPlugin.getControls()?.isPointerLocked && this.pointerState.button === 0) {
+        if (
+            cameraPlugin?.getCameraMode() === 'free' &&
+            cameraPlugin.getControls()?.isPointerLocked &&
+            this.pointerState.button === 0
+        ) {
             return;
         }
 
@@ -329,7 +350,7 @@ export class UIManager {
             this._transitionToState(InteractionState.PANNING);
             this.contextMenu.hide();
             if (!e.shiftKey) {
-                 this._uiPluginCallbacks.setSelectedNode(null, false);
+                this._uiPluginCallbacks.setSelectedNode(null, false);
             }
         }
     };
@@ -358,7 +379,11 @@ export class UIManager {
                         this.draggedNodeInitialZ = targetZ;
                     }
 
-                    const worldPos = this.space.screenToWorld(this.pointerState.clientX, this.pointerState.clientY, targetZ);
+                    const worldPos = this.space.screenToWorld(
+                        this.pointerState.clientX,
+                        this.pointerState.clientY,
+                        targetZ
+                    );
                     if (worldPos) {
                         const primaryNodeNewCalculatedPos = worldPos.clone().sub(this.dragOffset);
                         primaryNodeNewCalculatedPos.z = targetZ;
@@ -379,7 +404,10 @@ export class UIManager {
                         } else {
                             this.draggedNode.drag(primaryNodeNewCalculatedPos);
                         }
-                        this.space.emit('graph:node:dragged', {node: this.draggedNode, position: primaryNodeNewCalculatedPos});
+                        this.space.emit('graph:node:dragged', {
+                            node: this.draggedNode,
+                            position: primaryNodeNewCalculatedPos,
+                        });
                     }
                 }
                 break;
@@ -400,7 +428,10 @@ export class UIManager {
                         Math.max(HtmlNode.MIN_SIZE.width, newWidth),
                         Math.max(HtmlNode.MIN_SIZE.height, newHeight)
                     );
-                    this.space.emit('graph:node:resized', {node: this.resizedNode, size: { ...this.resizedNode.size }});
+                    this.space.emit('graph:node:resized', {
+                        node: this.resizedNode,
+                        size: { ...this.resizedNode.size },
+                    });
                 }
                 break;
 
@@ -415,7 +446,11 @@ export class UIManager {
                 const targetInfo = this._getTargetInfo(e);
                 $$('.node-common.linking-target').forEach((el) => el.classList.remove('linking-target'));
                 const targetElement = targetInfo.node?.htmlElement ?? targetInfo.node?.labelObject?.element;
-                if (targetInfo.node && targetInfo.node !== this._uiPluginCallbacks.getLinkSourceNode() && targetElement) {
+                if (
+                    targetInfo.node &&
+                    targetInfo.node !== this._uiPluginCallbacks.getLinkSourceNode() &&
+                    targetElement
+                ) {
                     targetElement.classList.add('linking-target');
                 }
                 break;
@@ -430,7 +465,13 @@ export class UIManager {
 
         if (!this.pointerState.isDraggingThresholdMet && e.button === 0) {
             const targetInfo = this._getTargetInfo(e);
-            if (targetInfo.node instanceof HtmlNode && targetInfo.node.data.editable && targetInfo.element?.closest('.node-content') === targetInfo.node.htmlElement.querySelector('.node-content')) {
+            if (
+                targetInfo.node instanceof HtmlNode &&
+                targetInfo.node.data.editable &&
+                targetInfo.element?.closest('.node-content') ===
+                    targetInfo.node.htmlElement.querySelector('.node-content')
+            ) {
+                /* empty */
             }
         }
 
@@ -451,7 +492,7 @@ export class UIManager {
             case 'delete':
                 this.space.emit('ui:request:confirm', {
                     message: `Delete node "${node.id.substring(0, 10)}..."?`,
-                    onConfirm: () => this.space.emit('ui:request:removeNode', node.id)
+                    onConfirm: () => this.space.emit('ui:request:removeNode', node.id),
                 });
                 break;
             case 'content-zoom-in':
@@ -480,12 +521,16 @@ export class UIManager {
         this.contextMenu.show(e.clientX, e.clientY, {
             node: targetInfo.node,
             intersectedEdge: targetInfo.intersectedEdge,
-            shiftKey: e.shiftKey
+            shiftKey: e.shiftKey,
         });
     };
 
     _onDocumentClick = (e) => {
-        if (this.contextMenu.contextMenuElement.contains(e.target) || this.contextMenu.contextMenuElement.style.display === 'none') return;
+        if (
+            this.contextMenu.contextMenuElement.contains(e.target) ||
+            this.contextMenu.contextMenuElement.style.display === 'none'
+        )
+            return;
         if (this.edgeMenu.edgeMenuObject?.element?.contains(e.target)) return;
         if (this.confirmDialog.confirmDialogElement.contains(e.target)) return;
         if (this.hudManager.keyboardShortcutsDialog.keyboardShortcutsDialogElement?.contains(e.target)) return;
@@ -499,14 +544,15 @@ export class UIManager {
             const clickedSelectedEdge = targetInfo.intersectedEdge && selectedEdges?.has(targetInfo.intersectedEdge);
 
             if (!clickedSelectedEdge) {
-                 this._uiPluginCallbacks.setSelectedEdge(null, false);
+                this._uiPluginCallbacks.setSelectedEdge(null, false);
             }
         }
     };
 
     _onKeyDown = (e) => {
         const activeEl = document.activeElement;
-        const isEditingText = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable);
+        const isEditingText =
+            activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable);
         if (isEditingText && e.key !== 'Escape') return;
 
         const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
@@ -518,29 +564,33 @@ export class UIManager {
 
         switch (e.key) {
             case 'Delete':
-            case 'Backspace':
+            case 'Backspace': {
                 if (primarySelectedNode) {
-                    const message = selectedNodes.size > 1
-                        ? `Delete ${selectedNodes.size} selected nodes?`
-                        : `Delete node "${primarySelectedNode.id.substring(0, 10)}..."?`;
+                    const message =
+                        selectedNodes.size > 1
+                            ? `Delete ${selectedNodes.size} selected nodes?`
+                            : `Delete node "${primarySelectedNode.id.substring(0, 10)}..."?`;
                     this.space.emit('ui:request:confirm', {
                         message: message,
-                        onConfirm: () => selectedNodes.forEach(node => this.space.emit('ui:request:removeNode', node.id))
+                        onConfirm: () =>
+                            selectedNodes.forEach((node) => this.space.emit('ui:request:removeNode', node.id)),
                     });
                     handled = true;
                 } else if (primarySelectedEdge) {
-                    const message = selectedEdges.size > 1
-                        ? `Delete ${selectedEdges.size} selected edges?`
-                        : `Delete edge "${primarySelectedEdge.id.substring(0, 10)}..."?`;
+                    const message =
+                        selectedEdges.size > 1
+                            ? `Delete ${selectedEdges.size} selected edges?`
+                            : `Delete edge "${primarySelectedEdge.id.substring(0, 10)}..."?`;
                     this.space.emit('ui:request:confirm', {
                         message: message,
-                        onConfirm: () => selectedEdges.forEach(edge => this.space.emit('ui:request:removeEdge', edge.id))
+                        onConfirm: () =>
+                            selectedEdges.forEach((edge) => this.space.emit('ui:request:removeEdge', edge.id)),
                     });
                     handled = true;
                 }
                 break;
-
-            case 'Escape':
+            }
+            case 'Escape': {
                 if (this._uiPluginCallbacks.getIsLinking()) {
                     this._uiPluginCallbacks.cancelLinking();
                     handled = true;
@@ -569,41 +619,46 @@ export class UIManager {
                     handled = true;
                 }
                 break;
-
-            case 'Enter':
+            }
+            case 'Enter': {
                 if (primarySelectedNode instanceof HtmlNode && primarySelectedNode.data.editable && !isEditingText) {
                     primarySelectedNode.htmlElement?.querySelector('.node-content')?.focus();
                     handled = true;
                 }
                 break;
-
+            }
             case '+':
-            case '=':
+            case '=': {
                 if (primarySelectedNode instanceof HtmlNode) {
                     const factor = e.key === '+' || e.key === '=' ? 1.15 : 1.2;
-                    (e.ctrlKey || e.metaKey)
+                    e.ctrlKey || e.metaKey
                         ? this.space.emit('ui:request:adjustNodeSize', primarySelectedNode, factor)
                         : this.space.emit('ui:request:adjustContentScale', primarySelectedNode, factor);
                     handled = true;
                 }
                 break;
+            }
             case '-':
-            case '_':
-                 if (primarySelectedNode instanceof HtmlNode) {
+            case '_': {
+                if (primarySelectedNode instanceof HtmlNode) {
                     const factor = e.key === '-' || e.key === '_' ? 1 / 1.15 : 1 / 1.2;
-                    (e.ctrlKey || e.metaKey)
+                    e.ctrlKey || e.metaKey
                         ? this.space.emit('ui:request:adjustNodeSize', primarySelectedNode, factor)
                         : this.space.emit('ui:request:adjustContentScale', primarySelectedNode, factor);
                     handled = true;
                 }
                 break;
-
-            case ' ':
+            }
+            case ' ': {
                 if (primarySelectedNode) {
                     this.space.emit('ui:request:focusOnNode', primarySelectedNode, 0.5, true);
                     handled = true;
                 } else if (primarySelectedEdge) {
-                    const midPoint = new THREE.Vector3().lerpVectors(primarySelectedEdge.source.position, primarySelectedEdge.target.position, 0.5);
+                    const midPoint = new THREE.Vector3().lerpVectors(
+                        primarySelectedEdge.source.position,
+                        primarySelectedEdge.target.position,
+                        0.5
+                    );
                     const dist = primarySelectedEdge.source.position.distanceTo(primarySelectedEdge.target.position);
                     const camPlugin = this.space.plugins.getPlugin('CameraPlugin');
                     camPlugin?.pushState();
@@ -614,6 +669,7 @@ export class UIManager {
                     handled = true;
                 }
                 break;
+            }
         }
 
         if (handled) {
@@ -625,7 +681,11 @@ export class UIManager {
     _onWheel = (e) => {
         const targetInfo = this._getTargetInfo(e);
 
-        if (targetInfo.element?.closest('.node-content') && targetInfo.element.scrollHeight > targetInfo.element.clientHeight) return;
+        if (
+            targetInfo.element?.closest('.node-content') &&
+            targetInfo.element.scrollHeight > targetInfo.element.clientHeight
+        )
+            return;
         if (targetInfo.element?.closest('.edge-menu-frame input[type="range"]')) return;
 
         if ((e.ctrlKey || e.metaKey) && targetInfo.node instanceof HtmlNode) {
@@ -648,7 +708,9 @@ export class UIManager {
         const contentEditableEl = element?.closest('[contenteditable="true"]');
         const interactiveEl = element?.closest('button, input, textarea, select, a, .clickable');
 
-        let graphNode = nodeElement ? this.space.plugins.getPlugin('NodePlugin')?.getNodeById(nodeElement.dataset.nodeId) : null;
+        let graphNode = nodeElement
+            ? this.space.plugins.getPlugin('NodePlugin')?.getNodeById(nodeElement.dataset.nodeId)
+            : null;
         let intersectedEdge = null;
 
         // Prioritize HTML element interactions before raycasting into the 3D scene.
@@ -727,7 +789,12 @@ export class UIManager {
     }
 
     _updateTempLinkLine(screenX, screenY) {
-        if (!this.tempLinkLine || !this._uiPluginCallbacks.getIsLinking() || !this._uiPluginCallbacks.getLinkSourceNode()) return;
+        if (
+            !this.tempLinkLine ||
+            !this._uiPluginCallbacks.getIsLinking() ||
+            !this._uiPluginCallbacks.getLinkSourceNode()
+        )
+            return;
 
         const sourceNode = this._uiPluginCallbacks.getLinkSourceNode();
         const targetPos = this.space.screenToWorld(screenX, screenY, sourceNode.position.z);
@@ -779,6 +846,8 @@ export class UIManager {
         this.container.removeEventListener('wheel', this._onWheel, passiveFalse);
 
         this.space.off('ui:request:confirm', this._onRequestConfirm);
+        this.space.off('ui:request:editNode', this._onEditNodeRequest);
+        this.space.off('ui:request:deleteNode', this._onDeleteNodeRequest);
         this.space.off('selection:changed', this._onSelectionChanged);
         this.space.off('linking:started', this._onLinkingStarted);
         this.space.off('linking:cancelled', this._onLinkingCancelled);

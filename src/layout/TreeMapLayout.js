@@ -31,14 +31,14 @@ export class TreeMapLayout {
         if (config) this.updateConfig(config);
         if (!nodes || nodes.length === 0) return;
 
-        const nodesToArrange = nodes.filter(n => !n.isPinned);
+        const nodesToArrange = nodes.filter((n) => !n.isPinned);
         if (nodesToArrange.length === 0) return;
 
         const { padding, plane, depth, centerOrigin, width, height } = this.settings;
 
         // Calculate total area and assign areas to nodes
         let totalArea = 0;
-        nodesToArrange.forEach(node => {
+        nodesToArrange.forEach((node) => {
             const area = node.data[this.settings.areaProperty] || 1;
             node._treemapArea = area;
             totalArea += area;
@@ -52,10 +52,14 @@ export class TreeMapLayout {
         this._squarify(nodesToArrange, rect, totalArea, padding);
 
         // Apply positions and potentially resize nodes
-        let minX = Infinity, minY = Infinity, minZ = Infinity;
-        let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+        let minX = Infinity,
+            minY = Infinity,
+            minZ = Infinity;
+        let maxX = -Infinity,
+            maxY = -Infinity,
+            maxZ = -Infinity;
 
-        nodesToArrange.forEach(node => {
+        nodesToArrange.forEach((node) => {
             const { x, y, width: nodeW, height: nodeH } = node._treemapRect;
             let finalX, finalY, finalZ;
 
@@ -67,7 +71,8 @@ export class TreeMapLayout {
                 finalX = x + nodeW / 2;
                 finalY = depth;
                 finalZ = y + nodeH / 2;
-            } else { // yz
+            } else {
+                // yz
                 finalX = depth;
                 finalY = x + nodeW / 2;
                 finalZ = y + nodeH / 2;
@@ -94,7 +99,7 @@ export class TreeMapLayout {
             const layoutCenterY = (minY + maxY) / 2;
             const layoutCenterZ = (minZ + maxZ) / 2;
 
-            nodesToArrange.forEach(node => {
+            nodesToArrange.forEach((node) => {
                 node.position.x -= layoutCenterX;
                 node.position.y -= layoutCenterY;
                 node.position.z -= layoutCenterZ;
@@ -126,7 +131,7 @@ export class TreeMapLayout {
             row.push(nodes[i]);
             rowArea += nodes[i]._treemapArea;
 
-            const currentRatio = this._calculateRowRatio(row, rowArea, rect.width, rect.height);
+            const currentRatio = this._calculateRowRatio(row, rowArea, rect.width, rect.height, totalArea);
 
             if (currentRatio < bestRatio) {
                 bestRatio = currentRatio;
@@ -145,22 +150,24 @@ export class TreeMapLayout {
         this._layoutRow(currentRow, rect, rowArea, totalArea, padding);
 
         const newRect = { ...rect };
-        if (rect.width > rect.height) { // Layouted horizontally
+        if (rect.width > rect.height) {
+            // Layouted horizontally
             newRect.x += currentRow[0]._treemapRect.width + padding;
-            newRect.width -= (currentRow[0]._treemapRect.width + padding);
-        } else { // Layouted vertically
+            newRect.width -= currentRow[0]._treemapRect.width + padding;
+        } else {
+            // Layouted vertically
             newRect.y += currentRow[0]._treemapRect.height + padding;
-            newRect.height -= (currentRow[0]._treemapRect.height + padding);
+            newRect.height -= currentRow[0]._treemapRect.height + padding;
         }
 
         this._squarify(remainingNodes, newRect, totalArea - rowArea, padding);
     }
 
-    _calculateRowRatio(row, rowArea, rectWidth, rectHeight) {
+    _calculateRowRatio(row, rowArea, rectWidth, rectHeight, totalArea) {
         if (row.length === 0 || rowArea === 0) return Infinity;
 
-        const minArea = Math.min(...row.map(n => n._treemapArea));
-        const maxArea = Math.max(...row.map(n => n._treemapArea));
+        const minArea = Math.min(...row.map((n) => n._treemapArea));
+        const maxArea = Math.max(...row.map((n) => n._treemapArea));
 
         const side = Math.min(rectWidth, rectHeight);
         const ratio = (side * rowArea) / (minArea * totalArea);
@@ -175,7 +182,7 @@ export class TreeMapLayout {
         const rowBreadth = isHorizontal ? rect.height : rect.width;
 
         let currentOffset = 0;
-        row.forEach(node => {
+        row.forEach((node) => {
             const nodeLength = (node._treemapArea / rowArea) * rowLength;
             const nodeBreadth = rowBreadth;
 
@@ -198,12 +205,22 @@ export class TreeMapLayout {
         });
     }
 
-    run() { /* Not typically a continuous layout */ }
-    stop() { /* Nothing to stop */ }
-    update() { /* No per-frame updates needed usually */ }
+    run() {
+        /* Not typically a continuous layout */
+    }
+    stop() {
+        /* Nothing to stop */
+    }
+    update() {
+        /* No per-frame updates needed usually */
+    }
 
-    addNode(node) { /* Could re-trigger init or add incrementally (complex) */ }
-    removeNode(node) { /* Could re-trigger init or remove incrementally (complex) */ }
+    addNode(node) {
+        /* Could re-trigger init or add incrementally (complex) */
+    }
+    removeNode(node) {
+        /* Could re-trigger init or remove incrementally (complex) */
+    }
     addEdge(edge) {}
     removeEdge(edge) {}
     kick() {}

@@ -79,7 +79,9 @@ export class ForceLayout {
             x: n.position.x,
             y: n.position.y,
             z: n.position.z,
-            vx: 0, vy: 0, vz: 0,
+            vx: 0,
+            vy: 0,
+            vz: 0,
             mass: n.mass || 1.0,
             isFixed: n.isPinned,
             isPinned: n.isPinned,
@@ -94,9 +96,14 @@ export class ForceLayout {
             constraintParams: e.data.constraintParams,
         }));
 
-        const plainGravityCenter = this.settings.gravityCenter && typeof this.settings.gravityCenter.x === 'number'
-            ? { x: this.settings.gravityCenter.x, y: this.settings.gravityCenter.y, z: this.settings.gravityCenter.z }
-            : { x: 0, y: 0, z: 0 };
+        const plainGravityCenter =
+            this.settings.gravityCenter && typeof this.settings.gravityCenter.x === 'number'
+                ? {
+                      x: this.settings.gravityCenter.x,
+                      y: this.settings.gravityCenter.y,
+                      z: this.settings.gravityCenter.z,
+                  }
+                : { x: 0, y: 0, z: 0 };
 
         this.worker.postMessage({
             type: 'init',
@@ -158,8 +165,12 @@ export class ForceLayout {
             payload: {
                 node: {
                     id: node.id,
-                    x: node.position.x, y: node.position.y, z: node.position.z,
-                    vx: 0, vy: 0, vz: 0,
+                    x: node.position.x,
+                    y: node.position.y,
+                    z: node.position.z,
+                    vx: 0,
+                    vy: 0,
+                    vz: 0,
                     mass: node.mass || 1.0,
                     isFixed: node.isPinned,
                     isPinned: node.isPinned,
@@ -234,9 +245,14 @@ export class ForceLayout {
 
     setSettings(newSettings) {
         this.settings = { ...this.settings, ...newSettings };
-        const plainGravityCenter = this.settings.gravityCenter && typeof this.settings.gravityCenter.x === 'number'
-            ? { x: this.settings.gravityCenter.x, y: this.settings.gravityCenter.y, z: this.settings.gravityCenter.z }
-            : { x: 0, y: 0, z: 0 };
+        const plainGravityCenter =
+            this.settings.gravityCenter && typeof this.settings.gravityCenter.x === 'number'
+                ? {
+                      x: this.settings.gravityCenter.x,
+                      y: this.settings.gravityCenter.y,
+                      z: this.settings.gravityCenter.z,
+                  }
+                : { x: 0, y: 0, z: 0 };
 
         this.worker.postMessage({
             type: 'updateSettings',

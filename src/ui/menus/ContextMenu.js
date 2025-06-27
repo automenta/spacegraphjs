@@ -20,7 +20,9 @@ export class ContextMenu {
         if (!li || li.classList.contains('disabled')) return;
 
         const { action, nodeId, edgeId, positionX, positionY, positionZ } = li.dataset;
-        const worldPos = positionX ? { x: parseFloat(positionX), y: parseFloat(positionY), z: parseFloat(positionZ) } : null;
+        const worldPos = positionX
+            ? { x: parseFloat(positionX), y: parseFloat(positionY), z: parseFloat(positionZ) }
+            : null;
 
         this.hide();
 
@@ -41,7 +43,7 @@ export class ContextMenu {
                 if (targetNode) {
                     this.space.emit('ui:request:confirm', {
                         message: `Delete node "${targetNode.id.substring(0, 10)}..."?`,
-                        onConfirm: () => this.space.emit('ui:request:removeNode', targetNode.id)
+                        onConfirm: () => this.space.emit('ui:request:removeNode', targetNode.id),
                     });
                 }
                 break;
@@ -75,22 +77,42 @@ export class ContextMenu {
                 if (targetEdge) {
                     this.space.emit('ui:request:confirm', {
                         message: `Delete edge "${targetEdge.id.substring(0, 10)}..."?`,
-                        onConfirm: () => this.space.emit('ui:request:removeEdge', targetEdge.id)
+                        onConfirm: () => this.space.emit('ui:request:removeEdge', targetEdge.id),
                     });
                 }
                 break;
 
             case 'create-html-node':
-                worldPos && this.space.emit('ui:request:createNode', { type: 'html', position: worldPos, data: { label: 'New Node', content: 'Edit me!' } });
+                worldPos &&
+                    this.space.emit('ui:request:createNode', {
+                        type: 'html',
+                        position: worldPos,
+                        data: { label: 'New Node', content: 'Edit me!' },
+                    });
                 break;
             case 'create-note-node':
-                 worldPos && this.space.emit('ui:request:createNode', { type: 'note', position: worldPos, data: { content: 'New Note ✨' } });
+                worldPos &&
+                    this.space.emit('ui:request:createNode', {
+                        type: 'note',
+                        position: worldPos,
+                        data: { content: 'New Note ✨' },
+                    });
                 break;
             case 'create-shape-node-box':
-                 worldPos && this.space.emit('ui:request:createNode', { type: 'shape', position: worldPos, data: { label: 'Box Node 📦', shape: 'box', size: 60, color: Math.random() * 0xffffff } });
+                worldPos &&
+                    this.space.emit('ui:request:createNode', {
+                        type: 'shape',
+                        position: worldPos,
+                        data: { label: 'Box Node 📦', shape: 'box', size: 60, color: Math.random() * 0xffffff },
+                    });
                 break;
-           case 'create-shape-node-sphere':
-                 worldPos && this.space.emit('ui:request:createNode', { type: 'shape', position: worldPos, data: { label: 'Sphere Node 🌐', shape: 'sphere', size: 60, color: Math.random() * 0xffffff } });
+            case 'create-shape-node-sphere':
+                worldPos &&
+                    this.space.emit('ui:request:createNode', {
+                        type: 'shape',
+                        position: worldPos,
+                        data: { label: 'Sphere Node 🌐', shape: 'sphere', size: 60, color: Math.random() * 0xffffff },
+                    });
                 break;
 
             case 'center-camera-view':
@@ -102,7 +124,12 @@ export class ContextMenu {
             case 'toggle-background-visibility': {
                 if (renderingPlugin) {
                     const newAlpha = renderingPlugin.background.alpha === 0 ? 1.0 : 0;
-                    const newColor = newAlpha === 0 ? 0x000000 : (document.body.classList.contains('theme-light') ? 0xf4f4f4 : 0x1a1a1d) ;
+                    const newColor =
+                        newAlpha === 0
+                            ? 0x000000
+                            : document.body.classList.contains('theme-light')
+                              ? 0xf4f4f4
+                              : 0x1a1a1d;
                     this.space.emit('ui:request:toggleBackground', newColor, newAlpha);
                 }
                 break;
@@ -175,7 +202,7 @@ export class ContextMenu {
             menuItems = this._getContextMenuItemsForEdge(targetInfo.intersectedEdge);
         } else {
             if (!targetInfo.shiftKey) {
-                 this._uiPluginCallbacks.setSelectedNode(null, false);
+                this._uiPluginCallbacks.setSelectedNode(null, false);
             }
             const worldPos = this.space.screenToWorld(x, y, 0);
             menuItems = this._getContextMenuItemsForBackground(worldPos);
@@ -187,14 +214,20 @@ export class ContextMenu {
         cm.innerHTML = '';
         const ul = document.createElement('ul');
 
-        menuItems.forEach(itemData => {
+        menuItems.forEach((itemData) => {
             const li = document.createElement('li');
             if (itemData.type === 'separator') {
                 li.className = 'separator';
             } else {
                 li.textContent = itemData.label;
-                Object.keys(itemData).forEach(key => {
-                    if (key !== 'label' && key !== 'type' && key !== 'isDestructive' && itemData[key] !== undefined && itemData[key] !== null) {
+                Object.keys(itemData).forEach((key) => {
+                    if (
+                        key !== 'label' &&
+                        key !== 'type' &&
+                        key !== 'isDestructive' &&
+                        itemData[key] !== undefined &&
+                        itemData[key] !== null
+                    ) {
                         li.dataset[key] = String(itemData[key]);
                     }
                 });

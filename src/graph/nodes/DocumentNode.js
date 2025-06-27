@@ -1,6 +1,6 @@
-import {Node} from './Node.js';
+import { Node } from './Node.js';
 import * as THREE from 'three';
-import {createCSS3DLabelObject, applyLabelLOD} from '../../utils/labelUtils.js';
+import { createCSS3DLabelObject, applyLabelLOD } from '../../utils/labelUtils.js';
 
 export class DocumentNode extends Node {
     static typeName = 'document';
@@ -63,7 +63,7 @@ export class DocumentNode extends Node {
     }
 
     getBoundingSphereRadius() {
-        return Math.sqrt((this.data.size / 2) ** 2 + (this.data.size * 1.2 / 2) ** 2);
+        return Math.sqrt((this.data.size / 2) ** 2 + ((this.data.size * 1.2) / 2) ** 2);
     }
 
     viewDocument() {

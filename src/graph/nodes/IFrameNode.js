@@ -1,5 +1,5 @@
-import {CSS3DObject} from 'three/addons/renderers/CSS3DRenderer.js';
-import {Node} from './Node.js';
+import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
+import { Node } from './Node.js';
 
 export class IFrameNode extends Node {
     static typeName = 'iframe';
@@ -15,6 +15,7 @@ export class IFrameNode extends Node {
             width: this.data.width ?? IFrameNode.DEFAULT_WIDTH,
             height: this.data.height ?? IFrameNode.DEFAULT_HEIGHT,
         };
+        this.initialSize = { width: this.size.width, height: this.size.height }; // Store initial size
         this.htmlElement = this._createElement();
         this.cssObject = new CSS3DObject(this.htmlElement);
         this.cssObject.userData = { nodeId: this.id, type: 'iframe-node' };
@@ -94,6 +95,22 @@ export class IFrameNode extends Node {
             if (this.data.billboard && space?._cam) {
                 this.cssObject.quaternion.copy(space._cam.quaternion);
             }
+        }
+    }
+
+    // Override the resize method to handle CSS object scaling
+    resize(newScale) {
+        super.resize(newScale);
+        // Calculate new width and height based on the initial size and the new scale
+        const newWidth = this.initialSize.width * newScale.x;
+        const newHeight = this.initialSize.height * newScale.y;
+
+        this.size.width = newWidth;
+        this.size.height = newHeight;
+
+        if (this.htmlElement) {
+            this.htmlElement.style.width = `${newWidth}px`;
+            this.htmlElement.style.height = `${newHeight}px`;
         }
     }
 

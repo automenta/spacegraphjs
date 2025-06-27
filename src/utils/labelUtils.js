@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {CSS3DObject} from 'three/addons/renderers/CSS3DRenderer.js';
+import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
 
 /**
  * Creates a DOM element for a 3D label.
@@ -52,7 +52,8 @@ export function applyLabelLOD(labelObject, labelLodData, space, baseScale = 1.0)
     if (!labelObject?.element || !labelLodData?.length) {
         if (labelObject?.element) {
             labelObject.element.style.visibility = '';
-            if (labelObject.element.classList.contains('node-html')) { // For HtmlNode content
+            if (labelObject.element.classList.contains('node-html')) {
+                // For HtmlNode content
                 const contentEl = labelObject.element.querySelector('.node-content');
                 if (contentEl) contentEl.style.transform = `scale(${baseScale})`;
             }

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import {Edge} from './Edge.js';
-import {createCSS3DLabelObject, applyLabelLOD} from '../../utils/labelUtils.js';
+import { Edge } from './Edge.js';
+import { createCSS3DLabelObject, applyLabelLOD } from '../../utils/labelUtils.js';
 
 export class CurvedEdge extends Edge {
     static typeName = 'curved';
@@ -12,9 +12,8 @@ export class CurvedEdge extends Edge {
         super(id, sourceNode, targetNode, data);
 
         this.numPoints = Math.max(1, Math.floor(this.data.numCurvePoints || 20));
-        this.curvature = (typeof this.data.curvature === 'number' && isFinite(this.data.curvature))
-            ? this.data.curvature
-            : 0.3;
+        this.curvature =
+            typeof this.data.curvature === 'number' && isFinite(this.data.curvature) ? this.data.curvature : 0.3;
 
         if (this.data.label) this.labelObject = this._createLabel();
         this.update();
@@ -39,8 +38,14 @@ export class CurvedEdge extends Edge {
         const sourcePos = this.source.position;
         const targetPos = this.target.position;
 
-        if (!isFinite(sourcePos.x) || !isFinite(sourcePos.y) || !isFinite(sourcePos.z) ||
-            !isFinite(targetPos.x) || !isFinite(targetPos.y) || !isFinite(targetPos.z)) {
+        if (
+            !isFinite(sourcePos.x) ||
+            !isFinite(sourcePos.y) ||
+            !isFinite(sourcePos.z) ||
+            !isFinite(targetPos.x) ||
+            !isFinite(targetPos.y) ||
+            !isFinite(targetPos.z)
+        ) {
             return;
         }
 
@@ -98,7 +103,7 @@ export class CurvedEdge extends Edge {
             const effectiveNumSegmentsForColor = Math.max(1, posAttribute.count - 1);
 
             for (let i = 0; i < posAttribute.count; i++) {
-                const t = (effectiveNumSegmentsForColor === 0) ? 0 : (i / effectiveNumSegmentsForColor);
+                const t = effectiveNumSegmentsForColor === 0 ? 0 : i / effectiveNumSegmentsForColor;
                 const interpolatedColor = new THREE.Color().lerpColors(colorStart, colorEnd, t);
                 curveColors.push(interpolatedColor.r, interpolatedColor.g, interpolatedColor.b);
             }

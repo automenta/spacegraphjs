@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import {Utils} from '../../utils.js';
-import {Line2} from 'three/addons/lines/Line2.js';
-import {LineMaterial} from 'three/addons/lines/LineMaterial.js';
-import {LineGeometry} from 'three/addons/lines/LineGeometry.js';
+import { Utils } from '../../utils.js';
+import { Line2 } from 'three/addons/lines/Line2.js';
+import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
+import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 
 export class Edge {
     static typeName = 'straight'; // Default base edge type
@@ -79,7 +79,7 @@ export class Edge {
 
     _createLine() {
         const geometry = new LineGeometry();
-        geometry.setPositions([0,0,0, 0,0,0.001]);
+        geometry.setPositions([0, 0, 0, 0, 0, 0.001]);
 
         const materialConfig = {
             linewidth: this.data.thickness,
@@ -97,7 +97,14 @@ export class Edge {
             materialConfig.vertexColors = true;
             this._colorStart.set(this.data.gradientColors[0]);
             this._colorEnd.set(this.data.gradientColors[1]);
-            geometry.setColors([this._colorStart.r, this._colorStart.g, this._colorStart.b, this._colorEnd.r, this._colorEnd.g, this._colorEnd.b]);
+            geometry.setColors([
+                this._colorStart.r,
+                this._colorStart.g,
+                this._colorStart.b,
+                this._colorEnd.r,
+                this._colorEnd.g,
+                this._colorEnd.b,
+            ]);
         } else {
             materialConfig.vertexColors = false;
             materialConfig.color = this.data.color || 0x00d0ff;
@@ -125,7 +132,8 @@ export class Edge {
             this._colorEnd.set(this.data.gradientColors[1]);
 
             const colors = this.line.geometry.attributes.color?.array || [];
-            if (colors.length >= 6) { // Ensure array is large enough for at least 2 points (6 components)
+            if (colors.length >= 6) {
+                // Ensure array is large enough for at least 2 points (6 components)
                 colors[0] = this._colorStart.r;
                 colors[1] = this._colorStart.g;
                 colors[2] = this._colorStart.b;
@@ -164,15 +172,18 @@ export class Edge {
         const sourcePos = this.source.position;
         const targetPos = this.target.position;
 
-        if (!isFinite(sourcePos.x) || !isFinite(sourcePos.y) || !isFinite(sourcePos.z) ||
-            !isFinite(targetPos.x) || !isFinite(targetPos.y) || !isFinite(targetPos.z)) {
+        if (
+            !isFinite(sourcePos.x) ||
+            !isFinite(sourcePos.y) ||
+            !isFinite(sourcePos.z) ||
+            !isFinite(targetPos.x) ||
+            !isFinite(targetPos.y) ||
+            !isFinite(targetPos.z)
+        ) {
             return;
         }
 
-        this.line.geometry.setPositions([
-            sourcePos.x, sourcePos.y, sourcePos.z,
-            targetPos.x, targetPos.y, targetPos.z,
-        ]);
+        this.line.geometry.setPositions([sourcePos.x, sourcePos.y, sourcePos.z, targetPos.x, targetPos.y, targetPos.z]);
 
         if (this.line.geometry.attributes.position.count === 0) return;
 
@@ -227,7 +238,7 @@ export class Edge {
         const mat = this.line.material;
         mat.opacity = highlight ? Edge.HIGHLIGHT_OPACITY : Edge.DEFAULT_OPACITY;
 
-        const thicknessMultiplier = (this.data.gradientColors?.length === 2 && mat.vertexColors) ? 2.0 : 1.5;
+        const thicknessMultiplier = this.data.gradientColors?.length === 2 && mat.vertexColors ? 2.0 : 1.5;
         mat.linewidth = highlight ? this.data.thickness * thicknessMultiplier : this.data.thickness;
 
         if (!mat.vertexColors) mat.color.set(highlight ? Edge.HIGHLIGHT_COLOR : this.data.color);
@@ -235,7 +246,9 @@ export class Edge {
 
         const highlightArrowhead = (arrowhead) => {
             if (arrowhead?.material) {
-                arrowhead.material.color.set(highlight ? Edge.HIGHLIGHT_COLOR : this.data.arrowheadColor || this.data.color);
+                arrowhead.material.color.set(
+                    highlight ? Edge.HIGHLIGHT_COLOR : this.data.arrowheadColor || this.data.color
+                );
                 arrowhead.material.opacity = highlight ? Edge.HIGHLIGHT_OPACITY : Edge.DEFAULT_OPACITY;
             }
         };
@@ -262,7 +275,9 @@ export class Edge {
         const hoverArrowhead = (arrowhead) => {
             if (arrowhead?.material) {
                 const arrowBaseOpacity = Edge.DEFAULT_OPACITY;
-                arrowhead.material.opacity = hovered ? Math.min(1.0, arrowBaseOpacity + Edge.DEFAULT_HOVER_OPACITY_BOOST) : arrowBaseOpacity;
+                arrowhead.material.opacity = hovered
+                    ? Math.min(1.0, arrowBaseOpacity + Edge.DEFAULT_HOVER_OPACITY_BOOST)
+                    : arrowBaseOpacity;
             }
         };
         if (!this.isHighlighted) {

@@ -13,6 +13,8 @@ export default [
             globals: {
                 ...globals.browser,
                 ...globals.node,
+                ...globals.vitest,
+                Chart: 'readonly',
                 // ecmaVersion 'latest' should cover ES2021 globals by default with modern ESLint.
                 // If specific ES2021 globals are missing, they can be added from 'globals' package.
                 // e.g. ...globals.es2021 (if available as a combined object) or specific ones.

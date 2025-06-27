@@ -17,7 +17,12 @@ describe('InstancedMeshManager', () => {
     });
 
     test('should add and remove a sphere node', async () => {
-        const node = { id: 'node1', position: new THREE.Vector3(0, 0, 0), size: 10, data: { shape: 'sphere', color: 0xff0000 } };
+        const node = {
+            id: 'node1',
+            position: new THREE.Vector3(0, 0, 0),
+            size: 10,
+            data: { shape: 'sphere', color: 0xff0000 },
+        };
         const added = await manager.addNode(node);
         expect(added).toBe(true);
         expect(node.isInstanced).toBe(true);
@@ -32,7 +37,11 @@ describe('InstancedMeshManager', () => {
             loadAsync: vi.fn().mockResolvedValue({
                 scene: {
                     traverse: (callback) => {
-                        const mesh = { isMesh: true, geometry: new THREE.BoxGeometry(), material: new THREE.MeshStandardMaterial() };
+                        const mesh = {
+                            isMesh: true,
+                            geometry: new THREE.BoxGeometry(),
+                            material: new THREE.MeshStandardMaterial(),
+                        };
                         callback(mesh);
                     },
                 },
@@ -52,7 +61,12 @@ describe('InstancedMeshManager', () => {
     });
 
     test('should update node transform and color', async () => {
-        const node = { id: 'node3', position: new THREE.Vector3(0, 0, 0), size: 10, data: { shape: 'sphere', color: 0xff0000 } };
+        const node = {
+            id: 'node3',
+            position: new THREE.Vector3(0, 0, 0),
+            size: 10,
+            data: { shape: 'sphere', color: 0xff0000 },
+        };
         await manager.addNode(node);
 
         node.position.set(5, 5, 5);

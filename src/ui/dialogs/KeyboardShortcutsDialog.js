@@ -39,10 +39,10 @@ export class KeyboardShortcutsDialog {
                 </thead>
                 <tbody>
         `;
-        this.keyboardShortcuts.forEach(shortcut => {
+        this.keyboardShortcuts.forEach((shortcut) => {
             tableHTML += `
                 <tr>
-                    <td>${shortcut.keys.map(key => `<kbd>${key}</kbd>`).join(' / ')}</td>
+                    <td>${shortcut.keys.map((key) => `<kbd>${key}</kbd>`).join(' / ')}</td>
                     <td>${shortcut.description}</td>
                 </tr>
             `;

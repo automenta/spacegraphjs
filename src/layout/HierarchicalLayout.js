@@ -26,9 +26,16 @@ export class HierarchicalLayout {
         this.nodeMap.clear();
         nodes.forEach((node) => {
             this.nodeMap.set(node.id, {
-                node, id: node.id, children: [], parent: null, level: -1, x: 0, y: 0,
+                node,
+                id: node.id,
+                children: [],
+                parent: null,
+                level: -1,
+                x: 0,
+                y: 0,
                 width: node.getBoundingSphereRadius?.() * 2 || 100,
-                prelim: 0, modifier: 0,
+                prelim: 0,
+                modifier: 0,
             });
         });
 
@@ -43,7 +50,7 @@ export class HierarchicalLayout {
 
         const roots = nodes.filter((n) => !this.nodeMap.get(n.id).parent && !n.isPinned);
         if (roots.length === 0 && nodes.length > 0) {
-            const firstUnpinned = nodes.find(n => !n.isPinned);
+            const firstUnpinned = nodes.find((n) => !n.isPinned);
             if (firstUnpinned) roots.push(firstUnpinned);
         }
 
@@ -98,7 +105,8 @@ export class HierarchicalLayout {
     }
 
     _calculateTreeWidth(nodeWrapper) {
-        if (!nodeWrapper || nodeWrapper.children.length === 0) return nodeWrapper?.width || this.settings.nodeSeparation;
+        if (!nodeWrapper || nodeWrapper.children.length === 0)
+            return nodeWrapper?.width || this.settings.nodeSeparation;
         let width = 0;
         nodeWrapper.children.forEach((child) => {
             width += this._calculateTreeWidth(child) + this.settings.nodeSeparation;

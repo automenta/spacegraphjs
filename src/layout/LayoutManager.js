@@ -1,4 +1,4 @@
-import {gsap} from 'gsap';
+import { gsap } from 'gsap';
 
 export class LayoutManager {
     constructor(space, pluginManager) {
@@ -23,7 +23,8 @@ export class LayoutManager {
         }
 
         this.activeLayout?.stop?.();
-        this.activeLayout && this.space.emit('layout:stopped', { name: this.activeLayoutName, layout: this.activeLayout });
+        this.activeLayout &&
+            this.space.emit('layout:stopped', { name: this.activeLayoutName, layout: this.activeLayout });
 
         this.activeLayout = newLayout;
         this.activeLayoutName = name;
@@ -40,24 +41,26 @@ export class LayoutManager {
             const oldPositions = new Map(nodes.map((node) => [node.id, node.position.clone()]));
             await this.activeLayout.init(nodes, edges, config);
 
-            await Promise.all(nodes.map((node) => {
-                const currentPos = oldPositions.get(node.id);
-                const targetPos = node.position;
+            await Promise.all(
+                nodes.map((node) => {
+                    const currentPos = oldPositions.get(node.id);
+                    const targetPos = node.position;
 
-                node.position.copy(currentPos);
+                    node.position.copy(currentPos);
 
-                return new Promise((resolve) => {
-                    gsap.to(node.position, {
-                        x: targetPos.x,
-                        y: targetPos.y,
-                        z: targetPos.z,
-                        duration: 0.7,
-                        ease: 'power2.inOut',
-                        overwrite: true,
-                        onComplete: resolve,
+                    return new Promise((resolve) => {
+                        gsap.to(node.position, {
+                            x: targetPos.x,
+                            y: targetPos.y,
+                            z: targetPos.z,
+                            duration: 0.7,
+                            ease: 'power2.inOut',
+                            overwrite: true,
+                            onComplete: resolve,
+                        });
                     });
-                });
-            }));
+                })
+            );
         }
 
         if (this.activeLayout.run) {
@@ -69,7 +72,8 @@ export class LayoutManager {
 
     stopLayout() {
         this.activeLayout?.stop?.();
-        this.activeLayout && this.space.emit('layout:stopped', { name: this.activeLayoutName, layout: this.activeLayout });
+        this.activeLayout &&
+            this.space.emit('layout:stopped', { name: this.activeLayoutName, layout: this.activeLayout });
     }
 
     update() {

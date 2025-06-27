@@ -1,17 +1,18 @@
 import { BaseFactory } from '../core/BaseFactory.js'; // Import BaseFactory
-import {HtmlNode} from './nodes/HtmlNode.js';
-import {ShapeNode} from './nodes/ShapeNode.js';
-import {ImageNode} from './nodes/ImageNode.js';
-import {VideoNode} from './nodes/VideoNode.js';
-import {IFrameNode} from './nodes/IFrameNode.js';
-import {GroupNode} from './nodes/GroupNode.js';
-import {DataNode} from './nodes/DataNode.js';
-import {NoteNode} from './nodes/NoteNode.js';
-import {AudioNode} from './nodes/AudioNode.js';
-import {DocumentNode} from './nodes/DocumentNode.js';
-import {ChartNode} from './nodes/ChartNode.js';
+import { HtmlNode } from './nodes/HtmlNode.js';
+import { ShapeNode } from './nodes/ShapeNode.js';
+import { ImageNode } from './nodes/ImageNode.js';
+import { VideoNode } from './nodes/VideoNode.js';
+import { IFrameNode } from './nodes/IFrameNode.js';
+import { GroupNode } from './nodes/GroupNode.js';
+import { DataNode } from './nodes/DataNode.js';
+import { NoteNode } from './nodes/NoteNode.js';
+import { AudioNode } from './nodes/AudioNode.js';
+import { DocumentNode } from './nodes/DocumentNode.js';
+import { ChartNode } from './nodes/ChartNode.js';
 
-export class NodeFactory extends BaseFactory { // Extend BaseFactory
+export class NodeFactory extends BaseFactory {
+    // Extend BaseFactory
     constructor(space) {
         super(); // Call BaseFactory constructor
         this.space = space;

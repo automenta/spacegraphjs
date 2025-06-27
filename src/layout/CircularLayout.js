@@ -32,7 +32,8 @@ export class CircularLayout {
 
         const numNodes = this.nodes.length;
         const { radius, plane, startAngle, center } = this.settings;
-        const angularSpacing = this.settings.angularSpacing <= 0 ? (2 * Math.PI) / numNodes : this.settings.angularSpacing;
+        const angularSpacing =
+            this.settings.angularSpacing <= 0 ? (2 * Math.PI) / numNodes : this.settings.angularSpacing;
 
         let dynamicRadius = radius;
         if (radius <= 0) {

@@ -53,7 +53,7 @@ export class LayoutSettingsDialog {
                 <label for="layout-select">Current Layout: </label>
                 <select id="layout-select">
         `;
-        availableLayouts.forEach(name => {
+        availableLayouts.forEach((name) => {
             const displayName = name.charAt(0).toUpperCase() + name.slice(1);
             controlsHTML += `<option value="${name}" ${name === currentLayoutName ? 'selected' : ''}>${displayName}</option>`;
         });
@@ -87,7 +87,10 @@ export class LayoutSettingsDialog {
 
     dispose() {
         if (this.layoutSettingsDialogElement) {
-            $('#apply-layout-button', this.layoutSettingsDialogElement)?.removeEventListener('click', this._onApplyLayout);
+            $('#apply-layout-button', this.layoutSettingsDialogElement)?.removeEventListener(
+                'click',
+                this._onApplyLayout
+            );
             $('#close-layout-dialog', this.layoutSettingsDialogElement)?.removeEventListener('click', this.hide);
             this.layoutSettingsDialogElement.remove();
             this.layoutSettingsDialogElement = null;

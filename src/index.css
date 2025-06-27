@@ -328,7 +328,7 @@ body {
     border: 1px solid var(--sg-accent-secondary);
     max-width: 350px; /* Increased max-width */
     font-size: 0.9em;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(8px);
 }
 
@@ -399,7 +399,7 @@ body {
     padding: 2px 5px;
     font-family: var(--sg-font-mono);
     font-size: 0.9em;
-    box-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+    box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
     margin: 0 2px;
     display: inline-block;
 }
@@ -473,10 +473,12 @@ body {
     border-radius: 4px;
     border: 1px solid rgba(var(--sg-accent-secondary-rgb, 0, 142, 168), 0.5);
     opacity: 0.75;
-    box-shadow: 0 1px 5px rgba(0,0,0,0.2);
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
     pointer-events: auto;
     white-space: nowrap;
-    transition: opacity var(--sg-transition-fast), background-color var(--sg-transition-fast);
+    transition:
+        opacity var(--sg-transition-fast),
+        background-color var(--sg-transition-fast);
 }
 
 #hud-layer > div:hover,
@@ -514,9 +516,9 @@ body {
 }
 .theme-light #hud-layer > div,
 .theme-light #hud-layer > select {
-     background-color: rgba(var(--sg-bg-ui-rgb, 255, 255, 255), 0.7);
-     border: 1px solid rgba(var(--sg-accent-secondary-rgb, 0, 86, 179), 0.5);
-     box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    background-color: rgba(var(--sg-bg-ui-rgb, 255, 255, 255), 0.7);
+    border: 1px solid rgba(var(--sg-accent-secondary-rgb, 0, 86, 179), 0.5);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }
 .theme-light #hud-layer > div:hover,
 .theme-light #hud-layer > select:hover {
@@ -842,11 +844,11 @@ body {
     z-index: 100;
     opacity: 0.95;
     transition: opacity var(--sg-transition-fast);
-    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
-.edge-menu-frame input[type="color"],
-.edge-menu-frame input[type="range"],
+.edge-menu-frame input[type='color'],
+.edge-menu-frame input[type='range'],
 .edge-menu-frame select {
     border: 1px solid var(--sg-accent-secondary);
     border-radius: 3px;
@@ -857,12 +859,12 @@ body {
     transition: border-color var(--sg-transition-fast);
     font-size: 12px;
 }
-.edge-menu-frame input[type="color"]{
+.edge-menu-frame input[type='color'] {
     min-width: 25px;
     height: 22px;
     padding: 1px 2px;
 }
-.edge-menu-frame input[type="range"]{
+.edge-menu-frame input[type='range'] {
     height: 22px;
     flex-grow: 1;
     min-width: 60px;
@@ -871,11 +873,11 @@ body {
     height: 22px;
 }
 
-.edge-menu-frame input[type="color"]:hover,
-.edge-menu-frame input[type="range"]:hover,
+.edge-menu-frame input[type='color']:hover,
+.edge-menu-frame input[type='range']:hover,
 .edge-menu-frame select:hover,
-.edge-menu-frame input[type="color"]:focus,
-.edge-menu-frame input[type="range"]:focus,
+.edge-menu-frame input[type='color']:focus,
+.edge-menu-frame input[type='range']:focus,
 .edge-menu-frame select:focus {
     border-color: var(--sg-accent-primary);
     outline: none;
@@ -892,7 +894,9 @@ body {
     line-height: 22px;
     text-align: center;
     cursor: pointer;
-    transition: background-color var(--sg-transition-fast), transform var(--sg-transition-fast);
+    transition:
+        background-color var(--sg-transition-fast),
+        transform var(--sg-transition-fast);
 }
 
 .edge-menu-frame button.delete-button:hover {
@@ -930,7 +934,7 @@ body {
     font-weight: 500;
     transition:
         background-color var(--sg-transition-fast),
-        border-color var(--sg-transition-fast);
+        transform var(--sg-transition-fast);
 }
 
 #toolbar button:hover {
@@ -939,6 +943,34 @@ body {
 }
 
 #toolbar button:active {
+    background-color: var(--sg-accent-primary);
+    color: var(--sg-text-on-accent);
+}
+
+/* Metaframe Controls */
+.metaframe-controls {
+    pointer-events: auto; /* Allow interaction with buttons */
+}
+
+.metaframe-controls button {
+    background: var(--sg-node-button-bg);
+    color: var(--sg-text-primary);
+    border: 1px solid var(--sg-accent-secondary);
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition:
+        background-color var(--sg-transition-fast),
+        border-color var(--sg-transition-fast);
+}
+
+.metaframe-controls button:hover {
+    background-color: var(--sg-node-button-bg-hover);
+    border-color: var(--sg-accent-primary);
+}
+
+.metaframe-controls button:active {
     background-color: var(--sg-accent-primary);
     color: var(--sg-text-on-accent);
 }

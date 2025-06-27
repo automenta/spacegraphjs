@@ -1,5 +1,5 @@
-import {Edge} from './Edge.js';
-import {Utils} from '../../utils.js';
+import { Edge } from './Edge.js';
+import { Utils } from '../../utils.js';
 import * as THREE from 'three';
 
 export class DynamicThicknessEdge extends Edge {
@@ -8,16 +8,22 @@ export class DynamicThicknessEdge extends Edge {
     static MAX_THICKNESS = 10;
 
     constructor(id, sourceNode, targetNode, data = {}) {
-        const dynamicData = Utils.mergeDeep({
-            // Default base thickness if not driven by value
-            thickness: data.thickness ?? 3,
-            // Property in 'data' that drives thickness, e.g., data: { value: 5 }
-            thicknessDataKey: data.thicknessDataKey ?? 'value',
-            // Range for mapping the data value to thickness
-            thicknessRange: data.thicknessRange ?? { min: 0, max: 100 }, // Expected input data range
-            // Actual visual thickness range
-            visualThicknessRange: data.visualThicknessRange ?? { min: DynamicThicknessEdge.MIN_THICKNESS, max: DynamicThicknessEdge.MAX_THICKNESS },
-        }, data);
+        const dynamicData = Utils.mergeDeep(
+            {
+                // Default base thickness if not driven by value
+                thickness: data.thickness ?? 3,
+                // Property in 'data' that drives thickness, e.g., data: { value: 5 }
+                thicknessDataKey: data.thicknessDataKey ?? 'value',
+                // Range for mapping the data value to thickness
+                thicknessRange: data.thicknessRange ?? { min: 0, max: 100 }, // Expected input data range
+                // Actual visual thickness range
+                visualThicknessRange: data.visualThicknessRange ?? {
+                    min: DynamicThicknessEdge.MIN_THICKNESS,
+                    max: DynamicThicknessEdge.MAX_THICKNESS,
+                },
+            },
+            data
+        );
 
         super(id, sourceNode, targetNode, dynamicData);
         this.updateThicknessFromData();
@@ -39,7 +45,7 @@ export class DynamicThicknessEdge extends Edge {
             // Normalize value from data range to 0-1
             let normalizedValue = 0;
             if (thicknessRange.max > thicknessRange.min) {
-                 normalizedValue = (value - thicknessRange.min) / (thicknessRange.max - thicknessRange.min);
+                normalizedValue = (value - thicknessRange.min) / (thicknessRange.max - thicknessRange.min);
             } else if (thicknessRange.max === thicknessRange.min && value >= thicknessRange.min) {
                 normalizedValue = 1; // if data value matches the single point in range
             }

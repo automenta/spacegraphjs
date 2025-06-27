@@ -7,7 +7,7 @@ export default defineConfig({
         emptyOutDir: false,
         outDir: 'dist',
         lib: {
-            entry: path.resolve(__dirname, 'src/spacegraph.js'),
+            entry: path.resolve(__dirname, 'src/index.js'),
             name: 'Spacegraph', // UMD global name
             formats: ['es', 'umd'], // Output ES module and UMD
             fileName: (format) => `spacegraph.${format}.js`,

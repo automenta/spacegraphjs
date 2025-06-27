@@ -1,4 +1,5 @@
-import {HtmlNode} from './HtmlNode.js';
+import { Chart } from 'chart.js';
+import { HtmlNode } from './HtmlNode.js';
 
 export class ChartNode extends HtmlNode {
     static typeName = 'chart';
@@ -6,25 +7,27 @@ export class ChartNode extends HtmlNode {
     constructor(id, position, data = {}, mass = 1.0) {
         const defaultChartData = {
             labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
-            datasets: [{
-                label: 'Sales',
-                data: [65, 59, 80, 81, 56],
-                backgroundColor: [
-                    'rgba(255, 99, 132, 0.7)',
-                    'rgba(54, 162, 235, 0.7)',
-                    'rgba(255, 206, 86, 0.7)',
-                    'rgba(75, 192, 192, 0.7)',
-                    'rgba(153, 102, 255, 0.7)'
-                ],
-                borderColor: [
-                    'rgba(255, 99, 132, 1)',
-                    'rgba(54, 162, 235, 1)',
-                    'rgba(255, 206, 86, 1)',
-                    'rgba(75, 192, 192, 1)',
-                    'rgba(153, 102, 255, 1)'
-                ],
-                borderWidth: 1
-            }]
+            datasets: [
+                {
+                    label: 'Sales',
+                    data: [65, 59, 80, 81, 56],
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.7)',
+                        'rgba(54, 162, 235, 0.7)',
+                        'rgba(255, 206, 86, 0.7)',
+                        'rgba(75, 192, 192, 0.7)',
+                        'rgba(153, 102, 255, 0.7)',
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)',
+                    ],
+                    borderWidth: 1,
+                },
+            ],
         };
 
         const defaultChartOptions = {
@@ -34,20 +37,20 @@ export class ChartNode extends HtmlNode {
                 legend: {
                     display: false,
                     labels: {
-                        color: 'white' // Default for dark theme
-                    }
-                }
+                        color: 'white', // Default for dark theme
+                    },
+                },
             },
             scales: {
                 x: {
                     ticks: { color: 'white' },
-                    grid: { color: 'rgba(255,255,255,0.1)' }
+                    grid: { color: 'rgba(255,255,255,0.1)' },
                 },
                 y: {
                     ticks: { color: 'white' },
-                    grid: { color: 'rgba(255,255,255,0.1)' }
-                }
-            }
+                    grid: { color: 'rgba(255,255,255,0.1)' },
+                },
+            },
         };
 
         const mergedData = {
@@ -92,16 +95,7 @@ export class ChartNode extends HtmlNode {
         contentDiv.innerHTML = `<canvas id="${chartId}" style="width:100%; height:100%;"></canvas>`;
         const canvas = contentDiv.querySelector(`#${chartId}`);
 
-        // Inject Chart.js script if not already present (simplified for demo)
-        // In a real app, Chart.js would be bundled or loaded globally.
-        if (typeof Chart === 'undefined') {
-            const script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js';
-            script.onload = () => this._initializeChart(canvas);
-            document.head.appendChild(script);
-        } else {
-            this._initializeChart(canvas);
-        }
+        this._initializeChart(canvas);
     }
 
     _initializeChart(canvas) {

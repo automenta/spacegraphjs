@@ -36,13 +36,13 @@ export class RadialLayout {
         const centerPos = new THREE.Vector3(0, 0, 0);
 
         let rootNode = null;
-        let nodesToArrange = nodes.filter(n => !n.isPinned);
+        let nodesToArrange = nodes.filter((n) => !n.isPinned);
 
         if (centerNodeId) {
-            rootNode = nodes.find(n => n.id === centerNodeId);
+            rootNode = nodes.find((n) => n.id === centerNodeId);
             if (rootNode) {
                 rootNode.position.copy(centerPos);
-                nodesToArrange = nodesToArrange.filter(n => n.id !== rootNode.id);
+                nodesToArrange = nodesToArrange.filter((n) => n.id !== rootNode.id);
             } else {
                 console.warn(`RadialLayout: Center node with ID "${centerNodeId}" not found. Using geometric center.`);
             }
@@ -54,11 +54,11 @@ export class RadialLayout {
         const nodeLevels = new Map(); // Map: nodeId -> level
         const adjacencyList = new Map(); // Map: nodeId -> Set<neighborId>
 
-        nodes.forEach(n => {
+        nodes.forEach((n) => {
             adjacencyList.set(n.id, new Set());
             nodeLevels.set(n.id, -1); // -1 means unvisited
         });
-        edges.forEach(edge => {
+        edges.forEach((edge) => {
             adjacencyList.get(edge.source.id)?.add(edge.target.id);
             adjacencyList.get(edge.target.id)?.add(edge.source.id); // Treat as undirected for levels
         });
@@ -80,7 +80,7 @@ export class RadialLayout {
         while (head < queue.length) {
             const currentId = queue[head++];
             const currentLevel = nodeLevels.get(currentId);
-            adjacencyList.get(currentId)?.forEach(neighborId => {
+            adjacencyList.get(currentId)?.forEach((neighborId) => {
                 if (nodeLevels.get(neighborId) === -1) {
                     nodeLevels.set(neighborId, currentLevel + 1);
                     queue.push(neighborId);
@@ -90,7 +90,7 @@ export class RadialLayout {
 
         // Group nodes by level
         const levels = new Map(); // Map: level -> Array<node>
-        nodesToArrange.forEach(node => {
+        nodesToArrange.forEach((node) => {
             const level = nodeLevels.get(node.id) || 0; // Default to level 0 if not reached by BFS
             if (!levels.has(level)) levels.set(level, []);
             levels.get(level).push(node);
@@ -99,11 +99,11 @@ export class RadialLayout {
         // Sort levels to ensure correct order
         const sortedLevels = Array.from(levels.keys()).sort((a, b) => a - b);
 
-        sortedLevels.forEach(level => {
+        sortedLevels.forEach((level) => {
             const nodesInLevel = levels.get(level);
             if (nodesInLevel.length === 0) return;
 
-            const currentRadius = startRadius + (level * radiusIncrement * levelSpacingFactor);
+            const currentRadius = startRadius + level * radiusIncrement * levelSpacingFactor;
             const angleStep = (2 * Math.PI) / nodesInLevel.length;
 
             nodesInLevel.forEach((node, index) => {
@@ -118,7 +118,8 @@ export class RadialLayout {
                     x = centerPos.x + currentRadius * Math.cos(angle);
                     y = centerPos.y; // Y is fixed for XZ plane
                     z = centerPos.z + currentRadius * Math.sin(angle);
-                } else { // yz
+                } else {
+                    // yz
                     x = centerPos.x; // X is fixed for YZ plane
                     y = centerPos.y + currentRadius * Math.cos(angle);
                     z = centerPos.z + currentRadius * Math.sin(angle);
@@ -128,12 +129,22 @@ export class RadialLayout {
         });
     }
 
-    run() { /* Not typically a continuous layout */ }
-    stop() { /* Nothing to stop */ }
-    update() { /* No per-frame updates needed usually */ }
+    run() {
+        /* Not typically a continuous layout */
+    }
+    stop() {
+        /* Nothing to stop */
+    }
+    update() {
+        /* No per-frame updates needed usually */
+    }
 
-    addNode(node) { /* Could re-trigger init */ }
-    removeNode(node) { /* Could re-trigger init */ }
+    addNode(node) {
+        /* Could re-trigger init */
+    }
+    removeNode(node) {
+        /* Could re-trigger init */
+    }
     addEdge(edge) {}
     removeEdge(edge) {}
     kick() {}

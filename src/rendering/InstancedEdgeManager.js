@@ -26,7 +26,8 @@ class InstancedArrowheadGroup {
         this.activeInstances = 0;
     }
 
-    addArrowhead(edge, type) { // type: 'source' or 'target'
+    addArrowhead(edge, type) {
+        // type: 'source' or 'target'
         if (this.activeInstances >= MAX_INSTANCED_EDGES * 2) {
             console.warn('InstancedEdgeManager: Max arrowhead instances reached.');
             return null;
@@ -55,7 +56,8 @@ class InstancedArrowheadGroup {
 
         if (type === 'target') {
             position.copy(targetPos).sub(direction.clone().multiplyScalar(arrowheadSize * 0.5)); // Position at target, slightly offset
-        } else { // 'source'
+        } else {
+            // 'source'
             position.copy(sourcePos).add(direction.clone().multiplyScalar(arrowheadSize * 0.5)); // Position at source, slightly offset
         }
 

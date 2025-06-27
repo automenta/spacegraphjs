@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {Plugin} from '../core/Plugin.js';
+import { Plugin } from '../core/Plugin.js';
 
 const MINIMAP_SIZE = 200;
 const MINIMAP_MARGIN = 10;
@@ -34,7 +34,10 @@ export class MinimapPlugin extends Plugin {
         this.space.on('node:added', this._addNodeProxy.bind(this));
         this.space.on('node:removed', this._removeNodeProxy.bind(this));
 
-        this.pluginManager.getPlugin('NodePlugin')?.getNodes().forEach((node) => this._addNodeProxy(node));
+        this.pluginManager
+            .getPlugin('NodePlugin')
+            ?.getNodes()
+            .forEach((node) => this._addNodeProxy(node));
     }
 
     _setupMinimapCamera() {
@@ -144,10 +147,30 @@ export class MinimapPlugin extends Plugin {
         ];
 
         const vertices = new Float32Array([
-            p[0], p[1], p[2], p[3], p[4], p[5],
-            p[3], p[4], p[5], p[6], p[7], p[8],
-            p[6], p[7], p[8], p[9], p[10], p[11],
-            p[9], p[10], p[11], p[0], p[1], p[2],
+            p[0],
+            p[1],
+            p[2],
+            p[3],
+            p[4],
+            p[5],
+            p[3],
+            p[4],
+            p[5],
+            p[6],
+            p[7],
+            p[8],
+            p[6],
+            p[7],
+            p[8],
+            p[9],
+            p[10],
+            p[11],
+            p[9],
+            p[10],
+            p[11],
+            p[0],
+            p[1],
+            p[2],
         ]);
 
         this.frustumHelper.geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));

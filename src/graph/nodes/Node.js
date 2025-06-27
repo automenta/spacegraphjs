@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {Utils} from '../../utils.js';
+import { Utils } from '../../utils.js';
 
 export class Node {
     space = null;
@@ -11,6 +11,8 @@ export class Node {
     cssObject = null;
     labelObject = null;
     isPinned = false;
+    /** @type {import('../../ui/Metaframe').Metaframe | null} */
+    metaframe = null;
 
     constructor(id, position = { x: 0, y: 0, z: 0 }, data = {}, mass = 1.0) {
         this.id = id ?? Utils.generateId('node');
@@ -24,7 +26,11 @@ export class Node {
         return { label: '' };
     }
 
-    update(_space) {}
+    update(_space) {
+        if (this.mesh) this.mesh.position.copy(this.position);
+        if (this.cssObject) this.cssObject.position.copy(this.position);
+        if (this.labelObject) this.labelObject.position.copy(this.position);
+    }
 
     dispose() {
         this.mesh?.geometry?.dispose();
@@ -44,7 +50,9 @@ export class Node {
         return 50;
     }
 
-    setSelectedStyle(_selected) {}
+    setSelectedStyle(_selected) {
+        // This method is intended to be overridden by subclasses for custom selection styling.
+    }
 
     setPosition(pos, y, z) {
         const { x, _y, _z } = typeof pos === 'object' && pos !== null ? pos : { x: pos, _y: y, _z: z };
@@ -52,21 +60,32 @@ export class Node {
         const finalZ = _z ?? 0;
 
         if (!isFinite(x) || !isFinite(finalY) || !isFinite(finalZ)) {
-            console.warn(`BaseNode.setPosition: Attempted to set invalid position for node ${this.id}:`, { x, y: finalY, z: finalZ });
+            console.warn(`BaseNode.setPosition: Attempted to set invalid position for node ${this.id}:`, {
+                x,
+                y: finalY,
+                z: finalZ,
+            });
             return;
         }
         this.position.set(x, finalY, finalZ);
     }
 
     startDrag() {
-        this.space?.emit('graph:node:dragstart', { node: this });
+        // Any setup needed when dragging begins
     }
 
     drag(newPosition) {
-        this.setPosition(newPosition.x, newPosition.y, newPosition.z);
+        this.setPosition(newPosition);
     }
 
     endDrag() {
-        this.space?.emit('graph:node:dragend', { node: this });
+        // Any cleanup needed when dragging ends
+    }
+
+    resize(newScale) {
+        if (this.mesh) {
+            this.mesh.scale.copy(newScale);
+        }
+        this.metaframe?.update();
     }
 }

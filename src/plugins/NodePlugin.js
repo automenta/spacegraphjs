@@ -1,25 +1,26 @@
-import {Plugin} from '../core/Plugin.js';
-import {Utils} from '../utils.js';
-import {NodeFactory} from '../graph/NodeFactory.js';
+import { Plugin } from '../core/Plugin.js';
+import { Utils } from '../utils.js';
+import { NodeFactory } from '../graph/NodeFactory.js';
 
 // Import all node types
-import {HtmlNode} from '../graph/nodes/HtmlNode.js';
-import {ShapeNode} from '../graph/nodes/ShapeNode.js';
-import {ImageNode} from '../graph/nodes/ImageNode.js';
-import {VideoNode} from '../graph/nodes/VideoNode.js';
-import {IFrameNode} from '../graph/nodes/IFrameNode.js';
-import {GroupNode} from '../graph/nodes/GroupNode.js';
-import {DataNode} from '../graph/nodes/DataNode.js';
-import {NoteNode} from '../graph/nodes/NoteNode.js';
-import {AudioNode} from '../graph/nodes/AudioNode.js';
-import {DocumentNode} from '../graph/nodes/DocumentNode.js';
-import {ChartNode} from '../graph/nodes/ChartNode.js';
-
+import { HtmlNode } from '../graph/nodes/HtmlNode.js';
+import { ShapeNode } from '../graph/nodes/ShapeNode.js';
+import { ImageNode } from '../graph/nodes/ImageNode.js';
+import { VideoNode } from '../graph/nodes/VideoNode.js';
+import { IFrameNode } from '../graph/nodes/IFrameNode.js';
+import { GroupNode } from '../graph/nodes/GroupNode.js';
+import { DataNode } from '../graph/nodes/DataNode.js';
+import { NoteNode } from '../graph/nodes/NoteNode.js';
+import { AudioNode } from '../graph/nodes/AudioNode.js';
+import { DocumentNode } from '../graph/nodes/DocumentNode.js';
+import { ChartNode } from '../graph/nodes/ChartNode.js';
+import { Metaframe } from '../ui/Metaframe.js';
 
 export class NodePlugin extends Plugin {
     nodes = new Map();
     nodeFactory = null;
     instancedMeshManager = null;
+    renderingPlugin = null; // Added to store rendering plugin reference
 
     constructor(spaceGraph, pluginManager) {
         super(spaceGraph, pluginManager);
@@ -65,7 +66,8 @@ export class NodePlugin extends Plugin {
 
     init() {
         super.init();
-        this.instancedMeshManager = this.pluginManager.getPlugin('RenderingPlugin')?.getInstancedMeshManager();
+        this.renderingPlugin = this.pluginManager.getPlugin('RenderingPlugin');
+        this.instancedMeshManager = this.renderingPlugin?.getInstancedMeshManager();
     }
 
     addNode(nodeInstance) {
@@ -78,9 +80,8 @@ export class NodePlugin extends Plugin {
         this.nodes.set(nodeInstance.id, nodeInstance);
         nodeInstance.space = this.space;
 
-        const renderingPlugin = this.pluginManager.getPlugin('RenderingPlugin');
-        const cssScene = renderingPlugin?.getCSS3DScene();
-        const webglScene = renderingPlugin?.getWebGLScene();
+        const cssScene = this.renderingPlugin?.getCSS3DScene();
+        const webglScene = this.renderingPlugin?.getWebGLScene();
 
         let successfullyInstanced = false;
         if (this.instancedMeshManager && nodeInstance instanceof ShapeNode && nodeInstance.data.shape === 'sphere') {
@@ -90,6 +91,11 @@ export class NodePlugin extends Plugin {
         if (nodeInstance.cssObject && cssScene) cssScene.add(nodeInstance.cssObject);
         if (nodeInstance.labelObject && cssScene) cssScene.add(nodeInstance.labelObject);
         if (!successfullyInstanced && nodeInstance.mesh && webglScene) webglScene.add(nodeInstance.mesh);
+
+        // Create and attach metaframe
+        if (webglScene && cssScene) {
+            nodeInstance.metaframe = new Metaframe(nodeInstance, this.space, webglScene, cssScene);
+        }
 
         this.space.emit('node:added', nodeInstance);
         return nodeInstance;
@@ -114,13 +120,15 @@ export class NodePlugin extends Plugin {
         if (uiPlugin?.getSelectedNode() === node) uiPlugin.setSelectedNode(null);
         if (uiPlugin?.getLinkSourceNode() === node) uiPlugin.cancelLinking();
 
-        this.pluginManager.getPlugin('EdgePlugin')?.getEdgesForNode(node).forEach((edge) =>
-            this.pluginManager.getPlugin('EdgePlugin')?.removeEdge(edge.id)
-        );
+        this.pluginManager
+            .getPlugin('EdgePlugin')
+            ?.getEdgesForNode(node)
+            .forEach((edge) => this.pluginManager.getPlugin('EdgePlugin')?.removeEdge(edge.id));
 
         this.pluginManager.getPlugin('LayoutPlugin')?.removeNodeFromLayout(node);
 
         if (node.isInstanced && this.instancedMeshManager) this.instancedMeshManager.removeNode(node);
+        node.metaframe?.dispose(); // Dispose of the metaframe
         node.dispose();
         this.nodes.delete(nodeId);
         this.space.emit('node:removed', nodeId, node);
@@ -138,6 +146,7 @@ export class NodePlugin extends Plugin {
         this.nodes.forEach((node) => {
             if (node.isInstanced && this.instancedMeshManager) this.instancedMeshManager.updateNode(node);
             node.update?.(this.space);
+            node.metaframe?.update(); // Update the metaframe position and scale
         });
     }
 

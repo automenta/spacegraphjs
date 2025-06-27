@@ -1,14 +1,14 @@
 import * as THREE from 'three';
-import {HtmlNode} from '../graph/nodes/HtmlNode.js';
-import {PluginManager} from './PluginManager.js';
-import {RenderingPlugin} from '../plugins/RenderingPlugin.js';
-import {CameraPlugin} from '../plugins/CameraPlugin.js';
-import {NodePlugin} from '../plugins/NodePlugin.js';
-import {EdgePlugin} from '../plugins/EdgePlugin.js';
-import {LayoutPlugin} from '../plugins/LayoutPlugin.js';
-import {UIPlugin} from '../plugins/UIPlugin.js';
-import {MinimapPlugin} from '../plugins/MinimapPlugin.js';
-import {DataPlugin} from '../plugins/DataPlugin.js';
+import { HtmlNode } from '../graph/nodes/HtmlNode.js';
+import { PluginManager } from './PluginManager.js';
+import { RenderingPlugin } from '../plugins/RenderingPlugin.js';
+import { CameraPlugin } from '../plugins/CameraPlugin.js';
+import { NodePlugin } from '../plugins/NodePlugin.js';
+import { EdgePlugin } from '../plugins/EdgePlugin.js';
+import { LayoutPlugin } from '../plugins/LayoutPlugin.js';
+import { UIPlugin } from '../plugins/UIPlugin.js';
+import { MinimapPlugin } from '../plugins/MinimapPlugin.js';
+import { DataPlugin } from '../plugins/DataPlugin.js';
 
 export class SpaceGraph {
     _cam = null;
@@ -221,6 +221,13 @@ export class SpaceGraph {
         return raycaster.ray.intersectPlane(targetPlane, intersectPoint) ?? null;
     }
 
+    getPointerNDC(screenX, screenY) {
+        // Convert screen coordinates to normalized device coordinates (NDC)
+        // x: -1 to 1 (left to right)
+        // y: -1 to 1 (bottom to top)
+        return new THREE.Vector2((screenX / window.innerWidth) * 2 - 1, -(screenY / window.innerHeight) * 2 + 1);
+    }
+
     intersectedObjects(screenX, screenY) {
         const cameraPlugin = this.plugins.getPlugin('CameraPlugin');
         const camInstance = cameraPlugin?.getCameraInstance();
@@ -305,8 +312,8 @@ export class SpaceGraph {
         return closestIntersect?.type === 'node'
             ? { node: closestIntersect.node, distance: closestIntersect.distance }
             : closestIntersect?.type === 'edge'
-            ? { edge: closestIntersect.edge, distance: closestIntersect.distance }
-            : null;
+              ? { edge: closestIntersect.edge, distance: closestIntersect.distance }
+              : null;
     }
 
     animate() {

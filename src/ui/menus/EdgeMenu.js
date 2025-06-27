@@ -30,9 +30,12 @@ export class EdgeMenu {
             <input type="color" value="${edgeColorHex}" title="Edge Color" data-property="color">
             <input type="range" min="0.5" max="10" step="0.1" value="${edge.data.thickness || 1}" title="Edge Thickness" data-property="thickness">
             <select title="Constraint Type" data-property="constraintType">
-                ${['elastic', 'rigid', 'weld', 'none'].map(type =>
-                    `<option value="${type}" ${edge.data.constraintType === type ? 'selected' : ''}>${type.charAt(0).toUpperCase() + type.slice(1)}</option>`
-                ).join('')}
+                ${['elastic', 'rigid', 'weld', 'none']
+                    .map(
+                        (type) =>
+                            `<option value="${type}" ${edge.data.constraintType === type ? 'selected' : ''}>${type.charAt(0).toUpperCase() + type.slice(1)}</option>`
+                    )
+                    .join('')}
             </select>
             <button title="Delete Edge" class="delete-button" data-action="delete-edge">×</button>
         `;
@@ -57,7 +60,7 @@ export class EdgeMenu {
             if (e.target.closest('button[data-action="delete-edge"]')) {
                 this.space.emit('ui:request:confirm', {
                     message: `Delete edge "${edge.id.substring(0, 10)}..."?`,
-                    onConfirm: () => this.space.emit('ui:request:removeEdge', edge.id)
+                    onConfirm: () => this.space.emit('ui:request:removeEdge', edge.id),
                 });
             }
         });
@@ -85,7 +88,7 @@ export class EdgeMenu {
 
         const camInstance = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
         camInstance && this.edgeMenuObject.lookAt(camInstance.position);
-        this.edgeMenuObject.element.style.transform = `scale(${1 / this.space.plugins.getPlugin('RenderingPlugin').getCSS3DRenderer().getSize().width * 100000})`;
+        this.edgeMenuObject.element.style.transform = `scale(${(1 / this.space.plugins.getPlugin('RenderingPlugin').getCSS3DRenderer().getSize().width) * 100000})`;
     };
 
     dispose() {

@@ -32,7 +32,8 @@ export class HudManager {
         }
 
         this.hudModeIndicator = $('#hud-mode-indicator');
-        if (this.hudModeIndicator?.tagName === 'DIV') { // Remove old div if it exists
+        if (this.hudModeIndicator?.tagName === 'DIV') {
+            // Remove old div if it exists
             this.hudModeIndicator.remove();
             this.hudModeIndicator = null;
         }
@@ -42,8 +43,8 @@ export class HudManager {
             this.hudModeIndicator.id = 'hud-mode-indicator';
 
             const cameraModes = {
-                'orbit': 'Orbit Control',
-                'free': 'Free Look'
+                orbit: 'Orbit Control',
+                free: 'Free Look',
             };
 
             for (const modeKey in cameraModes) {
@@ -104,7 +105,8 @@ export class HudManager {
 
     updateHudCameraMode(mode) {
         if (this.hudModeIndicator?.tagName === 'SELECT') {
-            this.hudModeIndicator.value = mode || this.space.plugins.getPlugin('CameraPlugin')?.getCameraMode() || 'orbit';
+            this.hudModeIndicator.value =
+                mode || this.space.plugins.getPlugin('CameraPlugin')?.getCameraMode() || 'orbit';
         }
     }
 

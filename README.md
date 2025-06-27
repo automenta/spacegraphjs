@@ -89,12 +89,7 @@ SpaceGraphJS relies on ES modules and modern browser features. You'll need to im
     Import the necessary classes from `spacegraph.js` and initialize your graph.
 
     ```javascript
-    import {
-        SpaceGraph,
-        NoteNode,
-        ShapeNode,
-        $,
-    } from './path/to/src/index.js';
+    import { SpaceGraph, NoteNode, ShapeNode, $ } from './path/to/src/index.js';
 
     document.addEventListener('DOMContentLoaded', async () => {
         const graphContainer = $('#graph-container');
@@ -123,7 +118,7 @@ SpaceGraphJS relies on ES modules and modern browser features. You'll need to im
                 content: 'Hello World!',
                 width: 150,
                 height: 50,
-            }
+            },
         });
 
         const node2 = space.createNode({
@@ -135,7 +130,7 @@ SpaceGraphJS relies on ES modules and modern browser features. You'll need to im
                 shape: 'sphere',
                 size: 40,
                 color: 0xff00ff,
-            }
+            },
         });
 
         if (node1 && node2) {
