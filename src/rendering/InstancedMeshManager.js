@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 const MAX_INSTANCES_PER_TYPE = 1000;
 
@@ -91,7 +92,36 @@ export class InstancedMeshManager {
     constructor(scene) {
         this.scene = scene;
         this.meshGroups = new Map();
+        this.gltfLoader = new GLTFLoader();
+        this.loadedGltfGeometries = new Map();
         this._initDefaultGeometries();
+    }
+
+    async _loadGltfModel(url) {
+        if (this.loadedGltfGeometries.has(url)) {
+            return this.loadedGltfGeometries.get(url);
+        }
+
+        try {
+            const gltf = await this.gltfLoader.loadAsync(url);
+            let geometry = null;
+            gltf.scene.traverse((child) => {
+                if (child.isMesh) {
+                    geometry = child.geometry;
+                }
+            });
+
+            if (geometry) {
+                this.loadedGltfGeometries.set(url, geometry);
+                return geometry;
+            } else {
+                console.warn(`GLTF model at ${url} contains no mesh geometry.`);
+                return null;
+            }
+        } catch (error) {
+            console.error(`Error loading GLTF model from ${url}:`, error);
+            return null;
+        }
     }
 
     _initDefaultGeometries() {
@@ -103,12 +133,29 @@ export class InstancedMeshManager {
         this.meshGroups.set('sphere', new InstancedMeshGroup(sphereGeometry, defaultMaterial, this.scene));
     }
 
-    getNodeGroup(node) {
-        return node.data.shape === 'sphere' ? this.meshGroups.get('sphere') : null;
+    async getNodeGroup(node) {
+        if (node.data.shape === 'sphere') {
+            return this.meshGroups.get('sphere');
+        } else if (node.data.gltfUrl) {
+            let group = this.meshGroups.get(node.data.gltfUrl);
+            if (!group) {
+                const geometry = await this._loadGltfModel(node.data.gltfUrl);
+                if (geometry) {
+                    const material = new THREE.MeshStandardMaterial({
+                        roughness: 0.6,
+                        metalness: 0.2,
+                    });
+                    group = new InstancedMeshGroup(geometry, material, this.scene);
+                    this.meshGroups.set(node.data.gltfUrl, group);
+                }
+            }
+            return group;
+        }
+        return null;
     }
 
-    addNode(node) {
-        const group = this.getNodeGroup(node);
+    async addNode(node) {
+        const group = await this.getNodeGroup(node);
         if (!group) {
             node.isInstanced = false;
             return false;
@@ -124,18 +171,18 @@ export class InstancedMeshManager {
         return true;
     }
 
-    updateNode(node) {
+    async updateNode(node) {
         if (!node.isInstanced) return;
-        const group = this.getNodeGroup(node);
+        const group = await this.getNodeGroup(node);
         if (group) {
             group.updateNodeTransform(node);
             group.updateNodeColor(node);
         }
     }
 
-    removeNode(node) {
+    async removeNode(node) {
         if (!node.isInstanced) return;
-        const group = this.getNodeGroup(node);
+        const group = await this.getNodeGroup(node);
         if (group) {
             group.removeNode(node);
             node.isInstanced = false;

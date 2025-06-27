@@ -372,7 +372,7 @@ export class UIManager {
                                     sNode.drag(primaryNodeNewCalculatedPos);
                                 } else {
                                     const sNodeTargetPos = sNode.position.clone().add(dragDelta);
-                                    sNodeTargetPos.z = sNode.position.z;
+                                    // sNodeTargetPos.z = sNode.position.z; // Allow Z-depth change for all selected nodes
                                     sNode.drag(sNodeTargetPos);
                                 }
                             });
