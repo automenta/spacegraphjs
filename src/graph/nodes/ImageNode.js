@@ -130,7 +130,21 @@ export class ImageNode extends Node {
     }
 
     setSelectedStyle(selected) {
-        super.setSelectedStyle(selected);
+        // super.setSelectedStyle(selected); // Base Node.setSelectedStyle is empty
+        if (this.mesh?.material) {
+            const emissiveColor = selected ? 0xccaa00 : 0x000000;
+            const emissiveIntensity = selected ? 0.6 : 0.0;
+
+            const materials = Array.isArray(this.mesh.material) ? this.mesh.material : [this.mesh.material];
+            materials.forEach(material => {
+                if (material.isMeshStandardMaterial || material.isMeshBasicMaterial) {
+                    material.emissive?.setHex(emissiveColor);
+                    if (material.emissiveIntensity !== undefined) {
+                         material.emissiveIntensity = emissiveIntensity;
+                    }
+                }
+            });
+        }
         this.labelObject?.element?.classList.toggle('selected', selected);
     }
 

@@ -272,19 +272,22 @@ export class ShapeNode extends Node {
             this.mesh.levels.forEach((level) => {
                 level.object?.traverse((child) => {
                     if (child.isMesh && child.material) {
-                        child.material.emissive?.setHex(selected ? 0xffff00 : 0x000000);
-                        child.material.emissiveIntensity =
-                            selected && child.material.emissive?.getHex() !== 0x000000 ? 1.0 : 0.0;
+                        const emissiveColor = selected ? 0xccaa00 : 0x000000;
+                        const emissiveIntensity = selected ? 0.6 : 0.0;
+                        child.material.emissive?.setHex(emissiveColor);
+                        if (child.material.emissiveIntensity !== undefined) {
+                            child.material.emissiveIntensity = emissiveIntensity;
+                        }
                     }
                 });
             });
         }
         this.labelObject?.element?.classList.toggle('selected', selected);
-        if (selected && this.isHovered) this.setHoverStyle(false, true);
+        if (selected && this.isHovered) this.setHoverStyle(false, true); // Clear hover if now selected
     }
 
     setHoverStyle(hovered, force = false) {
-        if (!force && this.isSelected) return;
+        if (!force && this.isSelected) return; // Do not apply hover if selected, unless forced
 
         this.isHovered = hovered;
 
@@ -292,10 +295,24 @@ export class ShapeNode extends Node {
             this.mesh.levels.forEach((level) => {
                 level.object?.traverse((child) => {
                     if (child.isMesh && child.material) {
-                        const targetEmissive = hovered && !this.isSelected ? 0x222200 : 0x000000;
-                        const targetIntensity = hovered && !this.isSelected ? 0.4 : 0.0;
-                        child.material.emissive?.setHex(targetEmissive);
-                        child.material.emissiveIntensity = targetEmissive !== 0x000000 ? targetIntensity : 0.0;
+                        // Only apply hover emissive if not selected
+                        if (!this.isSelected) {
+                            const targetEmissive = hovered ? 0x777700 : 0x000000; // Slightly brighter hover than before
+                            const targetIntensity = hovered ? 0.4 : 0.0;
+                            child.material.emissive?.setHex(targetEmissive);
+                            if (child.material.emissiveIntensity !== undefined) {
+                                child.material.emissiveIntensity = targetIntensity;
+                            }
+                        } else {
+                            // If selected, ensure hover doesn't remove selection emissive by mistake
+                            // (though the initial guard `!force && this.isSelected` should prevent this path often)
+                            const selectionEmissive = 0xccaa00;
+                            const selectionIntensity = 0.6;
+                            child.material.emissive?.setHex(selectionEmissive);
+                             if (child.material.emissiveIntensity !== undefined) {
+                                child.material.emissiveIntensity = selectionIntensity;
+                            }
+                        }
                     }
                 });
             });

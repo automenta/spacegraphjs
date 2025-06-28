@@ -31,4 +31,13 @@ export const Utils = {
         const hex = Math.floor(numColor).toString(16).padStart(6, '0');
         return `#${hex}`;
     },
+    debounce: (func, delay) => {
+        let timeoutId;
+        return function(...args) {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                func.apply(this, args);
+            }, delay);
+        };
+    },
 };

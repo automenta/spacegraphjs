@@ -61,8 +61,9 @@ export class Metaframe {
         for (const key in handlePositions) {
             const handleMaterial = handleMaterialTemplate.clone();
             const handle = new THREE.Mesh(handleGeometry, handleMaterial);
-            handle.name = `resizeHandle-${key}`;
-            handle.userData.handleType = key;
+            handle.name = `resizeHandle-${key}`; // Used by UIManager to identify handle type
+            handle.userData.handleType = key; // Store specific type (e.g., 'topLeft')
+            handle.userData.ownerNode = this.node; // Critical: associate handle with its parent node for raycasting logic
             handle.renderOrder = 1000; // Ensure handles render on top of border
             this.resizeHandles[key] = handle;
             this._originalHandleMaterials.set(handle, {
@@ -85,8 +86,9 @@ export class Metaframe {
             depthTest: false
         });
         this.dragHandle = new THREE.Mesh(dragHandleGeometry, dragHandleMaterial);
-        this.dragHandle.name = 'dragHandle';
+        this.dragHandle.name = 'dragHandle'; // Used by UIManager
         this.dragHandle.userData.handleType = 'drag';
+        this.dragHandle.userData.ownerNode = this.node; // Critical: associate handle with its parent node
         this.dragHandle.renderOrder = 1000; // Ensure drag handle renders on top
         this._originalHandleMaterials.set(this.dragHandle, {
             color: dragHandleMaterial.color.clone(),
@@ -253,16 +255,23 @@ export class Metaframe {
         if (!this.isVisible) return;
 
         // Update position and scale of border mesh
-        const nodeScale = this.node.mesh?.scale || new THREE.Vector3(1, 1, 1);
-        const nodeRadius = this.node.getBoundingSphereRadius(); // Assuming this gives a reasonable size
-        const size = nodeRadius * 2; // Approximate size based on radius
+        const actualSize = this.node.getActualSize();
+
+        if (!actualSize) { // Node might not have a mesh or size yet
+            this.hide(); // Hide metaframe if node size can't be determined
+            return;
+        }
 
         this.borderMesh.position.copy(this.node.position);
-        this.borderMesh.scale.set(size * nodeScale.x, size * nodeScale.y, size * nodeScale.z);
+        // The borderMesh is a unit cube (1x1x1), so we scale it to the node's actual size.
+        this.borderMesh.scale.copy(actualSize);
 
         // Update position of resize handles
-        const halfSizeX = (size * nodeScale.x) / 2;
-        const halfSizeY = (size * nodeScale.y) / 2;
+        // Positions are relative to the node's center (this.node.position)
+        const halfSizeX = actualSize.x / 2;
+        const halfSizeY = actualSize.y / 2;
+        // Assuming Z is also handled if metaframe becomes 3D, for now handles are on XY plane of node.
+        // const halfSizeZ = actualSize.z / 2;
 
         this.resizeHandles.topLeft.position.set(
             this.node.position.x - halfSizeX,
@@ -286,7 +295,19 @@ export class Metaframe {
         );
 
         // Update position of drag handle
-        this.dragHandle.position.set(this.node.position.x, this.node.position.y + halfSizeY + 15, this.node.position.z); // 15 units above the top edge
+        if (this.dragHandle) {
+            this.dragHandle.position.set(this.node.position.x, this.node.position.y + halfSizeY + 15, this.node.position.z); // 15 units above the top edge
+            this.dragHandle.visible = this.isVisible && (this.node.getCapabilities().canBeDragged ?? true);
+        }
+
+        // Update visibility of resize handles based on capabilities
+        const canBeResized = this.node.getCapabilities().canBeResized ?? true;
+        for (const key in this.resizeHandles) {
+            if (this.resizeHandles[key]) {
+                this.resizeHandles[key].visible = this.isVisible && canBeResized;
+            }
+        }
+
 
         // Update position of control buttons
         this.controlButtons.position.copy(this.node.position);
@@ -307,15 +328,24 @@ export class Metaframe {
 
     show() {
         if (this.isVisible) return;
+
+        const capabilities = this.node.getCapabilities();
+
         this.borderMesh.visible = true;
-        this.controlButtons.visible = true;
-        this.dragHandle.visible = true;
-        for (const key in this.resizeHandles) {
-            this.resizeHandles[key].visible = true;
+        this.controlButtons.visible = true; // Assuming control buttons visibility is not tied to drag/resize caps
+
+        if (this.dragHandle) {
+            this.dragHandle.visible = capabilities.canBeDragged ?? true;
         }
+
+        for (const key in this.resizeHandles) {
+            if (this.resizeHandles[key]) {
+                this.resizeHandles[key].visible = capabilities.canBeResized ?? true;
+            }
+        }
+
         this.isVisible = true;
-        this.update(); // Ensure it's positioned correctly on show
-        // Tooltip visibility is primarily controlled by UIManager on hover
+        this.update(); // Ensure it's positioned correctly on show and handle visibilities are re-applied
     }
 
     hide() {

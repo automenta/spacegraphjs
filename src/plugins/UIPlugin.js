@@ -13,7 +13,7 @@ export class UIPlugin extends Plugin {
     selectedEdges = new Set();
     linkSourceNode = null;
     isLinking = false;
-    hoveredNode = null; // Track the currently hovered node
+    // hoveredNode = null; // Track the currently hovered node - REMOVED, UIManager handles this
     renderingPlugin = null; // Reference to the RenderingPlugin
 
     // Removed interaction state for drag/resize, as UIManager will handle it
@@ -91,81 +91,29 @@ export class UIPlugin extends Plugin {
     _addEventListeners() {
         const domElement = this.renderingPlugin?.renderGL?.domElement;
         if (domElement) {
-            // These listeners are now primarily for hover effects on nodes (showing/hiding metaframe)
-            // and potentially other UI interactions not directly handled by UIManager's core states.
-            // UIManager binds its own listeners to space.container for primary interactions.
-            domElement.addEventListener('pointermove', this._onPointerMoveGeneral);
-            // domElement.addEventListener('pointerdown', this._onPointerDown); // UIManager handles pointerdown
-            // domElement.addEventListener('pointerup', this._onPointerUp); // UIManager handles pointerup
+            // UIManager now handles all hover effects via its _onPointerMove and _handleHover.
+            // No listeners needed here specifically for hover.
+            // domElement.addEventListener('pointermove', this._onPointerMoveGeneral); // REMOVED
         }
     }
 
     _removeEventListeners() {
         const domElement = this.renderingPlugin?.renderGL?.domElement;
         if (domElement) {
-            domElement.removeEventListener('pointermove', this._onPointerMoveGeneral);
-            // domElement.removeEventListener('pointerdown', this._onPointerDown);
-            // domElement.removeEventListener('pointerup', this._onPointerUp);
+            // domElement.removeEventListener('pointermove', this._onPointerMoveGeneral); // REMOVED
         }
     }
 
-    // _onPointerDown is effectively removed as UIManager._onPointerDown will take precedence
-    // for initiating drags, resizes, pans, and linking.
-    // If UIPlugin needs to react to a simple click on a node for selection,
-    // that logic would need to be reconciled with UIManager's _onPointerDown.
-    // UIManager._onPointerDown already calls this._uiPluginCallbacks.setSelectedNode.
-    // So, direct node selection is already covered by UIManager.
-
-    // _onPointerMove is renamed to _onPointerMoveGeneral and simplified
-    // to only handle node hover for showing/hiding metaframes.
-    // The drag/resize logic is removed as UIManager._onPointerMove handles it.
-    _onPointerMoveGeneral = (event) => {
-        // Do not interfere if UIManager is actively managing an interaction or if linking
-        if (this.uiManager?.currentState !== InteractionState.IDLE || this.isLinking) {
-            // If a node was hovered and its metaframe shown by UIPlugin,
-            // but UIManager took over (e.g., started dragging), hide the metaframe.
-            if (this.hoveredNode && this.hoveredNode.metaframe?.isVisible) {
-                // Check if the current interaction is related to this hovered node.
-                // If UIManager is dragging/resizing *this* node, its metaframe should be visible.
-                // This check might need refinement based on how UIManager shows/hides metaframes during its operations.
-                // For now, if UIManager is not IDLE, we assume it controls metaframe visibility.
-                // A simpler approach: UIManager explicitly shows the metaframe of the node it's interacting with.
-            }
-            return;
-        }
-
-        const newHoveredNode = intersected?.node || null;
-
-        if (this.hoveredNode && this.hoveredNode !== newHoveredNode) {
-            // Only hide if UIManager is not currently interacting with this hovered node.
-            // This logic might need to be more robust: UIPlugin should generally not interfere
-            // with a metaframe that UIManager is actively using (e.g. during resize).
-            if (this.uiManager?.currentState === InteractionState.IDLE ||
-                (this.uiManager?.resizedNode !== this.hoveredNode && this.uiManager?.draggedNode !== this.hoveredNode)) {
-                this.hoveredNode.metaframe?.hide();
-            }
-        }
-
-        if (newHoveredNode && newHoveredNode !== this.hoveredNode) {
-            // Only show if UIManager is IDLE. If UIManager is active, it controls metaframe visibility.
-            if (this.uiManager?.currentState === InteractionState.IDLE) {
-                // Ensure the metaframe is not already visible due to selection by UIManager
-                const selectedNodes = this.uiManager?._uiPluginCallbacks?.getSelectedNodes() || new Set();
-                if (!selectedNodes.has(newHoveredNode) || !newHoveredNode.metaframe?.isVisible) {
-                     newHoveredNode.metaframe?.show();
-                }
-            }
-        }
-        this.hoveredNode = newHoveredNode;
-    };
+    // _onPointerMoveGeneral has been removed. UIManager._handleHover now manages all hover effects.
 
     _onNodeRemoved = (nodeId, node) => {
         if (node) {
             this.selectedNodes.delete(node);
-            if (this.hoveredNode === node) {
-                this.hoveredNode.metaframe?.hide();
-                this.hoveredNode = null;
-            }
+            // UIManager's hoveredNodeForMetaframe will handle its own state if the removed node was hovered.
+            // if (this.hoveredNode === node) { // REMOVED
+            //     this.hoveredNode.metaframe?.hide(); // This would be redundant or conflicting
+            //     this.hoveredNode = null;
+            // }
         }
         if (this.linkSourceNode?.id === nodeId) this.cancelLinking();
         this._emitSelectionChange();

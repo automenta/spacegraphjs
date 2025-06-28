@@ -6,7 +6,7 @@ import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 
 export class Edge {
     static typeName = 'straight'; // Default base edge type
-    static HIGHLIGHT_COLOR = 0x00ffff;
+    static HIGHLIGHT_COLOR = 0xffaa00; // Changed to orange-yellow for better distinction
     static DEFAULT_OPACITY = 0.8;
     static HIGHLIGHT_OPACITY = 1.0;
     static DEFAULT_HOVER_OPACITY_BOOST = 0.1;
@@ -238,10 +238,17 @@ export class Edge {
         const mat = this.line.material;
         mat.opacity = highlight ? Edge.HIGHLIGHT_OPACITY : Edge.DEFAULT_OPACITY;
 
-        const thicknessMultiplier = this.data.gradientColors?.length === 2 && mat.vertexColors ? 2.0 : 1.5;
-        mat.linewidth = highlight ? this.data.thickness * thicknessMultiplier : this.data.thickness;
+        const highlightThicknessMultiplier = 1.75; // Consistent multiplier
+        mat.linewidth = highlight ? this.data.thickness * highlightThicknessMultiplier : this.data.thickness;
 
-        if (!mat.vertexColors) mat.color.set(highlight ? Edge.HIGHLIGHT_COLOR : this.data.color);
+        if (!mat.vertexColors) { // Only set color if not using vertexColors (gradient)
+            mat.color.set(highlight ? Edge.HIGHLIGHT_COLOR : (this.data.color || 0x00d0ff) );
+        } else {
+            // For gradient edges, highlighting by changing color is tricky without complex shader logic.
+            // Increased thickness and opacity will be the primary highlight indicators.
+            // Alternatively, could temporarily disable vertexColors and use HIGHLIGHT_COLOR,
+            // but that would lose the gradient. Keeping gradient is probably better.
+        }
         mat.needsUpdate = true;
 
         const highlightArrowhead = (arrowhead) => {
