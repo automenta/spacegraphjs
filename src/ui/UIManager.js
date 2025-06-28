@@ -30,10 +30,15 @@ export class UIManager {
     dragOffset = new THREE.Vector3();
 
     resizedNode = null;
+    activeResizeHandleType = null; // For metaframe handles: 'topLeft', 'topRight', etc.
     resizeStartPointerPos = { x: 0, y: 0 };
+    // For HtmlNodes
     resizeStartNodeSize = { width: 0, height: 0 };
     resizeNodeScreenScaleX = 1;
     resizeNodeScreenScaleY = 1;
+    // For Generic Nodes (using Metaframe handles)
+    resizeStartNodeScale = new THREE.Vector3(1, 1, 1);
+
 
     hoveredEdge = null;
 
@@ -217,51 +222,50 @@ export class UIManager {
             case InteractionState.RESIZING_NODE: {
                 this.resizedNode = data.node;
                 this.resizedNode.startResize();
-                this.resizeStartNodeSize = { ...this.resizedNode.size };
                 this.resizeStartPointerPos = { x: this.pointerState.clientX, y: this.pointerState.clientY };
-                this.container.style.cursor = 'nwse-resize';
+                this.activeResizeHandleType = data.handleType || null; // Store the handle type
 
-                const node = this.resizedNode;
-                const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
-                const cam = cameraPlugin?.getCameraInstance();
+                if (this.resizedNode instanceof HtmlNode) {
+                    this.resizeStartNodeSize = { ...this.resizedNode.size }; // For HtmlNode
+                    this.container.style.cursor = 'nwse-resize'; // Default for HTML node's own handle
 
-                if (node && cam && node.cssObject) {
-                    const localOrigin = new THREE.Vector3(0, 0, 0);
-                    const localOffsetX = new THREE.Vector3(1, 0, 0);
-                    const localOffsetY = new THREE.Vector3(0, 1, 0);
+                    // Screen scale calculation for HtmlNode (existing logic)
+                    const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
+                    const cam = cameraPlugin?.getCameraInstance();
+                    if (this.resizedNode.cssObject && cam) {
+                        const localOrigin = new THREE.Vector3(0, 0, 0);
+                        const localOffsetX = new THREE.Vector3(1, 0, 0);
+                        const localOffsetY = new THREE.Vector3(0, 1, 0);
 
-                    const worldOrigin = localOrigin.clone().applyMatrix4(node.cssObject.matrixWorld);
-                    const worldOffsetX = localOffsetX.clone().applyMatrix4(node.cssObject.matrixWorld);
-                    const worldOffsetY = localOffsetY.clone().applyMatrix4(node.cssObject.matrixWorld);
+                        const worldOrigin = localOrigin.clone().applyMatrix4(this.resizedNode.cssObject.matrixWorld);
+                        const worldOffsetX = localOffsetX.clone().applyMatrix4(this.resizedNode.cssObject.matrixWorld);
+                        const worldOffsetY = localOffsetY.clone().applyMatrix4(this.resizedNode.cssObject.matrixWorld);
 
-                    const screenOriginNDC = worldOrigin.clone().project(cam);
-                    const screenOffsetXNDC = worldOffsetX.clone().project(cam);
-                    const screenOffsetYNDC = worldOffsetY.clone().project(cam);
+                        const screenOriginNDC = worldOrigin.clone().project(cam);
+                        const screenOffsetXNDC = worldOffsetX.clone().project(cam);
+                        const screenOffsetYNDC = worldOffsetY.clone().project(cam);
 
-                    const halfW = window.innerWidth / 2;
-                    const halfH = window.innerHeight / 2;
+                        const halfW = window.innerWidth / 2;
+                        const halfH = window.innerHeight / 2;
 
-                    const screenOriginPx = {
-                        x: screenOriginNDC.x * halfW + halfW,
-                        y: -screenOriginNDC.y * halfH + halfH,
-                    };
-                    const screenOffsetXPx = {
-                        x: screenOffsetXNDC.x * halfW + halfW,
-                        y: -screenOffsetXNDC.y * halfH + halfH,
-                    };
-                    const screenOffsetYPx = {
-                        x: screenOffsetYNDC.x * halfW + halfH,
-                        y: -screenOffsetYNDC.y * halfH + halfH,
-                    };
+                        const screenOriginPx = { x: screenOriginNDC.x * halfW + halfW, y: -screenOriginNDC.y * halfH + halfH };
+                        const screenOffsetXPx = { x: screenOffsetXNDC.x * halfW + halfW, y: -screenOffsetXNDC.y * halfH + halfH };
+                        const screenOffsetYPx = { x: screenOffsetYNDC.x * halfW + halfH, y: -screenOffsetYNDC.y * halfH + halfH };
 
-                    this.resizeNodeScreenScaleX = Math.abs(screenOffsetXPx.x - screenOriginPx.x);
-                    this.resizeNodeScreenScaleY = Math.abs(screenOffsetYPx.y - screenOriginPx.y);
+                        this.resizeNodeScreenScaleX = Math.abs(screenOffsetXPx.x - screenOriginPx.x);
+                        this.resizeNodeScreenScaleY = Math.abs(screenOffsetYPx.y - screenOriginPx.y);
 
-                    if (this.resizeNodeScreenScaleX < 0.001) this.resizeNodeScreenScaleX = 0.001;
-                    if (this.resizeNodeScreenScaleY < 0.001) this.resizeNodeScreenScaleY = 0.001;
+                        if (this.resizeNodeScreenScaleX < 0.001) this.resizeNodeScreenScaleX = 0.001;
+                        if (this.resizeNodeScreenScaleY < 0.001) this.resizeNodeScreenScaleY = 0.001;
+                    } else {
+                        this.resizeNodeScreenScaleX = 1;
+                        this.resizeNodeScreenScaleY = 1;
+                    }
                 } else {
-                    this.resizeNodeScreenScaleX = 1;
-                    this.resizeNodeScreenScaleY = 1;
+                    // For generic nodes using Metaframe handles
+                    this.resizeStartNodeScale = this.resizedNode.mesh ? this.resizedNode.mesh.scale.clone() : new THREE.Vector3(1, 1, 1);
+                    // Set cursor based on handle type - can be more specific later
+                    this.container.style.cursor = 'nwse-resize'; // Default, can be refined
                 }
                 break;
             }
@@ -317,16 +321,42 @@ export class UIManager {
                 return;
             }
 
+            // Prioritize Metaframe Drag Handle
+            if (targetInfo.metaframeDragHandle && targetInfo.node) {
+                e.preventDefault();
+                e.stopPropagation();
+                this._transitionToState(InteractionState.DRAGGING_NODE, { node: targetInfo.node });
+                this._uiPluginCallbacks.setSelectedNode(targetInfo.node, e.shiftKey);
+                this.contextMenu.hide();
+                return;
+            }
+
+            // Prioritize Metaframe Resize Handles for non-HtmlNodes
+            if (targetInfo.metaframeResizeHandle && targetInfo.node && !(targetInfo.node instanceof HtmlNode)) {
+                e.preventDefault();
+                e.stopPropagation();
+                this._transitionToState(InteractionState.RESIZING_NODE, {
+                    node: targetInfo.node,
+                    handleType: targetInfo.metaframeResizeHandle,
+                });
+                this._uiPluginCallbacks.setSelectedNode(targetInfo.node, false);
+                this.contextMenu.hide();
+                return;
+            }
+
+            // For HtmlNode's own resize handle
             if (targetInfo.resizeHandle && targetInfo.node instanceof HtmlNode) {
                 e.preventDefault();
                 e.stopPropagation();
-                this._transitionToState(InteractionState.RESIZING_NODE, { node: targetInfo.node });
+                this._transitionToState(InteractionState.RESIZING_NODE, { node: targetInfo.node, handleType: 'htmlResizeHandle' }); // Pass a generic type
                 this._uiPluginCallbacks.setSelectedNode(targetInfo.node, false);
                 this.contextMenu.hide();
                 return;
             }
 
             if (targetInfo.node) {
+                // If already handled by metaframeDragHandle, this block won't be reached for starting a drag.
+                // It will still handle clicks on contentEditable or interactive elements within the node.
                 e.preventDefault();
                 if (targetInfo.contentEditable || targetInfo.interactiveElement) {
                     e.stopPropagation();
@@ -418,20 +448,66 @@ export class UIManager {
                     const totalDx_screen = this.pointerState.clientX - this.resizeStartPointerPos.x;
                     const totalDy_screen = this.pointerState.clientY - this.resizeStartPointerPos.y;
 
-                    const deltaWidth_local = totalDx_screen / (this.resizeNodeScreenScaleX || 1);
-                    const deltaHeight_local = totalDy_screen / (this.resizeNodeScreenScaleY || 1);
+                    if (this.resizedNode instanceof HtmlNode) {
+                        const deltaWidth_local = totalDx_screen / (this.resizeNodeScreenScaleX || 1);
+                        const deltaHeight_local = totalDy_screen / (this.resizeNodeScreenScaleY || 1);
 
-                    const newWidth = this.resizeStartNodeSize.width + deltaWidth_local;
-                    const newHeight = this.resizeStartNodeSize.height + deltaHeight_local;
+                        const newWidth = this.resizeStartNodeSize.width + deltaWidth_local;
+                        const newHeight = this.resizeStartNodeSize.height + deltaHeight_local;
 
-                    this.resizedNode.resize(
-                        Math.max(HtmlNode.MIN_SIZE.width, newWidth),
-                        Math.max(HtmlNode.MIN_SIZE.height, newHeight)
-                    );
-                    this.space.emit('graph:node:resized', {
-                        node: this.resizedNode,
-                        size: { ...this.resizedNode.size },
-                    });
+                        this.resizedNode.resize(
+                            Math.max(HtmlNode.MIN_SIZE.width, newWidth),
+                            Math.max(HtmlNode.MIN_SIZE.height, newHeight)
+                        );
+                        this.space.emit('graph:node:resized', {
+                            node: this.resizedNode,
+                            size: { ...this.resizedNode.size },
+                        });
+                    } else {
+                        // Generic node resizing using Metaframe handles
+                        let scaleXFactor = 1;
+                        let scaleYFactor = 1;
+                        const sensitivity = 0.005; // Adjust as needed
+
+                        // Determine scale factors based on which handle is being dragged
+                        // This is a simplified model and might need refinement for perfect intuitive feel
+                        switch (this.activeResizeHandleType) {
+                            case 'topLeft':
+                                scaleXFactor = 1 - totalDx_screen * sensitivity;
+                                scaleYFactor = 1 + totalDy_screen * sensitivity; // Screen Y is inverted relative to typical UI top-left origin
+                                break;
+                            case 'topRight':
+                                scaleXFactor = 1 + totalDx_screen * sensitivity;
+                                scaleYFactor = 1 + totalDy_screen * sensitivity;
+                                break;
+                            case 'bottomLeft':
+                                scaleXFactor = 1 - totalDx_screen * sensitivity;
+                                scaleYFactor = 1 - totalDy_screen * sensitivity;
+                                break;
+                            case 'bottomRight':
+                                scaleXFactor = 1 + totalDx_screen * sensitivity;
+                                scaleYFactor = 1 - totalDy_screen * sensitivity;
+                                break;
+                            default: // Should not happen if activeResizeHandleType is set
+                                break;
+                        }
+
+                        let newScaleX = this.resizeStartNodeScale.x * scaleXFactor;
+                        let newScaleY = this.resizeStartNodeScale.y * scaleYFactor;
+
+                        // Clamp scale to a minimum value to prevent inversion or zero scale
+                        const MIN_SCALE = 0.1;
+                        newScaleX = Math.max(MIN_SCALE, newScaleX);
+                        newScaleY = Math.max(MIN_SCALE, newScaleY);
+
+                        const newScale = new THREE.Vector3(newScaleX, newScaleY, this.resizeStartNodeScale.z);
+                        this.resizedNode.resize(newScale); // Assumes Node.resize() takes a Vector3 for scale
+
+                        this.space.emit('graph:node:resized', {
+                            node: this.resizedNode,
+                            scale: { ...newScale },
+                        });
+                    }
                 }
                 break;
 
@@ -712,31 +788,65 @@ export class UIManager {
             ? this.space.plugins.getPlugin('NodePlugin')?.getNodeById(nodeElement.dataset.nodeId)
             : null;
         let intersectedEdge = null;
+        let metaframeResizeHandle = null;
+        let metaframeDragHandle = false;
 
         // Prioritize HTML element interactions before raycasting into the 3D scene.
-        // Raycasting can be a performance bottleneck on very dense graphs,
-        // so minimizing its calls or optimizing the objects it checks is important.
         const needsRaycast = !resizeHandle && !nodeControlsButton && !contentEditableEl && !interactiveEl;
 
         if (needsRaycast) {
             const intersectedObjectResult = this.space.intersectedObjects(event.clientX, event.clientY);
             if (intersectedObjectResult) {
-                if (intersectedObjectResult.node && !graphNode) {
-                    graphNode = intersectedObjectResult.node;
+                const { object, node: intersectedGraphNode, edge: intersectedRayEdge } = intersectedObjectResult;
+
+                if (intersectedGraphNode && !graphNode) {
+                    graphNode = intersectedGraphNode;
                 }
-                intersectedEdge = intersectedObjectResult.edge || null;
+                intersectedEdge = intersectedRayEdge || null;
+
+                // Check if the intersected object is a metaframe handle
+                if (object && object.name) {
+                    if (object.name.startsWith('resizeHandle-')) {
+                        // Ensure this handle belongs to the currently selected node's metaframe
+                        const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
+                        const primarySelectedNode = selectedNodes.values().next().value;
+                        if (primarySelectedNode && primarySelectedNode.metaframe?.isVisible) {
+                            // Check if the intersected handle is part of the selected node's metaframe
+                            const handleType = object.name.substring('resizeHandle-'.length);
+                            if (primarySelectedNode.metaframe.resizeHandles[handleType] === object) {
+                                metaframeResizeHandle = handleType;
+                                graphNode = primarySelectedNode; // Associate the interaction with the node owning the metaframe
+                            }
+                        }
+                    } else if (object.name === 'dragHandle') {
+                        const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
+                        const primarySelectedNode = selectedNodes.values().next().value;
+                        if (primarySelectedNode && primarySelectedNode.metaframe?.isVisible && primarySelectedNode.metaframe.dragHandle === object) {
+                            metaframeDragHandle = true;
+                            graphNode = primarySelectedNode; // Associate the interaction with the node owning the metaframe
+                        }
+                    }
+                }
+                 // If we hit a metaframe handle, we prioritize that interaction over a general node click,
+                // especially if the handle is visually on top or closer to the camera.
+                // The `intersectedObjects` method should ideally return the closest object,
+                // so if a handle is returned, it was the "true" target.
+                // We also ensure that the graphNode is set to the node owning the metaframe.
             }
         }
+
 
         return {
             element,
             nodeElement,
-            resizeHandle,
+            resizeHandle, // This is for HtmlNode's own handle
             nodeControls: nodeControlsButton,
             contentEditable: contentEditableEl,
             interactiveElement: interactiveEl,
             node: graphNode,
             intersectedEdge,
+            metaframeResizeHandle, // e.g., 'topLeft', 'bottomRight'
+            metaframeDragHandle,   // boolean
         };
     }
 
