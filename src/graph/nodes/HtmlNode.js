@@ -9,8 +9,6 @@ export class HtmlNode extends Node {
     static CONTENT_SCALE_RANGE = { min: 0.3, max: 3.0 };
     htmlElement = null;
     size = { width: 160, height: 70 };
-    billboard = false;
-
     constructor(id, position, data = {}, mass = 1.0) {
         super(id, position, data, mass);
         const initialWidth = this.data.width ?? 160;
@@ -152,9 +150,6 @@ export class HtmlNode extends Node {
     update(space) {
         if (this.cssObject) {
             this.cssObject.position.copy(this.position);
-            if (this.billboard && space?._cam) {
-                this.cssObject.quaternion.copy(space._cam.quaternion);
-            }
             applyLabelLOD(this.cssObject, this.data.labelLod, space, this.data.contentScale ?? 1.0);
         }
     }
@@ -173,11 +168,7 @@ export class HtmlNode extends Node {
         this.space?.emit('graph:node:resizestart', { node: this });
     }
 
-    resize(newScale) {
-        super.resize(newScale);
-        // Calculate new width and height based on the initial size and the new scale
-        const newWidth = this.initialSize.width * newScale.x;
-        const newHeight = this.initialSize.height * newScale.y;
+    resize(newWidth, newHeight) {
         this.setSize(newWidth, newHeight);
     }
 
