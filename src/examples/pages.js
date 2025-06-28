@@ -958,7 +958,7 @@ export const pages = [
                 position: { x: xPos, y: 0, z: 0 },
                 data: {
                     label: 'Audio Clip 🎵',
-                    audioUrl: 'https://www.learningcontainer.com/wp-content/uploads/2020/02/Kalimba.mp3',
+                    audioUrl: 'https://www.w3schools.com/html/horse.mp3', // Replaced with a CORS-friendly URL
                     color: 0x00ccff,
                     size: 50,
                 },
