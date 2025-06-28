@@ -291,6 +291,88 @@ export class ShapeNode extends Node {
         super.setSelectedStyle(selected);
     }
 
+    /**
+     * Resizes the node to the target newWorldDimensions.
+     * This method is called by UIManager when a resize operation occurs.
+     * It calculates the necessary scale factor to apply to its LOD children
+     * to achieve the desired overall world dimensions.
+     * @param {THREE.Vector3} newWorldDimensions - The target absolute dimensions (width, height, depth) in world units.
+     */
+    resize(newWorldDimensions) {
+        if (!this.mesh || !(this.mesh instanceof THREE.LOD) || !newWorldDimensions) {
+            // console.warn(`ShapeNode ${this.id}: Resize called on invalid mesh or without newWorldDimensions.`);
+            return;
+        }
+
+        const currentActualSize = this.getActualSize(); // Current world dimensions based on bounding sphere of LOD 0
+
+        // Validate current and target dimensions to prevent division by zero or NaN scales.
+        if (
+            !currentActualSize ||
+            currentActualSize.x <= 0 || // Use <= 0 to catch zero and negative sizes
+            currentActualSize.y <= 0 ||
+            currentActualSize.z <= 0 ||
+            !Number.isFinite(currentActualSize.x) ||
+            !Number.isFinite(currentActualSize.y) ||
+            !Number.isFinite(currentActualSize.z) ||
+            !Number.isFinite(newWorldDimensions.x) ||
+            !Number.isFinite(newWorldDimensions.y) ||
+            !Number.isFinite(newWorldDimensions.z) ||
+            newWorldDimensions.x <= 0 || // Target dimensions should also be positive
+            newWorldDimensions.y <= 0 ||
+            newWorldDimensions.z <= 0
+        ) {
+            // console.warn(
+            //     `ShapeNode ${this.id}: Cannot resize due to zero, negative, or invalid current/target dimensions. Current:`,
+            //     currentActualSize,
+            //     'Target:',
+            //     newWorldDimensions
+            // );
+            // If current size is invalid (e.g. GLTF not loaded, node just created), reliable scaling is not possible.
+            // UIManager ensures newWorldDimensions meet MIN_DIMENSION, so they should be positive.
+            return;
+        }
+
+        // Calculate the scaling factor needed for each axis.
+        // This factor is how much each existing LOD child's scale needs to change.
+        const scaleFactor = new THREE.Vector3(
+            newWorldDimensions.x / currentActualSize.x,
+            newWorldDimensions.y / currentActualSize.y,
+            newWorldDimensions.z / currentActualSize.z
+        );
+
+        if (!Number.isFinite(scaleFactor.x) || !Number.isFinite(scaleFactor.y) || !Number.isFinite(scaleFactor.z)) {
+            // console.warn(`ShapeNode ${this.id}: Invalid scale factor during resize:`, scaleFactor);
+            return;
+        }
+
+        // Apply scale factor to each LOD level's object
+        this.mesh.levels.forEach((level) => {
+            if (level.object) {
+                level.object.scale.multiply(scaleFactor);
+            }
+        });
+
+        // Update internal data representation
+        this.data.width = newWorldDimensions.x;
+        this.data.height = newWorldDimensions.y;
+        this.data.depth = newWorldDimensions.z;
+
+        if (this.shape === 'sphere') {
+            // For a sphere, 'size' typically refers to its diameter or a characteristic dimension.
+            // We take the maximum of the new world dimensions to represent this.
+            this.size = Math.max(newWorldDimensions.x, newWorldDimensions.y, newWorldDimensions.z);
+            this.data.size = this.size;
+        }
+        // Note: `this.size` for non-sphere shapes might become ambiguous if dimensions are non-uniform.
+        // The specific `this.data.width/height/depth` are more reliable.
+
+        this.updateBoundingSphere(); // Recompute bounds after scaling children
+        this.metaframe?.update(); // Update metaframe to reflect new size
+
+        this.space?.emit('graph:node:resized', { node: this, worldDimensions: newWorldDimensions });
+    }
+
     setHoverStyle(hovered, force = false) {
         if (!force && this.isSelected) return; // Do not apply hover if selected, unless forced
 

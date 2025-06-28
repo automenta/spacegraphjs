@@ -3,6 +3,12 @@ import { gsap } from 'gsap';
 import { Utils } from '../utils.js';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 
+const DEFAULT_CAMERA_DAMPING_FACTOR = 0.12;
+const DEFAULT_FREE_CAMERA_SPEED = 250.0;
+const DEFAULT_FREE_CAMERA_VERTICAL_SPEED = 180.0;
+const ZOOM_BASE_FACTOR = 0.95;
+const WHEEL_DELTA_SENSITIVITY = 0.025;
+
 const CAMERA_MODES = {
     ORBIT: 'orbit',
     FREE: 'free',
@@ -34,15 +40,15 @@ export class Camera {
     panSpeed = 0.8;
     minZoomDistance = 10;
     maxZoomDistance = 15000;
-    dampingFactor = 0.12;
+    dampingFactor = DEFAULT_CAMERA_DAMPING_FACTOR;
 
     animationFrameId = null;
 
     namedViews = new Map();
 
     cameraMode = CAMERA_MODES.ORBIT;
-    freeCameraSpeed = 250.0;
-    freeCameraVerticalSpeed = 180.0;
+    freeCameraSpeed = DEFAULT_FREE_CAMERA_SPEED;
+    freeCameraVerticalSpeed = DEFAULT_FREE_CAMERA_VERTICAL_SPEED;
     pointerLockControls = null;
     isPointerLocked = false;
     moveState = {
@@ -173,17 +179,73 @@ export class Camera {
         if (this.isFollowing && this.followOptions.autoEndOnManualControl) this.stopFollowing();
         this.currentTargetNodeId = null;
 
-        const zoomFactor = Math.pow(0.95, deltaY * 0.025 * this.zoomSpeed);
+        const zoomFactor = Math.pow(ZOOM_BASE_FACTOR, deltaY * WHEEL_DELTA_SENSITIVITY * this.zoomSpeed);
+
+        // Access pointer state from UIManager for zoom-to-cursor
+        const pointerX = this.space.uiManager?.pointerState?.clientX;
+        const pointerY = this.space.uiManager?.pointerState?.clientY;
 
         if (this.cameraMode === CAMERA_MODES.TOP_DOWN) {
             const currentY = this.targetPosition.y;
             let newY = currentY * zoomFactor;
             newY = Utils.clamp(newY, this.minZoomDistance, this.maxZoomDistance);
+            const actualZoomRatio = newY / (currentY || 1); // Avoid division by zero if currentY is 0
+
+            if (pointerX !== undefined && pointerY !== undefined && this.space.getPointerNDC && this.space.screenToWorld) {
+                const pWorldPlane = this.space.screenToWorld(pointerX, pointerY, 0); // Project to Y=0 plane
+
+                if (pWorldPlane) {
+                    this.targetPosition.x = pWorldPlane.x - (pWorldPlane.x - this.targetPosition.x) * actualZoomRatio;
+                    this.targetPosition.z = pWorldPlane.z - (pWorldPlane.z - this.targetPosition.z) * actualZoomRatio;
+                }
+            }
             this.targetPosition.y = newY;
-            this.targetLookAt.x = this.targetPosition.x;
-            this.targetLookAt.z = this.targetPosition.z;
-            this.targetLookAt.y = 0;
-        } else {
+            // targetLookAt is derived from targetPosition in the update loop for TOP_DOWN
+        } else if (this.cameraMode === CAMERA_MODES.ORBIT) {
+            let pWorld = null;
+            if (pointerX !== undefined && pointerY !== undefined && this.space.getPointerNDC) {
+                const pointerNDC = this.space.getPointerNDC(pointerX, pointerY); // Mouse NDCs
+                const raycaster = new THREE.Raycaster();
+                raycaster.setFromCamera(pointerNDC, this._cam); // Ray from camera through mouse
+
+                // Define a plane through targetLookAt, facing the camera. This is our "focal plane".
+                const viewDirection = new THREE.Vector3().subVectors(this.targetPosition, this.targetLookAt).normalize();
+                const planeAtLookAt = new THREE.Plane().setFromNormalAndCoplanarPoint(viewDirection, this.targetLookAt);
+
+                pWorld = new THREE.Vector3(); // This will be the world point under the cursor on the focal plane
+                if (!raycaster.ray.intersectPlane(planeAtLookAt, pWorld)) {
+                    // Fallback if ray doesn't hit focal plane (e.g., if plane is behind camera or parallel).
+                    // Using targetLookAt itself means zooming towards the current look-at point (center zoom).
+                    pWorld.copy(this.targetLookAt);
+                }
+            } else {
+                // Fallback to center zoom if pointer info (mouse coords) is not available.
+                pWorld = this.targetLookAt.clone();
+            }
+
+            // Zoom-to-cursor math:
+            // The goal is to move the camera and its look-at point such that `pWorld` (the point under the cursor)
+            // effectively stays under the cursor after zoom.
+            // C_new = C_old + (P_world - C_old) * (1 - zoomFactor)
+            // L_new = L_old + (P_world - L_old) * (1 - zoomFactor)
+            // Where zoomFactor < 1 means zooming in, > 1 means zooming out.
+
+            // Adjust camera's target position
+            const offsetFromCamToPWorld = new THREE.Vector3().subVectors(pWorld, this.targetPosition);
+            this.targetPosition.addScaledVector(offsetFromCamToPWorld, (1 - zoomFactor));
+
+            // Adjust camera's look-at point
+            const offsetFromLookAtToPWorld = new THREE.Vector3().subVectors(pWorld, this.targetLookAt);
+            this.targetLookAt.addScaledVector(offsetFromLookAtToPWorld, (1 - zoomFactor));
+
+            // After adjusting, ensure the distance constraints (min/max zoom) are still met.
+            // This recalculates the camera position based on the (potentially new) lookAt and clamped distance.
+            const finalOffset = new THREE.Vector3().subVectors(this.targetPosition, this.targetLookAt);
+            let finalDist = finalOffset.length();
+            finalDist = Utils.clamp(finalDist, this.minZoomDistance, this.maxZoomDistance);
+            this.targetPosition.copy(this.targetLookAt).addScaledVector(finalOffset.normalize(), finalDist);
+
+        } else { // Fallback for other modes or if conditions not met
             const lookAtToCam = new THREE.Vector3().subVectors(this.targetPosition, this.targetLookAt);
             const currentDist = lookAtToCam.length();
             const newDist = Utils.clamp(currentDist * zoomFactor, this.minZoomDistance, this.maxZoomDistance);

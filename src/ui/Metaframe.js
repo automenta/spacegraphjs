@@ -6,8 +6,12 @@ export class Metaframe {
     space = null;
     webglScene = null;
     cssScene = null;
+    cameraPlugin = null; // To get camera for billboarding
 
-    // Three.js objects for the metaframe border and handles
+    // Group to hold all WebGL elements of the metaframe for easier manipulation (e.g., billboarding)
+    metaframeGroup = null;
+
+    // Three.js objects for the metaframe border and handles (now children of metaframeGroup)
     borderMesh = null;
     resizeHandles = {}; // e.g., { 'topLeft': Mesh, 'bottomRight': Mesh }
     dragHandle = null;
@@ -27,77 +31,90 @@ export class Metaframe {
         this.space = space;
         this.webglScene = webglScene;
         this.cssScene = cssScene;
+        this.cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
+
+        this.metaframeGroup = new THREE.Object3D();
+        this.metaframeGroup.name = `metaframeGroup-${this.node.id}`;
+        this.webglScene.add(this.metaframeGroup);
 
         this._createVisualElements();
-        this._createControlButtons();
+        this._createControlButtons(); // CSS3D objects are added to cssScene, not metaframeGroup
         this.hide(); // Start hidden
     }
 
     _createVisualElements() {
         // Create a simple wireframe box for the border
-        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        const geometry = new THREE.BoxGeometry(1, 1, 1); // Unit size, will be scaled
         const edges = new THREE.EdgesGeometry(geometry);
         this.borderMesh = new THREE.LineSegments(
             edges,
-            new THREE.LineBasicMaterial({ color: 0x00ffff, depthTest: false })
+            new THREE.LineBasicMaterial({ color: 0x00ffff, depthTest: false, transparent: true }) // Added transparent for consistency
         );
         this.borderMesh.renderOrder = 999; // Render on top
-        this.webglScene.add(this.borderMesh);
+        this.metaframeGroup.add(this.borderMesh); // Add to group
 
         // Create resize handles
-        const handleGeometry = new THREE.SphereGeometry(5, 16, 16); // Increased segments for smoother sphere
+        const handleGeometry = new THREE.SphereGeometry(1, 16, 16); // Unit size, will be scaled by parent group and then individually
         const handleMaterialTemplate = new THREE.MeshBasicMaterial({
-            color: 0xff00ff, // Changed color for better visibility
+            color: 0xff00ff,
             transparent: true,
             opacity: this._handleDefaultOpacity,
             depthTest: false,
         });
 
-        const handlePositions = {
+        // Local positions for handles, assuming parent group scale handles overall size
+        const handleLocalPositions = {
             topLeft: new THREE.Vector3(-0.5, 0.5, 0),
             topRight: new THREE.Vector3(0.5, 0.5, 0),
             bottomLeft: new THREE.Vector3(-0.5, -0.5, 0),
             bottomRight: new THREE.Vector3(0.5, -0.5, 0),
         };
 
-        for (const key in handlePositions) {
+        for (const key in handleLocalPositions) {
             const handleMaterial = handleMaterialTemplate.clone();
             const handle = new THREE.Mesh(handleGeometry, handleMaterial);
-            handle.name = `resizeHandle-${key}`; // Used by UIManager to identify handle type
-            handle.userData.handleType = key; // Store specific type (e.g., 'topLeft')
-            handle.userData.ownerNode = this.node; // Critical: associate handle with its parent node for raycasting logic
-            handle.renderOrder = 1000; // Ensure handles render on top of border
+            handle.name = `resizeHandle-${key}`;
+            handle.userData.handleType = key;
+            handle.userData.ownerNode = this.node;
+            handle.renderOrder = 1000;
+            // Set local position, actual world position will be determined by metaframeGroup's transform
+            handle.position.copy(handleLocalPositions[key]);
             this.resizeHandles[key] = handle;
             this._originalHandleMaterials.set(handle, {
                 color: handleMaterial.color.clone(),
                 opacity: handleMaterial.opacity,
-                scale: handle.scale.clone(),
+                scale: handle.scale.clone(), // Store initial local scale (which will be 1,1,1 or based on geometry)
             });
-            this.webglScene.add(handle);
+            this.metaframeGroup.add(handle); // Add to group
+
+            // Tooltips are CSS3DObjects, added to cssScene directly
             this.handleTooltips[key] = this._createTooltipElement();
             this.cssScene.add(this.handleTooltips[key]);
         }
 
-        // Create a drag handle (e.g., a small rectangle at the top center)
-        const dragHandleGeometry = new THREE.PlaneGeometry(60, 12); // Slightly larger
+        // Create a drag handle
+        const dragHandleGeometry = new THREE.PlaneGeometry(12, 2.4); // Smaller, relative to typical handle size
         const dragHandleMaterial = new THREE.MeshBasicMaterial({
-            color: 0x00cc00, // Darker green
+            color: 0x00cc00,
             transparent: true,
             opacity: this._handleDefaultOpacity,
             side: THREE.DoubleSide,
             depthTest: false,
         });
         this.dragHandle = new THREE.Mesh(dragHandleGeometry, dragHandleMaterial);
-        this.dragHandle.name = 'dragHandle'; // Used by UIManager
+        this.dragHandle.name = 'dragHandle';
         this.dragHandle.userData.handleType = 'drag';
-        this.dragHandle.userData.ownerNode = this.node; // Critical: associate handle with its parent node
-        this.dragHandle.renderOrder = 1000; // Ensure drag handle renders on top
+        this.dragHandle.userData.ownerNode = this.node;
+        this.dragHandle.renderOrder = 1000;
+        // Local position for drag handle (e.g., top-center)
+        // this.dragHandle.position.set(0, 0.5, 0); // Will be adjusted in update()
         this._originalHandleMaterials.set(this.dragHandle, {
             color: dragHandleMaterial.color.clone(),
             opacity: dragHandleMaterial.opacity,
             scale: this.dragHandle.scale.clone(),
         });
-        this.webglScene.add(this.dragHandle);
+        this.metaframeGroup.add(this.dragHandle); // Add to group
+
         this.handleTooltips['dragHandle'] = this._createTooltipElement();
         this.cssScene.add(this.handleTooltips['dragHandle']);
     }
@@ -279,55 +296,68 @@ export class Metaframe {
         // Update position and scale of border mesh
         const actualSize = this.node.getActualSize();
 
-        if (!actualSize) {
-            // Node might not have a mesh or size yet
+        if (!actualSize || actualSize.x === 0 || actualSize.y === 0) {
+            // Node might not have a mesh or valid size yet
             this.hide(); // Hide metaframe if node size can't be determined
             return;
         }
 
-        this.borderMesh.position.copy(this.node.position);
-        // The borderMesh is a unit cube (1x1x1), so we scale it to the node's actual size.
-        this.borderMesh.scale.copy(actualSize);
+        // 1. Position the metaframeGroup at the node's world position
+        this.metaframeGroup.position.copy(this.node.position);
 
-        // Update position of resize handles
-        // Positions are relative to the node's center (this.node.position)
+        // 2. Orient the metaframeGroup (billboarding or node's orientation)
+        const camera = this.cameraPlugin?.getCameraInstance();
+        if (this.node.cssObject && camera) {
+            // Billboarding for nodes with CSS content (e.g., HtmlNode).
+            // The metaframeGroup's orientation matches the camera's orientation,
+            // making its local XY plane parallel to the screen.
+            this.metaframeGroup.quaternion.copy(camera.quaternion);
+        } else if (this.node.mesh) {
+            // For nodes with WebGL mesh content (e.g., ShapeNode),
+            // align the metaframeGroup with the node's mesh orientation.
+            this.node.mesh.getWorldQuaternion(this.metaframeGroup.quaternion);
+        } else {
+            // Default: No specific orientation, align with world axes.
+            this.metaframeGroup.quaternion.identity();
+        }
+
+        // 3. Scale the border to match the node's actual size (local to metaframeGroup)
+        this.borderMesh.scale.copy(actualSize);
+        this.borderMesh.position.set(0,0,0); // Border is centered within the group
+
+        // 4. Position and scale resize handles locally within the metaframeGroup
+        const handleDesiredWorldSize = 10; // Target visual size for handles in world units
         const halfSizeX = actualSize.x / 2;
         const halfSizeY = actualSize.y / 2;
-        // Assuming Z is also handled if metaframe becomes 3D, for now handles are on XY plane of node.
-        // const halfSizeZ = actualSize.z / 2;
 
-        this.resizeHandles.topLeft.position.set(
-            this.node.position.x - halfSizeX,
-            this.node.position.y + halfSizeY,
-            this.node.position.z
-        );
-        this.resizeHandles.topRight.position.set(
-            this.node.position.x + halfSizeX,
-            this.node.position.y + halfSizeY,
-            this.node.position.z
-        );
-        this.resizeHandles.bottomLeft.position.set(
-            this.node.position.x - halfSizeX,
-            this.node.position.y - halfSizeY,
-            this.node.position.z
-        );
-        this.resizeHandles.bottomRight.position.set(
-            this.node.position.x + halfSizeX,
-            this.node.position.y - halfSizeY,
-            this.node.position.z
-        );
+        // Set local scale of handles to achieve desired world size (since their geometry is unit size)
+        // Their local position is at the corners of the 'actualSize' box.
+        this.resizeHandles.topLeft.scale.set(handleDesiredWorldSize, handleDesiredWorldSize, handleDesiredWorldSize);
+        this.resizeHandles.topLeft.position.set(-halfSizeX, halfSizeY, 0);
 
-        // Update position of drag handle
+        this.resizeHandles.topRight.scale.set(handleDesiredWorldSize, handleDesiredWorldSize, handleDesiredWorldSize);
+        this.resizeHandles.topRight.position.set(halfSizeX, halfSizeY, 0);
+
+        this.resizeHandles.bottomLeft.scale.set(handleDesiredWorldSize, handleDesiredWorldSize, handleDesiredWorldSize);
+        this.resizeHandles.bottomLeft.position.set(-halfSizeX, -halfSizeY, 0);
+
+        this.resizeHandles.bottomRight.scale.set(handleDesiredWorldSize, handleDesiredWorldSize, handleDesiredWorldSize);
+        this.resizeHandles.bottomRight.position.set(halfSizeX, -halfSizeY, 0);
+
+        // 5. Position and scale drag handle locally
         if (this.dragHandle) {
+            const dragHandleWorldWidth = 60;
+            const dragHandleWorldHeight = 12;
+            this.dragHandle.scale.set(dragHandleWorldWidth, dragHandleWorldHeight, 1); // Set to desired world size
             this.dragHandle.position.set(
-                this.node.position.x,
-                this.node.position.y + halfSizeY + 15,
-                this.node.position.z
-            ); // 15 units above the top edge
+                0, // Centered X locally
+                halfSizeY + (dragHandleWorldHeight / 2) + 5, // Positioned above the top edge, in local units
+                0
+            );
             this.dragHandle.visible = this.isVisible && (this.node.getCapabilities().canBeDragged ?? true);
         }
 
-        // Update visibility of resize handles based on capabilities
+        // 6. Update visibility of resize handles based on node capabilities
         const canBeResized = this.node.getCapabilities().canBeResized ?? true;
         for (const key in this.resizeHandles) {
             if (this.resizeHandles[key]) {
@@ -335,104 +365,160 @@ export class Metaframe {
             }
         }
 
-        // Update position of control buttons
-        this.controlButtons.position.copy(this.node.position);
-        // Adjust Y position to be above the node
-        this.controlButtons.position.y += halfSizeY + 40; // Position relative to actual top edge + offset
+        // 7. Ensure the entire metaframeGroup is visible if the metaframe is intended to be shown
+        this.metaframeGroup.visible = this.isVisible;
 
-        // Update position of tooltips
-        const tooltipOffset = new THREE.Vector3(0, 15, 0); // Offset tooltips above handles
+        // 8. Update world positions of CSS3DObjects (Control Buttons and Tooltips)
+
+        // Control Buttons: Positioned above the node, oriented with the metaframeGroup.
+        const controlsLocalOffset = new THREE.Vector3(0, halfSizeY + 40, 0); // Local offset from group center
+        const controlsWorldPosition = controlsLocalOffset.clone().applyMatrix4(this.metaframeGroup.matrixWorld);
+        this.controlButtons.position.copy(controlsWorldPosition);
+        // Note: CSS3DRenderer handles billboarding of the controlButtons element itself if it's a CSS3DObject.
+        // The positioning here ensures it follows the group's transform.
+
+        // Tooltips: Positioned relative to their corresponding WebGL handles.
+        const tooltipOffsetDistance = 15; // Desired screen-aligned offset above the handle
+        const tempWorldPos = new THREE.Vector3(); // Reusable vector for world position calculations
+
         for (const key in this.resizeHandles) {
-            if (this.handleTooltips[key] && this.resizeHandles[key]) {
-                this.handleTooltips[key].position.copy(this.resizeHandles[key].position).add(tooltipOffset);
+            const handleMesh = this.resizeHandles[key];
+            const tooltip = this.handleTooltips[key];
+            if (tooltip && handleMesh && handleMesh.visible && this.isVisible) {
+                handleMesh.getWorldPosition(tempWorldPos); // Get world position of the WebGL handle
+
+                // Create an offset vector that is screen-aligned (Y-up relative to camera)
+                const screenUpOffset = new THREE.Vector3(0, tooltipOffsetDistance, 0);
+                if (camera) { // Apply camera's orientation to make offset screen-aligned
+                    screenUpOffset.applyQuaternion(camera.quaternion);
+                }
+                tempWorldPos.add(screenUpOffset); // Add screen-aligned offset
+                tooltip.position.copy(tempWorldPos);
+                tooltip.visible = true; // Ensure CSS3DObject itself is marked visible for rendering
+            } else if (tooltip) {
+                 tooltip.visible = false;
+                 if (tooltip.element) tooltip.element.style.visibility = 'hidden'; // Also hide HTML element
             }
         }
-        if (this.handleTooltips.dragHandle && this.dragHandle) {
-            this.handleTooltips.dragHandle.position.copy(this.dragHandle.position).add(tooltipOffset);
+
+        const dragHandleMesh = this.dragHandle;
+        const dragHandleTooltip = this.handleTooltips.dragHandle;
+        if (dragHandleTooltip && dragHandleMesh && dragHandleMesh.visible && this.isVisible) {
+            dragHandleMesh.getWorldPosition(tempWorldPos);
+            const screenUpOffset = new THREE.Vector3(0, tooltipOffsetDistance, 0);
+            if (camera) {
+                screenUpOffset.applyQuaternion(camera.quaternion);
+            }
+            tempWorldPos.add(screenUpOffset);
+            dragHandleTooltip.position.copy(tempWorldPos);
+            dragHandleTooltip.visible = true;
+        } else if (dragHandleTooltip) {
+             dragHandleTooltip.visible = false;
+             if (dragHandleTooltip.element) dragHandleTooltip.element.style.visibility = 'hidden';
         }
     }
 
     show() {
         if (this.isVisible) return;
-
-        const capabilities = this.node.getCapabilities();
-
-        this.borderMesh.visible = true;
-        this.controlButtons.visible = true; // Assuming control buttons visibility is not tied to drag/resize caps
-
-        if (this.dragHandle) {
-            this.dragHandle.visible = capabilities.canBeDragged ?? true;
-        }
-
-        for (const key in this.resizeHandles) {
-            if (this.resizeHandles[key]) {
-                this.resizeHandles[key].visible = capabilities.canBeResized ?? true;
-            }
-        }
-
-        this.isVisible = true;
-        this.update(); // Ensure it's positioned correctly on show and handle visibilities are re-applied
+        this.isVisible = true; // Set state first
+        this.metaframeGroup.visible = true;
+        this.controlButtons.visible = true;
+        // Individual handle visibility and tooltip visibility will be set by update()
+        this.update();
     }
 
     hide() {
         if (!this.isVisible) return;
-        this.borderMesh.visible = false;
+        this.isVisible = false; // Set state first
+        this.metaframeGroup.visible = false;
         this.controlButtons.visible = false;
-        this.dragHandle.visible = false;
-        for (const key in this.resizeHandles) {
-            this.resizeHandles[key].visible = false;
-        }
-        // Hide all tooltips when metaframe is hidden
+
+        // Hide all tooltips explicitly by their CSS3DObject visibility and style
         for (const key in this.handleTooltips) {
-            this.setHandleTooltip(key, '', false);
+            const tooltip = this.handleTooltips[key];
+            if (tooltip) {
+                tooltip.visible = false;
+                if (tooltip.element) {
+                    tooltip.element.style.visibility = 'hidden';
+                    tooltip.element.style.opacity = '0';
+                }
+            }
         }
-        this.isVisible = false;
+        // No need to call update() when hiding, as elements are made invisible.
     }
 
     setHandleTooltip(handleType, text, visible) {
         const tooltip = this.handleTooltips[handleType];
         if (tooltip && tooltip.element) {
             tooltip.element.textContent = text;
+            // Manage CSS style visibility
             tooltip.element.style.visibility = visible ? 'visible' : 'hidden';
             tooltip.element.style.opacity = visible ? '1' : '0';
+            // Manage CSS3DObject visibility (important for renderer culling)
+            tooltip.visible = visible;
+
             if (visible) {
-                // Ensure position is updated when shown
+                // If making visible, ensure its position is correct based on the current state of the handle.
+                // This relies on the handle already being correctly positioned by the main update() loop.
+                const camera = this.cameraPlugin?.getCameraInstance();
                 const handleMesh = handleType === 'dragHandle' ? this.dragHandle : this.resizeHandles[handleType];
-                if (handleMesh) {
-                    const tooltipOffset = new THREE.Vector3(0, 15, 0); // Consistent with update()
-                    tooltip.position.copy(handleMesh.position).add(tooltipOffset);
+
+                // Only position if the metaframe itself and the specific handle are supposed to be visible.
+                if (this.isVisible && handleMesh && handleMesh.visible) {
+                    const tempWorldPos = new THREE.Vector3();
+                    handleMesh.getWorldPosition(tempWorldPos);
+
+                    const tooltipOffsetDistance = 15;
+                    const screenUpOffset = new THREE.Vector3(0, tooltipOffsetDistance, 0);
+                    if (camera) {
+                         screenUpOffset.applyQuaternion(camera.quaternion);
+                    }
+                    tempWorldPos.add(screenUpOffset);
+                    tooltip.position.copy(tempWorldPos);
+                } else {
+                    // If conditions aren't met for visibility, force hide it
+                    tooltip.element.style.visibility = 'hidden';
+                    tooltip.element.style.opacity = '0';
+                    tooltip.visible = false;
                 }
             }
         }
     }
 
     dispose() {
-        this.webglScene.remove(this.borderMesh);
-        this.borderMesh.geometry.dispose();
-        this.borderMesh.material.dispose();
-        this.borderMesh = null;
-
-        this.cssScene.remove(this.controlButtons);
-        this.controlButtons.element.remove();
-        this.controlButtons = null;
-
-        this.webglScene.remove(this.dragHandle);
-        this.dragHandle.geometry.dispose();
-        this.dragHandle.material.dispose();
-        this.dragHandle = null;
-
-        for (const key in this.resizeHandles) {
-            const handle = this.resizeHandles[key];
-            this.webglScene.remove(handle);
-            handle.geometry.dispose();
-            handle.material.dispose();
+        // Remove metaframeGroup from webglScene, which also removes all its children (border, handles)
+        if (this.metaframeGroup) {
+            this.webglScene.remove(this.metaframeGroup);
         }
+
+        // Dispose geometries and materials of children of metaframeGroup
+        this.borderMesh?.geometry?.dispose();
+        this.borderMesh?.material?.dispose();
+        this.dragHandle?.geometry?.dispose();
+        this.dragHandle?.material?.dispose();
+        for (const key in this.resizeHandles) {
+            this.resizeHandles[key]?.geometry?.dispose();
+            this.resizeHandles[key]?.material?.dispose();
+        }
+
+        this.borderMesh = null;
+        this.dragHandle = null;
         this.resizeHandles = {};
+        this.metaframeGroup = null; // Clear reference to the group
+
+        // Dispose CSS3DObjects
+        if (this.controlButtons) {
+            this.cssScene.remove(this.controlButtons);
+            this.controlButtons.element?.remove();
+            this.controlButtons = null;
+        }
 
         for (const key in this.handleTooltips) {
             const tooltip = this.handleTooltips[key];
-            this.cssScene.remove(tooltip);
-            tooltip.element.remove();
+            if (tooltip) {
+                this.cssScene.remove(tooltip);
+                tooltip.element?.remove();
+            }
         }
         this.handleTooltips = {};
         this._originalHandleMaterials.clear();
@@ -441,5 +527,6 @@ export class Metaframe {
         this.space = null;
         this.webglScene = null;
         this.cssScene = null;
+        this.cameraPlugin = null;
     }
 }
