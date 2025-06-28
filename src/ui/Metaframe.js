@@ -11,9 +11,15 @@ export class Metaframe {
     borderMesh = null;
     resizeHandles = {}; // e.g., { 'topLeft': Mesh, 'bottomRight': Mesh }
     dragHandle = null;
+    _originalHandleMaterials = new Map(); // To store original material properties for hover reset
+    _handleDefaultOpacity = 0.7; // Default opacity for handles
+    _handleHoverOpacity = 1.0;
+    _handleHoverScale = 1.2;
+
 
     // CSS3DObject for control buttons
     controlButtons = null; // This will be a CSS3DObject containing a div with buttons
+    handleTooltips = {}; // Stores CSS3DObjects for handle tooltips: { 'topLeft': CSS3DObject, ... }
 
     isVisible = false;
 
@@ -32,13 +38,18 @@ export class Metaframe {
         // Create a simple wireframe box for the border
         const geometry = new THREE.BoxGeometry(1, 1, 1);
         const edges = new THREE.EdgesGeometry(geometry);
-        this.borderMesh = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x00ffff }));
+        this.borderMesh = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x00ffff, depthTest: false }));
         this.borderMesh.renderOrder = 999; // Render on top
         this.webglScene.add(this.borderMesh);
 
         // Create resize handles
-        const handleGeometry = new THREE.SphereGeometry(5, 8, 8); // Small spheres
-        const handleMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.8 });
+        const handleGeometry = new THREE.SphereGeometry(5, 16, 16); // Increased segments for smoother sphere
+        const handleMaterialTemplate = new THREE.MeshBasicMaterial({
+            color: 0xff00ff, // Changed color for better visibility
+            transparent: true,
+            opacity: this._handleDefaultOpacity,
+            depthTest: false
+        });
 
         const handlePositions = {
             topLeft: new THREE.Vector3(-0.5, 0.5, 0),
@@ -48,25 +59,93 @@ export class Metaframe {
         };
 
         for (const key in handlePositions) {
+            const handleMaterial = handleMaterialTemplate.clone();
             const handle = new THREE.Mesh(handleGeometry, handleMaterial);
             handle.name = `resizeHandle-${key}`;
             handle.userData.handleType = key;
+            handle.renderOrder = 1000; // Ensure handles render on top of border
             this.resizeHandles[key] = handle;
+            this._originalHandleMaterials.set(handle, {
+                color: handleMaterial.color.clone(),
+                opacity: handleMaterial.opacity,
+                scale: handle.scale.clone()
+            });
             this.webglScene.add(handle);
+            this.handleTooltips[key] = this._createTooltipElement();
+            this.cssScene.add(this.handleTooltips[key]);
         }
 
         // Create a drag handle (e.g., a small rectangle at the top center)
-        const dragHandleGeometry = new THREE.PlaneGeometry(50, 10); // Width, Height
+        const dragHandleGeometry = new THREE.PlaneGeometry(60, 12); // Slightly larger
         const dragHandleMaterial = new THREE.MeshBasicMaterial({
-            color: 0x00ff00,
+            color: 0x00cc00, // Darker green
             transparent: true,
-            opacity: 0.8,
+            opacity: this._handleDefaultOpacity,
             side: THREE.DoubleSide,
+            depthTest: false
         });
         this.dragHandle = new THREE.Mesh(dragHandleGeometry, dragHandleMaterial);
         this.dragHandle.name = 'dragHandle';
         this.dragHandle.userData.handleType = 'drag';
+        this.dragHandle.renderOrder = 1000; // Ensure drag handle renders on top
+        this._originalHandleMaterials.set(this.dragHandle, {
+            color: dragHandleMaterial.color.clone(),
+            opacity: dragHandleMaterial.opacity,
+            scale: this.dragHandle.scale.clone()
+        });
         this.webglScene.add(this.dragHandle);
+        this.handleTooltips['dragHandle'] = this._createTooltipElement();
+        this.cssScene.add(this.handleTooltips['dragHandle']);
+    }
+
+    _createTooltipElement() {
+        const div = document.createElement('div');
+        div.className = 'metaframe-handle-tooltip';
+        div.style.cssText = `
+            position: absolute;
+            background-color: rgba(0,0,0,0.8);
+            color: white;
+            padding: 3px 7px;
+            border-radius: 3px;
+            font-size: 11px;
+            white-space: nowrap;
+            pointer-events: none; /* Tooltip should not intercept pointer events */
+            visibility: hidden; /* Start hidden */
+            transition: opacity 0.1s;
+            opacity: 0;
+        `;
+        // div.textContent will be set dynamically
+        const tooltipObject = new CSS3DObject(div);
+        tooltipObject.userData.isTooltip = true; // For easier identification if needed
+        return tooltipObject;
+    }
+
+    highlightHandle(handleOrType, highlightState) {
+        let handleInstance = null;
+        if (typeof handleOrType === 'string') {
+            if (handleOrType === 'dragHandle') {
+                handleInstance = this.dragHandle;
+            } else {
+                handleInstance = this.resizeHandles[handleOrType];
+            }
+        } else {
+            handleInstance = handleOrType; // Assuming it's a direct mesh instance
+        }
+
+        if (!handleInstance || !handleInstance.material) return;
+
+        const originalProps = this._originalHandleMaterials.get(handleInstance);
+        if (!originalProps) return;
+
+        if (highlightState) {
+            // handleInstance.material.color.setHex(0xffff00); // Example: Yellow highlight color
+            handleInstance.material.opacity = this._handleHoverOpacity;
+            handleInstance.scale.copy(originalProps.scale).multiplyScalar(this._handleHoverScale);
+        } else {
+            // handleInstance.material.color.copy(originalProps.color);
+            handleInstance.material.opacity = originalProps.opacity;
+            handleInstance.scale.copy(originalProps.scale);
+        }
     }
 
     _createControlButtons() {
@@ -85,29 +164,89 @@ export class Metaframe {
             pointer-events: auto; /* Allow interaction */
         `;
 
-        const createButton = (text, onClick) => {
+        const createButton = (text, action, onClick) => {
             const button = document.createElement('button');
             button.textContent = text;
-            button.style.cssText = `
-                background: #333;
-                color: white;
-                border: none;
-                padding: 5px 10px;
-                border-radius: 3px;
-                cursor: pointer;
-            `;
+            button.classList.add('metaframe-button', `metaframe-button-${action}`);
+            // Styles will be primarily from src/index.css via .metaframe-controls button
+            // and .metaframe-button class.
             button.onclick = onClick;
+
+            // Add title attribute for tooltip
+            switch (action) {
+                case 'edit-properties': // Changed from 'edit' to be more specific
+                    button.title = 'Edit node properties';
+                    break;
+                case 'link':
+                    button.title = 'Create a link from this node';
+                    break;
+                case 'delete':
+                    button.title = 'Delete this node';
+                    break;
+                case 'content-zoom-in':
+                    button.title = 'Zoom in content';
+                    break;
+                case 'content-zoom-out':
+                    button.title = 'Zoom out content';
+                    break;
+                case 'toggle-content-edit':
+                    button.title = 'Toggle content edit mode';
+                    break;
+            }
             return button;
         };
 
-        container.appendChild(createButton('Edit', () => this.space.emit('metaframe:editNode', { node: this.node })));
-        container.appendChild(createButton('Link', () => this.space.emit('metaframe:linkNode', { node: this.node })));
-        container.appendChild(
-            createButton('Delete', () => this.space.emit('metaframe:deleteNode', { node: this.node }))
-        );
+        // Clear existing buttons
+        while (container.firstChild) {
+            container.removeChild(container.firstChild);
+        }
+
+        const capabilities = this.node.getCapabilities();
+
+        if (capabilities.canEditProperties) {
+            let editText = 'Edit';
+            container.appendChild(createButton(editText, 'edit-properties', () => this.space.emit('metaframe:editNode', { node: this.node })));
+        }
+
+        if (capabilities.canEditContent) {
+            container.appendChild(createButton('Edit Content', 'toggle-content-edit', () => this.space.emit('metaframe:toggleNodeContentEditable', { node: this.node })));
+        }
+
+        if (capabilities.canZoomContent) {
+            container.appendChild(createButton('Zoom In', 'content-zoom-in', () => this.space.emit('ui:request:adjustContentScale', { node: this.node, factor: 1.15 })));
+            container.appendChild(createButton('Zoom Out', 'content-zoom-out', () => this.space.emit('ui:request:adjustContentScale', { node: this.node, factor: 1 / 1.15 })));
+        }
+
+        if (capabilities.canLink) {
+            container.appendChild(createButton('Link', 'link', () => this.space.emit('metaframe:linkNode', { node: this.node })));
+        }
+
+        if (capabilities.canDelete) {
+            container.appendChild(createButton('Delete', 'delete', () => this.space.emit('metaframe:deleteNode', { node: this.node })));
+        }
 
         this.controlButtons = new CSS3DObject(container);
         this.cssScene.add(this.controlButtons);
+    }
+
+    refreshButtons() {
+        if (this.controlButtons && this.controlButtons.element) {
+             // Check if parentElement exists before trying to remove from cssScene
+            if (this.controlButtons.element.parentElement) {
+                 this.cssScene.remove(this.controlButtons);
+            }
+            this.controlButtons.element.remove(); // Remove old HTML element from wherever it was attached
+            this.controlButtons = null;           // Clear reference
+        }
+        this._createControlButtons(); // This creates a new this.controlButtons and adds it to cssScene
+
+        // If the metaframe is currently visible, we might need to ensure its position is updated.
+        // The update() method handles positioning of controlButtons.
+        // However, _createControlButtons itself adds to cssScene.
+        // If the metaframe is visible, calling update() ensures correct placement.
+        if (this.isVisible) {
+            this.update();
+        }
     }
 
     update() {
@@ -152,7 +291,18 @@ export class Metaframe {
         // Update position of control buttons
         this.controlButtons.position.copy(this.node.position);
         // Adjust Y position to be above the node
-        this.controlButtons.position.y += size / 2 + 40; // 40 units above the node's top edge, to clear drag handle
+        this.controlButtons.position.y += halfSizeY + 40; // Position relative to actual top edge + offset
+
+        // Update position of tooltips
+        const tooltipOffset = new THREE.Vector3(0, 15, 0); // Offset tooltips above handles
+        for (const key in this.resizeHandles) {
+            if (this.handleTooltips[key] && this.resizeHandles[key]) {
+                this.handleTooltips[key].position.copy(this.resizeHandles[key].position).add(tooltipOffset);
+            }
+        }
+        if (this.handleTooltips.dragHandle && this.dragHandle) {
+            this.handleTooltips.dragHandle.position.copy(this.dragHandle.position).add(tooltipOffset);
+        }
     }
 
     show() {
@@ -165,6 +315,7 @@ export class Metaframe {
         }
         this.isVisible = true;
         this.update(); // Ensure it's positioned correctly on show
+        // Tooltip visibility is primarily controlled by UIManager on hover
     }
 
     hide() {
@@ -175,7 +326,27 @@ export class Metaframe {
         for (const key in this.resizeHandles) {
             this.resizeHandles[key].visible = false;
         }
+        // Hide all tooltips when metaframe is hidden
+        for (const key in this.handleTooltips) {
+            this.setHandleTooltip(key, '', false);
+        }
         this.isVisible = false;
+    }
+
+    setHandleTooltip(handleType, text, visible) {
+        const tooltip = this.handleTooltips[handleType];
+        if (tooltip && tooltip.element) {
+            tooltip.element.textContent = text;
+            tooltip.element.style.visibility = visible ? 'visible' : 'hidden';
+            tooltip.element.style.opacity = visible ? '1' : '0';
+            if (visible) { // Ensure position is updated when shown
+                const handleMesh = handleType === 'dragHandle' ? this.dragHandle : this.resizeHandles[handleType];
+                if (handleMesh) {
+                    const tooltipOffset = new THREE.Vector3(0, 15, 0); // Consistent with update()
+                    tooltip.position.copy(handleMesh.position).add(tooltipOffset);
+                }
+            }
+        }
     }
 
     dispose() {
@@ -200,6 +371,14 @@ export class Metaframe {
             handle.material.dispose();
         }
         this.resizeHandles = {};
+
+        for (const key in this.handleTooltips) {
+            const tooltip = this.handleTooltips[key];
+            this.cssScene.remove(tooltip);
+            tooltip.element.remove();
+        }
+        this.handleTooltips = {};
+        this._originalHandleMaterials.clear();
 
         this.node = null;
         this.space = null;
