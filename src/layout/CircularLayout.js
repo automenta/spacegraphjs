@@ -58,10 +58,10 @@ export class CircularLayout {
 
     run() {}
     stop() {}
-    addNode(node) {}
-    removeNode(node) {}
-    addEdge(edge) {}
-    removeEdge(edge) {}
+    addNode(_node) {}
+    removeNode(_node) {}
+    addEdge(_edge) {}
+    removeEdge(_edge) {}
 
     dispose() {
         this.nodes = [];

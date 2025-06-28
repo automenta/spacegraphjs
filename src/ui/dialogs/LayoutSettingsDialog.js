@@ -41,7 +41,7 @@ export class LayoutSettingsDialog {
 
         const layoutPlugin = this.space.plugins.getPlugin('LayoutPlugin');
         if (!layoutPlugin?.layoutManager) {
-            console.warn('LayoutPlugin not available for layout settings update.');
+            // console.warn('LayoutPlugin not available for layout settings update.');
             return;
         }
 

@@ -54,7 +54,9 @@ export class AudioNode extends Node {
                     this.play();
                 }
             })
-            .catch((e) => console.error('Error loading audio:', e));
+            .catch((_e) => {
+                /* console.error('Error loading audio:', _e) */
+            });
     }
 
     play() {

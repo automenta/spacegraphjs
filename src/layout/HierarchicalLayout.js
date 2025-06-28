@@ -91,7 +91,7 @@ export class HierarchicalLayout {
         return defaultAncestor;
     }
 
-    _secondPass(nodeWrapper, currentXOffset, modSum) {
+    _secondPass(nodeWrapper, currentXOffset, _modSum) {
         nodeWrapper.x = currentXOffset + nodeWrapper.prelim * this.settings.nodeSeparation;
 
         let childX = currentXOffset - ((nodeWrapper.children.length - 1) * this.settings.nodeSeparation) / 2;
@@ -121,10 +121,10 @@ export class HierarchicalLayout {
     run() {}
     stop() {}
     kick() {}
-    addNode(node) {}
-    removeNode(node) {}
-    addEdge(edge) {}
-    removeEdge(edge) {}
+    addNode(_node) {}
+    removeNode(_node) {}
+    addEdge(_edge) {}
+    removeEdge(_edge) {}
 
     dispose() {
         this.space = null;

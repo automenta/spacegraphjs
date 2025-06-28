@@ -10,7 +10,7 @@ export class BaseFactory {
      */
     registerType(typeName, typeClass) {
         if (!typeName) {
-            console.warn(`${this.constructor.name}: Attempted to register a class without a typeName.`, typeClass);
+            // console.warn(`${this.constructor.name}: Attempted to register a class without a typeName.`, typeClass);
             return;
         }
         if (this.types.has(typeName)) {
@@ -30,7 +30,7 @@ export class BaseFactory {
         const TypeClass = this.types.get(type) || (defaultType ? this.types.get(defaultType) : null);
 
         if (!TypeClass) {
-            console.warn(`${this.constructor.name}: Type "${type}" not found and no default type available.`);
+            // console.warn(`${this.constructor.name}: Type "${type}" not found and no default type available.`);
             return null;
         }
 

@@ -32,7 +32,7 @@ export class ForceLayout {
         this.worker = new Worker(new URL('./forceLayout.worker.js', import.meta.url), { type: 'module' });
         this.worker.onmessage = this._handleWorkerMessage.bind(this);
         this.worker.onerror = (error) => {
-            console.error('ForceLayout Worker Error:', error);
+            // console.error('ForceLayout Worker Error:', error);
             this.isRunning = false;
             this.space.emit('layout:error', { error });
         };
@@ -59,7 +59,7 @@ export class ForceLayout {
                 this.space.emit('layout:stopped', { name: 'force (worker)' });
                 break;
             case 'error':
-                console.error('ForceLayout Worker error:', error);
+                // console.error('ForceLayout Worker error:', error);
                 this.space.emit('layout:error', { error });
                 break;
         }

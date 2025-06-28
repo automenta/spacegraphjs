@@ -1,5 +1,5 @@
-import { $ } from '../../utils.js';
-import * as THREE from 'three';
+// import { $ } from '../../utils.js'; // Unused
+// import * as THREE from 'three'; // Unused
 import { HtmlNode } from '../../graph/nodes/HtmlNode.js';
 
 export class ContextMenu {
@@ -135,7 +135,7 @@ export class ContextMenu {
                 break;
             }
             default:
-                console.warn('ContextMenu: Unknown action:', action);
+            // console.warn('ContextMenu: Unknown action:', action);
         }
     };
 

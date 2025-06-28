@@ -53,7 +53,7 @@ export class EdgePlugin extends Plugin {
 
         const renderingPlugin = this.pluginManager.getPlugin('RenderingPlugin');
         if (!renderingPlugin?.getWebGLScene()) {
-            console.error('EdgePlugin: RenderingPlugin or scene not available.');
+            // console.error('EdgePlugin: RenderingPlugin or scene not available.');
             return;
         }
         this.instancedEdgeManager = new InstancedEdgeManager(renderingPlugin.getWebGLScene());
@@ -105,7 +105,7 @@ export class EdgePlugin extends Plugin {
 
     addEdge(sourceNode, targetNode, data = {}) {
         if (!sourceNode || !targetNode || sourceNode === targetNode) {
-            console.warn('EdgePlugin: Invalid source or target.');
+            // console.warn('EdgePlugin: Invalid source or target.');
             return null;
         }
         for (const existingEdge of this.edges.values()) {
@@ -113,7 +113,7 @@ export class EdgePlugin extends Plugin {
                 (existingEdge.source === sourceNode && existingEdge.target === targetNode) ||
                 (existingEdge.source === targetNode && existingEdge.target === sourceNode)
             ) {
-                console.warn(`EdgePlugin: Duplicate edge ignored between ${sourceNode.id} and ${targetNode.id}.`);
+                // console.warn(`EdgePlugin: Duplicate edge ignored between ${sourceNode.id} and ${targetNode.id}.`);
                 return existingEdge;
             }
         }
@@ -126,7 +126,7 @@ export class EdgePlugin extends Plugin {
             data
         );
         if (!edge) {
-            console.error(`EdgePlugin: Failed to create edge type "${data.type || 'default'}".`);
+            // console.error(`EdgePlugin: Failed to create edge type "${data.type || 'default'}".`);
             return null;
         }
         this.edges.set(edge.id, edge);
@@ -151,7 +151,9 @@ export class EdgePlugin extends Plugin {
 
     removeEdge(edgeId) {
         const edge = this.edges.get(edgeId);
-        if (!edge) return console.warn(`EdgePlugin: Edge ${edgeId} not found.`);
+        if (!edge) {
+            /* console.warn(`EdgePlugin: Edge ${edgeId} not found.`); */ return;
+        }
 
         this.pluginManager.getPlugin('UIPlugin')?.getSelectedEdge() === edge &&
             this.pluginManager.getPlugin('UIPlugin').setSelectedEdge(null);

@@ -1,4 +1,4 @@
-import { $, $$ } from '../../utils.js';
+import { $ } from '../../utils.js'; // $$ was unused
 import { KeyboardShortcutsDialog } from '../dialogs/KeyboardShortcutsDialog.js';
 import { LayoutSettingsDialog } from '../dialogs/LayoutSettingsDialog.js';
 

@@ -73,7 +73,7 @@ export class NodePlugin extends Plugin {
     addNode(nodeInstance) {
         nodeInstance.id ??= Utils.generateId('node');
         if (this.nodes.has(nodeInstance.id)) {
-            console.warn(`NodePlugin: Node ${nodeInstance.id} already exists.`);
+            // console.warn(`NodePlugin: Node ${nodeInstance.id} already exists.`);
             return this.nodes.get(nodeInstance.id);
         }
 
@@ -104,7 +104,7 @@ export class NodePlugin extends Plugin {
     createAndAddNode({ id, type, position, data = {}, mass = 1.0 }) {
         const nodeId = id || Utils.generateId('node');
         if (!type || !position) {
-            console.error('NodePlugin: Type and position required.');
+            // console.error('NodePlugin: Type and position required.');
             return undefined;
         }
 
@@ -114,7 +114,9 @@ export class NodePlugin extends Plugin {
 
     removeNode(nodeId) {
         const node = this.nodes.get(nodeId);
-        if (!node) return console.warn(`NodePlugin: Node ${nodeId} not found.`);
+        if (!node) {
+            /* console.warn(`NodePlugin: Node ${nodeId} not found.`); */ return;
+        }
 
         const uiPlugin = this.pluginManager.getPlugin('UIPlugin');
         if (uiPlugin?.getSelectedNode() === node) uiPlugin.setSelectedNode(null);

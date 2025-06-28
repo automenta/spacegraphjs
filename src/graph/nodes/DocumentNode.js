@@ -69,9 +69,9 @@ export class DocumentNode extends Node {
     viewDocument() {
         if (this.data.documentUrl) {
             this.space?.emit('node:document:view', { node: this, url: this.data.documentUrl });
-            console.log(`DocumentNode: Request to view document at ${this.data.documentUrl}`);
+            // console.log(`DocumentNode: Request to view document at ${this.data.documentUrl}`);
         } else {
-            console.warn(`DocumentNode: No documentUrl specified for node ${this.id}`);
+            // console.warn(`DocumentNode: No documentUrl specified for node ${this.id}`);
         }
     }
 
@@ -81,7 +81,7 @@ export class DocumentNode extends Node {
             const emissiveIntensity = selected ? 0.6 : 0.0;
 
             const materials = Array.isArray(this.mesh.material) ? this.mesh.material : [this.mesh.material];
-            materials.forEach(material => {
+            materials.forEach((material) => {
                 if (material.isMeshStandardMaterial || material.isMeshBasicMaterial) {
                     material.emissive?.setHex(emissiveColor);
                     if (material.emissiveIntensity !== undefined) {

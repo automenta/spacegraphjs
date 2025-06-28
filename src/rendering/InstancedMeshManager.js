@@ -22,7 +22,7 @@ class InstancedMeshGroup {
 
     addNode(node) {
         if (this.activeInstances >= MAX_INSTANCES_PER_TYPE) {
-            console.warn('InstancedMeshManager: Max instances reached.');
+            // console.warn('InstancedMeshManager: Max instances reached.');
             return null;
         }
 
@@ -115,11 +115,11 @@ export class InstancedMeshManager {
                 this.loadedGltfGeometries.set(url, geometry);
                 return geometry;
             } else {
-                console.warn(`GLTF model at ${url} contains no mesh geometry.`);
+                // console.warn(`GLTF model at ${url} contains no mesh geometry.`);
                 return null;
             }
-        } catch (error) {
-            console.error(`Error loading GLTF model from ${url}:`, error);
+        } catch (_error) {
+            // console.error(`Error loading GLTF model from ${url}:`, _error);
             return null;
         }
     }

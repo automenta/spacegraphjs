@@ -752,7 +752,7 @@ export const pages = [
                 if (uiPlugin && uiPlugin.showNotification) {
                     uiPlugin.showNotification('FileSystem (left) and Object (right) graphs generated.', 'info', 6000);
                 } else {
-                    console.log('Demo: FileSystem and ObjectProperty graphs generated.');
+                    // console.log('Demo: FileSystem and ObjectProperty graphs generated.');
                 }
             }, 500);
         },
@@ -797,7 +797,7 @@ export const pages = [
                 if (uiPlugin && uiPlugin.showNotification) {
                     uiPlugin.showNotification('Use UI to test TopDown or FirstPerson camera modes.', 'info', 5000);
                 } else {
-                    console.log('Demo: Use UI to test TopDown or FirstPerson camera modes.');
+                    // console.log('Demo: Use UI to test TopDown or FirstPerson camera modes.');
                 }
             }, 100);
         },
@@ -851,7 +851,7 @@ export const pages = [
                 if (uiPlugin && uiPlugin.showNotification) {
                     uiPlugin.showNotification('Try "treemap" or "radial" layouts from the UI dropdown!', 'info', 5000);
                 } else {
-                    console.log("Demo: Try 'treemap' or 'radial' layouts from the UI dropdown!");
+                    // console.log("Demo: Try 'treemap' or 'radial' layouts from the UI dropdown!");
                 }
             }, 100);
         },
@@ -907,7 +907,7 @@ export const pages = [
             // Default range for thicknessDataKey 'value' is 0-100, mapping to visual thickness 1-10.
             // N4 has data.value = 75, so it should be 75% of the way from min to max thickness.
             // (75/100 * (10-1)) + 1 = 0.75 * 9 + 1 = 6.75 + 1 = 7.75 thickness
-            const dynamicEdge = space.addEdge(n3, n4, {
+            /* const dynamicEdge = */ space.addEdge(n3, n4, {
                 type: 'dynamicThickness',
                 label: 'Dynamic Thickness (Value: 75)',
                 color: 0xffaa00,

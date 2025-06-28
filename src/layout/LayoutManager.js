@@ -10,7 +10,7 @@ export class LayoutManager {
     }
 
     registerLayout(name, layoutInstance) {
-        if (this.layouts.has(name)) console.warn(`LayoutManager: Layout "${name}" already registered. Overwriting.`);
+        // if (this.layouts.has(name)) console.warn(`LayoutManager: Layout "${name}" already registered. Overwriting.`);
         layoutInstance.setContext?.(this.space, this.pluginManager);
         this.layouts.set(name, layoutInstance);
     }
@@ -18,7 +18,7 @@ export class LayoutManager {
     async applyLayout(name, config = {}) {
         const newLayout = this.layouts.get(name);
         if (!newLayout) {
-            console.error(`LayoutManager: Layout "${name}" not found.`);
+            // console.error(`LayoutManager: Layout "${name}" not found.`);
             return false;
         }
 

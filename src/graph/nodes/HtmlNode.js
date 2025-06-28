@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
 import { $, Utils } from '../../utils.js';
 import { Node } from './Node.js';
@@ -27,11 +28,15 @@ export class HtmlNode extends Node {
         // Ensure this.mesh is initialized for Node.resize() and Metaframe
         // Use a 1x1 PlaneGeometry so its scale directly represents world dimensions for the metaframe.
         // Make it invisible or very transparent as it's just for bounding box/scaling purposes.
-        const placeholderMaterial = new THREE.MeshBasicMaterial({ visible: false, depthTest: false, transparent: true, opacity: 0 });
+        const placeholderMaterial = new THREE.MeshBasicMaterial({
+            visible: false,
+            depthTest: false,
+            transparent: true,
+            opacity: 0,
+        });
         this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), placeholderMaterial);
         this.mesh.userData = { nodeId: this.id, type: 'html-node-mesh-placeholder' };
         this.mesh.scale.set(initialScaleX * this.baseSize.width, initialScaleY * this.baseSize.height, 1.0);
-
 
         this.htmlElement = this._createElement();
         this.cssObject = new CSS3DObject(this.htmlElement);
@@ -44,7 +49,7 @@ export class HtmlNode extends Node {
     getCapabilities() {
         const capabilities = super.getCapabilities(); // Get base capabilities
         capabilities.canEditContent = this.data.editable === true; // Can toggle contentEditable
-        capabilities.canZoomContent = true;    // HtmlNode content can be zoomed
+        capabilities.canZoomContent = true; // HtmlNode content can be zoomed
         // canBeResized is true by default from Node.js, which is correct for HtmlNode via Metaframe
         // canEditProperties is true by default (for general props like color, label etc.)
         return capabilities;
@@ -80,8 +85,8 @@ export class HtmlNode extends Node {
                     ${this.data.content || this.data.label || ''}
                 </div>
                 <div class="node-controls">
-                    ${/* Zoom In/Out buttons removed, will be handled by Metaframe */''}
-                    ${/* Other quick buttons like Delete were already removed or will be part of Metaframe */''}
+                    ${/* Zoom In/Out buttons removed, will be handled by Metaframe */ ''}
+                    ${/* Other quick buttons like Delete were already removed or will be part of Metaframe */ ''}
                 </div>
             </div>
         `;
@@ -93,7 +98,8 @@ export class HtmlNode extends Node {
     // Debounced input handler
     _onContentInput = Utils.debounce(() => {
         const contentDiv = $('.node-content', this.htmlElement);
-        if (contentDiv && this.data.editable) { // Check data.editable for safety
+        if (contentDiv && this.data.editable) {
+            // Check data.editable for safety
             this.data.content = contentDiv.innerHTML;
             this.space?.emit('graph:node:dataChanged', {
                 node: this,
@@ -129,32 +135,35 @@ export class HtmlNode extends Node {
                 e.stopPropagation();
             }
         });
-        contentDiv.addEventListener('touchstart', (e) => {
-             if (this.data.editable || e.target.closest('button, input, textarea, select, a')) {
-                e.stopPropagation();
-            }
-        }, { passive: true });
+        contentDiv.addEventListener(
+            'touchstart',
+            (e) => {
+                if (this.data.editable || e.target.closest('button, input, textarea, select, a')) {
+                    e.stopPropagation();
+                }
+            },
+            { passive: true }
+        );
 
         contentDiv.addEventListener(
-                'wheel',
-                (e) => {
-                    const isScrollable =
-                        contentDiv.scrollHeight > contentDiv.clientHeight ||
-                        contentDiv.scrollWidth > contentDiv.clientWidth;
-                    const canScrollY =
-                        (e.deltaY < 0 && contentDiv.scrollTop > 0) ||
-                        (e.deltaY > 0 && contentDiv.scrollTop < contentDiv.scrollHeight - contentDiv.clientHeight);
-                    const canScrollX =
-                        (e.deltaX < 0 && contentDiv.scrollLeft > 0) ||
-                        (e.deltaX > 0 && contentDiv.scrollLeft < contentDiv.scrollWidth - contentDiv.clientWidth);
-                    if (isScrollable && (canScrollY || canScrollX)) {
-                        e.stopPropagation();
-                    }
-                },
-                { passive: false }
-            );
-        }
-    
+            'wheel',
+            (e) => {
+                const isScrollable =
+                    contentDiv.scrollHeight > contentDiv.clientHeight ||
+                    contentDiv.scrollWidth > contentDiv.clientWidth;
+                const canScrollY =
+                    (e.deltaY < 0 && contentDiv.scrollTop > 0) ||
+                    (e.deltaY > 0 && contentDiv.scrollTop < contentDiv.scrollHeight - contentDiv.clientHeight);
+                const canScrollX =
+                    (e.deltaX < 0 && contentDiv.scrollLeft > 0) ||
+                    (e.deltaX > 0 && contentDiv.scrollLeft < contentDiv.scrollWidth - contentDiv.clientWidth);
+                if (isScrollable && (canScrollY || canScrollX)) {
+                    e.stopPropagation();
+                }
+            },
+            { passive: false }
+        );
+    }
 
     setSize(width, height, scaleContent = false) {
         const oldSize = { ...this.size };
@@ -214,7 +223,8 @@ export class HtmlNode extends Node {
     }
 
     // Overridden resize method to work with scale from Metaframe
-    resize(newWorldScale) { // newWorldScale is the new world dimensions (width, height, depth) for the node's placeholder mesh
+    resize(newWorldScale) {
+        // newWorldScale is the new world dimensions (width, height, depth) for the node's placeholder mesh
         if (this.mesh) {
             this.mesh.scale.copy(newWorldScale); // newWorldScale is the target world dimensions for the 1x1 plane
         }
@@ -230,13 +240,21 @@ export class HtmlNode extends Node {
 
         this.metaframe?.update(); // Ensure metaframe is updated with the new size/scale
         this.space?.emit('graph:node:dataChanged', { node: this, property: 'size', value: { ...this.size } });
-        this.space?.emit('graph:node:dataChanged', { node: this, property: 'scale', value: { x: newWorldScale.x/this.baseSize.width, y: newWorldScale.y/this.baseSize.height, z:newWorldScale.z } });
-
+        this.space?.emit('graph:node:dataChanged', {
+            node: this,
+            property: 'scale',
+            value: {
+                x: newWorldScale.x / this.baseSize.width,
+                y: newWorldScale.y / this.baseSize.height,
+                z: newWorldScale.z,
+            },
+        });
     }
 
     getBoundingSphereRadius() {
         // Reflect current world size for layout purposes
-        if (this.mesh) { // mesh.scale is world dimensions for the 1x1 plane
+        if (this.mesh) {
+            // mesh.scale is world dimensions for the 1x1 plane
             return Math.sqrt(this.mesh.scale.x ** 2 + this.mesh.scale.y ** 2) / 2;
         }
         // Fallback to pixel size based (less accurate for world scale if mesh isn't ready)
@@ -263,8 +281,8 @@ export class HtmlNode extends Node {
         this.htmlElement?.classList.remove('resizing');
         try {
             this.space?.plugins?.getPlugin('LayoutPlugin')?.layoutManager?.getActiveLayout()?.releaseNode(this);
-        } catch (error) {
-            console.error('Error releasing node during resize:', error);
+        } catch (_error) {
+            // console.error('Error releasing node during resize:', _error);
         }
         this.space?.emit('graph:node:resizeend', { node: this, finalSize: { ...this.size } });
     }

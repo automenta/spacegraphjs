@@ -1,4 +1,4 @@
-import { $ } from '../utils.js';
+// import { $ } from '../utils.js'; // Unused
 import * as THREE from 'three';
 
 export class Toolbar {
@@ -63,7 +63,7 @@ export class Toolbar {
                 break;
             }
             default:
-                console.warn('Toolbar: Unknown action:', action);
+            // console.warn('Toolbar: Unknown action:', action);
         }
     }
 

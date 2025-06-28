@@ -26,7 +26,7 @@ export class ObjectPropertyGenerator {
      */
     generate(obj, space, options = {}) {
         if (typeof obj !== 'object' || obj === null || !space) {
-            console.error('ObjectPropertyGenerator: Invalid input object or space instance.');
+            // console.error('ObjectPropertyGenerator: Invalid input object or space instance.');
             return;
         }
 
