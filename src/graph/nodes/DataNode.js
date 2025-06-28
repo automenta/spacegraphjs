@@ -161,7 +161,21 @@ export class DataNode extends Node {
     }
 
     setSelectedStyle(selected) {
-        if (this.mesh?.material) this.mesh.material.emissive?.setHex(selected ? 0x333300 : 0x000000);
+        if (this.mesh?.material) {
+            const emissiveColor = selected ? 0xccaa00 : 0x000000;
+            const emissiveIntensity = selected ? 0.6 : 0.0;
+
+            // Ensure material is an array or single object
+            const materials = Array.isArray(this.mesh.material) ? this.mesh.material : [this.mesh.material];
+            materials.forEach(material => {
+                if (material.isMeshStandardMaterial || material.isMeshBasicMaterial) {
+                    material.emissive?.setHex(emissiveColor);
+                    if (material.emissiveIntensity !== undefined) {
+                         material.emissiveIntensity = emissiveIntensity;
+                    }
+                }
+            });
+        }
         this.labelObject?.element?.classList.toggle('selected', selected);
     }
 

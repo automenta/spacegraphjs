@@ -188,22 +188,26 @@ export class UIManager {
         switch (this.currentState) {
             case InteractionState.DRAGGING_NODE:
                 this.draggedNode?.endDrag();
-                document.body.style.cursor = 'grab'; // Consistent target
+                // Reset cursor to default 'grab' as it will likely transition to IDLE or be updated by hover.
+                document.body.style.cursor = 'grab';
                 this.draggedNode = null;
                 this.space.isDragging = false; // Reset flag
                 break;
             case InteractionState.RESIZING_NODE:
                 this.resizedNode?.endResize();
-                document.body.style.cursor = 'grab'; // Consistent target
+                // Reset cursor to default 'grab' as it will likely transition to IDLE or be updated by hover.
+                document.body.style.cursor = 'grab';
                 this.resizedNode = null;
                 this.space.isDragging = false; // Reset flag
                 break;
             case InteractionState.PANNING:
                 this.space.plugins.getPlugin('CameraPlugin')?.endPan();
-                document.body.style.cursor = 'grab'; // Consistent target
+                // Reset cursor to default 'grab' as it will likely transition to IDLE or be updated by hover.
+                document.body.style.cursor = 'grab';
                 break;
             case InteractionState.LINKING_NODE:
-                document.body.style.cursor = 'grab'; // Consistent target
+                // Reset cursor to default 'grab' as it will likely transition to IDLE or be updated by hover.
+                document.body.style.cursor = 'grab';
                 $$('.node-common.linking-target').forEach((el) => el.classList.remove('linking-target'));
                 break;
         }
@@ -889,20 +893,24 @@ export class UIManager {
         // Handles showing/hiding metaframes for nodes that are hovered but NOT selected.
         // Selected nodes manage their metaframe visibility via their `setSelectedStyle` method (called by UIPlugin).
         if (this.hoveredNodeForMetaframe !== newlyHoveredNode) {
-            // If the previously hover-shown metaframe's node is no longer hovered and isn't selected, hide its metaframe.
+            // If there was a previously hovered node (whose metaframe was shown due to hover),
+            // and that node is NOT currently selected, hide its metaframe.
             if (this.hoveredNodeForMetaframe && !selectedNodes.has(this.hoveredNodeForMetaframe)) {
                 this.hoveredNodeForMetaframe.metaframe?.hide();
             }
-            // If a new node is hovered and it's not selected, show its metaframe.
+
+            // If there's a new node being hovered, and it's NOT currently selected,
+            // show its metaframe and ensure its handles are in the default visual state.
             if (newlyHoveredNode && !selectedNodes.has(newlyHoveredNode)) {
                 newlyHoveredNode.metaframe?.show();
-                // When a metaframe is freshly shown due to hover, ensure its handles are in their default visual state
-                // (i.e., not carrying over a highlight from a previous interaction if the metaframe was hidden and re-shown).
                 if (newlyHoveredNode.metaframe) {
-                     Object.values(newlyHoveredNode.metaframe.resizeHandles).forEach(handle => newlyHoveredNode.metaframe.highlightHandle(handle, false));
-                     if(newlyHoveredNode.metaframe.dragHandle) {
+                    // Reset highlights on handles when metaframe is freshly shown by hover.
+                    Object.values(newlyHoveredNode.metaframe.resizeHandles).forEach(handle =>
+                        newlyHoveredNode.metaframe.highlightHandle(handle, false)
+                    );
+                    if (newlyHoveredNode.metaframe.dragHandle) {
                         newlyHoveredNode.metaframe.highlightHandle(newlyHoveredNode.metaframe.dragHandle, false);
-                     }
+                    }
                 }
             }
             this.hoveredNodeForMetaframe = newlyHoveredNode; // Update the record of which node's metaframe is shown by hover.
@@ -937,14 +945,14 @@ export class UIManager {
         // --- Part 3: Handle Edge Hover Highlight ---
         const currentlySelectedEdges = this._uiPluginCallbacks.getSelectedEdges() || new Set();
         if (this.hoveredEdge !== newHoveredEdge) {
-            // If previously hovered edge is no longer hovered and not selected, remove its highlight.
+            // If previously hovered edge is no longer hovered and not selected, remove its hover style.
             if (this.hoveredEdge && !currentlySelectedEdges.has(this.hoveredEdge)) {
-                this.hoveredEdge.setHighlight(false);
+                this.hoveredEdge.setHoverStyle(false);
             }
             this.hoveredEdge = newHoveredEdge; // Update record of hovered edge.
-            // If new edge is hovered and not selected, highlight it.
+            // If new edge is hovered and not selected, apply its hover style.
             if (this.hoveredEdge && !currentlySelectedEdges.has(this.hoveredEdge)) {
-                this.hoveredEdge.setHighlight(true);
+                this.hoveredEdge.setHoverStyle(true);
             }
         }
 
