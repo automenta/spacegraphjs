@@ -1595,5 +1595,3 @@ export class UIManager {
         if (camera) this.gizmo.updateScale(camera);
     }
 }
-
-[end of src/ui/UIManager.js]
