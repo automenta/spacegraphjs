@@ -28,6 +28,7 @@ export class UIManager {
     draggedNode = null;
     draggedNodeInitialZ = 0;
     dragOffset = new THREE.Vector3();
+    draggedNodeInitialQuaternion = new THREE.Quaternion(); // For debugging rotation
 
     resizedNode = null;
     activeResizeHandleType = null; // For metaframe handles: 'topLeft', 'topRight', etc.
@@ -216,6 +217,9 @@ export class UIManager {
             case InteractionState.DRAGGING_NODE: {
                 this.draggedNode = data.node;
                 this.draggedNodeInitialZ = this.draggedNode.position.z;
+                if (this.draggedNode.mesh) {
+                    this.draggedNodeInitialQuaternion.copy(this.draggedNode.mesh.quaternion);
+                }
                 this.draggedNode.startDrag();
 
                 const worldPos = this.space.screenToWorld(
@@ -387,19 +391,41 @@ export class UIManager {
                         const dragDelta = primaryNodeNewCalculatedPos.clone().sub(this.draggedNode.position);
                         const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
 
+                        // Original debug logging removed for clarity, will add targeted logging below.
+
                         if (selectedNodes?.size > 0 && selectedNodes.has(this.draggedNode)) {
                             selectedNodes.forEach((sNode) => {
                                 if (sNode === this.draggedNode) {
                                     sNode.drag(primaryNodeNewCalculatedPos);
                                 } else {
                                     const sNodeTargetPos = sNode.position.clone().add(dragDelta);
-                                    // sNodeTargetPos.z = sNode.position.z; // Allow Z-depth change for all selected nodes
                                     sNode.drag(sNodeTargetPos);
                                 }
+                                // --- ROTATION PRESERVATION TEST ---
+                                if (sNode.mesh && !sNode.mesh.quaternion.equals(this.draggedNodeInitialQuaternion)) {
+                                    // console.warn(
+                                    //     `[Drag Rotation] Node ${sNode.id} quaternion changed. Restoring.`,
+                                    //     'From:', { ...sNode.mesh.quaternion },
+                                    //     'To:', { ...this.draggedNodeInitialQuaternion }
+                                    // );
+                                    sNode.mesh.quaternion.copy(this.draggedNodeInitialQuaternion);
+                                }
+                                // --- END ROTATION PRESERVATION TEST ---
                             });
                         } else {
                             this.draggedNode.drag(primaryNodeNewCalculatedPos);
+                            // --- ROTATION PRESERVATION TEST ---
+                            if (this.draggedNode.mesh && !this.draggedNode.mesh.quaternion.equals(this.draggedNodeInitialQuaternion)) {
+                                // console.warn(
+                                //    `[Drag Rotation] Node ${this.draggedNode.id} quaternion changed. Restoring.`,
+                                //    'From:', { ...this.draggedNode.mesh.quaternion },
+                                //    'To:', { ...this.draggedNodeInitialQuaternion }
+                                // );
+                                this.draggedNode.mesh.quaternion.copy(this.draggedNodeInitialQuaternion);
+                            }
+                            // --- END ROTATION PRESERVATION TEST ---
                         }
+
                         this.space.emit('graph:node:dragged', {
                             node: this.draggedNode,
                             position: primaryNodeNewCalculatedPos,
@@ -912,20 +938,24 @@ export class UIManager {
             // If there was a previously hovered node (whose metaframe was shown due to hover),
             // and that node is NOT currently selected, hide its metaframe.
             if (this.hoveredNodeForMetaframe && !selectedNodes.has(this.hoveredNodeForMetaframe)) {
-                this.hoveredNodeForMetaframe.metaframe?.hide();
+                // ensureMetaframe will be called by metaframe.hide() if metaframe itself calls it,
+                // or we can call it here. Node.setSelectedStyle now calls it.
+                // For direct calls like this, it's safer to ensure it exists.
+                this.hoveredNodeForMetaframe.ensureMetaframe()?.hide();
             }
 
             // If there's a new node being hovered, and it's NOT currently selected,
             // show its metaframe and ensure its handles are in the default visual state.
             if (newlyHoveredNode && !selectedNodes.has(newlyHoveredNode)) {
-                newlyHoveredNode.metaframe?.show();
-                if (newlyHoveredNode.metaframe) {
+                const metaframe = newlyHoveredNode.ensureMetaframe(); // Ensure metaframe exists
+                if (metaframe) {
+                    metaframe.show();
                     // Reset highlights on handles when metaframe is freshly shown by hover.
-                    Object.values(newlyHoveredNode.metaframe.resizeHandles).forEach((handle) =>
-                        newlyHoveredNode.metaframe.highlightHandle(handle, false)
+                    Object.values(metaframe.resizeHandles).forEach((handle) =>
+                        metaframe.highlightHandle(handle, false)
                     );
-                    if (newlyHoveredNode.metaframe.dragHandle) {
-                        newlyHoveredNode.metaframe.highlightHandle(newlyHoveredNode.metaframe.dragHandle, false);
+                    if (metaframe.dragHandle) {
+                        metaframe.highlightHandle(metaframe.dragHandle, false);
                     }
                 }
             }
@@ -940,21 +970,26 @@ export class UIManager {
             this.currentHoveredGLHandle?.handleMesh !== newHoveredHandleInfo?.object
         ) {
             // De-highlight previous handle and hide its tooltip if it exists.
-            if (this.currentHoveredGLHandle && this.currentHoveredGLHandle.node?.metaframe) {
-                this.currentHoveredGLHandle.node.metaframe.highlightHandle(
-                    this.currentHoveredGLHandle.handleMesh,
-                    false
-                );
-                this.currentHoveredGLHandle.node.metaframe.setHandleTooltip(this.hoveredHandleType, '', false);
+            if (this.currentHoveredGLHandle) {
+                const oldMetaframe = this.currentHoveredGLHandle.node?.ensureMetaframe();
+                if (oldMetaframe) {
+                    oldMetaframe.highlightHandle(
+                        this.currentHoveredGLHandle.handleMesh,
+                        false
+                    );
+                    oldMetaframe.setHandleTooltip(this.hoveredHandleType, '', false);
+                }
             }
 
-            if (newHoveredHandleInfo && newHoveredHandleInfo.node?.metaframe?.isVisible) {
-                // If a new handle is hovered and its parent metaframe is visible:
-                document.body.style.cursor = this._getCursorForHandle(newHoveredHandleInfo.type);
-                const currentMetaframe = newHoveredHandleInfo.node.metaframe;
-                currentMetaframe.highlightHandle(newHoveredHandleInfo.object, true); // Highlight the handle mesh itself.
-                const tooltipText = this._getTooltipTextForHandle(newHoveredHandleInfo.type);
-                currentMetaframe.setHandleTooltip(newHoveredHandleInfo.type, tooltipText, true); // Show tooltip.
+            if (newHoveredHandleInfo) {
+                const currentMetaframe = newHoveredHandleInfo.node?.ensureMetaframe();
+                if (currentMetaframe?.isVisible) {
+                    // If a new handle is hovered and its parent metaframe is visible:
+                    document.body.style.cursor = this._getCursorForHandle(newHoveredHandleInfo.type);
+                    currentMetaframe.highlightHandle(newHoveredHandleInfo.object, true); // Highlight the handle mesh itself.
+                    const tooltipText = this._getTooltipTextForHandle(newHoveredHandleInfo.type);
+                    currentMetaframe.setHandleTooltip(newHoveredHandleInfo.type, tooltipText, true); // Show tooltip.
+                }
                 this.currentHoveredGLHandle = {
                     node: newHoveredHandleInfo.node,
                     handleMesh: newHoveredHandleInfo.object,

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Utils } from '../../utils.js';
+import { Metaframe } from '../../ui/Metaframe.js';
 
 export class Node {
     space = null;
@@ -99,7 +100,37 @@ export class Node {
 
     setSelectedStyle(_selected) {
         // This method is intended to be overridden by subclasses for custom selection styling.
+        // Basic implementation for nodes that might have a metaframe
+        const metaframe = this.ensureMetaframe(); // Ensure it's created
+        if (metaframe) {
+            if (_selected) {
+                metaframe.show();
+            } else {
+                // UIManager's hover logic will show it again if needed for hover.
+                metaframe.hide();
+            }
+        }
     }
+
+    ensureMetaframe() {
+        if (!this.metaframe && this.space) {
+            const renderingPlugin = this.space.plugins.getPlugin('RenderingPlugin');
+            if (renderingPlugin) {
+                const webglScene = renderingPlugin.getWebGLScene();
+                const cssScene = renderingPlugin.getCSS3DScene();
+
+                if (webglScene && cssScene) {
+                    this.metaframe = new Metaframe(this, this.space, webglScene, cssScene);
+                } else {
+                    // console.error(`Node ${this.id}: Cannot create Metaframe, missing scenes. Ensure RenderingPlugin is loaded and provides scenes.`);
+                }
+            } else {
+                // console.error(`Node ${this.id}: Cannot create Metaframe, missing RenderingPlugin.`);
+            }
+        }
+        return this.metaframe;
+    }
+
 
     setPosition(pos, y, z) {
         const { x, _y, _z } = typeof pos === 'object' && pos !== null ? pos : { x: pos, _y: y, _z: z };
