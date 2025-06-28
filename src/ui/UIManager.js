@@ -223,50 +223,17 @@ export class UIManager {
                 this.resizedNode = data.node;
                 this.resizedNode.startResize();
                 this.resizeStartPointerPos = { x: this.pointerState.clientX, y: this.pointerState.clientY };
-                this.activeResizeHandleType = data.handleType || null; // Store the handle type
+                this.activeResizeHandleType = data.handleType || null; // Store the handle type, e.g., 'topLeft'
 
-                if (this.resizedNode instanceof HtmlNode) {
-                    this.resizeStartNodeSize = { ...this.resizedNode.size }; // For HtmlNode
-                    this.container.style.cursor = 'nwse-resize'; // Default for HTML node's own handle
+                // Unified logic for all nodes using Metaframe handles
+                this.resizeStartNodeScale = this.resizedNode.mesh
+                    ? this.resizedNode.mesh.scale.clone()
+                    : new THREE.Vector3(1, 1, 1);
 
-                    // Screen scale calculation for HtmlNode (existing logic)
-                    const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
-                    const cam = cameraPlugin?.getCameraInstance();
-                    if (this.resizedNode.cssObject && cam) {
-                        const localOrigin = new THREE.Vector3(0, 0, 0);
-                        const localOffsetX = new THREE.Vector3(1, 0, 0);
-                        const localOffsetY = new THREE.Vector3(0, 1, 0);
-
-                        const worldOrigin = localOrigin.clone().applyMatrix4(this.resizedNode.cssObject.matrixWorld);
-                        const worldOffsetX = localOffsetX.clone().applyMatrix4(this.resizedNode.cssObject.matrixWorld);
-                        const worldOffsetY = localOffsetY.clone().applyMatrix4(this.resizedNode.cssObject.matrixWorld);
-
-                        const screenOriginNDC = worldOrigin.clone().project(cam);
-                        const screenOffsetXNDC = worldOffsetX.clone().project(cam);
-                        const screenOffsetYNDC = worldOffsetY.clone().project(cam);
-
-                        const halfW = window.innerWidth / 2;
-                        const halfH = window.innerHeight / 2;
-
-                        const screenOriginPx = { x: screenOriginNDC.x * halfW + halfW, y: -screenOriginNDC.y * halfH + halfH };
-                        const screenOffsetXPx = { x: screenOffsetXNDC.x * halfW + halfW, y: -screenOffsetXNDC.y * halfH + halfH };
-                        const screenOffsetYPx = { x: screenOffsetYNDC.x * halfW + halfH, y: -screenOffsetYNDC.y * halfH + halfH };
-
-                        this.resizeNodeScreenScaleX = Math.abs(screenOffsetXPx.x - screenOriginPx.x);
-                        this.resizeNodeScreenScaleY = Math.abs(screenOffsetYPx.y - screenOriginPx.y);
-
-                        if (this.resizeNodeScreenScaleX < 0.001) this.resizeNodeScreenScaleX = 0.001;
-                        if (this.resizeNodeScreenScaleY < 0.001) this.resizeNodeScreenScaleY = 0.001;
-                    } else {
-                        this.resizeNodeScreenScaleX = 1;
-                        this.resizeNodeScreenScaleY = 1;
-                    }
-                } else {
-                    // For generic nodes using Metaframe handles
-                    this.resizeStartNodeScale = this.resizedNode.mesh ? this.resizedNode.mesh.scale.clone() : new THREE.Vector3(1, 1, 1);
-                    // Set cursor based on handle type - can be more specific later
-                    this.container.style.cursor = 'nwse-resize'; // Default, can be refined
-                }
+                // Set cursor based on handle type - can be more specific later
+                // For now, a generic resize cursor is fine. More sophisticated cursors could be added
+                // based on this.activeResizeHandleType (e.g., 'nwse-resize', 'nesw-resize')
+                this.container.style.cursor = 'nwse-resize'; // Default, can be refined
                 break;
             }
             case InteractionState.PANNING: {
@@ -331,28 +298,20 @@ export class UIManager {
                 return;
             }
 
-            // Prioritize Metaframe Resize Handles for non-HtmlNodes
-            if (targetInfo.metaframeResizeHandle && targetInfo.node && !(targetInfo.node instanceof HtmlNode)) {
+            // Prioritize Metaframe Resize Handles for all nodes
+            if (targetInfo.metaframeResizeHandle && targetInfo.node) {
                 e.preventDefault();
                 e.stopPropagation();
                 this._transitionToState(InteractionState.RESIZING_NODE, {
                     node: targetInfo.node,
                     handleType: targetInfo.metaframeResizeHandle,
                 });
-                this._uiPluginCallbacks.setSelectedNode(targetInfo.node, false);
+                this._uiPluginCallbacks.setSelectedNode(targetInfo.node, false); // Do not allow multi-select when initiating resize
                 this.contextMenu.hide();
                 return;
             }
 
-            // For HtmlNode's own resize handle
-            if (targetInfo.resizeHandle && targetInfo.node instanceof HtmlNode) {
-                e.preventDefault();
-                e.stopPropagation();
-                this._transitionToState(InteractionState.RESIZING_NODE, { node: targetInfo.node, handleType: 'htmlResizeHandle' }); // Pass a generic type
-                this._uiPluginCallbacks.setSelectedNode(targetInfo.node, false);
-                this.contextMenu.hide();
-                return;
-            }
+            // Removed specific block for HtmlNode's own resize handle as it's been removed from HtmlNode.
 
             if (targetInfo.node) {
                 // If already handled by metaframeDragHandle, this block won't be reached for starting a drag.
@@ -448,69 +407,55 @@ export class UIManager {
                     const totalDx_screen = this.pointerState.clientX - this.resizeStartPointerPos.x;
                     const totalDy_screen = this.pointerState.clientY - this.resizeStartPointerPos.y;
 
-                    if (this.resizedNode instanceof HtmlNode) {
-                        const deltaWidth_local = totalDx_screen / (this.resizeNodeScreenScaleX || 1);
-                        const deltaHeight_local = totalDy_screen / (this.resizeNodeScreenScaleY || 1);
+                    // Unified resizing logic for all nodes (including HtmlNode) using Metaframe handles
+                    let scaleXFactor = 1;
+                    let scaleYFactor = 1;
+                    const sensitivity = 0.005; // Adjust as needed
 
-                        const newWidth = this.resizeStartNodeSize.width + deltaWidth_local;
-                        const newHeight = this.resizeStartNodeSize.height + deltaHeight_local;
-
-                        this.resizedNode.resize(
-                            Math.max(HtmlNode.MIN_SIZE.width, newWidth),
-                            Math.max(HtmlNode.MIN_SIZE.height, newHeight)
-                        );
-                        this.space.emit('graph:node:resized', {
-                            node: this.resizedNode,
-                            size: { ...this.resizedNode.size },
-                        });
-                    } else {
-                        // Generic node resizing using Metaframe handles
-                        let scaleXFactor = 1;
-                        let scaleYFactor = 1;
-                        const sensitivity = 0.005; // Adjust as needed
-
-                        // Determine scale factors based on which handle is being dragged
-                        // This is a simplified model and might need refinement for perfect intuitive feel
-                        switch (this.activeResizeHandleType) {
-                            case 'topLeft':
-                                scaleXFactor = 1 - totalDx_screen * sensitivity;
-                                scaleYFactor = 1 + totalDy_screen * sensitivity; // Screen Y is inverted relative to typical UI top-left origin
-                                break;
-                            case 'topRight':
-                                scaleXFactor = 1 + totalDx_screen * sensitivity;
-                                scaleYFactor = 1 + totalDy_screen * sensitivity;
-                                break;
-                            case 'bottomLeft':
-                                scaleXFactor = 1 - totalDx_screen * sensitivity;
-                                scaleYFactor = 1 - totalDy_screen * sensitivity;
-                                break;
-                            case 'bottomRight':
-                                scaleXFactor = 1 + totalDx_screen * sensitivity;
-                                scaleYFactor = 1 - totalDy_screen * sensitivity;
-                                break;
-                            default: // Should not happen if activeResizeHandleType is set
-                                break;
-                        }
-
-                        let newScaleX = this.resizeStartNodeScale.x * scaleXFactor;
-                        let newScaleY = this.resizeStartNodeScale.y * scaleYFactor;
-
-                        // Clamp scale to a minimum value to prevent inversion or zero scale
-                        const MIN_SCALE = 0.1;
-                        newScaleX = Math.max(MIN_SCALE, newScaleX);
-                        newScaleY = Math.max(MIN_SCALE, newScaleY);
-
-                        const newScale = new THREE.Vector3(newScaleX, newScaleY, this.resizeStartNodeScale.z);
-                        this.resizedNode.resize(newScale); // Assumes Node.resize() takes a Vector3 for scale
-
-                        this.space.emit('graph:node:resized', {
-                            node: this.resizedNode,
-                            scale: { ...newScale },
-                        });
+                    // Determine scale factors based on which handle is being dragged
+                    switch (this.activeResizeHandleType) {
+                        case 'topLeft':
+                            scaleXFactor = 1 - totalDx_screen * sensitivity;
+                            scaleYFactor = 1 + totalDy_screen * sensitivity; // Screen Y is inverted
+                            break;
+                        case 'topRight':
+                            scaleXFactor = 1 + totalDx_screen * sensitivity;
+                            scaleYFactor = 1 + totalDy_screen * sensitivity;
+                            break;
+                        case 'bottomLeft':
+                            scaleXFactor = 1 - totalDx_screen * sensitivity;
+                            scaleYFactor = 1 - totalDy_screen * sensitivity;
+                            break;
+                        case 'bottomRight':
+                            scaleXFactor = 1 + totalDx_screen * sensitivity;
+                            scaleYFactor = 1 - totalDy_screen * sensitivity;
+                            break;
+                        default: // Should ideally not happen if activeResizeHandleType is always set
+                            console.warn('UIManager: Unknown resize handle type:', this.activeResizeHandleType);
+                            break;
                     }
+
+                    let newScaleX = this.resizeStartNodeScale.x * scaleXFactor;
+                    let newScaleY = this.resizeStartNodeScale.y * scaleYFactor;
+
+                    // Clamp scale to a minimum value to prevent inversion or zero scale
+                    const MIN_SCALE = 0.1; // TODO: This could be Node.MIN_SCALE if defined
+                    newScaleX = Math.max(MIN_SCALE, newScaleX);
+                    newScaleY = Math.max(MIN_SCALE, newScaleY);
+
+                    const newScale = new THREE.Vector3(newScaleX, newScaleY, this.resizeStartNodeScale.z);
+
+                    // Node.resize() is expected to handle its internal logic (e.g. HtmlNode converting scale to pixels)
+                    this.resizedNode.resize(newScale);
+
+                    this.space.emit('graph:node:resized', {
+                        node: this.resizedNode,
+                        scale: { ...newScale }, // For listeners interested in the scale
+                        // For HtmlNode, its 'size' property is updated internally by its new resize method
+                        ...(this.resizedNode instanceof HtmlNode && { size: { ...this.resizedNode.size } }),
+                    });
                 }
                 break;
-
             case InteractionState.PANNING:
                 e.preventDefault();
                 this.space.plugins.getPlugin('CameraPlugin')?.pan(dx, dy);
@@ -779,7 +724,7 @@ export class UIManager {
         const element = document.elementFromPoint(event.clientX, event.clientY);
 
         const nodeElement = element?.closest('.node-common');
-        const resizeHandle = element?.closest('.resize-handle');
+        // const resizeHandle = element?.closest('.resize-handle'); // Removed as HtmlNode's own handle is gone
         const nodeControlsButton = element?.closest('.node-controls button');
         const contentEditableEl = element?.closest('[contenteditable="true"]');
         const interactiveEl = element?.closest('button, input, textarea, select, a, .clickable');
@@ -792,7 +737,8 @@ export class UIManager {
         let metaframeDragHandle = false;
 
         // Prioritize HTML element interactions before raycasting into the 3D scene.
-        const needsRaycast = !resizeHandle && !nodeControlsButton && !contentEditableEl && !interactiveEl;
+        // Removed resizeHandle from this check
+        const needsRaycast = !nodeControlsButton && !contentEditableEl && !interactiveEl;
 
         if (needsRaycast) {
             const intersectedObjectResult = this.space.intersectedObjects(event.clientX, event.clientY);
@@ -839,7 +785,7 @@ export class UIManager {
         return {
             element,
             nodeElement,
-            resizeHandle, // This is for HtmlNode's own handle
+            // resizeHandle, // This is for HtmlNode's own handle - REMOVED
             nodeControls: nodeControlsButton,
             contentEditable: contentEditableEl,
             interactiveElement: interactiveEl,

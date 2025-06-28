@@ -8,13 +8,31 @@ export class HtmlNode extends Node {
     static MIN_SIZE = { width: 80, height: 40 };
     static CONTENT_SCALE_RANGE = { min: 0.3, max: 3.0 };
     htmlElement = null;
-    size = { width: 160, height: 70 };
+    size = { width: 160, height: 70 }; // Current pixel size
+    baseSize = { width: 160, height: 70 }; // Base pixel size, scale is applied to this
+
     constructor(id, position, data = {}, mass = 1.0) {
         super(id, position, data, mass);
         const initialWidth = this.data.width ?? 160;
         const initialHeight = this.data.height ?? 70;
-        this.size = { width: initialWidth, height: initialHeight };
-        this.initialSize = { width: initialWidth, height: initialHeight }; // Store initial size
+        this.baseSize = { width: initialWidth, height: initialHeight };
+        // Initialize this.size based on initial scale if provided, otherwise same as baseSize
+        const initialScaleX = this.data.scale?.x ?? 1.0;
+        const initialScaleY = this.data.scale?.y ?? 1.0;
+        this.size = {
+            width: Math.max(HtmlNode.MIN_SIZE.width, this.baseSize.width * initialScaleX),
+            height: Math.max(HtmlNode.MIN_SIZE.height, this.baseSize.height * initialScaleY),
+        };
+
+        // Ensure this.mesh is initialized for Node.resize() and Metaframe
+        if (!this.mesh) {
+            // Using a Group as a placeholder if no specific WebGL mesh is needed for HtmlNode itself
+            this.mesh = new THREE.Group();
+            this.mesh.userData = { nodeId: this.id, type: 'html-node-mesh-placeholder' };
+        }
+        this.mesh.scale.set(initialScaleX, initialScaleY, this.data.scale?.z ?? 1.0);
+
+
         this.htmlElement = this._createElement();
         this.cssObject = new CSS3DObject(this.htmlElement);
         this.cssObject.userData = { nodeId: this.id, type: 'html-node' };
@@ -55,12 +73,10 @@ export class HtmlNode extends Node {
                 <div class="node-controls">
                     <button class="node-quick-button node-content-zoom-in" title="Zoom In Content (+)">➕</button>
                     <button class="node-quick-button node-content-zoom-out" title="Zoom Out Content (-)">➖</button>
-                    <button class="node-quick-button node-grow" title="Grow Node (Ctrl++)">↗️</button>
-                    <button class="node-quick-button node-shrink" title="Shrink Node (Ctrl+-)">↙️</button>
-                    <button class="node-quick-button delete-button node-delete" title="Delete Node (Del)">🗑️</button>
+                    ${/* Removed Grow, Shrink, Delete buttons. Resize handle also removed. */''}
                 </div>
             </div>
-            <div class="resize-handle" title="Resize Node"></div>
+            ${/* Removed <div class="resize-handle" title="Resize Node"></div> */''}
         `;
         this._initContentEditable(el);
         return el;
@@ -145,7 +161,15 @@ export class HtmlNode extends Node {
     }
 
     adjustContentScale = (deltaFactor) => this.setContentScale(this.data.contentScale * deltaFactor);
-    adjustNodeSize = (factor) => this.setSize(this.size.width * factor, this.size.height * factor, false);
+    adjustNodeSize = (factor) => {
+        if (!this.mesh) return; // Should be initialized by constructor
+        const newScale = this.mesh.scale.clone();
+        newScale.x *= factor;
+        newScale.y *= factor;
+        // Z scale is typically 1 for HtmlNodes, but preserve it if it was set otherwise
+        // newScale.z *= factor; // Uncomment if 3D scaling of HtmlNode plane is intended
+        this.resize(newScale); // Calls the overridden resize(newScale)
+    };
 
     update(space) {
         if (this.cssObject) {
@@ -154,8 +178,30 @@ export class HtmlNode extends Node {
         }
     }
 
+    // Overridden resize method to work with scale from Metaframe
+    resize(newScale) {
+        if (this.mesh) { // Ensure mesh exists, as base Node.resize expects
+            this.mesh.scale.copy(newScale);
+        }
+
+        // Calculate new pixel dimensions based on baseSize and newScale
+        this.size.width = Math.max(HtmlNode.MIN_SIZE.width, this.baseSize.width * newScale.x);
+        this.size.height = Math.max(HtmlNode.MIN_SIZE.height, this.baseSize.height * newScale.y);
+
+        if (this.htmlElement) {
+            this.htmlElement.style.width = `${this.size.width}px`;
+            this.htmlElement.style.height = `${this.size.height}px`;
+        }
+
+        // Important: Metaframe relies on getBoundingSphereRadius *not* returning a pre-scaled radius.
+        // The Node.resize() method calls this.metaframe?.update() which will handle scaling the metaframe itself.
+        super.resize(newScale); // Call super to ensure metaframe updates if logic is there
+    }
+
+
     getBoundingSphereRadius() {
-        return Math.sqrt(this.size.width ** 2 + this.size.height ** 2) / 2;
+        // Return radius based on unscaled baseSize, as Metaframe applies node.mesh.scale separately.
+        return Math.sqrt(this.baseSize.width ** 2 + this.baseSize.height ** 2) / 2;
     }
 
     setSelectedStyle(selected) {
@@ -168,9 +214,8 @@ export class HtmlNode extends Node {
         this.space?.emit('graph:node:resizestart', { node: this });
     }
 
-    resize(newWidth, newHeight) {
-        this.setSize(newWidth, newHeight);
-    }
+    // Old resize(newWidth, newHeight) is replaced by resize(newScale)
+    // setSize is still used internally if needed, or by other methods like adjustNodeSize
 
     endResize() {
         this.htmlElement?.classList.remove('resizing');
