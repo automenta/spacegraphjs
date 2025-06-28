@@ -6,5 +6,8 @@ export default defineConfig({
     base: '/spacegraphjs/',
     build: {
         outDir: 'dist-demo', // Though specified in script, good to have for clarity
+        rollupOptions: {
+            external: ['three', /^three\/.*/],
+        },
     },
 });
