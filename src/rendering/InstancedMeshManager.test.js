@@ -32,7 +32,7 @@ describe('InstancedMeshManager', () => {
     });
 
     // Mock GLTFLoader for testing GLTF loading
-    vi.mock('three/examples/jsm/loaders/GLTFLoader.js', () => ({
+    vi.mock('three/addons/loaders/GLTFLoader.js', () => ({
         GLTFLoader: vi.fn().mockImplementation(() => ({
             loadAsync: vi.fn().mockResolvedValue({
                 scene: {
