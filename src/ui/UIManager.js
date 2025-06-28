@@ -78,7 +78,6 @@ export class UIManager {
     /** @type {THREE.Object3D | null} Helper object to represent the center of multi-selection for gizmo operations, storing its initial transform. */
     multiSelectionHelper = null;
 
-
     // --- General Hover/Selection ---
     hoveredEdge = null;
     hoveredHandleType = null; // For Metaframe handles
@@ -137,7 +136,6 @@ export class UIManager {
 
         this.multiSelectionHelper = new THREE.Object3D();
 
-
         this._applySavedTheme();
         this._bindEvents();
         this._subscribeToSpaceGraphEvents();
@@ -183,7 +181,7 @@ export class UIManager {
             this.gizmo.hide();
         }
         // this.activeGizmoMode remains, it's a user setting
-    }
+    };
 
     _onRequestConfirm = (payload) => {
         this.confirmDialog.show(payload.message, payload.onConfirm);
@@ -230,21 +228,23 @@ export class UIManager {
 
         if (selectedNodes.size > 0) {
             const center = new THREE.Vector3();
-            selectedNodes.forEach(n => center.add(n.position));
+            selectedNodes.forEach((n) => center.add(n.position));
             center.divideScalar(selectedNodes.size);
             this.gizmo.position.copy(center);
 
             // For rotation and scaling of multiple nodes, the gizmo should align with the multiSelectionHelper's orientation
             if (selectedNodes.size > 1) {
-                 // If there's a meaningful average orientation, apply it. Otherwise, world default.
-                 // For now, keep it simple: use world orientation for multi-select gizmo rotation/scale.
-                 // A more advanced approach might involve calculating an average quaternion or using the first selected node's orientation.
+                // If there's a meaningful average orientation, apply it. Otherwise, world default.
+                // For now, keep it simple: use world orientation for multi-select gizmo rotation/scale.
+                // A more advanced approach might involve calculating an average quaternion or using the first selected node's orientation.
                 this.gizmo.quaternion.identity(); // Reset to world orientation for multi-select
             } else if (selectedNodes.size === 1) {
                 const node = selectedNodes.values().next().value;
-                if (node.mesh) { // ShapeNodes have a mesh with world quaternion
+                if (node.mesh) {
+                    // ShapeNodes have a mesh with world quaternion
                     this.gizmo.quaternion.copy(node.mesh.getWorldQuaternion(new THREE.Quaternion()));
-                } else { // HTML nodes don't have a direct 3D mesh rotation by default
+                } else {
+                    // HTML nodes don't have a direct 3D mesh rotation by default
                     this.gizmo.quaternion.identity();
                 }
             }
@@ -299,15 +299,15 @@ export class UIManager {
                 break;
             case InteractionState.GIZMO_DRAGGING:
                 if (this.gizmo && this.draggedGizmoHandleInfo?.object) {
-                     this.gizmo.setHandleActive(this.draggedGizmoHandleInfo.object, false);
+                    this.gizmo.setHandleActive(this.draggedGizmoHandleInfo.object, false);
                 }
                 this.draggedGizmoHandleInfo = null;
                 this.selectedNodesInitialPositions.clear();
                 this.selectedNodesInitialQuaternions.clear();
                 this.selectedNodesInitialScales.clear();
-                this.multiSelectionHelper?.position.set(0,0,0);
+                this.multiSelectionHelper?.position.set(0, 0, 0);
                 this.multiSelectionHelper?.quaternion.identity();
-                this.multiSelectionHelper?.scale.set(1,1,1);
+                this.multiSelectionHelper?.scale.set(1, 1, 1);
 
                 document.body.style.cursor = this.gizmo?.visible ? 'default' : 'grab';
                 this.space.isDragging = false;
@@ -331,7 +331,10 @@ export class UIManager {
                 if (this.draggedNode.mesh) this.draggedNodeInitialQuaternion.copy(this.draggedNode.mesh.quaternion);
                 this.draggedNode.startDrag();
                 const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
-                if (!camera) { this._transitionToState(InteractionState.IDLE); return; }
+                if (!camera) {
+                    this._transitionToState(InteractionState.IDLE);
+                    return;
+                }
                 const cameraForward = new THREE.Vector3();
                 camera.getWorldDirection(cameraForward);
                 this.dragInteractionPlane.setFromNormalAndCoplanarPoint(cameraForward, this.draggedNodeInitialWorldPos);
@@ -342,8 +345,14 @@ export class UIManager {
                 if (raycaster.ray.intersectPlane(this.dragInteractionPlane, initialIntersectionPoint)) {
                     this.dragOffset.subVectors(initialIntersectionPoint, this.draggedNodeInitialWorldPos);
                 } else {
-                    const fallbackWorldPos = this.space.screenToWorld(this.pointerState.clientX, this.pointerState.clientY, this.draggedNodeInitialWorldPos.z);
-                    this.dragOffset = fallbackWorldPos ? fallbackWorldPos.sub(this.draggedNode.position) : new THREE.Vector3();
+                    const fallbackWorldPos = this.space.screenToWorld(
+                        this.pointerState.clientX,
+                        this.pointerState.clientY,
+                        this.draggedNodeInitialWorldPos.z
+                    );
+                    this.dragOffset = fallbackWorldPos
+                        ? fallbackWorldPos.sub(this.draggedNode.position)
+                        : new THREE.Vector3();
                 }
                 document.body.style.cursor = 'grabbing';
                 this.space.isDragging = true;
@@ -355,7 +364,10 @@ export class UIManager {
                 this.space.isDragging = true;
                 this.resizeStartPointerPos = { x: this.pointerState.clientX, y: this.pointerState.clientY };
                 this.activeResizeHandleType = data.handleType || null;
-                if (!this.resizedNode.mesh) { this._transitionToState(InteractionState.IDLE); return; }
+                if (!this.resizedNode.mesh) {
+                    this._transitionToState(InteractionState.IDLE);
+                    return;
+                }
                 this.resizeNodeInitialMatrixWorld.copy(this.resizedNode.mesh.matrixWorld);
                 this.resizeStartNodeScale.copy(this.resizedNode.mesh.scale);
                 const actualSize = this.resizedNode.getActualSize();
@@ -366,23 +378,41 @@ export class UIManager {
                     const handleWorldPos = handleObject.getWorldPosition(new THREE.Vector3());
                     const nodeWorldPos = this.resizedNode.mesh.getWorldPosition(new THREE.Vector3());
                     this.resizeStartHandleLocalPos.subVectors(handleWorldPos, nodeWorldPos);
-                    const inverseNodeWorldQuaternion = this.resizedNode.mesh.getWorldQuaternion(new THREE.Quaternion()).invert();
+                    const inverseNodeWorldQuaternion = this.resizedNode.mesh
+                        .getWorldQuaternion(new THREE.Quaternion())
+                        .invert();
                     this.resizeStartHandleLocalPos.applyQuaternion(inverseNodeWorldQuaternion);
                 } else {
                     const halfSize = this.resizeStartNodeSize.clone().multiplyScalar(0.5);
                     switch (this.activeResizeHandleType) {
-                        case 'topLeft': this.resizeStartHandleLocalPos.set(-halfSize.x, halfSize.y, 0); break;
-                        case 'topRight': this.resizeStartHandleLocalPos.set(halfSize.x, halfSize.y, 0); break;
-                        case 'bottomLeft': this.resizeStartHandleLocalPos.set(-halfSize.x, -halfSize.y, 0); break;
-                        case 'bottomRight': this.resizeStartHandleLocalPos.set(halfSize.x, -halfSize.y, 0); break;
-                        default: this.resizeStartHandleLocalPos.set(0,0,0);
+                        case 'topLeft':
+                            this.resizeStartHandleLocalPos.set(-halfSize.x, halfSize.y, 0);
+                            break;
+                        case 'topRight':
+                            this.resizeStartHandleLocalPos.set(halfSize.x, halfSize.y, 0);
+                            break;
+                        case 'bottomLeft':
+                            this.resizeStartHandleLocalPos.set(-halfSize.x, -halfSize.y, 0);
+                            break;
+                        case 'bottomRight':
+                            this.resizeStartHandleLocalPos.set(halfSize.x, -halfSize.y, 0);
+                            break;
+                        default:
+                            this.resizeStartHandleLocalPos.set(0, 0, 0);
                     }
                 }
                 const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
                 if (camera) {
-                    const nodeLocalZAxisInWorld = new THREE.Vector3(0, 0, 1).applyQuaternion(this.resizedNode.mesh.getWorldQuaternion(new THREE.Quaternion()));
-                    const initialHandleWorldPos = this.resizeStartHandleLocalPos.clone().applyMatrix4(this.resizeNodeInitialMatrixWorld);
-                    this.resizeInteractionPlane.setFromNormalAndCoplanarPoint(nodeLocalZAxisInWorld, initialHandleWorldPos);
+                    const nodeLocalZAxisInWorld = new THREE.Vector3(0, 0, 1).applyQuaternion(
+                        this.resizedNode.mesh.getWorldQuaternion(new THREE.Quaternion())
+                    );
+                    const initialHandleWorldPos = this.resizeStartHandleLocalPos
+                        .clone()
+                        .applyMatrix4(this.resizeNodeInitialMatrixWorld);
+                    this.resizeInteractionPlane.setFromNormalAndCoplanarPoint(
+                        nodeLocalZAxisInWorld,
+                        initialHandleWorldPos
+                    );
                 } else {
                     this.resizeInteractionPlane.setComponents(0, 0, 1, -this.resizedNode.position.z);
                 }
@@ -396,21 +426,25 @@ export class UIManager {
                 this.selectedNodesInitialPositions.clear();
                 this.selectedNodesInitialQuaternions.clear();
                 this.selectedNodesInitialScales.clear();
-                data.selectedNodes.forEach(node => {
+                data.selectedNodes.forEach((node) => {
                     this.selectedNodesInitialPositions.set(node.id, node.position.clone());
-                    const worldQuaternion = node.mesh ? node.mesh.getWorldQuaternion(new THREE.Quaternion()) : new THREE.Quaternion();
+                    const worldQuaternion = node.mesh
+                        ? node.mesh.getWorldQuaternion(new THREE.Quaternion())
+                        : new THREE.Quaternion();
                     this.selectedNodesInitialQuaternions.set(node.id, worldQuaternion);
-                     const worldScale = node.mesh ? node.mesh.getWorldScale(new THREE.Vector3()) : new THREE.Vector3(1,1,1);
+                    const worldScale = node.mesh
+                        ? node.mesh.getWorldScale(new THREE.Vector3())
+                        : new THREE.Vector3(1, 1, 1);
                     this.selectedNodesInitialScales.set(node.id, worldScale);
                 });
 
                 if (data.selectedNodes.size > 1 && this.multiSelectionHelper && this.gizmo) {
                     this.multiSelectionHelper.position.copy(this.gizmo.position);
                     this.multiSelectionHelper.quaternion.copy(this.gizmo.quaternion); // Align helper with gizmo itself
-                    this.multiSelectionHelper.scale.set(1,1,1); // Reset scale for helper
+                    this.multiSelectionHelper.scale.set(1, 1, 1); // Reset scale for helper
                     this.multiSelectionHelper.updateMatrixWorld(true);
 
-                    data.selectedNodes.forEach(node => {
+                    data.selectedNodes.forEach((node) => {
                         const initialPos = this.selectedNodesInitialPositions.get(node.id);
                         if (initialPos) {
                             // Store offset in local coords of the multiSelectionHelper
@@ -420,7 +454,6 @@ export class UIManager {
                     });
                 }
 
-
                 if (this.gizmo && this.draggedGizmoHandleInfo.object) {
                     this.gizmo.setHandleActive(this.draggedGizmoHandleInfo.object, true);
                 }
@@ -429,7 +462,9 @@ export class UIManager {
                 break;
             }
             case InteractionState.PANNING: {
-                this.space.plugins.getPlugin('CameraPlugin')?.startPan(this.pointerState.clientX, this.pointerState.clientY);
+                this.space.plugins
+                    .getPlugin('CameraPlugin')
+                    ?.startPan(this.pointerState.clientX, this.pointerState.clientY);
                 document.body.style.cursor = 'grabbing';
                 break;
             }
@@ -453,14 +488,20 @@ export class UIManager {
         const targetInfo = this._getTargetInfo(e);
 
         const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
-        if (cameraPlugin?.getCameraMode() === 'free' && cameraPlugin.getControls()?.isPointerLocked && this.pointerState.button === 0) return;
+        if (
+            cameraPlugin?.getCameraMode() === 'free' &&
+            cameraPlugin.getControls()?.isPointerLocked &&
+            this.pointerState.button === 0
+        )
+            return;
 
         // Gizmo Interaction takes precedence
         if (this.pointerState.button === 0 && targetInfo.gizmoHandleInfo) {
             e.preventDefault();
             e.stopPropagation();
             const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
-            if (selectedNodes && selectedNodes.size > 0 && this.gizmo) { // Ensure gizmo exists
+            if (selectedNodes && selectedNodes.size > 0 && this.gizmo) {
+                // Ensure gizmo exists
                 // Store initial transforms for all selected nodes
                 // This is now handled inside _transitionToState GIZMO_DRAGGING block
 
@@ -479,7 +520,10 @@ export class UIManager {
                     // This is crucial for rotation handles where the click might not be exactly on the mesh
                     const gizmoPlaneNormal = new THREE.Vector3();
                     camera.getWorldDirection(gizmoPlaneNormal); // Normal faces away from camera
-                    const interactionPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(gizmoPlaneNormal.negate(), this.gizmo.position);
+                    const interactionPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(
+                        gizmoPlaneNormal.negate(),
+                        this.gizmo.position
+                    );
                     if (!raycaster.ray.intersectPlane(interactionPlane, initialPointerWorldPosOnGizmo)) {
                         // Further fallback if plane intersection fails (should be rare)
                         initialPointerWorldPosOnGizmo.copy(this.gizmo.position);
@@ -489,7 +533,7 @@ export class UIManager {
                 this._transitionToState(InteractionState.GIZMO_DRAGGING, {
                     gizmoHandleInfo: targetInfo.gizmoHandleInfo,
                     initialPointerWorldPos: initialPointerWorldPosOnGizmo,
-                    selectedNodes: selectedNodes // Pass the set of selected nodes
+                    selectedNodes: selectedNodes, // Pass the set of selected nodes
                 });
             }
             this.contextMenu.hide();
@@ -504,13 +548,15 @@ export class UIManager {
 
         if (this.pointerState.button === 0) {
             if (targetInfo.nodeControls) {
-                e.preventDefault(); e.stopPropagation();
+                e.preventDefault();
+                e.stopPropagation();
                 this._handleNodeControlButtonClick(targetInfo.nodeControls, targetInfo.node);
                 return;
             }
             if (targetInfo.metaframeHandleInfo && targetInfo.metaframeHandleInfo.node) {
-                e.preventDefault(); e.stopPropagation();
-                const {node: handleNode, type: handleType} = targetInfo.metaframeHandleInfo;
+                e.preventDefault();
+                e.stopPropagation();
+                const { node: handleNode, type: handleType } = targetInfo.metaframeHandleInfo;
                 if (handleType === 'dragHandle') {
                     this._transitionToState(InteractionState.DRAGGING_NODE, { node: handleNode });
                     this._uiPluginCallbacks.setSelectedNode(handleNode, e.shiftKey);
@@ -576,7 +622,10 @@ export class UIManager {
                         const cameraForward = new THREE.Vector3();
                         camera.getWorldDirection(cameraForward);
                         this.draggedNodeInitialWorldPos.addScaledVector(cameraForward, planeShiftAmount);
-                        this.dragInteractionPlane.setFromNormalAndCoplanarPoint(cameraForward, this.draggedNodeInitialWorldPos);
+                        this.dragInteractionPlane.setFromNormalAndCoplanarPoint(
+                            cameraForward,
+                            this.draggedNodeInitialWorldPos
+                        );
                         currentInteractionPlane = this.dragInteractionPlane;
                     }
                     const intersectionPoint = new THREE.Vector3();
@@ -586,15 +635,22 @@ export class UIManager {
                         const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
                         if (selectedNodes?.size > 0 && selectedNodes.has(this.draggedNode)) {
                             selectedNodes.forEach((sNode) => {
-                                const newPos = sNode === this.draggedNode ? primaryNodeNewCalculatedPos : sNode.position.clone().add(dragDelta);
+                                const newPos =
+                                    sNode === this.draggedNode
+                                        ? primaryNodeNewCalculatedPos
+                                        : sNode.position.clone().add(dragDelta);
                                 sNode.drag(newPos);
                                 if (sNode.mesh) sNode.mesh.quaternion.copy(this.draggedNodeInitialQuaternion);
                             });
                         } else {
                             this.draggedNode.drag(primaryNodeNewCalculatedPos);
-                            if (this.draggedNode.mesh) this.draggedNode.mesh.quaternion.copy(this.draggedNodeInitialQuaternion);
+                            if (this.draggedNode.mesh)
+                                this.draggedNode.mesh.quaternion.copy(this.draggedNodeInitialQuaternion);
                         }
-                        this.space.emit('graph:node:dragged', { node: this.draggedNode, position: primaryNodeNewCalculatedPos });
+                        this.space.emit('graph:node:dragged', {
+                            node: this.draggedNode,
+                            position: primaryNodeNewCalculatedPos,
+                        });
                     }
                 }
                 break;
@@ -608,25 +664,44 @@ export class UIManager {
                     raycaster.setFromCamera(pointerNDC, camera);
                     const currentHandleWorldPosOnPlane = new THREE.Vector3();
                     if (!raycaster.ray.intersectPlane(this.resizeInteractionPlane, currentHandleWorldPosOnPlane)) break;
-                    const initialHandleWorldPos = this.resizeStartHandleLocalPos.clone().applyMatrix4(this.resizeNodeInitialMatrixWorld);
-                    const worldDisplacement = new THREE.Vector3().subVectors(currentHandleWorldPosOnPlane, initialHandleWorldPos);
-                    const inverseInitialNodeMatrix = new THREE.Matrix4().copy(this.resizeNodeInitialMatrixWorld).invert();
+                    const initialHandleWorldPos = this.resizeStartHandleLocalPos
+                        .clone()
+                        .applyMatrix4(this.resizeNodeInitialMatrixWorld);
+                    const worldDisplacement = new THREE.Vector3().subVectors(
+                        currentHandleWorldPosOnPlane,
+                        initialHandleWorldPos
+                    );
+                    const inverseInitialNodeMatrix = new THREE.Matrix4()
+                        .copy(this.resizeNodeInitialMatrixWorld)
+                        .invert();
                     const worldDisplacementEndPoint = initialHandleWorldPos.clone().add(worldDisplacement);
                     const localEndPoint = worldDisplacementEndPoint.clone().applyMatrix4(inverseInitialNodeMatrix);
                     const localStartPoint = initialHandleWorldPos.clone().applyMatrix4(inverseInitialNodeMatrix);
                     const localDisplacement = new THREE.Vector3().subVectors(localEndPoint, localStartPoint);
-                    let deltaWidth = 0, deltaHeight = 0;
+                    let deltaWidth = 0,
+                        deltaHeight = 0;
                     if (this.activeResizeHandleType.includes('Left')) deltaWidth = -localDisplacement.x;
                     else if (this.activeResizeHandleType.includes('Right')) deltaWidth = localDisplacement.x;
                     if (this.activeResizeHandleType.includes('Top')) deltaHeight = localDisplacement.y;
                     else if (this.activeResizeHandleType.includes('Bottom')) deltaHeight = -localDisplacement.y;
                     let newWorldWidth = Math.max(20, this.resizeStartNodeSize.x + deltaWidth);
                     let newWorldHeight = Math.max(20, this.resizeStartNodeSize.y + deltaHeight);
-                    const newWorldDimensions = new THREE.Vector3(newWorldWidth, newWorldHeight, this.resizeStartNodeSize.z);
+                    const newWorldDimensions = new THREE.Vector3(
+                        newWorldWidth,
+                        newWorldHeight,
+                        this.resizeStartNodeSize.z
+                    );
                     this.resizedNode.resize(newWorldDimensions);
                     this.space.emit('graph:node:resized', {
                         node: this.resizedNode,
-                        ...(this.resizedNode instanceof HtmlNode && { size: { ...this.resizedNode.size }, scale: { x: newWorldWidth / this.resizedNode.baseSize.width, y: newWorldHeight / this.resizedNode.baseSize.height, z: this.resizeStartNodeScale.z } }),
+                        ...(this.resizedNode instanceof HtmlNode && {
+                            size: { ...this.resizedNode.size },
+                            scale: {
+                                x: newWorldWidth / this.resizedNode.baseSize.width,
+                                y: newWorldHeight / this.resizedNode.baseSize.height,
+                                z: this.resizeStartNodeScale.z,
+                            },
+                        }),
                         ...(!(this.resizedNode instanceof HtmlNode) && { worldDimensions: { ...newWorldDimensions } }),
                     });
                 }
@@ -641,7 +716,11 @@ export class UIManager {
                 const targetInfo = this._getTargetInfo(e);
                 $$('.node-common.linking-target').forEach((el) => el.classList.remove('linking-target'));
                 const targetElement = targetInfo.node?.htmlElement ?? targetInfo.node?.labelObject?.element;
-                if (targetInfo.node && targetInfo.node !== this._uiPluginCallbacks.getLinkSourceNode() && targetElement) {
+                if (
+                    targetInfo.node &&
+                    targetInfo.node !== this._uiPluginCallbacks.getLinkSourceNode() &&
+                    targetElement
+                ) {
                     targetElement.classList.add('linking-target');
                 }
                 break;
@@ -655,7 +734,15 @@ export class UIManager {
 
         if (!this.pointerState.isDraggingThresholdMet && e.button === 0) {
             const targetInfo = this._getTargetInfo(e);
-            if (targetInfo.node instanceof HtmlNode && targetInfo.node.data.editable && targetInfo.element?.closest('.node-content') === targetInfo.node.htmlElement.querySelector('.node-content')) {
+            if (
+                targetInfo.node instanceof HtmlNode &&
+                targetInfo.node.data.editable &&
+                targetInfo.element?.closest('.node-content') ===
+                    targetInfo.node.htmlElement.querySelector('.node-content')
+            ) {
+                // This condition is met when a user clicks (not drags) on the content area of an editable HTML node.
+                // Future: Could potentially auto-focus or enter an edit mode here if not already handled by browser default behavior.
+                // For now, no specific action is taken, allowing default browser behavior for contentEditable.
             }
         }
 
@@ -671,11 +758,24 @@ export class UIManager {
         const actionClass = [...buttonEl.classList].find((cls) => cls.startsWith('node-') && !cls.includes('button'));
         const action = actionClass?.substring('node-'.length);
         switch (action) {
-            case 'delete': this.space.emit('ui:request:confirm', { message: `Delete node "${node.id.substring(0,10)}..."?`, onConfirm: () => this.space.emit('ui:request:removeNode', node.id) }); break;
-            case 'content-zoom-in': this.space.emit('ui:request:adjustContentScale', {node, factor: 1.15}); break;
-            case 'content-zoom-out': this.space.emit('ui:request:adjustContentScale', {node, factor: 1/1.15}); break;
-            case 'grow': this.space.emit('ui:request:adjustNodeSize', {node, factor: 1.2}); break;
-            case 'shrink': this.space.emit('ui:request:adjustNodeSize', {node, factor: 1/1.2}); break;
+            case 'delete':
+                this.space.emit('ui:request:confirm', {
+                    message: `Delete node "${node.id.substring(0, 10)}..."?`,
+                    onConfirm: () => this.space.emit('ui:request:removeNode', node.id),
+                });
+                break;
+            case 'content-zoom-in':
+                this.space.emit('ui:request:adjustContentScale', { node, factor: 1.15 });
+                break;
+            case 'content-zoom-out':
+                this.space.emit('ui:request:adjustContentScale', { node, factor: 1 / 1.15 });
+                break;
+            case 'grow':
+                this.space.emit('ui:request:adjustNodeSize', { node, factor: 1.2 });
+                break;
+            case 'shrink':
+                this.space.emit('ui:request:adjustNodeSize', { node, factor: 1 / 1.2 });
+                break;
         }
     }
 
@@ -685,11 +785,19 @@ export class UIManager {
         this.contextMenu.hide();
         const targetInfo = this._getTargetInfo(e);
         if (targetInfo.gizmoHandleInfo) return;
-        this.contextMenu.show(e.clientX, e.clientY, { node: targetInfo.node, intersectedEdge: targetInfo.intersectedEdge, shiftKey: e.shiftKey });
+        this.contextMenu.show(e.clientX, e.clientY, {
+            node: targetInfo.node,
+            intersectedEdge: targetInfo.intersectedEdge,
+            shiftKey: e.shiftKey,
+        });
     };
 
     _onDocumentClick = (e) => {
-        if (this.contextMenu.contextMenuElement.contains(e.target) || this.contextMenu.contextMenuElement.style.display === 'none') return;
+        if (
+            this.contextMenu.contextMenuElement.contains(e.target) ||
+            this.contextMenu.contextMenuElement.style.display === 'none'
+        )
+            return;
         if (this.edgeMenu.edgeMenuObject?.element?.contains(e.target)) return;
         if (this.confirmDialog.confirmDialogElement.contains(e.target)) return;
         if (this.hudManager.keyboardShortcutsDialog.keyboardShortcutsDialogElement?.contains(e.target)) return;
@@ -706,7 +814,8 @@ export class UIManager {
 
     _onKeyDown = (e) => {
         const activeEl = document.activeElement;
-        const isEditingText = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable);
+        const isEditingText =
+            activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable);
         if (isEditingText && e.key !== 'Escape') return;
 
         const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
@@ -714,62 +823,120 @@ export class UIManager {
         const primarySelectedNode = selectedNodes.size > 0 ? selectedNodes.values().next().value : null;
         const primarySelectedEdge = selectedEdges.size > 0 ? selectedEdges.values().next().value : null;
         let handled = false;
+        let msg = ''; // msg variable declared here
 
         switch (e.key) {
-            case 'Delete': case 'Backspace':
+            case 'Delete':
+            case 'Backspace': {
                 if (primarySelectedNode) {
-                    const msg = selectedNodes.size > 1 ? `Delete ${selectedNodes.size} selected nodes?` : `Delete node "${primarySelectedNode.id.substring(0,10)}..."?`;
-                    this.space.emit('ui:request:confirm', { message: msg, onConfirm: () => selectedNodes.forEach(n => this.space.emit('ui:request:removeNode', n.id))});
+                    msg = // msg is assigned here
+                        selectedNodes.size > 1
+                            ? `Delete ${selectedNodes.size} selected nodes?`
+                            : `Delete node "${primarySelectedNode.id.substring(0, 10)}..."?`;
+                    this.space.emit('ui:request:confirm', {
+                        message: msg,
+                        onConfirm: () =>
+                            selectedNodes.forEach((n) => this.space.emit('ui:request:removeNode', n.id)),
+                    });
                     handled = true;
                 } else if (primarySelectedEdge) {
-                    const msg = selectedEdges.size > 1 ? `Delete ${selectedEdges.size} selected edges?` : `Delete edge "${primarySelectedEdge.id.substring(0,10)}..."?`;
-                    this.space.emit('ui:request:confirm', { message: msg, onConfirm: () => selectedEdges.forEach(edge => this.space.emit('ui:request:removeEdge', edge.id))});
+                    msg = // msg is assigned here
+                        selectedEdges.size > 1
+                            ? `Delete ${selectedEdges.size} selected edges?`
+                            : `Delete edge "${primarySelectedEdge.id.substring(0, 10)}..."?`;
+                    this.space.emit('ui:request:confirm', {
+                        message: msg,
+                        onConfirm: () =>
+                            selectedEdges.forEach((edge) => this.space.emit('ui:request:removeEdge', edge.id)),
+                    });
                     handled = true;
                 }
                 break;
-            case 'Escape':
-                if (this._uiPluginCallbacks.getIsLinking()) { this._uiPluginCallbacks.cancelLinking(); handled = true; }
-                else if (this.hudManager.isLayoutSettingsDialogVisible()) { this.hudManager.layoutSettingsDialog.hide(); handled = true; }
-                else if (this.hudManager.isKeyboardShortcutsDialogVisible()) { this.hudManager.keyboardShortcutsDialog.hide(); handled = true; }
-                else if (this.contextMenu.contextMenuElement.style.display === 'block') { this.contextMenu.hide(); handled = true; }
-                else if (this.confirmDialog.confirmDialogElement.style.display === 'block') { this.confirmDialog.hide(); handled = true; }
-                else if (this.edgeMenu.edgeMenuObject) { this._uiPluginCallbacks.setSelectedEdge(null, false); handled = true; }
-                else if (selectedNodes.size > 0 || selectedEdges.size > 0) { this._uiPluginCallbacks.setSelectedNode(null, false); handled = true; }
+            }
+            case 'Escape': {
+                if (this._uiPluginCallbacks.getIsLinking()) {
+                    this._uiPluginCallbacks.cancelLinking();
+                    handled = true;
+                } else if (this.hudManager.isLayoutSettingsDialogVisible()) {
+                    this.hudManager.layoutSettingsDialog.hide();
+                    handled = true;
+                } else if (this.hudManager.isKeyboardShortcutsDialogVisible()) {
+                    this.hudManager.keyboardShortcutsDialog.hide();
+                    handled = true;
+                } else if (this.contextMenu.contextMenuElement.style.display === 'block') {
+                    this.contextMenu.hide();
+                    handled = true;
+                } else if (this.confirmDialog.confirmDialogElement.style.display === 'block') {
+                    this.confirmDialog.hide();
+                    handled = true;
+                } else if (this.edgeMenu.edgeMenuObject) {
+                    this._uiPluginCallbacks.setSelectedEdge(null, false);
+                    handled = true;
+                } else if (selectedNodes.size > 0 || selectedEdges.size > 0) {
+                    this._uiPluginCallbacks.setSelectedNode(null, false);
+                    handled = true;
+                }
                 const camPlugin = this.space.plugins.getPlugin('CameraPlugin');
-                if (camPlugin?.getCameraMode() === 'free' && camPlugin.getControls()?.isPointerLocked) { camPlugin.exitPointerLock(); handled = true; }
+                if (camPlugin?.getCameraMode() === 'free' && camPlugin.getControls()?.isPointerLocked) {
+                    camPlugin.exitPointerLock();
+                    handled = true;
+                }
                 break;
+            }
             case 'Enter':
                 if (primarySelectedNode instanceof HtmlNode && primarySelectedNode.data.editable && !isEditingText) {
-                    primarySelectedNode.htmlElement?.querySelector('.node-content')?.focus(); handled = true;
+                    primarySelectedNode.htmlElement?.querySelector('.node-content')?.focus();
+                    handled = true;
                 }
                 break;
-            case '+': case '=':
+            case '+':
+            case '=': {
                 if (primarySelectedNode instanceof HtmlNode) {
-                    const eventName = (e.ctrlKey || e.metaKey) ? 'ui:request:adjustNodeSize' : 'ui:request:adjustContentScale';
-                    const factor = (e.ctrlKey || e.metaKey) ? 1.2 : 1.15;
-                    this.space.emit(eventName, { node: primarySelectedNode, factor }); handled = true;
+                    const eventName =
+                        e.ctrlKey || e.metaKey ? 'ui:request:adjustNodeSize' : 'ui:request:adjustContentScale';
+                    const factor = e.ctrlKey || e.metaKey ? 1.2 : 1.15;
+                    this.space.emit(eventName, { node: primarySelectedNode, factor });
+                    handled = true;
                 }
                 break;
-            case '-': case '_':
+            }
+            case '-':
+            case '_': {
                 if (primarySelectedNode instanceof HtmlNode) {
-                    const eventName = (e.ctrlKey || e.metaKey) ? 'ui:request:adjustNodeSize' : 'ui:request:adjustContentScale';
-                    const factor = (e.ctrlKey || e.metaKey) ? 1/1.2 : 1/1.15;
-                    this.space.emit(eventName, { node: primarySelectedNode, factor }); handled = true;
+                    const eventName =
+                        e.ctrlKey || e.metaKey ? 'ui:request:adjustNodeSize' : 'ui:request:adjustContentScale';
+                    const factor = e.ctrlKey || e.metaKey ? 1 / 1.2 : 1 / 1.15;
+                    this.space.emit(eventName, { node: primarySelectedNode, factor });
+                    handled = true;
                 }
                 break;
-            case ' ':
-                if (primarySelectedNode) { this.space.emit('ui:request:focusOnNode', primarySelectedNode, 0.5, true); handled = true; }
-                else if (primarySelectedEdge) {
-                    const midPoint = new THREE.Vector3().lerpVectors(primarySelectedEdge.source.position, primarySelectedEdge.target.position, 0.5);
+            }
+            case ' ': {
+                if (primarySelectedNode) {
+                    this.space.emit('ui:request:focusOnNode', primarySelectedNode, 0.5, true);
+                    handled = true;
+                } else if (primarySelectedEdge) {
+                    const midPoint = new THREE.Vector3().lerpVectors(
+                        primarySelectedEdge.source.position,
+                        primarySelectedEdge.target.position,
+                        0.5
+                    );
                     const dist = primarySelectedEdge.source.position.distanceTo(primarySelectedEdge.target.position);
                     const cam = this.space.plugins.getPlugin('CameraPlugin');
                     cam?.pushState();
                     cam?.moveTo(midPoint.x, midPoint.y, midPoint.z + dist * 0.6 + 100, 0.5, midPoint);
                     handled = true;
-                } else { this.space.emit('ui:request:centerView'); handled = true; }
+                } else {
+                    this.space.emit('ui:request:centerView');
+                    handled = true;
+                }
                 break;
+            }
         }
-        if (handled) { e.preventDefault(); e.stopPropagation(); }
+        if (handled) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
     };
 
     _onWheel = (e) => {
@@ -778,8 +945,9 @@ export class UIManager {
         if (targetInfo.element?.closest('.edge-menu-frame input[type="range"]')) return;
 
         if ((e.ctrlKey || e.metaKey) && targetInfo.node instanceof HtmlNode) {
-            e.preventDefault(); e.stopPropagation();
-            const scaleFactor = e.deltaY < 0 ? 1.1 : 1/1.1;
+            e.preventDefault();
+            e.stopPropagation();
+            const scaleFactor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
             this.space.emit('ui:request:adjustContentScale', { node: targetInfo.node, factor: scaleFactor });
         } else {
             e.preventDefault();
@@ -810,7 +978,9 @@ export class UIManager {
         const contentEditableEl = element?.closest('[contenteditable="true"]');
         const interactiveEl = element?.closest('button, input, textarea, select, a, .clickable');
 
-        let graphNode = nodeElement ? this.space.plugins.getPlugin('NodePlugin')?.getNodeById(nodeElement.dataset.nodeId) : null;
+        let graphNode = nodeElement
+            ? this.space.plugins.getPlugin('NodePlugin')?.getNodeById(nodeElement.dataset.nodeId)
+            : null;
         let intersectedEdge = null;
         let metaframeHandleInfo = null;
         let gizmoHandleInfo = null;
@@ -838,7 +1008,7 @@ export class UIManager {
                                 type: intersectedHandleMesh.userData.gizmoType, // 'translate', 'rotate', or 'scale'
                                 part: intersectedHandleMesh.userData.part,
                                 object: intersectedHandleMesh, // The actual mesh hit
-                                distance: gizmoIntersects[0].distance
+                                distance: gizmoIntersects[0].distance,
                             };
                         }
                     }
@@ -863,54 +1033,82 @@ export class UIManager {
         }
 
         return {
-            element, nodeElement, nodeControls: nodeControlsButton, contentEditable: contentEditableEl,
-            interactiveElement: interactiveEl, node: graphNode, intersectedEdge,
-            metaframeHandleInfo, gizmoHandleInfo
+            element,
+            nodeElement,
+            nodeControls: nodeControlsButton,
+            contentEditable: contentEditableEl,
+            interactiveElement: interactiveEl,
+            node: graphNode,
+            intersectedEdge,
+            metaframeHandleInfo,
+            gizmoHandleInfo,
         };
     }
 
     _getCursorForHandle(handleType) {
         switch (handleType) {
-            case 'topLeft': case 'bottomRight': return 'nwse-resize';
-            case 'topRight': case 'bottomLeft': return 'nesw-resize';
-            case 'dragHandle': return 'grab';
-            default: return 'default';
+            case 'topLeft':
+            case 'bottomRight':
+                return 'nwse-resize';
+            case 'topRight':
+            case 'bottomLeft':
+                return 'nesw-resize';
+            case 'dragHandle':
+                return 'grab';
+            default:
+                return 'default';
         }
     }
 
     _getTooltipTextForHandle(handleType) {
         switch (handleType) {
-            case 'topLeft': return 'Resize (Top-Left)';
-            case 'topRight': return 'Resize (Top-Right)';
-            case 'bottomLeft': return 'Resize (Bottom-Left)';
-            case 'bottomRight': return 'Resize (Bottom-Right)';
-            case 'dragHandle': return 'Move Node';
-            default: return '';
+            case 'topLeft':
+                return 'Resize (Top-Left)';
+            case 'topRight':
+                return 'Resize (Top-Right)';
+            case 'bottomLeft':
+                return 'Resize (Bottom-Left)';
+            case 'bottomRight':
+                return 'Resize (Bottom-Right)';
+            case 'dragHandle':
+                return 'Move Node';
+            default:
+                return '';
         }
     }
 
     _handleHover(e) {
         const selectedNodes = this._uiPluginCallbacks.getSelectedNodes() || new Set();
         if (this.pointerState.down || this.currentState !== InteractionState.IDLE) {
-            if (this.hoveredNodeForMetaframe && !selectedNodes.has(this.hoveredNodeForMetaframe)) this.hoveredNodeForMetaframe.metaframe?.hide();
+            if (this.hoveredNodeForMetaframe && !selectedNodes.has(this.hoveredNodeForMetaframe))
+                this.hoveredNodeForMetaframe.metaframe?.hide();
             this.hoveredNodeForMetaframe = null;
             if (this.currentHoveredGLHandle && this.currentHoveredGLHandle.node?.metaframe) {
-                this.currentHoveredGLHandle.node.metaframe.highlightHandle(this.currentHoveredGLHandle.handleMesh, false);
+                this.currentHoveredGLHandle.node.metaframe.highlightHandle(
+                    this.currentHoveredGLHandle.handleMesh,
+                    false
+                );
                 this.currentHoveredGLHandle.node.metaframe.setHandleTooltip(this.hoveredHandleType, '', false);
             }
-            this.currentHoveredGLHandle = null; this.hoveredHandleType = null;
+            this.currentHoveredGLHandle = null;
+            this.hoveredHandleType = null;
             if (this.hoveredGizmoHandle && this.gizmo) this.gizmo.setHandleActive(this.hoveredGizmoHandle, false); // Use this.gizmo
             this.hoveredGizmoHandle = null;
             if (this.hoveredEdge) {
                 const selectedEdges = this._uiPluginCallbacks.getSelectedEdges() || new Set();
-                if(!selectedEdges.has(this.hoveredEdge)) this.hoveredEdge.setHoverStyle(false);
+                if (!selectedEdges.has(this.hoveredEdge)) this.hoveredEdge.setHoverStyle(false);
             }
             this.hoveredEdge = null;
             return;
         }
 
         const targetInfo = this._getTargetInfo(e);
-        const { node: newlyHoveredNode, intersectedEdge: newHoveredEdge, metaframeHandleInfo: newMFHInfo, gizmoHandleInfo: newGizmoHInfo } = targetInfo;
+        const {
+            node: newlyHoveredNode,
+            intersectedEdge: newHoveredEdge,
+            metaframeHandleInfo: newMFHInfo,
+            gizmoHandleInfo: newGizmoHInfo,
+        } = targetInfo;
 
         if (this.hoveredGizmoHandle !== newGizmoHInfo?.object) {
             if (this.hoveredGizmoHandle && this.gizmo) this.gizmo.setHandleActive(this.hoveredGizmoHandle, false); // Use this.gizmo
@@ -919,19 +1117,23 @@ export class UIManager {
         }
 
         if (this.hoveredNodeForMetaframe !== newlyHoveredNode) {
-            if (this.hoveredNodeForMetaframe && !selectedNodes.has(this.hoveredNodeForMetaframe)) this.hoveredNodeForMetaframe.ensureMetaframe()?.hide();
+            if (this.hoveredNodeForMetaframe && !selectedNodes.has(this.hoveredNodeForMetaframe))
+                this.hoveredNodeForMetaframe.ensureMetaframe()?.hide();
             if (newlyHoveredNode && !selectedNodes.has(newlyHoveredNode) && newlyHoveredNode.metaframe) {
                 const mf = newlyHoveredNode.ensureMetaframe();
                 if (mf) {
                     mf.show();
-                    Object.values(mf.resizeHandles).forEach(h => mf.highlightHandle(h, false));
+                    Object.values(mf.resizeHandles).forEach((h) => mf.highlightHandle(h, false));
                     if (mf.dragHandle) mf.highlightHandle(mf.dragHandle, false);
                 }
             }
             this.hoveredNodeForMetaframe = newlyHoveredNode;
         }
 
-        if (this.hoveredHandleType !== newMFHInfo?.type || this.currentHoveredGLHandle?.handleMesh !== newMFHInfo?.object) {
+        if (
+            this.hoveredHandleType !== newMFHInfo?.type ||
+            this.currentHoveredGLHandle?.handleMesh !== newMFHInfo?.object
+        ) {
             if (this.currentHoveredGLHandle) {
                 const oldMf = this.currentHoveredGLHandle.node?.ensureMetaframe();
                 if (oldMf) {
@@ -947,13 +1149,16 @@ export class UIManager {
                     curMf.setHandleTooltip(newMFHInfo.type, this._getTooltipTextForHandle(newMFHInfo.type), true);
                 }
                 this.currentHoveredGLHandle = { node: newMFHInfo.node, handleMesh: newMFHInfo.object };
-            } else { this.currentHoveredGLHandle = null; }
+            } else {
+                this.currentHoveredGLHandle = null;
+            }
             this.hoveredHandleType = newMFHInfo?.type || null;
         }
 
         const currentlySelectedEdges = this._uiPluginCallbacks.getSelectedEdges() || new Set();
         if (this.hoveredEdge !== newHoveredEdge) {
-            if (this.hoveredEdge && !currentlySelectedEdges.has(this.hoveredEdge)) this.hoveredEdge.setHoverStyle(false);
+            if (this.hoveredEdge && !currentlySelectedEdges.has(this.hoveredEdge))
+                this.hoveredEdge.setHoverStyle(false);
             this.hoveredEdge = newHoveredEdge;
             if (this.hoveredEdge && !currentlySelectedEdges.has(this.hoveredEdge)) this.hoveredEdge.setHoverStyle(true);
         }
@@ -962,14 +1167,19 @@ export class UIManager {
             // TODO: Set cursor based on gizmo handle type (e.g., rotate cursor, scale cursor)
             // For now, generic pointer for any gizmo handle
             document.body.style.cursor = 'pointer';
-        } else if (this.currentHoveredGLHandle) { /* cursor set by metaframe logic */ }
-        else if (this.hoveredEdge) document.body.style.cursor = 'pointer';
-        else if (this.gizmo?.visible || this.hoveredNodeForMetaframe || (newlyHoveredNode && selectedNodes.has(newlyHoveredNode))) {
+        } else if (this.currentHoveredGLHandle) {
+            /* cursor set by metaframe logic */
+        } else if (this.hoveredEdge) document.body.style.cursor = 'pointer';
+        else if (
+            this.gizmo?.visible ||
+            this.hoveredNodeForMetaframe ||
+            (newlyHoveredNode && selectedNodes.has(newlyHoveredNode))
+        ) {
             document.body.style.cursor = this.gizmo?.visible ? 'default' : 'grab';
-        }
-        else document.body.style.cursor = 'grab';
+        } else document.body.style.cursor = 'grab';
 
-        if (this.gizmo?.visible) { // Use this.gizmo
+        if (this.gizmo?.visible) {
+            // Use this.gizmo
             const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
             if (camera) this.gizmo.updateScale(camera); // Use this.gizmo
         }
@@ -977,7 +1187,15 @@ export class UIManager {
 
     _createTempLinkLine(sourceNode) {
         this._removeTempLinkLine();
-        const material = new THREE.LineDashedMaterial({ color: 0xffaa00, linewidth: 2, dashSize: 8, gapSize: 4, transparent: true, opacity: 0.9, depthTest: false });
+        const material = new THREE.LineDashedMaterial({
+            color: 0xffaa00,
+            linewidth: 2,
+            dashSize: 8,
+            gapSize: 4,
+            transparent: true,
+            opacity: 0.9,
+            depthTest: false,
+        });
         const points = [sourceNode.position.clone(), sourceNode.position.clone()];
         const geometry = new THREE.BufferGeometry().setFromPoints(points);
         this.tempLinkLine = new THREE.Line(geometry, material);
@@ -987,11 +1205,17 @@ export class UIManager {
     }
 
     _updateTempLinkLine(screenX, screenY) {
-        if (!this.tempLinkLine || !this._uiPluginCallbacks.getIsLinking() || !this._uiPluginCallbacks.getLinkSourceNode()) return;
+        if (
+            !this.tempLinkLine ||
+            !this._uiPluginCallbacks.getIsLinking() ||
+            !this._uiPluginCallbacks.getLinkSourceNode()
+        )
+            return;
         const sourceNode = this._uiPluginCallbacks.getLinkSourceNode();
         let projectionZ = sourceNode.position.z;
         const potentialTargetInfo = this.space.intersectedObjects(screenX, screenY);
-        if (potentialTargetInfo?.node && potentialTargetInfo.node !== sourceNode) projectionZ = potentialTargetInfo.node.position.z;
+        if (potentialTargetInfo?.node && potentialTargetInfo.node !== sourceNode)
+            projectionZ = potentialTargetInfo.node.position.z;
         const targetPos = this.space.screenToWorld(screenX, screenY, projectionZ);
         if (targetPos) {
             const positions = this.tempLinkLine.geometry.attributes.position;
@@ -1011,9 +1235,16 @@ export class UIManager {
         }
     }
 
-    _onLinkingStarted = (data) => this._transitionToState(InteractionState.LINKING_NODE, { sourceNode: data.sourceNode });
-    _onLinkingCancelled = () => { this._removeTempLinkLine(); if (this.currentState === InteractionState.LINKING_NODE) this._transitionToState(InteractionState.IDLE); };
-    _onLinkingCompleted = () => { this._removeTempLinkLine(); if (this.currentState === InteractionState.LINKING_NODE) this._transitionToState(InteractionState.IDLE); };
+    _onLinkingStarted = (data) =>
+        this._transitionToState(InteractionState.LINKING_NODE, { sourceNode: data.sourceNode });
+    _onLinkingCancelled = () => {
+        this._removeTempLinkLine();
+        if (this.currentState === InteractionState.LINKING_NODE) this._transitionToState(InteractionState.IDLE);
+    };
+    _onLinkingCompleted = () => {
+        this._removeTempLinkLine();
+        if (this.currentState === InteractionState.LINKING_NODE) this._transitionToState(InteractionState.IDLE);
+    };
 
     /**
      * Cleans up event listeners and disposes of UI components and gizmos.
@@ -1046,7 +1277,8 @@ export class UIManager {
         this.hudManager.dispose();
         this.toolbar.dispose();
 
-        if (this.gizmo) { // Use this.gizmo
+        if (this.gizmo) {
+            // Use this.gizmo
             this.space.plugins.getPlugin('RenderingPlugin')?.getWebGLScene()?.remove(this.gizmo);
             this.gizmo.dispose();
             this.gizmo = null;
@@ -1056,8 +1288,13 @@ export class UIManager {
             this.multiSelectionHelper = null;
         }
 
-        this.space = null; this.container = null; this.draggedNode = null; this.resizedNode = null;
-        this.hoveredEdge = null; this.hoveredGizmoHandle = null; this.draggedGizmoHandleInfo = null;
+        this.space = null;
+        this.container = null;
+        this.draggedNode = null;
+        this.resizedNode = null;
+        this.hoveredEdge = null;
+        this.hoveredGizmoHandle = null;
+        this.draggedGizmoHandleInfo = null;
         this._uiPluginCallbacks = null;
     }
 
@@ -1084,66 +1321,92 @@ export class UIManager {
         // const gizmoWorldPosition = this.gizmo.position.clone();
         // const gizmoWorldQuaternion = this.gizmo.quaternion.clone();
 
-
         // --- Translation ---
         if (gizmoInfo.type === 'translate') {
             let dragDelta = new THREE.Vector3();
             if (gizmoInfo.part === 'arrow') {
-                const axisVectorWorld = TranslationGizmo.getAxisVector(gizmoInfo.axis).clone().applyQuaternion(this.gizmo.quaternion);
-                const dragLine = new THREE.Line3(this.gizmo.position.clone().sub(axisVectorWorld.clone().multiplyScalar(10000)), this.gizmo.position.clone().add(axisVectorWorld.clone().multiplyScalar(10000)));
+                const axisVectorWorld = TranslationGizmo.getAxisVector(gizmoInfo.axis)
+                    .clone()
+                    .applyQuaternion(this.gizmo.quaternion);
+                const dragLine = new THREE.Line3(
+                    this.gizmo.position.clone().sub(axisVectorWorld.clone().multiplyScalar(10000)),
+                    this.gizmo.position.clone().add(axisVectorWorld.clone().multiplyScalar(10000))
+                );
                 raycaster.ray.closestPointToLine(dragLine, false, currentPointerWorldPos);
             } else if (gizmoInfo.part === 'plane') {
-                const planeNormalWorld = TranslationGizmo.getPlaneNormal(gizmoInfo.axis).clone().applyQuaternion(this.gizmo.quaternion);
-                const dragPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(planeNormalWorld, this.gizmoDragStartPointerWorldPos);
+                const planeNormalWorld = TranslationGizmo.getPlaneNormal(gizmoInfo.axis)
+                    .clone()
+                    .applyQuaternion(this.gizmo.quaternion);
+                const dragPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(
+                    planeNormalWorld,
+                    this.gizmoDragStartPointerWorldPos
+                );
                 if (!raycaster.ray.intersectPlane(dragPlane, currentPointerWorldPos)) return;
             }
             if (this.gizmoDragStartPointerWorldPos.lengthSq() > 0) {
                 dragDelta.subVectors(currentPointerWorldPos, this.gizmoDragStartPointerWorldPos);
             } else return;
 
-            selectedNodes.forEach(node => {
+            selectedNodes.forEach((node) => {
                 const initialPos = this.selectedNodesInitialPositions.get(node.id);
                 if (initialPos) {
                     const newPos = initialPos.clone().add(dragDelta);
                     node.setPosition(newPos.x, newPos.y, newPos.z); // Use Node's method if available for side effects
                 }
             });
-            this.space.emit('graph:nodes:transformed', { nodes: Array.from(selectedNodes), transformationType: 'translate' });
+            this.space.emit('graph:nodes:transformed', {
+                nodes: Array.from(selectedNodes),
+                transformationType: 'translate',
+            });
         }
         // --- Rotation ---
         else if (gizmoInfo.type === 'rotate') {
             const rotationSpeed = 0.025; // Adjust for sensitivity
             const deltaPointer = new THREE.Vector2(event.movementX, event.movementY);
-            const rotationAxisWorld = TranslationGizmo.getAxisVector(gizmoInfo.axis).clone().applyQuaternion(this.gizmo.quaternion);
+            const rotationAxisWorld = TranslationGizmo.getAxisVector(gizmoInfo.axis)
+                .clone()
+                .applyQuaternion(this.gizmo.quaternion);
 
             // Project pointer movement onto a vector perpendicular to both camera view and rotation axis
             // This gives a more intuitive rotation control based on mouse direction
             const viewDirection = camera.getWorldDirection(new THREE.Vector3()).negate();
-            let rotationSign = 1;
+            let _rotationSign = 1;
 
             // Determine dominant component of pointer movement relative to screen axes
             // and align with the rotation axis projected to screen space
-            const screenPerpendicularToAxis = rotationAxisWorld.clone().cross(viewDirection);
+            const _screenPerpendicularToAxis = rotationAxisWorld.clone().cross(viewDirection);
 
             // The sign of rotation depends on the dot product of pointer movement and screenPerpendicularToAxis
             // Simplified: Use movementX for Y-axis rotation, movementY for X-axis rotation. Z-axis is trickier.
             let angleIncrement = 0;
-            if (gizmoInfo.axis === 'y') { // Rotation around world Y (or gizmo's Y)
+            if (gizmoInfo.axis === 'y') {
+                // Rotation around world Y (or gizmo's Y)
                 angleIncrement = -deltaPointer.x * rotationSpeed;
-            } else if (gizmoInfo.axis === 'x') { // Rotation around world X (or gizmo's X)
+            } else if (gizmoInfo.axis === 'x') {
+                // Rotation around world X (or gizmo's X)
                 angleIncrement = deltaPointer.y * rotationSpeed;
-            } else { // Z-axis rotation
+            } else {
+                // Z-axis rotation
                 // Project gizmo center and current pointer to screen space
                 const gizmoScreenPos = this.gizmo.position.clone().project(camera);
-                const prevPointerScreenPos = new THREE.Vector2(this.pointerState.clientX - event.movementX, this.pointerState.clientY - event.movementY)
-                                                .sub(new THREE.Vector2(window.innerWidth/2, window.innerHeight/2))
-                                                .multiply(new THREE.Vector2(1/ (window.innerWidth/2), -1/(window.innerHeight/2)));
+                const prevPointerScreenPos = new THREE.Vector2(
+                    this.pointerState.clientX - event.movementX,
+                    this.pointerState.clientY - event.movementY
+                )
+                    .sub(new THREE.Vector2(window.innerWidth / 2, window.innerHeight / 2))
+                    .multiply(new THREE.Vector2(1 / (window.innerWidth / 2), -1 / (window.innerHeight / 2)));
                 const currentPointerScreenPos = new THREE.Vector2(this.pointerState.clientX, this.pointerState.clientY)
-                                                .sub(new THREE.Vector2(window.innerWidth/2, window.innerHeight/2))
-                                                .multiply(new THREE.Vector2(1/ (window.innerWidth/2), -1/(window.innerHeight/2)));
+                    .sub(new THREE.Vector2(window.innerWidth / 2, window.innerHeight / 2))
+                    .multiply(new THREE.Vector2(1 / (window.innerWidth / 2), -1 / (window.innerHeight / 2)));
 
-                const prevAngle = Math.atan2(prevPointerScreenPos.y - gizmoScreenPos.y, prevPointerScreenPos.x - gizmoScreenPos.x);
-                const currentAngle = Math.atan2(currentPointerScreenPos.y - gizmoScreenPos.y, currentPointerScreenPos.x - gizmoScreenPos.x);
+                const prevAngle = Math.atan2(
+                    prevPointerScreenPos.y - gizmoScreenPos.y,
+                    prevPointerScreenPos.x - gizmoScreenPos.x
+                );
+                const currentAngle = Math.atan2(
+                    currentPointerScreenPos.y - gizmoScreenPos.y,
+                    currentPointerScreenPos.x - gizmoScreenPos.x
+                );
                 angleIncrement = currentAngle - prevAngle;
             }
 
@@ -1153,7 +1416,7 @@ export class UIManager {
                 this.multiSelectionHelper.quaternion.premultiply(deltaRotation); // Rotate the helper
                 this.multiSelectionHelper.updateMatrixWorld(true);
 
-                selectedNodes.forEach(node => {
+                selectedNodes.forEach((node) => {
                     const initialLocalOffset = node.userData.initialOffsetFromMultiSelectCenter;
                     const initialQuaternion = this.selectedNodesInitialQuaternions.get(node.id);
                     if (initialLocalOffset && initialQuaternion) {
@@ -1178,16 +1441,17 @@ export class UIManager {
                         // For now, a simpler approach for HTML nodes (which don't have intrinsic rotation)
                         // and shape nodes (where we directly set mesh quaternion):
                         if (node.mesh) {
-                             const newWorldQuaternion = this.multiSelectionHelper.quaternion.clone(); // Simplified: align with helper
-                             // A more correct approach would be:
-                             // const initialRelQuaternion = node.userData.initialRelativeQuaternion; (if stored)
-                             // const newWorldQuaternion = this.multiSelectionHelper.quaternion.clone().multiply(initialRelQuaternion);
-                             node.mesh.quaternion.copy(newWorldQuaternion);
+                            const newWorldQuaternion = this.multiSelectionHelper.quaternion.clone(); // Simplified: align with helper
+                            // A more correct approach would be:
+                            // const initialRelQuaternion = node.userData.initialRelativeQuaternion; (if stored)
+                            // const newWorldQuaternion = this.multiSelectionHelper.quaternion.clone().multiply(initialRelQuaternion);
+                            node.mesh.quaternion.copy(newWorldQuaternion);
                         }
                     }
                 });
-            } else { // Single node selection
-                selectedNodes.forEach(node => {
+            } else {
+                // Single node selection
+                selectedNodes.forEach((node) => {
                     const initialPos = this.selectedNodesInitialPositions.get(node.id);
                     const initialQuaternion = this.selectedNodesInitialQuaternions.get(node.id);
                     if (initialPos && initialQuaternion) {
@@ -1197,14 +1461,18 @@ export class UIManager {
                         const newPos = this.gizmo.position.clone().add(offset);
                         node.setPosition(newPos.x, newPos.y, newPos.z);
 
-                        if (node.mesh) { // Only ShapeNodes usually have a mesh to rotate
+                        if (node.mesh) {
+                            // Only ShapeNodes usually have a mesh to rotate
                             const newQuaternion = deltaRotation.clone().multiply(initialQuaternion);
                             node.mesh.quaternion.copy(newQuaternion);
                         }
                     }
                 });
             }
-            this.space.emit('graph:nodes:transformed', { nodes: Array.from(selectedNodes), transformationType: 'rotate' });
+            this.space.emit('graph:nodes:transformed', {
+                nodes: Array.from(selectedNodes),
+                transformationType: 'rotate',
+            });
         }
         // --- Scaling ---
         else if (gizmoInfo.type === 'scale') {
@@ -1212,13 +1480,15 @@ export class UIManager {
             let scaleFactorDelta = new THREE.Vector3(event.movementX, event.movementY, 0).length() * scaleSpeed;
             if (event.movementX + event.movementY < 0) scaleFactorDelta *= -1; // Simplistic direction check
 
-            let scaleDeltaVec = new THREE.Vector3(1,1,1);
+            let scaleDeltaVec = new THREE.Vector3(1, 1, 1);
 
-            if (gizmoInfo.axis === 'xyz') { // Uniform scale
+            if (gizmoInfo.axis === 'xyz') {
+                // Uniform scale
                 const scaleVal = 1 + scaleFactorDelta;
                 scaleDeltaVec.set(scaleVal, scaleVal, scaleVal);
-            } else { // Axis-specific scale
-                const axisVectorGizmoSpace = TranslationGizmo.getAxisVector(gizmoInfo.axis);
+            } else {
+                // Axis-specific scale
+                const _axisVectorGizmoSpace = TranslationGizmo.getAxisVector(gizmoInfo.axis);
                 if (gizmoInfo.axis === 'x') scaleDeltaVec.x += scaleFactorDelta;
                 else if (gizmoInfo.axis === 'y') scaleDeltaVec.y += scaleFactorDelta;
                 else if (gizmoInfo.axis === 'z') scaleDeltaVec.z += scaleFactorDelta;
@@ -1234,14 +1504,15 @@ export class UIManager {
                 this.multiSelectionHelper.scale.multiply(scaleDeltaVec);
                 this.multiSelectionHelper.updateMatrixWorld(true);
 
-                selectedNodes.forEach(node => {
+                selectedNodes.forEach((node) => {
                     const initialLocalOffset = node.userData.initialOffsetFromMultiSelectCenter;
                     const initialScale = this.selectedNodesInitialScales.get(node.id); // World scale initially
                     if (initialLocalOffset && initialScale) {
                         const newWorldPos = this.multiSelectionHelper.localToWorld(initialLocalOffset.clone());
                         node.setPosition(newWorldPos.x, newWorldPos.y, newWorldPos.z);
 
-                        if (node.mesh) { // For ShapeNodes primarily
+                        if (node.mesh) {
+                            // For ShapeNodes primarily
                             // New scale = initial_node_scale_relative_to_helper * helper_new_scale
                             // This requires storing initial relative scales.
                             // Simplest: apply the same world scale delta. This might not be visually perfect for complex hierarchies.
@@ -1249,12 +1520,12 @@ export class UIManager {
                             const newScale = initialScale.clone().multiply(scaleDeltaVec);
                             node.setScale(newScale.x, newScale.y, newScale.z); // Assuming node.setScale exists
                         } else if (node instanceof HtmlNode) {
-                             // For HTML nodes, scaling is often about width/height of the HTML element.
-                             // This needs a different approach, possibly by scaling the node's 'size' property.
-                             // This part of the scaling logic for HTML nodes via gizmo needs careful thought.
-                             // For now, we might just scale their visual representation if they have one (e.g. via CSS transform scale)
-                             // or adjust their width/height properties.
-                             // Let's try to apply to node.size if it exists and it's an HtmlNode.
+                            // For HTML nodes, scaling is often about width/height of the HTML element.
+                            // This needs a different approach, possibly by scaling the node's 'size' property.
+                            // This part of the scaling logic for HTML nodes via gizmo needs careful thought.
+                            // For now, we might just scale their visual representation if they have one (e.g. via CSS transform scale)
+                            // or adjust their width/height properties.
+                            // Let's try to apply to node.size if it exists and it's an HtmlNode.
                             const newSize = {
                                 width: (node.size?.width || node.baseSize.width) * scaleDeltaVec.x,
                                 height: (node.size?.height || node.baseSize.height) * scaleDeltaVec.y,
@@ -1263,37 +1534,46 @@ export class UIManager {
                         }
                     }
                 });
-
-            } else { // Single node selection
-                selectedNodes.forEach(node => {
+            } else {
+                // Single node selection
+                selectedNodes.forEach((node) => {
                     const initialScale = this.selectedNodesInitialScales.get(node.id);
                     if (initialScale) {
-                        if (node.mesh) { // ShapeNode
+                        if (node.mesh) {
+                            // ShapeNode
                             const newScale = initialScale.clone().multiply(scaleDeltaVec);
                             node.setScale(newScale.x, newScale.y, newScale.z);
                         } else if (node instanceof HtmlNode) {
                             // Apply scaleDeltaVec to node's size, respecting aspect ratio if uniform scaling
                             let newWidth, newHeight;
-                            if (gizmoInfo.axis === 'xyz') { // Uniform
+                            if (gizmoInfo.axis === 'xyz') {
+                                // Uniform
                                 newWidth = (node.size?.width || node.baseSize.width) * scaleDeltaVec.x;
                                 newHeight = (node.size?.height || node.baseSize.height) * scaleDeltaVec.y; // Should be same as x for uniform
-                            } else { // Axis specific - might be tricky for HTML nodes, usually they are 2D scaled
-                                newWidth = (node.size?.width || node.baseSize.width) * (gizmoInfo.axis === 'x' || gizmoInfo.axis === 'xy' ? scaleDeltaVec.x : 1);
-                                newHeight = (node.size?.height || node.baseSize.height) * (gizmoInfo.axis === 'y' || gizmoInfo.axis === 'xy' ? scaleDeltaVec.y : 1);
+                            } else {
+                                // Axis specific - might be tricky for HTML nodes, usually they are 2D scaled
+                                newWidth =
+                                    (node.size?.width || node.baseSize.width) *
+                                    (gizmoInfo.axis === 'x' || gizmoInfo.axis === 'xy' ? scaleDeltaVec.x : 1);
+                                newHeight =
+                                    (node.size?.height || node.baseSize.height) *
+                                    (gizmoInfo.axis === 'y' || gizmoInfo.axis === 'xy' ? scaleDeltaVec.y : 1);
                             }
                             node.setSize(Math.max(20, newWidth), Math.max(20, newHeight));
                         }
                     }
                 });
             }
-            this.space.emit('graph:nodes:transformed', { nodes: Array.from(selectedNodes), transformationType: 'scale' });
+            this.space.emit('graph:nodes:transformed', {
+                nodes: Array.from(selectedNodes),
+                transformationType: 'scale',
+            });
         }
-
 
         // Update Gizmo Position (always to center of selection)
         if (selectedNodes.size > 0) {
             const center = new THREE.Vector3();
-            selectedNodes.forEach(n => center.add(n.position));
+            selectedNodes.forEach((n) => center.add(n.position));
             center.divideScalar(selectedNodes.size);
             this.gizmo.position.copy(center);
 
@@ -1304,14 +1584,16 @@ export class UIManager {
                 else this.gizmo.quaternion.identity(); // HTML nodes typically don't have own 3D orientation
             } else {
                 // For multi-select, gizmo orientation is aligned with multiSelectionHelper if rotation/scale, or world if translate
-                 if (gizmoInfo.type === 'rotate' || gizmoInfo.type === 'scale') {
-                    if(this.multiSelectionHelper) this.gizmo.quaternion.copy(this.multiSelectionHelper.quaternion);
-                 } else {
+                if (gizmoInfo.type === 'rotate' || gizmoInfo.type === 'scale') {
+                    if (this.multiSelectionHelper) this.gizmo.quaternion.copy(this.multiSelectionHelper.quaternion);
+                } else {
                     this.gizmo.quaternion.identity(); // World aligned for multi-translate
-                 }
+                }
             }
         }
 
         if (camera) this.gizmo.updateScale(camera);
     }
 }
+
+[end of src/ui/UIManager.js]

@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
 import * as THREE from 'three';
-import { TranslationGizmo } from './TranslationGizmo';
+import { TranslationGizmo } from './TranslationGizmo.js';
 
 // Mock THREE.Material and its methods if they cause issues in pure JS environment
 // For simple tests, direct instantiation might be fine.
@@ -16,7 +16,6 @@ import { TranslationGizmo } from './TranslationGizmo';
 //         // Mock other geometries/materials if needed
 //     };
 // });
-
 
 describe('TranslationGizmo', () => {
     let gizmo;
@@ -36,7 +35,7 @@ describe('TranslationGizmo', () => {
     test('constructor: should create axis arrow handles with correct userData', () => {
         const expectedAxes = ['x', 'y', 'z'];
         let arrowHandleCount = 0;
-        gizmo.handles.children.forEach(handle => {
+        gizmo.handles.children.forEach((handle) => {
             if (handle.userData.part === 'arrow') {
                 arrowHandleCount++;
                 expect(expectedAxes).toContain(handle.userData.axis);
@@ -53,7 +52,7 @@ describe('TranslationGizmo', () => {
     test('constructor: should create plane handles with correct userData', () => {
         const expectedPlanes = ['xy', 'yz', 'xz'];
         let planeHandleCount = 0;
-        gizmo.handles.children.forEach(handle => {
+        gizmo.handles.children.forEach((handle) => {
             if (handle.userData.part === 'plane') {
                 planeHandleCount++;
                 expect(expectedPlanes).toContain(handle.userData.axis);
@@ -93,7 +92,7 @@ describe('TranslationGizmo', () => {
 
     test('setHandleActive(): should change material for active state and restore for inactive', () => {
         // Find an X-axis arrow handle part (e.g., the line)
-        const xArrowLine = gizmo.handles.children.find(h => h.userData.axis === 'x' && h.userData.part === 'arrow');
+        const xArrowLine = gizmo.handles.children.find((h) => h.userData.axis === 'x' && h.userData.part === 'arrow');
         expect(xArrowLine).toBeDefined();
 
         const originalMaterial = xArrowLine.material;
@@ -101,18 +100,19 @@ describe('TranslationGizmo', () => {
 
         gizmo.setHandleActive(xArrowLine, true);
         // Check if the material of both parts of the X arrow (line and head) is the hover material
-        gizmo.handles.children.forEach(child => {
+        gizmo.handles.children.forEach((child) => {
             if (child.userData.axis === 'x' && child.userData.part === 'arrow') {
                 expect(child.material).toBe(hoverMaterial);
             }
         });
         // Check if hover material color/opacity was set based on original
-        expect(hoverMaterial.color.getHex()).toBe(gizmo._originalMaterials.x_arrow.color.clone().multiplyScalar(1.5).getHex());
+        expect(hoverMaterial.color.getHex()).toBe(
+            gizmo._originalMaterials.x_arrow.color.clone().multiplyScalar(1.5).getHex()
+        );
         expect(hoverMaterial.opacity).toBeCloseTo(gizmo._originalMaterials.x_arrow.opacity * 1.2);
 
-
         gizmo.setHandleActive(xArrowLine, false);
-        gizmo.handles.children.forEach(child => {
+        gizmo.handles.children.forEach((child) => {
             if (child.userData.axis === 'x' && child.userData.part === 'arrow') {
                 expect(child.material).toBe(originalMaterial); // Should be restored
             }
@@ -120,8 +120,8 @@ describe('TranslationGizmo', () => {
     });
 
     test('resetHandlesState(): should restore original materials to all handles', () => {
-        const xArrowLine = gizmo.handles.children.find(h => h.userData.axis === 'x' && h.userData.part === 'arrow');
-        const xyPlane = gizmo.handles.children.find(h => h.userData.axis === 'xy' && h.userData.part === 'plane');
+        const xArrowLine = gizmo.handles.children.find((h) => h.userData.axis === 'x' && h.userData.part === 'arrow');
+        const xyPlane = gizmo.handles.children.find((h) => h.userData.axis === 'xy' && h.userData.part === 'plane');
 
         // Activate a couple of handles
         gizmo.setHandleActive(xArrowLine, true);
@@ -137,14 +137,14 @@ describe('TranslationGizmo', () => {
     });
 
     test('dispose(): should dispose materials and remove handles', () => {
-        const disposeSpies = Object.values(gizmo._materials).map(m => vi.spyOn(m, 'dispose'));
-        const geometryDisposeSpies = gizmo.handles.children.map(h => vi.spyOn(h.geometry, 'dispose'));
+        const disposeSpies = Object.values(gizmo._materials).map((m) => vi.spyOn(m, 'dispose'));
+        const geometryDisposeSpies = gizmo.handles.children.map((h) => vi.spyOn(h.geometry, 'dispose'));
         const removeSpy = vi.spyOn(gizmo, 'remove');
 
         gizmo.dispose();
 
-        disposeSpies.forEach(spy => expect(spy).toHaveBeenCalled());
-        geometryDisposeSpies.forEach(spy => expect(spy).toHaveBeenCalled());
+        disposeSpies.forEach((spy) => expect(spy).toHaveBeenCalled());
+        geometryDisposeSpies.forEach((spy) => expect(spy).toHaveBeenCalled());
         expect(removeSpy).toHaveBeenCalledWith(gizmo.handles);
     });
 

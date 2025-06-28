@@ -39,17 +39,53 @@ export class TranslationGizmo extends THREE.Object3D {
             x: new THREE.MeshBasicMaterial({ color: 0xff0000, depthTest: false, transparent: true }),
             y: new THREE.MeshBasicMaterial({ color: 0x00ff00, depthTest: false, transparent: true }),
             z: new THREE.MeshBasicMaterial({ color: 0x0000ff, depthTest: false, transparent: true }),
-            xy: new THREE.MeshBasicMaterial({ color: 0xffff00, depthTest: false, transparent: true, opacity: 0.5, side: THREE.DoubleSide }),
-            yz: new THREE.MeshBasicMaterial({ color: 0x00ffff, depthTest: false, transparent: true, opacity: 0.5, side: THREE.DoubleSide }),
-            xz: new THREE.MeshBasicMaterial({ color: 0xff00ff, depthTest: false, transparent: true, opacity: 0.5, side: THREE.DoubleSide }),
-            rotX: new THREE.MeshBasicMaterial({ color: 0xff0000, depthTest: false, transparent: true, side: THREE.DoubleSide, opacity: 0.7 }),
-            rotY: new THREE.MeshBasicMaterial({ color: 0x00ff00, depthTest: false, transparent: true, side: THREE.DoubleSide, opacity: 0.7 }),
-            rotZ: new THREE.MeshBasicMaterial({ color: 0x0000ff, depthTest: false, transparent: true, side: THREE.DoubleSide, opacity: 0.7 }),
+            xy: new THREE.MeshBasicMaterial({
+                color: 0xffff00,
+                depthTest: false,
+                transparent: true,
+                opacity: 0.5,
+                side: THREE.DoubleSide,
+            }),
+            yz: new THREE.MeshBasicMaterial({
+                color: 0x00ffff,
+                depthTest: false,
+                transparent: true,
+                opacity: 0.5,
+                side: THREE.DoubleSide,
+            }),
+            xz: new THREE.MeshBasicMaterial({
+                color: 0xff00ff,
+                depthTest: false,
+                transparent: true,
+                opacity: 0.5,
+                side: THREE.DoubleSide,
+            }),
+            rotX: new THREE.MeshBasicMaterial({
+                color: 0xff0000,
+                depthTest: false,
+                transparent: true,
+                side: THREE.DoubleSide,
+                opacity: 0.7,
+            }),
+            rotY: new THREE.MeshBasicMaterial({
+                color: 0x00ff00,
+                depthTest: false,
+                transparent: true,
+                side: THREE.DoubleSide,
+                opacity: 0.7,
+            }),
+            rotZ: new THREE.MeshBasicMaterial({
+                color: 0x0000ff,
+                depthTest: false,
+                transparent: true,
+                side: THREE.DoubleSide,
+                opacity: 0.7,
+            }),
             scaleX: new THREE.MeshBasicMaterial({ color: 0xff3333, depthTest: false, transparent: true }), // Lighter Red
             scaleY: new THREE.MeshBasicMaterial({ color: 0x33ff33, depthTest: false, transparent: true }), // Lighter Green
             scaleZ: new THREE.MeshBasicMaterial({ color: 0x3333ff, depthTest: false, transparent: true }), // Lighter Blue
             scaleUniform: new THREE.MeshBasicMaterial({ color: 0xaaaaaa, depthTest: false, transparent: true }), // Grey
-            hover: new THREE.MeshBasicMaterial({ depthTest: false, transparent: true }) // Color will be set on hover
+            hover: new THREE.MeshBasicMaterial({ depthTest: false, transparent: true }), // Color will be set on hover
         };
         /**
          * @private
@@ -155,7 +191,12 @@ export class TranslationGizmo extends THREE.Object3D {
      * Creates the X, Y, and Z rotation ring handles.
      */
     _createRotationHandles() {
-        const ringGeometry = new THREE.TorusGeometry(ROTATION_RING_RADIUS, ROTATION_RING_THICKNESS, 8, ROTATION_RING_SEGMENTS);
+        const ringGeometry = new THREE.TorusGeometry(
+            ROTATION_RING_RADIUS,
+            ROTATION_RING_THICKNESS,
+            8,
+            ROTATION_RING_SEGMENTS
+        );
 
         // Rotate X (around X axis, so ring is in YZ plane)
         const rotXRing = new THREE.Mesh(ringGeometry, this._materials.rotX);
@@ -208,14 +249,23 @@ export class TranslationGizmo extends THREE.Object3D {
         this.handles.add(scaleZHandle);
 
         // Uniform Scale Handle (center)
-        const uniformScaleHandleGeom = new THREE.BoxGeometry(UNIFORM_SCALE_HANDLE_SIZE, UNIFORM_SCALE_HANDLE_SIZE, UNIFORM_SCALE_HANDLE_SIZE);
+        const uniformScaleHandleGeom = new THREE.BoxGeometry(
+            UNIFORM_SCALE_HANDLE_SIZE,
+            UNIFORM_SCALE_HANDLE_SIZE,
+            UNIFORM_SCALE_HANDLE_SIZE
+        );
         const uniformScaleHandle = new THREE.Mesh(uniformScaleHandleGeom, this._materials.scaleUniform);
         uniformScaleHandle.position.set(0, 0, 0); // Positioned at the gizmo's origin
-        uniformScaleHandle.userData = { type: 'gizmo', gizmoType: 'scale', axis: 'xyz', part: 'cube', isGizmoHandle: true };
+        uniformScaleHandle.userData = {
+            type: 'gizmo',
+            gizmoType: 'scale',
+            axis: 'xyz',
+            part: 'cube',
+            isGizmoHandle: true,
+        };
         this._originalMaterials.xyz_cube = this._materials.scaleUniform;
         this.handles.add(uniformScaleHandle);
     }
-
 
     /**
      * Updates the gizmo's scale to maintain a consistent apparent size on screen
@@ -258,10 +308,12 @@ export class TranslationGizmo extends THREE.Object3D {
         // Find the correct original material. This logic assumes that arrow, plane, ring, cube for a given axis might have distinct base colors
         // or we might want to fetch specifically e.g. this._materials.x for x-arrow, this._materials.rotX for x-ring
         let originalMaterial = this._originalMaterials[originalMatKey];
-        if (!originalMaterial) { // Fallback for more complex keys or if a specific part type isn't in _originalMaterials with that exact key
-            switch(gizmoType) {
+        if (!originalMaterial) {
+            // Fallback for more complex keys or if a specific part type isn't in _originalMaterials with that exact key
+            switch (gizmoType) {
                 case 'translate':
-                    if (partType === 'arrow') originalMaterial = this._materials[axis]; // e.g., this._materials.x
+                    if (partType === 'arrow')
+                        originalMaterial = this._materials[axis]; // e.g., this._materials.x
                     else if (partType === 'plane') originalMaterial = this._materials[axis]; // e.g., this._materials.xy
                     break;
                 case 'rotate':
@@ -274,11 +326,10 @@ export class TranslationGizmo extends THREE.Object3D {
             }
         }
 
-
         if (isActive) {
             let hoverColor;
             if (originalMaterial && originalMaterial.color) {
-                hoverColor = originalMaterial.color.clone().multiplyScalar(1.3).clampScalar(0,1); // brighten but don't oversaturate pure colors
+                hoverColor = originalMaterial.color.clone().multiplyScalar(1.3).clampScalar(0, 1); // brighten but don't oversaturate pure colors
             } else {
                 hoverColor = new THREE.Color(0xffffff);
             }
@@ -287,42 +338,47 @@ export class TranslationGizmo extends THREE.Object3D {
             // Ensure opacity doesn't exceed 1
             if (this._materials.hover.opacity > 1.0) this._materials.hover.opacity = 1.0;
 
-
             // Apply hover to all components of the same logical handle
             // (e.g., both line and head of an arrow)
-            this.handles.children.forEach(child => {
-                if (child.userData.isGizmoHandle &&
+            this.handles.children.forEach((child) => {
+                if (
+                    child.userData.isGizmoHandle &&
                     child.userData.gizmoType === gizmoType &&
                     child.userData.axis === axis &&
-                    child.userData.part === partType) {
+                    child.userData.part === partType
+                ) {
                     child.material = this._materials.hover;
                 }
             });
         } else {
-             this.handles.children.forEach(child => {
-                if (child.userData.isGizmoHandle &&
+            this.handles.children.forEach((child) => {
+                if (
+                    child.userData.isGizmoHandle &&
                     child.userData.gizmoType === gizmoType &&
                     child.userData.axis === axis &&
-                    child.userData.part === partType) {
-
+                    child.userData.part === partType
+                ) {
                     let originalMatToRestore = this._originalMaterials[`${child.userData.axis}_${child.userData.part}`];
-                    if(!originalMatToRestore) {
-                         switch(child.userData.gizmoType) {
+                    if (!originalMatToRestore) {
+                        switch (child.userData.gizmoType) {
                             case 'translate':
-                                if (child.userData.part === 'arrow') originalMatToRestore = this._materials[child.userData.axis];
-                                else if (child.userData.part === 'plane') originalMatToRestore = this._materials[child.userData.axis];
+                                if (child.userData.part === 'arrow')
+                                    originalMatToRestore = this._materials[child.userData.axis];
+                                else if (child.userData.part === 'plane')
+                                    originalMatToRestore = this._materials[child.userData.axis];
                                 break;
                             case 'rotate':
                                 originalMatToRestore = this._materials['rot' + child.userData.axis.toUpperCase()];
                                 break;
                             case 'scale':
                                 if (child.userData.axis === 'xyz') originalMatToRestore = this._materials.scaleUniform;
-                                else originalMatToRestore = this._materials['scale' + child.userData.axis.toUpperCase()];
+                                else
+                                    originalMatToRestore = this._materials['scale' + child.userData.axis.toUpperCase()];
                                 break;
                         }
                     }
                     if (originalMatToRestore) {
-                         child.material = originalMatToRestore;
+                        child.material = originalMatToRestore;
                     }
                 }
             });
@@ -333,23 +389,26 @@ export class TranslationGizmo extends THREE.Object3D {
      * Resets all gizmo handles to their inactive visual state.
      */
     resetHandlesState() {
-        this.handles.children.forEach(child => {
+        this.handles.children.forEach((child) => {
             if (child.userData.isGizmoHandle) {
                 const originalMatKey = `${child.userData.axis}_${child.userData.part}`;
                 let originalMaterial = this._originalMaterials[originalMatKey];
 
-                if (!originalMaterial) { // Fallback logic similar to setHandleActive
-                    switch(child.userData.gizmoType) {
+                if (!originalMaterial) {
+                    // Fallback logic similar to setHandleActive
+                    switch (child.userData.gizmoType) {
                         case 'translate':
-                            if (child.userData.part === 'arrow') originalMaterial = this._materials[child.userData.axis];
-                            else if (child.userData.part === 'plane') originalMaterial = this._materials[child.userData.axis];
+                            if (child.userData.part === 'arrow')
+                                originalMaterial = this._materials[child.userData.axis];
+                            else if (child.userData.part === 'plane')
+                                originalMaterial = this._materials[child.userData.axis];
                             break;
                         case 'rotate':
                             originalMaterial = this._materials['rot' + child.userData.axis.toUpperCase()];
                             break;
                         case 'scale':
-                             if (child.userData.axis === 'xyz') originalMaterial = this._materials.scaleUniform;
-                             else originalMaterial = this._materials['scale' + child.userData.axis.toUpperCase()];
+                            if (child.userData.axis === 'xyz') originalMaterial = this._materials.scaleUniform;
+                            else originalMaterial = this._materials['scale' + child.userData.axis.toUpperCase()];
                             break;
                     }
                 }
@@ -368,8 +427,8 @@ export class TranslationGizmo extends THREE.Object3D {
      * Disposes of the gizmo's materials and geometries.
      */
     dispose() {
-        Object.values(this._materials).forEach(material => material.dispose());
-        this.handles.children.forEach(handle => {
+        Object.values(this._materials).forEach((material) => material.dispose());
+        this.handles.children.forEach((handle) => {
             handle.geometry?.dispose();
         });
         this.remove(this.handles); // Removes handles group from this gizmo object
@@ -382,12 +441,16 @@ export class TranslationGizmo extends THREE.Object3D {
  * @param {string} axis - Axis identifier ('x', 'y', 'z').
  * @returns {THREE.Vector3} The normalized axis vector.
  */
-TranslationGizmo.getAxisVector = function(axis) {
+TranslationGizmo.getAxisVector = function (axis) {
     switch (axis) {
-        case 'x': return new THREE.Vector3(1, 0, 0);
-        case 'y': return new THREE.Vector3(0, 1, 0);
-        case 'z': return new THREE.Vector3(0, 0, 1);
-        default: return new THREE.Vector3();
+        case 'x':
+            return new THREE.Vector3(1, 0, 0);
+        case 'y':
+            return new THREE.Vector3(0, 1, 0);
+        case 'z':
+            return new THREE.Vector3(0, 0, 1);
+        default:
+            return new THREE.Vector3();
     }
 };
 
@@ -397,11 +460,15 @@ TranslationGizmo.getAxisVector = function(axis) {
  * @param {string} planeAxis - Plane identifier ('xy', 'yz', 'xz').
  * @returns {THREE.Vector3} The normalized plane normal vector.
  */
-TranslationGizmo.getPlaneNormal = function(planeAxis) {
+TranslationGizmo.getPlaneNormal = function (planeAxis) {
     switch (planeAxis) {
-        case 'xy': return new THREE.Vector3(0, 0, 1); // Normal is Z
-        case 'yz': return new THREE.Vector3(1, 0, 0); // Normal is X
-        case 'xz': return new THREE.Vector3(0, 1, 0); // Normal is Y
-        default: return new THREE.Vector3();
+        case 'xy':
+            return new THREE.Vector3(0, 0, 1); // Normal is Z
+        case 'yz':
+            return new THREE.Vector3(1, 0, 0); // Normal is X
+        case 'xz':
+            return new THREE.Vector3(0, 1, 0); // Normal is Y
+        default:
+            return new THREE.Vector3();
     }
 };

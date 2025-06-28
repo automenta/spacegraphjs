@@ -323,7 +323,6 @@ export class Metaframe {
             this.node.cssObject.updateMatrixWorld(true); // Force update matrixWorld for cssObject
             this.node.cssObject.matrixWorld.decompose(cssWorldPosition, cssWorldQuaternion, cssWorldScale);
             this.metaframeGroup.quaternion.copy(cssWorldQuaternion);
-
         } else if (this.node.mesh) {
             // For nodes with WebGL mesh content (e.g., ShapeNode),
             // align the metaframeGroup with the node's mesh orientation.

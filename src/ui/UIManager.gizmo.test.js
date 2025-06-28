@@ -1,13 +1,13 @@
 import { describe, test, expect, beforeEach, vi, afterEach } from 'vitest';
 import * as THREE from 'three';
-import { UIManager } from './UIManager';
-import { InteractionState } from './InteractionState';
-import { TranslationGizmo } from './gizmos/TranslationGizmo';
-import { SpaceGraph } from '../core/SpaceGraph'; // Needed for mocks
-import { Node } from '../graph/nodes/Node'; // Base node or a specific type
+import { UIManager } from './UIManager.js';
+import { InteractionState } from './InteractionState.js';
+import { TranslationGizmo } from './gizmos/TranslationGizmo.js';
+import { SpaceGraph as _SpaceGraph } from '../core/SpaceGraph.js'; // Needed for mocks
+import { Node } from '../graph/nodes/Node.js'; // Base node or a specific type
 
 // Mock dependencies
-vi.mock('../core/SpaceGraph');
+vi.mock('../core/SpaceGraph.js');
 vi.mock('./gizmos/TranslationGizmo');
 vi.mock('../graph/nodes/Node');
 
@@ -30,7 +30,6 @@ describe('UIManager - Gizmo Interactions', () => {
         // This ensures we get a fresh mock instance with controllable methods for each test.
         TranslationGizmo.mockClear();
 
-
         mockNode1 = new Node('n1', { x: 100, y: 0, z: 0 }, {});
         mockNode1.position = new THREE.Vector3(100, 0, 0);
         mockNode1.id = 'n1';
@@ -42,10 +41,9 @@ describe('UIManager - Gizmo Interactions', () => {
         mockSelectedNodesSet = new Set();
 
         mockCamera = new THREE.PerspectiveCamera();
-        mockCamera.position.set(0,0,500);
-        mockCamera.lookAt(0,0,0);
+        mockCamera.position.set(0, 0, 500);
+        mockCamera.lookAt(0, 0, 0);
         mockCamera.updateMatrixWorld();
-
 
         mockWebGLScene = { add: vi.fn(), remove: vi.fn() };
         mockRenderingPlugin = { getWebGLScene: () => mockWebGLScene };
@@ -53,7 +51,7 @@ describe('UIManager - Gizmo Interactions', () => {
         spaceGraphMock = {
             container: document.createElement('div'),
             plugins: {
-                getPlugin: vi.fn(pluginName => {
+                getPlugin: vi.fn((pluginName) => {
                     if (pluginName === 'CameraPlugin') return { getCameraInstance: () => mockCamera };
                     if (pluginName === 'RenderingPlugin') return mockRenderingPlugin;
                     // Add other plugin mocks if UIManager interacts with them directly here
@@ -66,9 +64,9 @@ describe('UIManager - Gizmo Interactions', () => {
             // Mock raycasting and intersection methods used by _getTargetInfo
             raycast: vi.fn().mockReturnValue([]), // Default to no intersects
             intersectedObjects: vi.fn().mockReturnValue(null), // Default to no general intersects
-            getPointerNDC: vi.fn().mockReturnValue(new THREE.Vector2(0,0)), // Default NDC
-            screenToWorld: vi.fn().mockImplementation((x,y,z) => new THREE.Vector3(x,y,z)), // Simplistic mock
-            resolveIntersectedObject: vi.fn(obj => ({object: obj, node: null, edge: null})) // Simplistic mock
+            getPointerNDC: vi.fn().mockReturnValue(new THREE.Vector2(0, 0)), // Default NDC
+            screenToWorld: vi.fn().mockImplementation((x, y, z) => new THREE.Vector3(x, y, z)), // Simplistic mock
+            resolveIntersectedObject: vi.fn((obj) => ({ object: obj, node: null, edge: null })), // Simplistic mock
         };
 
         const mockUiPluginCallbacks = {
@@ -98,8 +96,6 @@ describe('UIManager - Gizmo Interactions', () => {
         uiManager.translationGizmo.handles = { children: [] }; // Mock handles for raycasting checks
         uiManager.translationGizmo.setHandleActive = vi.fn();
         uiManager.translationGizmo.resetHandlesState = vi.fn();
-
-
     });
 
     afterEach(() => {
@@ -153,18 +149,31 @@ describe('UIManager - Gizmo Interactions', () => {
         test('_onPointerDown with gizmo handle should transition to GIZMO_DRAGGING', () => {
             const mockGizmoHandleObject = {
                 userData: { isGizmoHandle: true, axis: 'x', gizmoType: 'translate', part: 'arrow' },
-                parent: uiManager.translationGizmo.handles // Simulate it's a child of gizmo.handles
+                parent: uiManager.translationGizmo.handles, // Simulate it's a child of gizmo.handles
             };
             // Setup _getTargetInfo to return this gizmo handle
-            uiManager._getTargetInfo = vi.fn().mockReturnValue({ gizmoHandleInfo: {
-                axis: 'x', type: 'translate', part: 'arrow', object: mockGizmoHandleObject
-            }});
+            uiManager._getTargetInfo = vi.fn().mockReturnValue({
+                gizmoHandleInfo: {
+                    axis: 'x',
+                    type: 'translate',
+                    part: 'arrow',
+                    object: mockGizmoHandleObject,
+                },
+            });
 
             // Simulate raycaster intersecting the handle mesh directly for initialPointerWorldPos
-            spaceGraphMock.raycast.mockReturnValueOnce([{ object: mockGizmoHandleObject, point: new THREE.Vector3(10,0,0), distance: 1 }]);
+            spaceGraphMock.raycast.mockReturnValueOnce([
+                { object: mockGizmoHandleObject, point: new THREE.Vector3(10, 0, 0), distance: 1 },
+            ]);
 
-
-            const mockEvent = { clientX: 0, clientY: 0, button: 0, pointerId: 1, preventDefault: vi.fn(), stopPropagation: vi.fn() };
+            const mockEvent = {
+                clientX: 0,
+                clientY: 0,
+                button: 0,
+                pointerId: 1,
+                preventDefault: vi.fn(),
+                stopPropagation: vi.fn(),
+            };
             uiManager._onPointerDown(mockEvent);
 
             expect(uiManager.currentState).toBe(InteractionState.GIZMO_DRAGGING);
@@ -177,7 +186,7 @@ describe('UIManager - Gizmo Interactions', () => {
         test('_onPointerUp from GIZMO_DRAGGING should transition to IDLE', () => {
             // Manually set state for test
             uiManager.currentState = InteractionState.GIZMO_DRAGGING;
-            const mockGizmoHandleObject = { userData: { axis: 'x', part: 'arrow' }}; // simplified
+            const mockGizmoHandleObject = { userData: { axis: 'x', part: 'arrow' } }; // simplified
             uiManager.draggedGizmoHandleInfo = { axis: 'x', part: 'arrow', object: mockGizmoHandleObject };
 
             const mockEvent = { clientX: 0, clientY: 0, button: 0, pointerId: 1 };
@@ -222,14 +231,14 @@ describe('UIManager - Gizmo Interactions', () => {
         // Focus on ensuring the correct node positions are calculated and events emitted.
         beforeEach(() => {
             mockSelectedNodesSet.add(mockNode1); // Node at (100,0,0)
-            uiManager.selectedNodesInitialPositions.set('n1', new THREE.Vector3(100,0,0));
+            uiManager.selectedNodesInitialPositions.set('n1', new THREE.Vector3(100, 0, 0));
             uiManager.currentState = InteractionState.GIZMO_DRAGGING;
             uiManager.space.isDragging = true;
 
             // Mock camera to be looking along -Z axis, Y up.
-            mockCamera.position.set(0,0,500);
-            mockCamera.lookAt(0,0,0);
-            mockCamera.up.set(0,1,0);
+            mockCamera.position.set(0, 0, 500);
+            mockCamera.lookAt(0, 0, 0);
+            mockCamera.up.set(0, 1, 0);
             mockCamera.updateMatrixWorld(true);
 
             // Gizmo is at node's position, world orientation (default)
@@ -246,14 +255,14 @@ describe('UIManager - Gizmo Interactions', () => {
             const expectedNewPosOnLine = new THREE.Vector3(120, 0, 0);
             // Note: closestPointToLine calculation is complex. Here we directly mock its *output*.
             const mockRay = { closestPointToLine: vi.fn((line, clamp, target) => target.copy(expectedNewPosOnLine)) };
-            spaceGraphMock.raycast.mockImplementationOnce(() => ({ // This is for _getTargetInfo, not relevant here
-                intersectObject: () => []
+            spaceGraphMock.raycast.mockImplementationOnce(() => ({
+                // This is for _getTargetInfo, not relevant here
+                intersectObject: () => [],
             }));
             // We need to mock the raycaster used *inside* _handleGizmoDrag
             const tempRaycaster = new THREE.Raycaster();
             tempRaycaster.ray = mockRay; // Override the ray property
             vi.spyOn(THREE, 'Raycaster').mockImplementation(() => tempRaycaster);
-
 
             const mockEvent = { clientX: 10, clientY: 0 }; // Screen movement doesn't directly map here, result of projection is key
             uiManager._handleGizmoDrag(mockEvent);
@@ -261,9 +270,10 @@ describe('UIManager - Gizmo Interactions', () => {
             expect(mockNode1.position.x).toBeCloseTo(120); // 100 (initial) + (120-100 from delta)
             expect(mockNode1.position.y).toBeCloseTo(0);
             expect(mockNode1.position.z).toBeCloseTo(0);
-            expect(spaceGraphMock.emit).toHaveBeenCalledWith('graph:nodes:transformed',
-                { nodes: [mockNode1], transformationType: 'translate' }
-            );
+            expect(spaceGraphMock.emit).toHaveBeenCalledWith('graph:nodes:transformed', {
+                nodes: [mockNode1],
+                transformationType: 'translate',
+            });
             // Gizmo should follow the node
             expect(uiManager.translationGizmo.position.x).toBeCloseTo(120);
 
@@ -291,9 +301,10 @@ describe('UIManager - Gizmo Interactions', () => {
             expect(mockNode1.position.x).toBeCloseTo(110);
             expect(mockNode1.position.y).toBeCloseTo(15);
             expect(mockNode1.position.z).toBeCloseTo(0); // Z should be unchanged
-            expect(spaceGraphMock.emit).toHaveBeenCalledWith('graph:nodes:transformed',
-                { nodes: [mockNode1], transformationType: 'translate' }
-            );
+            expect(spaceGraphMock.emit).toHaveBeenCalledWith('graph:nodes:transformed', {
+                nodes: [mockNode1],
+                transformationType: 'translate',
+            });
             expect(uiManager.translationGizmo.position.x).toBeCloseTo(110);
             expect(uiManager.translationGizmo.position.y).toBeCloseTo(15);
 
