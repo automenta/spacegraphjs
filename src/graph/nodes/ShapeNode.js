@@ -284,6 +284,11 @@ export class ShapeNode extends Node {
         }
         this.labelObject?.element?.classList.toggle('selected', selected);
         if (selected && this.isHovered) this.setHoverStyle(false, true); // Clear hover if now selected
+
+        // Call super to handle metaframe visibility AFTER applying specific styles
+        // so metaframe can correctly size itself if node appearance affects bounds.
+        // However, ensureMetaframe() is called by super.setSelectedStyle, so metaframe exists.
+        super.setSelectedStyle(selected);
     }
 
     setHoverStyle(hovered, force = false) {
@@ -349,5 +354,34 @@ export class ShapeNode extends Node {
         this.labelObject?.element?.remove();
         this.labelObject = null;
         super.dispose();
+    }
+
+    getActualSize() {
+        // Use the bounding sphere radius of the highest detail LOD (level 0)
+        // and derive a size vector. This is an approximation but often sufficient for Metaframe.
+        const radius = this.getBoundingSphereRadius(); // This already tries to use LOD 0 if possible
+
+        if (radius > 0 && Number.isFinite(radius)) {
+            // Approximate width, height, depth from the radius.
+            // Metaframe primarily uses X and Y for its 2D representation.
+            // For a ShapeNode, its visual extent is often what matters.
+            return new THREE.Vector3(radius * 2, radius * 2, radius * 2);
+        }
+
+        // Fallback if radius is not available or invalid (e.g. GLTF not loaded yet, or error in computation)
+        // Use the 'size' data property if it's a simple numeric value, common for primitive shapes.
+        let fallbackSize = 50; // Default fallback
+        if (Number.isFinite(this.data.size)) {
+            fallbackSize = this.data.size;
+        } else if (typeof this.data.size === 'object' && this.data.size !== null && Number.isFinite(this.data.size.radius)) {
+            // For shapes like capsules that might have a size object with radius
+            fallbackSize = this.data.size.radius * 2; // Approximate from radius
+        } else if (Number.isFinite(this.size)) { // this.size is set in constructor from data.size
+             fallbackSize = this.size;
+        }
+
+        fallbackSize = Math.max(5, fallbackSize); // Ensure a minimum size
+        // console.warn(`ShapeNode ${this.id}: getActualSize using fallback size: ${fallbackSize}`);
+        return new THREE.Vector3(fallbackSize, fallbackSize, fallbackSize);
     }
 }

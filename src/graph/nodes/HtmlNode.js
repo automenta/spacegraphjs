@@ -265,7 +265,9 @@ export class HtmlNode extends Node {
     // is a 1x1 plane and this.mesh.scale stores the world dimensions.
 
     setSelectedStyle(selected) {
+        super.setSelectedStyle(selected); // Handles metaframe show/hide via Node.js base
         this.htmlElement?.classList.toggle('selected', selected);
+        // Any other HtmlNode specific selection styling can be added here.
     }
 
     startResize() {
