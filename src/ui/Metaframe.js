@@ -323,7 +323,7 @@ export class Metaframe {
 
         // 3. Scale the border to match the node's actual size (local to metaframeGroup)
         this.borderMesh.scale.copy(actualSize);
-        this.borderMesh.position.set(0,0,0); // Border is centered within the group
+        this.borderMesh.position.set(0, 0, 0); // Border is centered within the group
 
         // 4. Position and scale resize handles locally within the metaframeGroup
         const handleDesiredWorldSize = 10; // Target visual size for handles in world units
@@ -341,7 +341,11 @@ export class Metaframe {
         this.resizeHandles.bottomLeft.scale.set(handleDesiredWorldSize, handleDesiredWorldSize, handleDesiredWorldSize);
         this.resizeHandles.bottomLeft.position.set(-halfSizeX, -halfSizeY, 0);
 
-        this.resizeHandles.bottomRight.scale.set(handleDesiredWorldSize, handleDesiredWorldSize, handleDesiredWorldSize);
+        this.resizeHandles.bottomRight.scale.set(
+            handleDesiredWorldSize,
+            handleDesiredWorldSize,
+            handleDesiredWorldSize
+        );
         this.resizeHandles.bottomRight.position.set(halfSizeX, -halfSizeY, 0);
 
         // 5. Position and scale drag handle locally
@@ -351,7 +355,7 @@ export class Metaframe {
             this.dragHandle.scale.set(dragHandleWorldWidth, dragHandleWorldHeight, 1); // Set to desired world size
             this.dragHandle.position.set(
                 0, // Centered X locally
-                halfSizeY + (dragHandleWorldHeight / 2) + 5, // Positioned above the top edge, in local units
+                halfSizeY + dragHandleWorldHeight / 2 + 5, // Positioned above the top edge, in local units
                 0
             );
             this.dragHandle.visible = this.isVisible && (this.node.getCapabilities().canBeDragged ?? true);
@@ -389,15 +393,16 @@ export class Metaframe {
 
                 // Create an offset vector that is screen-aligned (Y-up relative to camera)
                 const screenUpOffset = new THREE.Vector3(0, tooltipOffsetDistance, 0);
-                if (camera) { // Apply camera's orientation to make offset screen-aligned
+                if (camera) {
+                    // Apply camera's orientation to make offset screen-aligned
                     screenUpOffset.applyQuaternion(camera.quaternion);
                 }
                 tempWorldPos.add(screenUpOffset); // Add screen-aligned offset
                 tooltip.position.copy(tempWorldPos);
                 tooltip.visible = true; // Ensure CSS3DObject itself is marked visible for rendering
             } else if (tooltip) {
-                 tooltip.visible = false;
-                 if (tooltip.element) tooltip.element.style.visibility = 'hidden'; // Also hide HTML element
+                tooltip.visible = false;
+                if (tooltip.element) tooltip.element.style.visibility = 'hidden'; // Also hide HTML element
             }
         }
 
@@ -413,8 +418,8 @@ export class Metaframe {
             dragHandleTooltip.position.copy(tempWorldPos);
             dragHandleTooltip.visible = true;
         } else if (dragHandleTooltip) {
-             dragHandleTooltip.visible = false;
-             if (dragHandleTooltip.element) dragHandleTooltip.element.style.visibility = 'hidden';
+            dragHandleTooltip.visible = false;
+            if (dragHandleTooltip.element) dragHandleTooltip.element.style.visibility = 'hidden';
         }
     }
 
@@ -471,7 +476,7 @@ export class Metaframe {
                     const tooltipOffsetDistance = 15;
                     const screenUpOffset = new THREE.Vector3(0, tooltipOffsetDistance, 0);
                     if (camera) {
-                         screenUpOffset.applyQuaternion(camera.quaternion);
+                        screenUpOffset.applyQuaternion(camera.quaternion);
                     }
                     tempWorldPos.add(screenUpOffset);
                     tooltip.position.copy(tempWorldPos);

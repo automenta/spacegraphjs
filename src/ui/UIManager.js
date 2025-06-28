@@ -270,7 +270,9 @@ export class UIManager {
                         this.draggedNodeInitialWorldPos.z // Fallback to a plane at the node's initial Z depth.
                     );
                     // Calculate fallback dragOffset based on current node position (less accurate for the new plane method but better than nothing).
-                    this.dragOffset = fallbackWorldPos ? fallbackWorldPos.sub(this.draggedNode.position) : new THREE.Vector3();
+                    this.dragOffset = fallbackWorldPos
+                        ? fallbackWorldPos.sub(this.draggedNode.position)
+                        : new THREE.Vector3();
                     // console.warn("UIManager: Drag interaction plane intersection failed during setup. Using fallback offset.");
                 }
 
@@ -281,7 +283,7 @@ export class UIManager {
             case InteractionState.RESIZING_NODE: {
                 this.resizedNode = data.node;
                 this.resizedNode.startResize(); // Notify node for visual state changes.
-                this.space.isDragging = true;   // Global flag.
+                this.space.isDragging = true; // Global flag.
                 this.resizeStartPointerPos = { x: this.pointerState.clientX, y: this.pointerState.clientY }; // Initial screen pointer.
                 this.activeResizeHandleType = data.handleType || null; // e.g., 'topLeft', 'bottomRight'.
 
@@ -318,18 +320,29 @@ export class UIManager {
                     const nodeWorldPos = this.resizedNode.mesh.getWorldPosition(new THREE.Vector3());
                     this.resizeStartHandleLocalPos.subVectors(handleWorldPos, nodeWorldPos); // Vector from node origin to handle in world space.
 
-                    const inverseNodeWorldQuaternion = this.resizedNode.mesh.getWorldQuaternion(new THREE.Quaternion()).invert();
+                    const inverseNodeWorldQuaternion = this.resizedNode.mesh
+                        .getWorldQuaternion(new THREE.Quaternion())
+                        .invert();
                     this.resizeStartHandleLocalPos.applyQuaternion(inverseNodeWorldQuaternion); // Rotate to node's local orientation.
                 } else {
                     // Fallback: Estimate local handle position if direct handle object is not available.
                     // This is less precise and ideally should not be reached if metaframe provides handle info.
                     const halfSize = this.resizeStartNodeSize.clone().multiplyScalar(0.5);
                     switch (this.activeResizeHandleType) {
-                        case 'topLeft': this.resizeStartHandleLocalPos.set(-halfSize.x, halfSize.y, 0); break;
-                        case 'topRight': this.resizeStartHandleLocalPos.set(halfSize.x, halfSize.y, 0); break;
-                        case 'bottomLeft': this.resizeStartHandleLocalPos.set(-halfSize.x, -halfSize.y, 0); break;
-                        case 'bottomRight': this.resizeStartHandleLocalPos.set(halfSize.x, -halfSize.y, 0); break;
-                        default: this.resizeStartHandleLocalPos.set(0,0,0); // Should not happen.
+                        case 'topLeft':
+                            this.resizeStartHandleLocalPos.set(-halfSize.x, halfSize.y, 0);
+                            break;
+                        case 'topRight':
+                            this.resizeStartHandleLocalPos.set(halfSize.x, halfSize.y, 0);
+                            break;
+                        case 'bottomLeft':
+                            this.resizeStartHandleLocalPos.set(-halfSize.x, -halfSize.y, 0);
+                            break;
+                        case 'bottomRight':
+                            this.resizeStartHandleLocalPos.set(halfSize.x, -halfSize.y, 0);
+                            break;
+                        default:
+                            this.resizeStartHandleLocalPos.set(0, 0, 0); // Should not happen.
                     }
                 }
 
@@ -340,16 +353,23 @@ export class UIManager {
                 const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance(); // Needed for raycasting.
                 if (camera) {
                     const nodeLocalZAxisInWorld = new THREE.Vector3(0, 0, 1);
-                    nodeLocalZAxisInWorld.applyQuaternion(this.resizedNode.mesh.getWorldQuaternion(new THREE.Quaternion()));
+                    nodeLocalZAxisInWorld.applyQuaternion(
+                        this.resizedNode.mesh.getWorldQuaternion(new THREE.Quaternion())
+                    );
 
                     // Initial world position of the handle (recalculate for clarity or use from above if transformed correctly)
-                    const initialHandleWorldPos = this.resizeStartHandleLocalPos.clone().applyMatrix4(this.resizeNodeInitialMatrixWorld);
-                    this.resizeInteractionPlane.setFromNormalAndCoplanarPoint(nodeLocalZAxisInWorld, initialHandleWorldPos);
+                    const initialHandleWorldPos = this.resizeStartHandleLocalPos
+                        .clone()
+                        .applyMatrix4(this.resizeNodeInitialMatrixWorld);
+                    this.resizeInteractionPlane.setFromNormalAndCoplanarPoint(
+                        nodeLocalZAxisInWorld,
+                        initialHandleWorldPos
+                    );
                 } else {
                     // Fallback if camera isn't available (e.g., during setup or error).
                     // console.error("UIManager: Camera not found for RESIZING_NODE state setup.");
                     // Define a default plane, e.g., world XY plane at node's Z depth.
-                    this.resizeInteractionPlane.setComponents(0,0,1, -this.resizedNode.position.z);
+                    this.resizeInteractionPlane.setComponents(0, 0, 1, -this.resizedNode.position.z);
                 }
 
                 document.body.style.cursor = this._getCursorForHandle(this.activeResizeHandleType) || 'nwse-resize';
@@ -514,7 +534,10 @@ export class UIManager {
 
                         // Update the main dragInteractionPlane to this new depth.
                         // Its normal remains camera-facing.
-                        this.dragInteractionPlane.setFromNormalAndCoplanarPoint(cameraForward, this.draggedNodeInitialWorldPos);
+                        this.dragInteractionPlane.setFromNormalAndCoplanarPoint(
+                            cameraForward,
+                            this.draggedNodeInitialWorldPos
+                        );
                         currentInteractionPlane = this.dragInteractionPlane; // Use this newly defined plane for the current intersection.
 
                         // The original dragOffset (calculated at drag start) is maintained.
@@ -538,18 +561,21 @@ export class UIManager {
 
                         if (selectedNodes?.size > 0 && selectedNodes.has(this.draggedNode)) {
                             selectedNodes.forEach((sNode) => {
-                                const newPos = (sNode === this.draggedNode)
-                                    ? primaryNodeNewCalculatedPos
-                                    : sNode.position.clone().add(dragDelta);
+                                const newPos =
+                                    sNode === this.draggedNode
+                                        ? primaryNodeNewCalculatedPos
+                                        : sNode.position.clone().add(dragDelta);
 
                                 sNode.drag(newPos);
-                                if (sNode.mesh) { // Preserve orientation
+                                if (sNode.mesh) {
+                                    // Preserve orientation
                                     sNode.mesh.quaternion.copy(this.draggedNodeInitialQuaternion);
                                 }
                             });
                         } else {
                             this.draggedNode.drag(primaryNodeNewCalculatedPos);
-                            if (this.draggedNode.mesh) { // Preserve orientation
+                            if (this.draggedNode.mesh) {
+                                // Preserve orientation
                                 this.draggedNode.mesh.quaternion.copy(this.draggedNodeInitialQuaternion);
                             }
                         }
@@ -572,7 +598,6 @@ export class UIManager {
                     const pointerNDC = this.space.getPointerNDC(this.pointerState.clientX, this.pointerState.clientY);
                     raycaster.setFromCamera(pointerNDC, camera);
 
-                    const currentHandleWorldPosOnPlane = new THREE.Vector3();
                     // 1. Project current mouse position onto the resize interaction plane.
                     // This plane is aligned with the node's face and passes through the handle's initial world position.
                     const currentHandleWorldPosOnPlane = new THREE.Vector3();
@@ -581,14 +606,21 @@ export class UIManager {
                     }
 
                     // 2. Calculate the handle's initial world position using its stored local position and the node's initial world matrix.
-                    const initialHandleWorldPos = this.resizeStartHandleLocalPos.clone().applyMatrix4(this.resizeNodeInitialMatrixWorld);
+                    const initialHandleWorldPos = this.resizeStartHandleLocalPos
+                        .clone()
+                        .applyMatrix4(this.resizeNodeInitialMatrixWorld);
 
                     // 3. Determine the displacement of the handle in world space, constrained to the resize plane.
-                    const worldDisplacement = new THREE.Vector3().subVectors(currentHandleWorldPosOnPlane, initialHandleWorldPos);
+                    const worldDisplacement = new THREE.Vector3().subVectors(
+                        currentHandleWorldPosOnPlane,
+                        initialHandleWorldPos
+                    );
 
                     // 4. Transform this world displacement into the node's local coordinate system (at the start of resize).
                     // This gives us how much the handle has moved along the node's local X and Y axes.
-                    const inverseInitialNodeMatrix = new THREE.Matrix4().copy(this.resizeNodeInitialMatrixWorld).invert();
+                    const inverseInitialNodeMatrix = new THREE.Matrix4()
+                        .copy(this.resizeNodeInitialMatrixWorld)
+                        .invert();
 
                     // To correctly transform a displacement vector, we transform its start and end points to local space
                     // and then find their difference. This avoids issues with the translation part of the matrix.
@@ -597,8 +629,7 @@ export class UIManager {
                     const localStartPoint = initialHandleWorldPos.clone().applyMatrix4(inverseInitialNodeMatrix); // Should be close to resizeStartHandleLocalPos
                     const localDisplacement = new THREE.Vector3().subVectors(localEndPoint, localStartPoint);
 
-
-                    let deltaWidth = 0;  // Change in width in node's local units.
+                    let deltaWidth = 0; // Change in width in node's local units.
                     let deltaHeight = 0; // Change in height in node's local units.
 
                     // 5. Determine how localDisplacement translates to deltaWidth and deltaHeight based on which handle is active.
@@ -612,13 +643,13 @@ export class UIManager {
                     if (this.activeResizeHandleType.includes('Left')) {
                         deltaWidth = -localDisplacement.x; // Moving left handle to positive X decreases width.
                     } else if (this.activeResizeHandleType.includes('Right')) {
-                        deltaWidth = localDisplacement.x;  // Moving right handle to positive X increases width.
+                        deltaWidth = localDisplacement.x; // Moving right handle to positive X increases width.
                     }
 
                     if (this.activeResizeHandleType.includes('Top')) {
                         deltaHeight = localDisplacement.y; // Moving top handle to positive Y increases height.
                     } else if (this.activeResizeHandleType.includes('Bottom')) {
-                        deltaHeight = -localDisplacement.y;// Moving bottom handle to positive Y decreases height.
+                        deltaHeight = -localDisplacement.y; // Moving bottom handle to positive Y decreases height.
                     }
 
                     // 6. Calculate new target world dimensions for the node.
@@ -631,7 +662,11 @@ export class UIManager {
                     newWorldHeight = Math.max(MIN_DIMENSION, newWorldHeight);
 
                     // Create a vector for the new world dimensions. Z dimension remains unchanged from start of resize.
-                    const newWorldDimensions = new THREE.Vector3(newWorldWidth, newWorldHeight, this.resizeStartNodeSize.z);
+                    const newWorldDimensions = new THREE.Vector3(
+                        newWorldWidth,
+                        newWorldHeight,
+                        this.resizeStartNodeSize.z
+                    );
 
                     // 8. Apply the resize to the node.
                     //    Node.resize() is expected to handle this. For HtmlNode, its mesh.scale is updated to these world dimensions.
@@ -645,14 +680,15 @@ export class UIManager {
                         // For HtmlNode, provide its internal pixel 'size' and its 'scale' relative to its baseSize.
                         ...(this.resizedNode instanceof HtmlNode && {
                             size: { ...this.resizedNode.size }, // Current pixel size
-                            scale: { // Scale relative to its original 'baseSize' (data.width/height)
+                            scale: {
+                                // Scale relative to its original 'baseSize' (data.width/height)
                                 x: newWorldWidth / this.resizedNode.baseSize.width,
                                 y: newWorldHeight / this.resizedNode.baseSize.height,
-                                z: this.resizeStartNodeScale.z // Preserve original Z scale factor if any
-                            }
+                                z: this.resizeStartNodeScale.z, // Preserve original Z scale factor if any
+                            },
                         }),
                         // For other generic nodes, report the calculated new world dimensions.
-                        ...(!(this.resizedNode instanceof HtmlNode) && { worldDimensions: { ...newWorldDimensions } })
+                        ...(!(this.resizedNode instanceof HtmlNode) && { worldDimensions: { ...newWorldDimensions } }),
                     });
                 }
                 break;
@@ -787,33 +823,27 @@ export class UIManager {
             case 'Delete':
             case 'Backspace': {
                 if (primarySelectedNode) {
-                    {
-                        // Block for lexical declaration
-                        const message =
-                            selectedNodes.size > 1
-                                ? `Delete ${selectedNodes.size} selected nodes?`
-                                : `Delete node "${primarySelectedNode.id.substring(0, 10)}..."?`;
-                        this.space.emit('ui:request:confirm', {
-                            message: message,
-                            onConfirm: () =>
-                                selectedNodes.forEach((node) => this.space.emit('ui:request:removeNode', node.id)),
-                        });
-                        handled = true;
-                    }
+                    const message =
+                        selectedNodes.size > 1
+                            ? `Delete ${selectedNodes.size} selected nodes?`
+                            : `Delete node "${primarySelectedNode.id.substring(0, 10)}..."?`;
+                    this.space.emit('ui:request:confirm', {
+                        message: message,
+                        onConfirm: () =>
+                            selectedNodes.forEach((node) => this.space.emit('ui:request:removeNode', node.id)),
+                    });
+                    handled = true;
                 } else if (primarySelectedEdge) {
-                    {
-                        // Block for lexical declaration
-                        const message =
-                            selectedEdges.size > 1
-                                ? `Delete ${selectedEdges.size} selected edges?`
-                                : `Delete edge "${primarySelectedEdge.id.substring(0, 10)}..."?`;
-                        this.space.emit('ui:request:confirm', {
-                            message: message,
-                            onConfirm: () =>
-                                selectedEdges.forEach((edge) => this.space.emit('ui:request:removeEdge', edge.id)),
-                        });
-                        handled = true;
-                    }
+                    const message =
+                        selectedEdges.size > 1
+                            ? `Delete ${selectedEdges.size} selected edges?`
+                            : `Delete edge "${primarySelectedEdge.id.substring(0, 10)}..."?`;
+                    this.space.emit('ui:request:confirm', {
+                        message: message,
+                        onConfirm: () =>
+                            selectedEdges.forEach((edge) => this.space.emit('ui:request:removeEdge', edge.id)),
+                    });
+                    handled = true;
                 }
                 break;
             }
@@ -1140,10 +1170,7 @@ export class UIManager {
             if (this.currentHoveredGLHandle) {
                 const oldMetaframe = this.currentHoveredGLHandle.node?.ensureMetaframe();
                 if (oldMetaframe) {
-                    oldMetaframe.highlightHandle(
-                        this.currentHoveredGLHandle.handleMesh,
-                        false
-                    );
+                    oldMetaframe.highlightHandle(this.currentHoveredGLHandle.handleMesh, false);
                     oldMetaframe.setHandleTooltip(this.hoveredHandleType, '', false);
                 }
             }

@@ -131,7 +131,6 @@ export class Node {
         return this.metaframe;
     }
 
-
     setPosition(pos, y, z) {
         const { x, _y, _z } = typeof pos === 'object' && pos !== null ? pos : { x: pos, _y: y, _z: z };
         const finalY = _y ?? 0;
