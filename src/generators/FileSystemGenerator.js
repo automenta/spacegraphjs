@@ -28,7 +28,7 @@ export class FileSystemGenerator {
      */
     generate(fsData, space, options = {}) {
         if (!fsData || !space) {
-            console.error('FileSystemGenerator: Missing fsData or space instance.');
+            // console.error('FileSystemGenerator: Missing fsData or space instance.');
             return;
         }
 
@@ -94,7 +94,7 @@ export class FileSystemGenerator {
             if (createType === 'group' && currentNode) {
                 const childIds = [];
                 // Temporarily store children to get their IDs after creation
-                const tempChildren = [];
+                // const tempChildren = []; // Unused variable
 
                 item.children.forEach((childItem, index) => {
                     // For now, we'll just create them and let a global layout handle it.

@@ -16,7 +16,6 @@ export class Metaframe {
     _handleHoverOpacity = 1.0;
     _handleHoverScale = 1.2;
 
-
     // CSS3DObject for control buttons
     controlButtons = null; // This will be a CSS3DObject containing a div with buttons
     handleTooltips = {}; // Stores CSS3DObjects for handle tooltips: { 'topLeft': CSS3DObject, ... }
@@ -38,7 +37,10 @@ export class Metaframe {
         // Create a simple wireframe box for the border
         const geometry = new THREE.BoxGeometry(1, 1, 1);
         const edges = new THREE.EdgesGeometry(geometry);
-        this.borderMesh = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x00ffff, depthTest: false }));
+        this.borderMesh = new THREE.LineSegments(
+            edges,
+            new THREE.LineBasicMaterial({ color: 0x00ffff, depthTest: false })
+        );
         this.borderMesh.renderOrder = 999; // Render on top
         this.webglScene.add(this.borderMesh);
 
@@ -48,7 +50,7 @@ export class Metaframe {
             color: 0xff00ff, // Changed color for better visibility
             transparent: true,
             opacity: this._handleDefaultOpacity,
-            depthTest: false
+            depthTest: false,
         });
 
         const handlePositions = {
@@ -69,7 +71,7 @@ export class Metaframe {
             this._originalHandleMaterials.set(handle, {
                 color: handleMaterial.color.clone(),
                 opacity: handleMaterial.opacity,
-                scale: handle.scale.clone()
+                scale: handle.scale.clone(),
             });
             this.webglScene.add(handle);
             this.handleTooltips[key] = this._createTooltipElement();
@@ -83,7 +85,7 @@ export class Metaframe {
             transparent: true,
             opacity: this._handleDefaultOpacity,
             side: THREE.DoubleSide,
-            depthTest: false
+            depthTest: false,
         });
         this.dragHandle = new THREE.Mesh(dragHandleGeometry, dragHandleMaterial);
         this.dragHandle.name = 'dragHandle'; // Used by UIManager
@@ -93,7 +95,7 @@ export class Metaframe {
         this._originalHandleMaterials.set(this.dragHandle, {
             color: dragHandleMaterial.color.clone(),
             opacity: dragHandleMaterial.opacity,
-            scale: this.dragHandle.scale.clone()
+            scale: this.dragHandle.scale.clone(),
         });
         this.webglScene.add(this.dragHandle);
         this.handleTooltips['dragHandle'] = this._createTooltipElement();
@@ -207,24 +209,44 @@ export class Metaframe {
 
         if (capabilities.canEditProperties) {
             let editText = 'Edit';
-            container.appendChild(createButton(editText, 'edit-properties', () => this.space.emit('metaframe:editNode', { node: this.node })));
+            container.appendChild(
+                createButton(editText, 'edit-properties', () =>
+                    this.space.emit('metaframe:editNode', { node: this.node })
+                )
+            );
         }
 
         if (capabilities.canEditContent) {
-            container.appendChild(createButton('Edit Content', 'toggle-content-edit', () => this.space.emit('metaframe:toggleNodeContentEditable', { node: this.node })));
+            container.appendChild(
+                createButton('Edit Content', 'toggle-content-edit', () =>
+                    this.space.emit('metaframe:toggleNodeContentEditable', { node: this.node })
+                )
+            );
         }
 
         if (capabilities.canZoomContent) {
-            container.appendChild(createButton('Zoom In', 'content-zoom-in', () => this.space.emit('ui:request:adjustContentScale', { node: this.node, factor: 1.15 })));
-            container.appendChild(createButton('Zoom Out', 'content-zoom-out', () => this.space.emit('ui:request:adjustContentScale', { node: this.node, factor: 1 / 1.15 })));
+            container.appendChild(
+                createButton('Zoom In', 'content-zoom-in', () =>
+                    this.space.emit('ui:request:adjustContentScale', { node: this.node, factor: 1.15 })
+                )
+            );
+            container.appendChild(
+                createButton('Zoom Out', 'content-zoom-out', () =>
+                    this.space.emit('ui:request:adjustContentScale', { node: this.node, factor: 1 / 1.15 })
+                )
+            );
         }
 
         if (capabilities.canLink) {
-            container.appendChild(createButton('Link', 'link', () => this.space.emit('metaframe:linkNode', { node: this.node })));
+            container.appendChild(
+                createButton('Link', 'link', () => this.space.emit('metaframe:linkNode', { node: this.node }))
+            );
         }
 
         if (capabilities.canDelete) {
-            container.appendChild(createButton('Delete', 'delete', () => this.space.emit('metaframe:deleteNode', { node: this.node })));
+            container.appendChild(
+                createButton('Delete', 'delete', () => this.space.emit('metaframe:deleteNode', { node: this.node }))
+            );
         }
 
         this.controlButtons = new CSS3DObject(container);
@@ -233,12 +255,12 @@ export class Metaframe {
 
     refreshButtons() {
         if (this.controlButtons && this.controlButtons.element) {
-             // Check if parentElement exists before trying to remove from cssScene
+            // Check if parentElement exists before trying to remove from cssScene
             if (this.controlButtons.element.parentElement) {
-                 this.cssScene.remove(this.controlButtons);
+                this.cssScene.remove(this.controlButtons);
             }
             this.controlButtons.element.remove(); // Remove old HTML element from wherever it was attached
-            this.controlButtons = null;           // Clear reference
+            this.controlButtons = null; // Clear reference
         }
         this._createControlButtons(); // This creates a new this.controlButtons and adds it to cssScene
 
@@ -257,7 +279,8 @@ export class Metaframe {
         // Update position and scale of border mesh
         const actualSize = this.node.getActualSize();
 
-        if (!actualSize) { // Node might not have a mesh or size yet
+        if (!actualSize) {
+            // Node might not have a mesh or size yet
             this.hide(); // Hide metaframe if node size can't be determined
             return;
         }
@@ -296,7 +319,11 @@ export class Metaframe {
 
         // Update position of drag handle
         if (this.dragHandle) {
-            this.dragHandle.position.set(this.node.position.x, this.node.position.y + halfSizeY + 15, this.node.position.z); // 15 units above the top edge
+            this.dragHandle.position.set(
+                this.node.position.x,
+                this.node.position.y + halfSizeY + 15,
+                this.node.position.z
+            ); // 15 units above the top edge
             this.dragHandle.visible = this.isVisible && (this.node.getCapabilities().canBeDragged ?? true);
         }
 
@@ -307,7 +334,6 @@ export class Metaframe {
                 this.resizeHandles[key].visible = this.isVisible && canBeResized;
             }
         }
-
 
         // Update position of control buttons
         this.controlButtons.position.copy(this.node.position);
@@ -369,7 +395,8 @@ export class Metaframe {
             tooltip.element.textContent = text;
             tooltip.element.style.visibility = visible ? 'visible' : 'hidden';
             tooltip.element.style.opacity = visible ? '1' : '0';
-            if (visible) { // Ensure position is updated when shown
+            if (visible) {
+                // Ensure position is updated when shown
                 const handleMesh = handleType === 'dragHandle' ? this.dragHandle : this.resizeHandles[handleType];
                 if (handleMesh) {
                     const tooltipOffset = new THREE.Vector3(0, 15, 0); // Consistent with update()

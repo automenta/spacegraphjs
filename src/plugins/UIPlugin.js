@@ -1,7 +1,7 @@
 import { Plugin } from '../core/Plugin.js';
 import { UIManager } from '../ui/UIManager.js';
-import { InteractionState } from '../ui/InteractionState.js';
-import * as THREE from 'three';
+// import { InteractionState } from '../ui/InteractionState.js'; // Unused
+// import * as THREE from 'three'; // Unused
 import { HtmlNode } from '../graph/nodes/HtmlNode.js'; // Import HtmlNode
 
 // const raycaster = new THREE.Raycaster(); // Managed by UIManager or SpaceGraph
@@ -71,7 +71,9 @@ export class UIPlugin extends Plugin {
 
     _onAdjustContentScale = (payload) => {
         // Ensure node is an HtmlNode and has the method, and factor is present
-        if (payload && payload.node instanceof HtmlNode &&
+        if (
+            payload &&
+            payload.node instanceof HtmlNode &&
             typeof payload.node.adjustContentScale === 'function' &&
             payload.factor !== undefined
         ) {
@@ -80,7 +82,9 @@ export class UIPlugin extends Plugin {
     };
 
     _onAdjustNodeSize = (payload) => {
-        if (payload && payload.node &&
+        if (
+            payload &&
+            payload.node &&
             typeof payload.node.adjustNodeSize === 'function' &&
             payload.factor !== undefined
         ) {

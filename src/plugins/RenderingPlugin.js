@@ -149,13 +149,13 @@ export class RenderingPlugin extends Plugin {
 
     _setupRenderersAndComposer() {
         if (!this.space?.container) {
-            console.error('RenderingPlugin: SpaceGraph container not available.');
+            // console.error('RenderingPlugin: SpaceGraph container not available.');
             return;
         }
 
         const cam = this.pluginManager?.getPlugin('CameraPlugin')?.getCameraInstance();
         if (!cam) {
-            console.error('RenderingPlugin: Camera instance not available.');
+            // console.error('RenderingPlugin: Camera instance not available.');
             return;
         }
 
@@ -260,14 +260,18 @@ export class RenderingPlugin extends Plugin {
     }
 
     setEffectEnabled(effectName, enabled) {
-        if (!this.effectsConfig[effectName]) return console.warn(`RenderingPlugin: Effect "${effectName}" not found.`);
+        if (!this.effectsConfig[effectName]) {
+            /* console.warn(`RenderingPlugin: Effect "${effectName}" not found.`); */ return;
+        }
         this.effectsConfig[effectName].enabled = enabled;
         this._rebuildEffectPasses();
         this.space.emit('effect:enabled:changed', { effectName, enabled });
     }
 
     configureEffect(effectName, settings) {
-        if (!this.effectsConfig[effectName]) return console.warn(`RenderingPlugin: Effect "${effectName}" not found.`);
+        if (!this.effectsConfig[effectName]) {
+            /* console.warn(`RenderingPlugin: Effect "${effectName}" not found.`); */ return;
+        }
         Object.assign(this.effectsConfig[effectName], settings);
         this._rebuildEffectPasses();
         this.space.emit('effect:settings:changed', { effectName, settings });
@@ -325,7 +329,7 @@ export class RenderingPlugin extends Plugin {
                 }
                 break;
             default:
-                console.error(`RenderingPlugin: Unknown light type '${type}'`);
+                // console.error(`RenderingPlugin: Unknown light type '${type}'`);
                 return null;
         }
 
@@ -339,7 +343,9 @@ export class RenderingPlugin extends Plugin {
 
     removeLight(id) {
         const light = this.managedLights.get(id);
-        if (!light) return console.warn(`RenderingPlugin: Light '${id}' not found.`) || false;
+        if (!light) {
+            /* console.warn(`RenderingPlugin: Light '${id}' not found.`); */ return false;
+        }
         if (light.target?.parent === this.scene) this.scene.remove(light.target);
         this.scene.remove(light);
         light.dispose?.();

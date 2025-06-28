@@ -28,13 +28,13 @@ export class Node {
 
     getCapabilities() {
         return {
-            canEditContent: false,      // e.g., for direct text editing or specific content UI
-            canZoomContent: false,      // e.g., for scaling content within an HtmlNode
-            canEditProperties: true,    // General properties panel
-            canLink: true,              // Can be a source/target for links
-            canDelete: true,            // Can be deleted
-            canBeResized: true,         // If the node's bounding box/scale can be changed. Metaframe handles will honor this.
-            canBeDragged: true,         // If the node can be moved. Metaframe drag handle will honor this.
+            canEditContent: false, // e.g., for direct text editing or specific content UI
+            canZoomContent: false, // e.g., for scaling content within an HtmlNode
+            canEditProperties: true, // General properties panel
+            canLink: true, // Can be a source/target for links
+            canDelete: true, // Can be deleted
+            canBeResized: true, // If the node's bounding box/scale can be changed. Metaframe handles will honor this.
+            canBeDragged: true, // If the node can be moved. Metaframe drag handle will honor this.
         };
     }
 
@@ -65,7 +65,10 @@ export class Node {
                 this.mesh.geometry.computeBoundingSphere();
             }
             if (this.mesh.geometry.boundingSphere) {
-                 return this.mesh.geometry.boundingSphere.radius * Math.max(this.mesh.scale.x, this.mesh.scale.y, this.mesh.scale.z);
+                return (
+                    this.mesh.geometry.boundingSphere.radius *
+                    Math.max(this.mesh.scale.x, this.mesh.scale.y, this.mesh.scale.z)
+                );
             }
         }
         return 50; // Default if no mesh or geometry
@@ -84,8 +87,8 @@ export class Node {
 
         // If boundingBox is still null (e.g. for an empty geometry), return null or a default.
         if (!this.mesh.geometry.boundingBox) {
-            console.warn(`Node ${this.id}: Mesh geometry lacks a boundingBox.`);
-            return new THREE.Vector3(1,1,1); // Or return null and handle upstream
+            // console.warn(`Node ${this.id}: Mesh geometry lacks a boundingBox.`);
+            return new THREE.Vector3(1, 1, 1); // Or return null and handle upstream
         }
 
         const size = new THREE.Vector3();
@@ -104,11 +107,11 @@ export class Node {
         const finalZ = _z ?? 0;
 
         if (!isFinite(x) || !isFinite(finalY) || !isFinite(finalZ)) {
-            console.warn(`BaseNode.setPosition: Attempted to set invalid position for node ${this.id}:`, {
-                x,
-                y: finalY,
-                z: finalZ,
-            });
+            // console.warn(`BaseNode.setPosition: Attempted to set invalid position for node ${this.id}:`, {
+            //     x,
+            //     y: finalY,
+            //     z: finalZ,
+            // });
             return;
         }
         this.position.set(x, finalY, finalZ);

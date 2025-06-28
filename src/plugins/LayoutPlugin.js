@@ -116,14 +116,16 @@ export class LayoutPlugin extends Plugin {
 
     togglePinNode(nodeId) {
         const node = this.pluginManager.getPlugin('NodePlugin')?.getNodeById(nodeId);
-        if (!node) return console.warn(`LayoutPlugin: Node ${nodeId} not found.`);
+        if (!node) {
+            /* console.warn(`LayoutPlugin: Node ${nodeId} not found.`); */ return;
+        }
 
         const currentLayout = this.layoutManager?.getActiveLayout();
         if (currentLayout && typeof currentLayout.setPinState === 'function') {
             currentLayout.setPinState(node, !node.isPinned);
             this.space.emit('node:pinned', { node, isPinned: node.isPinned });
         } else {
-            console.warn(`LayoutPlugin: Active layout does not support pinning.`);
+            // console.warn(`LayoutPlugin: Active layout does not support pinning.`);
         }
     }
 

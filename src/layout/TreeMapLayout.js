@@ -1,5 +1,3 @@
-import * as THREE from 'three';
-
 export class TreeMapLayout {
     static layoutName = 'treemap';
     space = null;
@@ -131,7 +129,7 @@ export class TreeMapLayout {
             row.push(nodes[i]);
             rowArea += nodes[i]._treemapArea;
 
-            const currentRatio = this._calculateRowRatio(row, rowArea, rect.width, rect.height, totalArea);
+            const currentRatio = this._calculateRowRatio(row, rowArea, rect.width, rect.height /* totalArea */);
 
             if (currentRatio < bestRatio) {
                 bestRatio = currentRatio;
@@ -147,7 +145,7 @@ export class TreeMapLayout {
         const currentRow = nodes.slice(0, bestRowIndex);
         const remainingNodes = nodes.slice(bestRowIndex);
 
-        this._layoutRow(currentRow, rect, rowArea, totalArea, padding);
+        this._layoutRow(currentRow, rect, rowArea, totalArea /* padding */);
 
         const newRect = { ...rect };
         if (rect.width > rect.height) {
@@ -163,20 +161,20 @@ export class TreeMapLayout {
         this._squarify(remainingNodes, newRect, totalArea - rowArea, padding);
     }
 
-    _calculateRowRatio(row, rowArea, rectWidth, rectHeight, totalArea) {
+    _calculateRowRatio(row, rowArea, rectWidth, rectHeight, _totalArea) {
         if (row.length === 0 || rowArea === 0) return Infinity;
 
         const minArea = Math.min(...row.map((n) => n._treemapArea));
         const maxArea = Math.max(...row.map((n) => n._treemapArea));
 
         const side = Math.min(rectWidth, rectHeight);
-        const ratio = (side * rowArea) / (minArea * totalArea);
-        const inverseRatio = (maxArea * totalArea) / (side * rowArea);
+        const ratio = (side * rowArea) / (minArea * _totalArea); // Assuming totalArea was intended here
+        const inverseRatio = (maxArea * _totalArea) / (side * rowArea); // Assuming totalArea was intended here
 
         return Math.max(ratio, inverseRatio);
     }
 
-    _layoutRow(row, rect, rowArea, totalArea, padding) {
+    _layoutRow(row, rect, rowArea, _totalArea, _padding) {
         const isHorizontal = rect.width > rect.height;
         const rowLength = isHorizontal ? rect.width : rect.height;
         const rowBreadth = isHorizontal ? rect.height : rect.width;
@@ -215,14 +213,14 @@ export class TreeMapLayout {
         /* No per-frame updates needed usually */
     }
 
-    addNode(node) {
+    addNode(_node) {
         /* Could re-trigger init or add incrementally (complex) */
     }
-    removeNode(node) {
+    removeNode(_node) {
         /* Could re-trigger init or remove incrementally (complex) */
     }
-    addEdge(edge) {}
-    removeEdge(edge) {}
+    addEdge(_edge) {}
+    removeEdge(_edge) {}
     kick() {}
 
     dispose() {

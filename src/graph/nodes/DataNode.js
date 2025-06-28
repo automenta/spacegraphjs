@@ -167,11 +167,11 @@ export class DataNode extends Node {
 
             // Ensure material is an array or single object
             const materials = Array.isArray(this.mesh.material) ? this.mesh.material : [this.mesh.material];
-            materials.forEach(material => {
+            materials.forEach((material) => {
                 if (material.isMeshStandardMaterial || material.isMeshBasicMaterial) {
                     material.emissive?.setHex(emissiveColor);
                     if (material.emissiveIntensity !== undefined) {
-                         material.emissiveIntensity = emissiveIntensity;
+                        material.emissiveIntensity = emissiveIntensity;
                     }
                 }
             });

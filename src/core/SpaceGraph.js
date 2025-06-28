@@ -257,7 +257,13 @@ export class SpaceGraph {
                 const node = nodePlugin?.getNodeById(instancedNodeHit.nodeId);
                 if (node) {
                     // If instancedNodeHit.object is not provided, use node.mesh as a fallback.
-                    closestIntersect = { object: instancedNodeHit.object || node.mesh, node, edge: null, distance: instancedNodeHit.distance, type: 'node' };
+                    closestIntersect = {
+                        object: instancedNodeHit.object || node.mesh,
+                        node,
+                        edge: null,
+                        distance: instancedNodeHit.distance,
+                        type: 'node',
+                    };
                 }
             }
         }
@@ -266,7 +272,7 @@ export class SpaceGraph {
         const allNodes = nodePlugin?.getNodes(); // Cache for efficiency if used multiple times.
         if (allNodes) {
             const nonInstancedNodeMeshes = [];
-            allNodes.forEach(node => {
+            allNodes.forEach((node) => {
                 // Filter for nodes that are not instanced, have a mesh, and are visible.
                 if (!node.isInstanced && node.mesh && node.mesh.visible) {
                     nonInstancedNodeMeshes.push(node.mesh);
@@ -282,7 +288,13 @@ export class SpaceGraph {
                         // Retrieve the SpaceGraph Node associated with this THREE.Mesh via userData.
                         const node = nodePlugin.getNodeById(intersectedMesh.userData?.nodeId);
                         if (node) {
-                            closestIntersect = { object: intersectedMesh, node, edge: null, distance: nodeIntersects[0].distance, type: 'node' };
+                            closestIntersect = {
+                                object: intersectedMesh,
+                                node,
+                                edge: null,
+                                distance: nodeIntersects[0].distance,
+                                type: 'node',
+                            };
                         }
                     }
                 }
@@ -298,7 +310,13 @@ export class SpaceGraph {
                 if (!closestIntersect || instancedEdgeHit.distance < closestIntersect.distance) {
                     const edge = edgePlugin?.getEdgeById(instancedEdgeHit.edgeId);
                     if (edge) {
-                        closestIntersect = { object: instancedEdgeHit.object || edge.line, node: null, edge, distance: instancedEdgeHit.distance, type: 'edge' };
+                        closestIntersect = {
+                            object: instancedEdgeHit.object || edge.line,
+                            node: null,
+                            edge,
+                            distance: instancedEdgeHit.distance,
+                            type: 'edge',
+                        };
                     }
                 }
             }
@@ -308,7 +326,7 @@ export class SpaceGraph {
         const allEdges = edgePlugin?.getEdges();
         if (allEdges) {
             const nonInstancedEdgeLines = [];
-            allEdges.forEach(edge => {
+            allEdges.forEach((edge) => {
                 if (!edge.isInstanced && edge.line && edge.line.visible) {
                     nonInstancedEdgeLines.push(edge.line);
                 }
@@ -321,7 +339,13 @@ export class SpaceGraph {
                         const intersectedLine = edgeIntersects[0].object;
                         const edge = edgePlugin.getEdgeById(intersectedLine.userData?.edgeId);
                         if (edge) {
-                            closestIntersect = { object: intersectedLine, node: null, edge, distance: edgeIntersects[0].distance, type: 'edge' };
+                            closestIntersect = {
+                                object: intersectedLine,
+                                node: null,
+                                edge,
+                                distance: edgeIntersects[0].distance,
+                                type: 'edge',
+                            };
                         }
                     }
                 }
@@ -332,11 +356,12 @@ export class SpaceGraph {
         // Metaframe handles (spheres/planes for resize/drag) are added directly to the scene.
         // They need to be included in the intersection test.
         // `userData.ownerNode` is assumed to be set on these handles by `Metaframe.js`.
-        if (allNodes) { // Re-use `allNodes` from above.
+        if (allNodes) {
+            // Re-use `allNodes` from above.
             const metaframeHandles = [];
-            allNodes.forEach(node => {
+            allNodes.forEach((node) => {
                 if (node.metaframe && node.metaframe.isVisible) {
-                    Object.values(node.metaframe.resizeHandles).forEach(handle => metaframeHandles.push(handle));
+                    Object.values(node.metaframe.resizeHandles).forEach((handle) => metaframeHandles.push(handle));
                     if (node.metaframe.dragHandle) {
                         metaframeHandles.push(node.metaframe.dragHandle);
                     }
@@ -356,9 +381,9 @@ export class SpaceGraph {
                             closestIntersect = {
                                 object: intersectedHandleObject,
                                 node: ownerNode, // The node owning the handle.
-                                edge: null,      // Not an edge.
+                                edge: null, // Not an edge.
                                 distance: handleIntersects[0].distance,
-                                type: 'metaframe_handle' // Explicit type for this category.
+                                type: 'metaframe_handle', // Explicit type for this category.
                             };
                         }
                     }

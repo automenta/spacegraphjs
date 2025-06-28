@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
+// import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js'; // Unused
 import { $, $$ } from '../utils.js';
 import { HtmlNode } from '../graph/nodes/HtmlNode.js';
 
@@ -39,12 +39,10 @@ export class UIManager {
     // For Generic Nodes (using Metaframe handles)
     resizeStartNodeScale = new THREE.Vector3(1, 1, 1);
 
-
     hoveredEdge = null;
     hoveredHandleType = null; // To track hovered metaframe handle for cursor changes
     currentHoveredGLHandle = null; // The actual THREE.Object3D of the handle
     hoveredNodeForMetaframe = null; // Tracks node whose metaframe is shown due to hover
-
 
     pointerState = {
         down: false,
@@ -184,7 +182,7 @@ export class UIManager {
     _transitionToState(newState, data = {}) {
         if (this.currentState === newState) return;
 
-        console.log(`UIManager: Exiting state: ${this.currentState}, transitioning to ${newState}`);
+        // console.log(`UIManager: Exiting state: ${this.currentState}, transitioning to ${newState}`);
         switch (this.currentState) {
             case InteractionState.DRAGGING_NODE:
                 this.draggedNode?.endDrag();
@@ -308,7 +306,8 @@ export class UIManager {
                 if (handleType === 'dragHandle') {
                     this._transitionToState(InteractionState.DRAGGING_NODE, { node: handleNode });
                     this._uiPluginCallbacks.setSelectedNode(handleNode, e.shiftKey);
-                } else { // Resize handle
+                } else {
+                    // Resize handle
                     this._transitionToState(InteractionState.RESIZING_NODE, {
                         node: handleNode,
                         handleType: handleType, // e.g., 'topLeft'
@@ -439,7 +438,7 @@ export class UIManager {
                             scaleYFactor = 1 - totalDy_screen * sensitivity;
                             break;
                         default: // Should ideally not happen if activeResizeHandleType is always set
-                            console.warn('UIManager: Unknown resize handle type:', this.activeResizeHandleType);
+                            // console.warn('UIManager: Unknown resize handle type:', this.activeResizeHandleType);
                             break;
                     }
 
@@ -537,7 +536,7 @@ export class UIManager {
                 this.space.emit('ui:request:adjustNodeSize', node, 1 / 1.2);
                 break;
             default:
-                console.warn('UIManager: Unknown node control action:', action);
+            // console.warn('UIManager: Unknown node control action:', action);
         }
     }
 
@@ -595,27 +594,33 @@ export class UIManager {
             case 'Delete':
             case 'Backspace': {
                 if (primarySelectedNode) {
-                    const message =
-                        selectedNodes.size > 1
-                            ? `Delete ${selectedNodes.size} selected nodes?`
-                            : `Delete node "${primarySelectedNode.id.substring(0, 10)}..."?`;
-                    this.space.emit('ui:request:confirm', {
-                        message: message,
-                        onConfirm: () =>
-                            selectedNodes.forEach((node) => this.space.emit('ui:request:removeNode', node.id)),
-                    });
-                    handled = true;
+                    {
+                        // Block for lexical declaration
+                        const message =
+                            selectedNodes.size > 1
+                                ? `Delete ${selectedNodes.size} selected nodes?`
+                                : `Delete node "${primarySelectedNode.id.substring(0, 10)}..."?`;
+                        this.space.emit('ui:request:confirm', {
+                            message: message,
+                            onConfirm: () =>
+                                selectedNodes.forEach((node) => this.space.emit('ui:request:removeNode', node.id)),
+                        });
+                        handled = true;
+                    }
                 } else if (primarySelectedEdge) {
-                    const message =
-                        selectedEdges.size > 1
-                            ? `Delete ${selectedEdges.size} selected edges?`
-                            : `Delete edge "${primarySelectedEdge.id.substring(0, 10)}..."?`;
-                    this.space.emit('ui:request:confirm', {
-                        message: message,
-                        onConfirm: () =>
-                            selectedEdges.forEach((edge) => this.space.emit('ui:request:removeEdge', edge.id)),
-                    });
-                    handled = true;
+                    {
+                        // Block for lexical declaration
+                        const message =
+                            selectedEdges.size > 1
+                                ? `Delete ${selectedEdges.size} selected edges?`
+                                : `Delete edge "${primarySelectedEdge.id.substring(0, 10)}..."?`;
+                        this.space.emit('ui:request:confirm', {
+                            message: message,
+                            onConfirm: () =>
+                                selectedEdges.forEach((edge) => this.space.emit('ui:request:removeEdge', edge.id)),
+                        });
+                        handled = true;
+                    }
                 }
                 break;
             }
@@ -779,7 +784,10 @@ export class UIManager {
                         const handleType = object.name.substring('resizeHandle-'.length);
                         // Verify that the intersected 'object' is indeed one of the known resize handle meshes
                         // belonging to the 'ownerNode's metaframe.
-                        if (ownerNode.metaframe.resizeHandles && ownerNode.metaframe.resizeHandles[handleType] === object) {
+                        if (
+                            ownerNode.metaframe.resizeHandles &&
+                            ownerNode.metaframe.resizeHandles[handleType] === object
+                        ) {
                             metaframeHandleInfo = { type: handleType, object: object, node: ownerNode };
                             // If a handle is hit, the 'effective' graph node for interaction purposes is the owner of the handle.
                             graphNode = ownerNode;
@@ -794,14 +802,13 @@ export class UIManager {
                         }
                     }
                 }
-                 // If we hit a metaframe handle, we prioritize that interaction over a general node click,
+                // If we hit a metaframe handle, we prioritize that interaction over a general node click,
                 // especially if the handle is visually on top or closer to the camera.
                 // The `intersectedObjects` method should ideally return the closest object,
                 // so if a handle is returned, it was the "true" target.
                 // We also ensure that the graphNode is set to the node owning the metaframe.
             }
         }
-
 
         return {
             element,
@@ -813,7 +820,7 @@ export class UIManager {
             node: graphNode,
             intersectedEdge,
             metaframeHandleInfo, // { type: string, object: THREE.Object3D, node: Node } or null
-        }
+        };
     }
 
     _getCursorForHandle(handleType) {
@@ -831,22 +838,28 @@ export class UIManager {
                 return 'grab'; // Or 'move'
             default:
                 return 'default'; // Should not happen for valid handles
-        };
+        }
     }
 
     _getTooltipTextForHandle(handleType) {
         switch (handleType) {
-            case 'topLeft': return 'Resize (Top-Left)';
-            case 'topRight': return 'Resize (Top-Right)';
-            case 'bottomLeft': return 'Resize (Bottom-Left)';
-            case 'bottomRight': return 'Resize (Bottom-Right)';
-            case 'dragHandle': return 'Move Node';
+            case 'topLeft':
+                return 'Resize (Top-Left)';
+            case 'topRight':
+                return 'Resize (Top-Right)';
+            case 'bottomLeft':
+                return 'Resize (Bottom-Left)';
+            case 'bottomRight':
+                return 'Resize (Bottom-Right)';
+            case 'dragHandle':
+                return 'Move Node';
             // Future:
             // case 'top': return 'Resize (Top)';
             // case 'bottom': return 'Resize (Bottom)';
             // case 'left': return 'Resize (Left)';
             // case 'right': return 'Resize (Right)';
-            default: return '';
+            default:
+                return '';
         }
     }
 
@@ -865,7 +878,10 @@ export class UIManager {
 
             // Cleanup active handle highlighting and tooltips
             if (this.currentHoveredGLHandle && this.currentHoveredGLHandle.node?.metaframe) {
-                this.currentHoveredGLHandle.node.metaframe.highlightHandle(this.currentHoveredGLHandle.handleMesh, false);
+                this.currentHoveredGLHandle.node.metaframe.highlightHandle(
+                    this.currentHoveredGLHandle.handleMesh,
+                    false
+                );
                 this.currentHoveredGLHandle.node.metaframe.setHandleTooltip(this.hoveredHandleType, '', false);
             }
             this.currentHoveredGLHandle = null;
@@ -873,11 +889,11 @@ export class UIManager {
 
             // Cleanup edge highlighting (if not selected)
             if (this.hoveredEdge) {
-                 const selectedEdges = this._uiPluginCallbacks.getSelectedEdges() || new Set();
-                 // Only de-highlight if it's not a selected edge (selected edges maintain their highlight)
-                 if(!selectedEdges.has(this.hoveredEdge)) {
+                const selectedEdges = this._uiPluginCallbacks.getSelectedEdges() || new Set();
+                // Only de-highlight if it's not a selected edge (selected edges maintain their highlight)
+                if (!selectedEdges.has(this.hoveredEdge)) {
                     this.hoveredEdge.setHighlight(false);
-                 }
+                }
             }
             this.hoveredEdge = null;
             return; // Exit early, active interaction state will manage cursors etc.
@@ -905,7 +921,7 @@ export class UIManager {
                 newlyHoveredNode.metaframe?.show();
                 if (newlyHoveredNode.metaframe) {
                     // Reset highlights on handles when metaframe is freshly shown by hover.
-                    Object.values(newlyHoveredNode.metaframe.resizeHandles).forEach(handle =>
+                    Object.values(newlyHoveredNode.metaframe.resizeHandles).forEach((handle) =>
                         newlyHoveredNode.metaframe.highlightHandle(handle, false)
                     );
                     if (newlyHoveredNode.metaframe.dragHandle) {
@@ -919,10 +935,16 @@ export class UIManager {
         // --- Part 2: Handle Metaframe Handle Hover Effects (highlights, tooltips, cursor) ---
         // This applies if a specific handle (of any visible metaframe) is hovered.
         // newHoveredHandleInfo.node is the owner of the handle.
-        if (this.hoveredHandleType !== newHoveredHandleInfo?.type || this.currentHoveredGLHandle?.handleMesh !== newHoveredHandleInfo?.object) {
+        if (
+            this.hoveredHandleType !== newHoveredHandleInfo?.type ||
+            this.currentHoveredGLHandle?.handleMesh !== newHoveredHandleInfo?.object
+        ) {
             // De-highlight previous handle and hide its tooltip if it exists.
             if (this.currentHoveredGLHandle && this.currentHoveredGLHandle.node?.metaframe) {
-                this.currentHoveredGLHandle.node.metaframe.highlightHandle(this.currentHoveredGLHandle.handleMesh, false);
+                this.currentHoveredGLHandle.node.metaframe.highlightHandle(
+                    this.currentHoveredGLHandle.handleMesh,
+                    false
+                );
                 this.currentHoveredGLHandle.node.metaframe.setHandleTooltip(this.hoveredHandleType, '', false);
             }
 
@@ -933,7 +955,10 @@ export class UIManager {
                 currentMetaframe.highlightHandle(newHoveredHandleInfo.object, true); // Highlight the handle mesh itself.
                 const tooltipText = this._getTooltipTextForHandle(newHoveredHandleInfo.type);
                 currentMetaframe.setHandleTooltip(newHoveredHandleInfo.type, tooltipText, true); // Show tooltip.
-                this.currentHoveredGLHandle = { node: newHoveredHandleInfo.node, handleMesh: newHoveredHandleInfo.object };
+                this.currentHoveredGLHandle = {
+                    node: newHoveredHandleInfo.node,
+                    handleMesh: newHoveredHandleInfo.object,
+                };
             } else {
                 // No specific handle is hovered, or its metaframe is not visible.
                 // Cursor will be set by general logic below.
@@ -1094,6 +1119,6 @@ export class UIManager {
         this.hoveredEdge = null;
         this._uiPluginCallbacks = null;
 
-        console.log('UIManager disposed.');
+        // console.log('UIManager disposed.');
     }
 }

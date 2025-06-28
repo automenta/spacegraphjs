@@ -296,6 +296,6 @@ self.onmessage = function (event) {
             break;
         }
         default:
-            console.warn('ForceLayout Worker: Unknown message type:', type);
+        // console.warn('ForceLayout Worker: Unknown message type:', type);
     }
 };

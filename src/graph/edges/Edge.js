@@ -241,8 +241,9 @@ export class Edge {
         const highlightThicknessMultiplier = 1.75; // Consistent multiplier
         mat.linewidth = highlight ? this.data.thickness * highlightThicknessMultiplier : this.data.thickness;
 
-        if (!mat.vertexColors) { // Only set color if not using vertexColors (gradient)
-            mat.color.set(highlight ? Edge.HIGHLIGHT_COLOR : (this.data.color || 0x00d0ff) );
+        if (!mat.vertexColors) {
+            // Only set color if not using vertexColors (gradient)
+            mat.color.set(highlight ? Edge.HIGHLIGHT_COLOR : this.data.color || 0x00d0ff);
         } else {
             // For gradient edges, highlighting by changing color is tricky without complex shader logic.
             // Increased thickness and opacity will be the primary highlight indicators.

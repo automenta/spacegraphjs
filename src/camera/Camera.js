@@ -433,8 +433,8 @@ export class Camera {
                     });
                 });
             }
-        } catch (e) {
-            console.error('Camera: Error loading named views:', e);
+        } catch (_e) {
+            // console.error('Camera: Error loading named views:', _e);
         }
     }
 
@@ -450,8 +450,8 @@ export class Camera {
                 };
             });
             localStorage.setItem('spacegraph_namedViews', JSON.stringify(viewsToStore));
-        } catch (e) {
-            console.error('Camera: Error saving named views:', e);
+        } catch (_e) {
+            // console.error('Camera: Error saving named views:', _e);
         }
     }
 
@@ -490,7 +490,7 @@ export class Camera {
 
     setCameraMode(mode, calledInternally = false) {
         if (!Object.values(CAMERA_MODES).includes(mode)) {
-            console.warn(`Camera: Unknown mode "${mode}" requested.`);
+            // console.warn(`Camera: Unknown mode "${mode}" requested.`);
             return;
         }
         if (this.cameraMode === mode && !calledInternally) return;

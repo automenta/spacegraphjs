@@ -29,7 +29,7 @@ class InstancedArrowheadGroup {
     addArrowhead(edge, type) {
         // type: 'source' or 'target'
         if (this.activeInstances >= MAX_INSTANCED_EDGES * 2) {
-            console.warn('InstancedEdgeManager: Max arrowhead instances reached.');
+            // console.warn('InstancedEdgeManager: Max arrowhead instances reached.');
             return null;
         }
 
@@ -131,7 +131,7 @@ class InstancedEdgeGroup {
 
     addEdge(edge) {
         if (this.activeInstances >= MAX_INSTANCED_EDGES) {
-            console.warn('InstancedEdgeManager: Max instances reached.');
+            // console.warn('InstancedEdgeManager: Max instances reached.');
             return null;
         }
 

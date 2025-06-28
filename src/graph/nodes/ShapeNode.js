@@ -177,11 +177,11 @@ export class ShapeNode extends Node {
                 });
             },
             undefined,
-            (error) => {
-                console.error(
-                    `ShapeNode: Failed to load GLTF model from ${levelConfig.gltfUrl}. Falling back to primitive shape.`,
-                    error
-                );
+            (_error) => {
+                // console.error(
+                //     `ShapeNode: Failed to load GLTF model from ${levelConfig.gltfUrl}. Falling back to primitive shape.`,
+                //     _error
+                // );
                 const fallbackSize = levelConfig.size || this.size || 20;
                 const fallbackColor = levelConfig.color || this.color || 0xff0000;
                 const fallbackMesh = this._createMeshForLevel({
@@ -223,9 +223,9 @@ export class ShapeNode extends Node {
                 this._boundingSphere.center.copy(this.position);
             } else {
                 // Fallback if bounding box computation failed or resulted in invalid values
-                console.warn(
-                    `ShapeNode ${this.id}: Bounding box computation failed for object. Using fallback radius.`
-                );
+                // console.warn(
+                //     `ShapeNode ${this.id}: Bounding box computation failed for object. Using fallback radius.`
+                // );
                 this._boundingSphere.radius = (this.size || 50) / 2;
                 this._boundingSphere.center.copy(this.position);
             }
@@ -309,7 +309,7 @@ export class ShapeNode extends Node {
                             const selectionEmissive = 0xccaa00;
                             const selectionIntensity = 0.6;
                             child.material.emissive?.setHex(selectionEmissive);
-                             if (child.material.emissiveIntensity !== undefined) {
+                            if (child.material.emissiveIntensity !== undefined) {
                                 child.material.emissiveIntensity = selectionIntensity;
                             }
                         }

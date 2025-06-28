@@ -19,7 +19,7 @@ export class DataPlugin extends Plugin {
         const cameraPlugin = this.pluginManager.getPlugin('CameraPlugin');
 
         if (!nodePlugin || !edgePlugin) {
-            console.error('DataPlugin: Node/Edge Plugin not available.');
+            // console.error('DataPlugin: Node/Edge Plugin not available.');
             return null;
         }
 
@@ -60,8 +60,8 @@ export class DataPlugin extends Plugin {
 
         try {
             return JSON.stringify(graphData, null, options.prettyPrint ? 2 : undefined);
-        } catch (error) {
-            console.error('DataPlugin: Error serializing graph:', error);
+        } catch (_error) {
+            // console.error('DataPlugin: Error serializing graph:', _error);
             return null;
         }
     }
@@ -73,7 +73,7 @@ export class DataPlugin extends Plugin {
         const cameraPlugin = this.pluginManager.getPlugin('CameraPlugin');
 
         if (!nodePlugin || !edgePlugin || !layoutPlugin) {
-            console.error('DataPlugin: Required plugins (Node, Edge, Layout) not available.');
+            // console.error('DataPlugin: Required plugins (Node, Edge, Layout) not available.');
             return false;
         }
 
@@ -88,8 +88,8 @@ export class DataPlugin extends Plugin {
             ) {
                 throw new Error('Invalid graph data structure.');
             }
-        } catch (error) {
-            console.error('DataPlugin: Error parsing JSON:', error);
+        } catch (_error) {
+            // console.error('DataPlugin: Error parsing JSON:', _error);
             return false;
         }
 
@@ -110,7 +110,7 @@ export class DataPlugin extends Plugin {
                 if (nodeData.isPinned) node.isPinned = true;
                 importedNodesMap.set(node.id, node);
             } else {
-                console.warn(`DataPlugin: Failed to create node:`, nodeData);
+                // console.warn(`DataPlugin: Failed to create node:`, nodeData);
             }
         }
 
@@ -131,7 +131,7 @@ export class DataPlugin extends Plugin {
             if (sourceNode && targetNode) {
                 edgePlugin.addEdge(sourceNode, targetNode, edgeData.data);
             } else {
-                console.warn(`DataPlugin: Missing source/target node for edge:`, edgeData);
+                // console.warn(`DataPlugin: Missing source/target node for edge:`, edgeData);
             }
         }
 

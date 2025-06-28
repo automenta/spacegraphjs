@@ -14,11 +14,11 @@ export class PluginManager {
      */
     add(plugin) {
         if (!(plugin instanceof Plugin)) {
-            console.warn('PluginManager: Attempted to add a non-Plugin object.');
+            // console.warn('PluginManager: Attempted to add a non-Plugin object.');
             return;
         }
         if (this.plugins.has(plugin.getName())) {
-            console.warn(`PluginManager: Plugin "${plugin.getName()}" already registered. Overwriting.`);
+            // console.warn(`PluginManager: Plugin "${plugin.getName()}" already registered. Overwriting.`);
         }
         this.plugins.set(plugin.getName(), plugin);
     }

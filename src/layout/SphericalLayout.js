@@ -49,10 +49,10 @@ export class SphericalLayout {
     stop() {}
     kick() {}
 
-    addNode(node) {}
-    removeNode(node) {}
-    addEdge(edge) {}
-    removeEdge(edge) {}
+    addNode(_node) {}
+    removeNode(_node) {}
+    addEdge(_edge) {}
+    removeEdge(_edge) {}
 
     dispose() {
         this.space = null;
