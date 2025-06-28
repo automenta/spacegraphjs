@@ -25,12 +25,12 @@ export class HtmlNode extends Node {
         };
 
         // Ensure this.mesh is initialized for Node.resize() and Metaframe
-        if (!this.mesh) {
-            // Using a Group as a placeholder if no specific WebGL mesh is needed for HtmlNode itself
-            this.mesh = new THREE.Group();
-            this.mesh.userData = { nodeId: this.id, type: 'html-node-mesh-placeholder' };
-        }
-        this.mesh.scale.set(initialScaleX, initialScaleY, this.data.scale?.z ?? 1.0);
+        // Use a 1x1 PlaneGeometry so its scale directly represents world dimensions for the metaframe.
+        // Make it invisible or very transparent as it's just for bounding box/scaling purposes.
+        const placeholderMaterial = new THREE.MeshBasicMaterial({ visible: false, depthTest: false, transparent: true, opacity: 0 });
+        this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), placeholderMaterial);
+        this.mesh.userData = { nodeId: this.id, type: 'html-node-mesh-placeholder' };
+        this.mesh.scale.set(initialScaleX * this.baseSize.width, initialScaleY * this.baseSize.height, 1.0);
 
 
         this.htmlElement = this._createElement();
@@ -214,30 +214,37 @@ export class HtmlNode extends Node {
     }
 
     // Overridden resize method to work with scale from Metaframe
-    resize(newScale) {
-        if (this.mesh) { // Ensure mesh exists, as base Node.resize expects
-            this.mesh.scale.copy(newScale);
+    resize(newWorldScale) { // newWorldScale is the new world dimensions (width, height, depth) for the node's placeholder mesh
+        if (this.mesh) {
+            this.mesh.scale.copy(newWorldScale); // newWorldScale is the target world dimensions for the 1x1 plane
         }
 
-        // Calculate new pixel dimensions based on baseSize and newScale
-        this.size.width = Math.max(HtmlNode.MIN_SIZE.width, this.baseSize.width * newScale.x);
-        this.size.height = Math.max(HtmlNode.MIN_SIZE.height, this.baseSize.height * newScale.y);
+        // Update pixel dimensions based on this new world scale
+        this.size.width = Math.max(HtmlNode.MIN_SIZE.width, newWorldScale.x);
+        this.size.height = Math.max(HtmlNode.MIN_SIZE.height, newWorldScale.y);
 
         if (this.htmlElement) {
             this.htmlElement.style.width = `${this.size.width}px`;
             this.htmlElement.style.height = `${this.size.height}px`;
         }
 
-        // Important: Metaframe relies on getBoundingSphereRadius *not* returning a pre-scaled radius.
-        // The Node.resize() method calls this.metaframe?.update() which will handle scaling the metaframe itself.
-        super.resize(newScale); // Call super to ensure metaframe updates if logic is there
-    }
+        this.metaframe?.update(); // Ensure metaframe is updated with the new size/scale
+        this.space?.emit('graph:node:dataChanged', { node: this, property: 'size', value: { ...this.size } });
+        this.space?.emit('graph:node:dataChanged', { node: this, property: 'scale', value: { x: newWorldScale.x/this.baseSize.width, y: newWorldScale.y/this.baseSize.height, z:newWorldScale.z } });
 
+    }
 
     getBoundingSphereRadius() {
-        // Return radius based on unscaled baseSize, as Metaframe applies node.mesh.scale separately.
-        return Math.sqrt(this.baseSize.width ** 2 + this.baseSize.height ** 2) / 2;
+        // Reflect current world size for layout purposes
+        if (this.mesh) { // mesh.scale is world dimensions for the 1x1 plane
+            return Math.sqrt(this.mesh.scale.x ** 2 + this.mesh.scale.y ** 2) / 2;
+        }
+        // Fallback to pixel size based (less accurate for world scale if mesh isn't ready)
+        return Math.sqrt(this.size.width ** 2 + this.size.height ** 2) / 2;
     }
+
+    // getActualSize is inherited from Node.js and should work correctly now if this.mesh
+    // is a 1x1 plane and this.mesh.scale stores the world dimensions.
 
     setSelectedStyle(selected) {
         this.htmlElement?.classList.toggle('selected', selected);

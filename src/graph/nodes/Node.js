@@ -59,7 +59,39 @@ export class Node {
     }
 
     getBoundingSphereRadius() {
-        return 50;
+        // Fallback or for physics if needed.
+        if (this.mesh && this.mesh.geometry) {
+            if (!this.mesh.geometry.boundingSphere) {
+                this.mesh.geometry.computeBoundingSphere();
+            }
+            if (this.mesh.geometry.boundingSphere) {
+                 return this.mesh.geometry.boundingSphere.radius * Math.max(this.mesh.scale.x, this.mesh.scale.y, this.mesh.scale.z);
+            }
+        }
+        return 50; // Default if no mesh or geometry
+    }
+
+    /**
+     * Returns the node's actual size after scaling its geometry's bounding box.
+     * @returns {THREE.Vector3 | null} A new Vector3 instance representing the (width, height, depth), or null.
+     */
+    getActualSize() {
+        if (!this.mesh || !this.mesh.geometry) return null;
+
+        if (!this.mesh.geometry.boundingBox) {
+            this.mesh.geometry.computeBoundingBox();
+        }
+
+        // If boundingBox is still null (e.g. for an empty geometry), return null or a default.
+        if (!this.mesh.geometry.boundingBox) {
+            console.warn(`Node ${this.id}: Mesh geometry lacks a boundingBox.`);
+            return new THREE.Vector3(1,1,1); // Or return null and handle upstream
+        }
+
+        const size = new THREE.Vector3();
+        this.mesh.geometry.boundingBox.getSize(size); // Gets size of unscaled geometry
+        size.multiply(this.mesh.scale); // Apply node's scale
+        return size;
     }
 
     setSelectedStyle(_selected) {
