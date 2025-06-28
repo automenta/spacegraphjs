@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import { $, $$ } from '../utils.js';
 import { HtmlNode } from '../graph/nodes/HtmlNode.js';
 
+const ALT_Z_DRAG_SENSITIVITY = 1.0;
+
 // Import decomposed modules
 import { InteractionState } from './InteractionState.js';
 import { ConfirmDialog } from './dialogs/ConfirmDialog.js';
@@ -490,7 +492,7 @@ export class UIManager {
                     if (e.altKey) {
                         // Alt-key is pressed: Adjust the depth of the interaction plane.
                         // The amount to shift the plane is based on vertical mouse movement (dy).
-                        const planeShiftAmount = dy * 0.5; // Sensitivity factor for depth change.
+                        const planeShiftAmount = dy * ALT_Z_DRAG_SENSITIVITY;
 
                         const cameraForward = new THREE.Vector3();
                         camera.getWorldDirection(cameraForward); // Get current camera viewing direction.
