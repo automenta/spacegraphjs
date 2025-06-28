@@ -283,8 +283,8 @@ export class HtmlNode extends Node {
         this.htmlElement?.classList.remove('resizing');
         try {
             this.space?.plugins?.getPlugin('LayoutPlugin')?.layoutManager?.getActiveLayout()?.releaseNode(this);
-        } catch (_error) {
-            // console.error('Error releasing node during resize:', _error);
+        } catch {
+            // console.error('Error releasing node during resize:');
         }
         this.space?.emit('graph:node:resizeend', { node: this, finalSize: { ...this.size } });
     }

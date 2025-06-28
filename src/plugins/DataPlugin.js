@@ -60,8 +60,8 @@ export class DataPlugin extends Plugin {
 
         try {
             return JSON.stringify(graphData, null, options.prettyPrint ? 2 : undefined);
-        } catch (_error) {
-            // console.error('DataPlugin: Error serializing graph:', _error);
+        } catch {
+            // console.error('DataPlugin: Error serializing graph:');
             return null;
         }
     }
@@ -88,8 +88,8 @@ export class DataPlugin extends Plugin {
             ) {
                 throw new Error('Invalid graph data structure.');
             }
-        } catch (_error) {
-            // console.error('DataPlugin: Error parsing JSON:', _error);
+        } catch {
+            // console.error('DataPlugin: Error parsing JSON:');
             return false;
         }
 

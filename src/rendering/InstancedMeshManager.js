@@ -118,8 +118,8 @@ export class InstancedMeshManager {
                 // console.warn(`GLTF model at ${url} contains no mesh geometry.`);
                 return null;
             }
-        } catch (_error) {
-            // console.error(`Error loading GLTF model from ${url}:`, _error);
+        } catch {
+            // console.error(`Error loading GLTF model from ${url}:`);
             return null;
         }
     }

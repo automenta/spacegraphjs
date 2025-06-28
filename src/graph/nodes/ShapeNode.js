@@ -455,11 +455,16 @@ export class ShapeNode extends Node {
         let fallbackSize = 50; // Default fallback
         if (Number.isFinite(this.data.size)) {
             fallbackSize = this.data.size;
-        } else if (typeof this.data.size === 'object' && this.data.size !== null && Number.isFinite(this.data.size.radius)) {
+        } else if (
+            typeof this.data.size === 'object' &&
+            this.data.size !== null &&
+            Number.isFinite(this.data.size.radius)
+        ) {
             // For shapes like capsules that might have a size object with radius
             fallbackSize = this.data.size.radius * 2; // Approximate from radius
-        } else if (Number.isFinite(this.size)) { // this.size is set in constructor from data.size
-             fallbackSize = this.size;
+        } else if (Number.isFinite(this.size)) {
+            // this.size is set in constructor from data.size
+            fallbackSize = this.size;
         }
 
         fallbackSize = Math.max(5, fallbackSize); // Ensure a minimum size

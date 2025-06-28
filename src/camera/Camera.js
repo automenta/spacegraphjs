@@ -191,7 +191,12 @@ export class Camera {
             newY = Utils.clamp(newY, this.minZoomDistance, this.maxZoomDistance);
             const actualZoomRatio = newY / (currentY || 1); // Avoid division by zero if currentY is 0
 
-            if (pointerX !== undefined && pointerY !== undefined && this.space.getPointerNDC && this.space.screenToWorld) {
+            if (
+                pointerX !== undefined &&
+                pointerY !== undefined &&
+                this.space.getPointerNDC &&
+                this.space.screenToWorld
+            ) {
                 const pWorldPlane = this.space.screenToWorld(pointerX, pointerY, 0); // Project to Y=0 plane
 
                 if (pWorldPlane) {
@@ -209,7 +214,9 @@ export class Camera {
                 raycaster.setFromCamera(pointerNDC, this._cam); // Ray from camera through mouse
 
                 // Define a plane through targetLookAt, facing the camera. This is our "focal plane".
-                const viewDirection = new THREE.Vector3().subVectors(this.targetPosition, this.targetLookAt).normalize();
+                const viewDirection = new THREE.Vector3()
+                    .subVectors(this.targetPosition, this.targetLookAt)
+                    .normalize();
                 const planeAtLookAt = new THREE.Plane().setFromNormalAndCoplanarPoint(viewDirection, this.targetLookAt);
 
                 pWorld = new THREE.Vector3(); // This will be the world point under the cursor on the focal plane
@@ -232,11 +239,11 @@ export class Camera {
 
             // Adjust camera's target position
             const offsetFromCamToPWorld = new THREE.Vector3().subVectors(pWorld, this.targetPosition);
-            this.targetPosition.addScaledVector(offsetFromCamToPWorld, (1 - zoomFactor));
+            this.targetPosition.addScaledVector(offsetFromCamToPWorld, 1 - zoomFactor);
 
             // Adjust camera's look-at point
             const offsetFromLookAtToPWorld = new THREE.Vector3().subVectors(pWorld, this.targetLookAt);
-            this.targetLookAt.addScaledVector(offsetFromLookAtToPWorld, (1 - zoomFactor));
+            this.targetLookAt.addScaledVector(offsetFromLookAtToPWorld, 1 - zoomFactor);
 
             // After adjusting, ensure the distance constraints (min/max zoom) are still met.
             // This recalculates the camera position based on the (potentially new) lookAt and clamped distance.
@@ -244,8 +251,8 @@ export class Camera {
             let finalDist = finalOffset.length();
             finalDist = Utils.clamp(finalDist, this.minZoomDistance, this.maxZoomDistance);
             this.targetPosition.copy(this.targetLookAt).addScaledVector(finalOffset.normalize(), finalDist);
-
-        } else { // Fallback for other modes or if conditions not met
+        } else {
+            // Fallback for other modes or if conditions not met
             const lookAtToCam = new THREE.Vector3().subVectors(this.targetPosition, this.targetLookAt);
             const currentDist = lookAtToCam.length();
             const newDist = Utils.clamp(currentDist * zoomFactor, this.minZoomDistance, this.maxZoomDistance);
@@ -495,8 +502,8 @@ export class Camera {
                     });
                 });
             }
-        } catch (_e) {
-            // console.error('Camera: Error loading named views:', _e);
+        } catch {
+            // console.error('Camera: Error loading named views:');
         }
     }
 
@@ -512,8 +519,8 @@ export class Camera {
                 };
             });
             localStorage.setItem('spacegraph_namedViews', JSON.stringify(viewsToStore));
-        } catch (_e) {
-            // console.error('Camera: Error saving named views:', _e);
+        } catch {
+            // console.error('Camera: Error saving named views:');
         }
     }
 
