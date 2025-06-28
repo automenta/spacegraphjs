@@ -308,10 +308,22 @@ export class Metaframe {
         // 2. Orient the metaframeGroup (billboarding or node's orientation)
         const camera = this.cameraPlugin?.getCameraInstance();
         if (this.node.cssObject && camera) {
-            // Billboarding for nodes with CSS content (e.g., HtmlNode).
-            // The metaframeGroup's orientation matches the camera's orientation,
-            // making its local XY plane parallel to the screen.
-            this.metaframeGroup.quaternion.copy(camera.quaternion);
+            // For nodes with CSS content (e.g., HtmlNode),
+            // their cssObject is already billboarded by the CSS3DRenderer.
+            // The metaframeGroup (WebGL frame and handles) should align with this.
+            // We extract the rotation from the cssObject's world matrix.
+
+            // Decompose the cssObject's world matrix to get its world quaternion
+            const cssWorldPosition = new THREE.Vector3();
+            const cssWorldQuaternion = new THREE.Quaternion();
+            const cssWorldScale = new THREE.Vector3();
+
+            // Ensure cssObject.matrixWorld is up-to-date.
+            // This typically happens during the rendering loop (before this update or as part of scene graph update).
+            this.node.cssObject.updateMatrixWorld(true); // Force update matrixWorld for cssObject
+            this.node.cssObject.matrixWorld.decompose(cssWorldPosition, cssWorldQuaternion, cssWorldScale);
+            this.metaframeGroup.quaternion.copy(cssWorldQuaternion);
+
         } else if (this.node.mesh) {
             // For nodes with WebGL mesh content (e.g., ShapeNode),
             // align the metaframeGroup with the node's mesh orientation.
