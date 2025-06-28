@@ -908,10 +908,10 @@ export class UIManager {
         }
 
         // If not hovering over a handle or an edge, ensure default cursor
-        if (!newHoveredHandleType && !newHoveredEdge) {
+        if (!newHoveredHandleInfo?.type && !newHoveredEdge) {
             document.body.style.cursor = 'grab';
-        } else if (newHoveredHandleType) { // If on a handle, ensure its cursor is set
-            document.body.style.cursor = this._getCursorForHandle(newHoveredHandleType);
+        } else if (newHoveredHandleInfo?.type) { // If on a handle, ensure its cursor is set
+            document.body.style.cursor = this._getCursorForHandle(newHoveredHandleInfo.type);
         }
         // If only on an edge, cursor is not changed by edge hover itself currently.
     }
