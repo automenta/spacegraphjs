@@ -12,12 +12,13 @@ SpaceGraphJS is a JavaScript library for creating interactive 3D force-directed 
     - Support for different edge constraint types (elastic, rigid, weld).
 - **Interactive UI**:
     - Drag & drop nodes.
-    - Resize HTML nodes.
+    - Resize HTML nodes (via Metaframe or potentially new scale gizmo in future).
+    - **3D Translation Gizmo**: Manipulate node positions along X, Y, Z axes or planes.
     - Context menus for creating nodes, linking, deleting, etc.
     - Interactive edge menu for adjusting properties like color and thickness.
     - Smooth camera controls (pan, zoom, focus on node) with GSAP animations.
     - History for camera movements (back/forward).
-- **Modular Design**: Core components like `SpaceGraph`, `UIManager`, `ForceLayout`, `Camera`, and Node types are organized into classes.
+- **Modular Design**: Core components like `SpaceGraph`, `UIManager`, `ForceLayout`, `Camera`, Gizmos, and Node types are organized into classes.
 - **ES Module Support**: Can be easily integrated into modern JavaScript projects.
 
 ## Live Demo

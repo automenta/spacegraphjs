@@ -159,10 +159,48 @@ export class Node {
         // Any cleanup needed when dragging ends
     }
 
-    resize(newScale) {
-        if (this.mesh) {
-            this.mesh.scale.copy(newScale);
+    // Default resize methods. Specific node types can override these.
+    startResize() {
+        // Default behavior: no specific action on resize start.
+        // Node types like HtmlNode override this for custom visual feedback or state changes.
+    }
+
+    resize(newWorldDimensions) {
+        if (this.mesh && this.mesh.geometry) {
+            if (!this.mesh.geometry.boundingBox) {
+                this.mesh.geometry.computeBoundingBox();
+            }
+
+            if (this.mesh.geometry.boundingBox) {
+                const geometrySize = new THREE.Vector3();
+                this.mesh.geometry.boundingBox.getSize(geometrySize);
+
+                // Avoid division by zero if geometry has no size
+                const newScale = new THREE.Vector3(
+                    geometrySize.x > 0 ? newWorldDimensions.x / geometrySize.x : 1,
+                    geometrySize.y > 0 ? newWorldDimensions.y / geometrySize.y : 1,
+                    geometrySize.z > 0 ? newWorldDimensions.z / geometrySize.z : 1
+                );
+                this.mesh.scale.copy(newScale);
+            } else {
+                // Fallback if boundingBox is not available (e.g. empty geometry)
+                // This might happen for nodes that are not supposed to be scaled or have no visual mesh
+                // console.warn(`Node ${this.id}: Cannot compute scale factor due to missing boundingBox. Applying dimensions as scale.`);
+                this.mesh.scale.copy(newWorldDimensions);
+            }
+        } else if (this.mesh) {
+            // If there's a mesh but no geometry (less common, but possible for abstract meshes)
+            // or if we want to treat the scale as direct world dimensions for some reason (like HtmlNode's 1x1 plane)
+            // For generic nodes, this path is less likely if they have standard geometry.
+            // This behavior is similar to HtmlNode's specific resize.
+            // console.warn(`Node ${this.id}: Mesh geometry not available for precise scaling. Applying dimensions as scale.`);
+            this.mesh.scale.copy(newWorldDimensions);
         }
         this.metaframe?.update();
+    }
+
+    endResize() {
+        // Default behavior: no specific action on resize end.
+        // Node types like HtmlNode override this for custom visual feedback or state changes.
     }
 }
