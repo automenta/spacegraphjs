@@ -2,10 +2,55 @@
 import js from '@eslint/js';
 import globals from 'globals';
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
+import importPlugin from 'eslint-plugin-import';
 
 export default [
     js.configs.recommended,
     eslintPluginPrettierRecommended,
+    {
+        // Settings for eslint-plugin-import
+        plugins: {
+            import: importPlugin,
+        },
+        settings: {
+            'import/resolver': {
+                node: {
+                    extensions: ['.js', '.jsx', '.mjs', '.ts', '.tsx'], // Added .mjs
+                },
+                alias: {
+                    map: [
+                        // We don't need to map 'three/addons/' to a local path
+                        // because it's external (CDN). Instead, we'll ignore it.
+                    ],
+                    extensions: ['.js', '.jsx', '.mjs'],
+                },
+            },
+            // 'import/ignore': [
+            //  'three/addons/.*', // This would ignore them from resolution entirely
+            // ],
+        },
+        rules: {
+            // 'import/no-unresolved': ['error', { commonjs: true, amd: true, ignore: ['^three/addons/'] }],
+            // Let's try configuring the resolver properly first or using 'import/core-modules'
+            'import/no-unresolved': [
+                'error',
+                {
+                    commonjs: true,
+                    amd: true,
+                    ignore: ['^three$', '^three/addons/.*$', '^gsap$'], // Mark CDN imports as "ignorable"
+                },
+            ],
+            'import/extensions': [
+                'warn',
+                'ignorePackages',
+                {
+                    js: 'always', // or 'never' if you don't want .js extensions
+                    mjs: 'always',
+                },
+            ],
+            // other import plugin rules can be added here
+        },
+    },
     {
         languageOptions: {
             ecmaVersion: 'latest',
