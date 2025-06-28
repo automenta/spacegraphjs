@@ -1511,55 +1511,47 @@ export class UIManager {
                         const newWorldPos = this.multiSelectionHelper.localToWorld(initialLocalOffset.clone());
                         node.setPosition(newWorldPos.x, newWorldPos.y, newWorldPos.z);
 
-                        if (node.mesh) {
-                            // For ShapeNodes primarily
-                            // New scale = initial_node_scale_relative_to_helper * helper_new_scale
-                            // This requires storing initial relative scales.
-                            // Simplest: apply the same world scale delta. This might not be visually perfect for complex hierarchies.
-                            // For now, let's assume nodes adopt the helper's scale change directly applied to their original scale
-                            const newScale = initialScale.clone().multiply(scaleDeltaVec);
-                            node.setScale(newScale.x, newScale.y, newScale.z); // Assuming node.setScale exists
-                        } else if (node instanceof HtmlNode) {
-                            // For HTML nodes, scaling is often about width/height of the HTML element.
-                            // This needs a different approach, possibly by scaling the node's 'size' property.
-                            // This part of the scaling logic for HTML nodes via gizmo needs careful thought.
-                            // For now, we might just scale their visual representation if they have one (e.g. via CSS transform scale)
-                            // or adjust their width/height properties.
-                            // Let's try to apply to node.size if it exists and it's an HtmlNode.
-                            const newSize = {
-                                width: (node.size?.width || node.baseSize.width) * scaleDeltaVec.x,
-                                height: (node.size?.height || node.baseSize.height) * scaleDeltaVec.y,
-                            };
-                            node.setSize(newSize.width, newSize.height);
+                        // Calculate the new target world dimensions/scale for the node.
+                        // initialScale here is the node's initial world scale (which for HtmlNode's 1x1 plane means its world dimensions).
+                        // scaleDeltaVec is the multiplicative factor derived from mouse movement.
+                        const newWorldDimensions = initialScale.clone().multiply(scaleDeltaVec);
+
+                        // Ensure minimum dimensions to prevent nodes from becoming too small or inverted.
+                        // Node's resize method should also enforce its own minimums.
+                        newWorldDimensions.x = Math.max(1, newWorldDimensions.x); // Min dimension of 1 world unit
+                        newWorldDimensions.y = Math.max(1, newWorldDimensions.y);
+                        newWorldDimensions.z = Math.max(1, newWorldDimensions.z);
+
+                        if (typeof node.resize === 'function') {
+                            node.resize(newWorldDimensions);
+                        } else {
+                            // Fallback for nodes that might not have a resize method but have a mesh
+                            // This situation should ideally be avoided by ensuring all scalable nodes have `resize`.
+                            if (node.mesh) {
+                                node.mesh.scale.copy(newWorldDimensions); // Assuming mesh scale directly maps to world dimensions
+                            }
                         }
                     }
                 });
             } else {
                 // Single node selection
                 selectedNodes.forEach((node) => {
-                    const initialScale = this.selectedNodesInitialScales.get(node.id);
+                    const initialScale = this.selectedNodesInitialScales.get(node.id); // Initial world dimensions/scale
                     if (initialScale) {
-                        if (node.mesh) {
-                            // ShapeNode
-                            const newScale = initialScale.clone().multiply(scaleDeltaVec);
-                            node.setScale(newScale.x, newScale.y, newScale.z);
-                        } else if (node instanceof HtmlNode) {
-                            // Apply scaleDeltaVec to node's size, respecting aspect ratio if uniform scaling
-                            let newWidth, newHeight;
-                            if (gizmoInfo.axis === 'xyz') {
-                                // Uniform
-                                newWidth = (node.size?.width || node.baseSize.width) * scaleDeltaVec.x;
-                                newHeight = (node.size?.height || node.baseSize.height) * scaleDeltaVec.y; // Should be same as x for uniform
-                            } else {
-                                // Axis specific - might be tricky for HTML nodes, usually they are 2D scaled
-                                newWidth =
-                                    (node.size?.width || node.baseSize.width) *
-                                    (gizmoInfo.axis === 'x' || gizmoInfo.axis === 'xy' ? scaleDeltaVec.x : 1);
-                                newHeight =
-                                    (node.size?.height || node.baseSize.height) *
-                                    (gizmoInfo.axis === 'y' || gizmoInfo.axis === 'xy' ? scaleDeltaVec.y : 1);
+                        const newWorldDimensions = initialScale.clone().multiply(scaleDeltaVec);
+
+                        newWorldDimensions.x = Math.max(1, newWorldDimensions.x);
+                        newWorldDimensions.y = Math.max(1, newWorldDimensions.y);
+                        newWorldDimensions.z = Math.max(1, newWorldDimensions.z);
+
+                        if (typeof node.resize === 'function') {
+                            node.resize(newWorldDimensions);
+                        } else {
+                             if (node.mesh) {
+                                // Fallback if no resize method, attempt to scale mesh directly.
+                                // This is less ideal as it bypasses any node-specific logic in resize.
+                                node.mesh.scale.copy(newWorldDimensions);
                             }
-                            node.setSize(Math.max(20, newWidth), Math.max(20, newHeight));
                         }
                     }
                 });
