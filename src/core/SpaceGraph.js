@@ -245,55 +245,74 @@ export class SpaceGraph {
         const instancedNodeManager = renderingPlugin?.getInstancedMeshManager();
         const instancedEdgeManager = edgePlugin?.instancedEdgeManager;
 
+        // This will store the closest valid intersection found.
+        // Structure: { object: THREE.Object3D, node?: Node, edge?: Edge, distance: number, type: string }
         let closestIntersect = null;
 
+        // --- 1. Raycast against Instanced Nodes ---
         if (instancedNodeManager) {
-            const instancedNodeIntersection = instancedNodeManager.raycast(raycaster);
-            if (instancedNodeIntersection) {
-                const node = nodePlugin?.getNodeById(instancedNodeIntersection.nodeId);
+            // Assuming instancedNodeManager.raycast returns an object like { distance, nodeId, object? (optional, actual instance mesh/marker) }
+            const instancedNodeHit = instancedNodeManager.raycast(raycaster);
+            if (instancedNodeHit) {
+                const node = nodePlugin?.getNodeById(instancedNodeHit.nodeId);
                 if (node) {
-                    closestIntersect = { node, distance: instancedNodeIntersection.distance, type: 'node' };
+                    // If instancedNodeHit.object is not provided, use node.mesh as a fallback.
+                    closestIntersect = { object: instancedNodeHit.object || node.mesh, node, edge: null, distance: instancedNodeHit.distance, type: 'node' };
                 }
             }
         }
 
-        const currentNodes = nodePlugin?.getNodes();
-        if (currentNodes) {
-            const nonInstancedNodeMeshes = [...currentNodes.values()]
-                .filter((n) => !n.isInstanced && n.mesh && n.mesh.visible)
-                .map((n) => n.mesh);
+        // --- 2. Raycast against Non-Instanced Node Meshes ---
+        const allNodes = nodePlugin?.getNodes(); // Cache for efficiency if used multiple times.
+        if (allNodes) {
+            const nonInstancedNodeMeshes = [];
+            allNodes.forEach(node => {
+                // Filter for nodes that are not instanced, have a mesh, and are visible.
+                if (!node.isInstanced && node.mesh && node.mesh.visible) {
+                    nonInstancedNodeMeshes.push(node.mesh);
+                }
+            });
 
             if (nonInstancedNodeMeshes.length > 0) {
-                const nodeIntersects = raycaster.intersectObjects(nonInstancedNodeMeshes, false);
+                const nodeIntersects = raycaster.intersectObjects(nonInstancedNodeMeshes, false); // false = non-recursive
                 if (nodeIntersects.length > 0) {
+                    // If this intersection is closer than any found so far.
                     if (!closestIntersect || nodeIntersects[0].distance < closestIntersect.distance) {
                         const intersectedMesh = nodeIntersects[0].object;
+                        // Retrieve the SpaceGraph Node associated with this THREE.Mesh via userData.
                         const node = nodePlugin.getNodeById(intersectedMesh.userData?.nodeId);
                         if (node) {
-                            closestIntersect = { node, distance: nodeIntersects[0].distance, type: 'node' };
+                            closestIntersect = { object: intersectedMesh, node, edge: null, distance: nodeIntersects[0].distance, type: 'node' };
                         }
                     }
                 }
             }
         }
 
+        // --- 3. Raycast against Instanced Edges ---
         if (instancedEdgeManager) {
-            const instancedEdgeIntersection = instancedEdgeManager.raycast(raycaster);
-            if (instancedEdgeIntersection) {
-                if (!closestIntersect || instancedEdgeIntersection.distance < closestIntersect.distance) {
-                    const edge = edgePlugin?.getEdgeById(instancedEdgeIntersection.edgeId);
+            // Assuming instancedEdgeManager.raycast returns { distance, edgeId, object? }
+            const instancedEdgeHit = instancedEdgeManager.raycast(raycaster);
+            if (instancedEdgeHit) {
+                // If this intersection is closer than any found so far.
+                if (!closestIntersect || instancedEdgeHit.distance < closestIntersect.distance) {
+                    const edge = edgePlugin?.getEdgeById(instancedEdgeHit.edgeId);
                     if (edge) {
-                        closestIntersect = { edge, distance: instancedEdgeIntersection.distance, type: 'edge' };
+                        closestIntersect = { object: instancedEdgeHit.object || edge.line, node: null, edge, distance: instancedEdgeHit.distance, type: 'edge' };
                     }
                 }
             }
         }
 
-        const currentEdges = edgePlugin?.getEdges();
-        if (currentEdges) {
-            const nonInstancedEdgeLines = [...currentEdges.values()]
-                .filter((e) => !e.isInstanced && e.line && e.line.visible)
-                .map((e) => e.line);
+        // --- 4. Raycast against Non-Instanced Edge Lines ---
+        const allEdges = edgePlugin?.getEdges();
+        if (allEdges) {
+            const nonInstancedEdgeLines = [];
+            allEdges.forEach(edge => {
+                if (!edge.isInstanced && edge.line && edge.line.visible) {
+                    nonInstancedEdgeLines.push(edge.line);
+                }
+            });
 
             if (nonInstancedEdgeLines.length > 0) {
                 const edgeIntersects = raycaster.intersectObjects(nonInstancedEdgeLines, false);
@@ -302,18 +321,64 @@ export class SpaceGraph {
                         const intersectedLine = edgeIntersects[0].object;
                         const edge = edgePlugin.getEdgeById(intersectedLine.userData?.edgeId);
                         if (edge) {
-                            closestIntersect = { edge, distance: edgeIntersects[0].distance, type: 'edge' };
+                            closestIntersect = { object: intersectedLine, node: null, edge, distance: edgeIntersects[0].distance, type: 'edge' };
                         }
                     }
                 }
             }
         }
 
-        return closestIntersect?.type === 'node'
-            ? { node: closestIntersect.node, distance: closestIntersect.distance }
-            : closestIntersect?.type === 'edge'
-              ? { edge: closestIntersect.edge, distance: closestIntersect.distance }
-              : null;
+        // --- 5. Raycast against Metaframe Handles ---
+        // Metaframe handles (spheres/planes for resize/drag) are added directly to the scene.
+        // They need to be included in the intersection test.
+        // `userData.ownerNode` is assumed to be set on these handles by `Metaframe.js`.
+        if (allNodes) { // Re-use `allNodes` from above.
+            const metaframeHandles = [];
+            allNodes.forEach(node => {
+                if (node.metaframe && node.metaframe.isVisible) {
+                    Object.values(node.metaframe.resizeHandles).forEach(handle => metaframeHandles.push(handle));
+                    if (node.metaframe.dragHandle) {
+                        metaframeHandles.push(node.metaframe.dragHandle);
+                    }
+                }
+            });
+
+            if (metaframeHandles.length > 0) {
+                const handleIntersects = raycaster.intersectObjects(metaframeHandles, false);
+                if (handleIntersects.length > 0) {
+                    if (!closestIntersect || handleIntersects[0].distance < closestIntersect.distance) {
+                        const intersectedHandleObject = handleIntersects[0].object;
+                        const ownerNode = intersectedHandleObject.userData?.ownerNode;
+                        if (ownerNode) {
+                            // If a handle is hit, it's the primary 'object'.
+                            // The 'node' field in the result is set to the handle's owner.
+                            // UIManager._getTargetInfo will use object.name to determine it's a handle.
+                            closestIntersect = {
+                                object: intersectedHandleObject,
+                                node: ownerNode, // The node owning the handle.
+                                edge: null,      // Not an edge.
+                                distance: handleIntersects[0].distance,
+                                type: 'metaframe_handle' // Explicit type for this category.
+                            };
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- Return Structure ---
+        // Consistently return the underlying THREE.Object3D, associated graph node/edge, and distance.
+        // This allows UIManager to inspect object.name for handles or use node/edge directly.
+        if (closestIntersect) {
+            return {
+                object: closestIntersect.object,
+                node: closestIntersect.node,
+                edge: closestIntersect.edge,
+                distance: closestIntersect.distance,
+                // type: closestIntersect.type // Optional: could be useful for UIManager if it needs explicit types.
+            };
+        }
+        return null; // No intersection found.
     }
 
     animate() {

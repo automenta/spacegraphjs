@@ -43,6 +43,8 @@ export class UIManager {
     hoveredEdge = null;
     hoveredHandleType = null; // To track hovered metaframe handle for cursor changes
     currentHoveredGLHandle = null; // The actual THREE.Object3D of the handle
+    hoveredNodeForMetaframe = null; // Tracks node whose metaframe is shown due to hover
+
 
     pointerState = {
         down: false,
@@ -763,25 +765,28 @@ export class UIManager {
                 }
                 intersectedEdge = intersectedRayEdge || null;
 
-                // Check if the intersected object is a metaframe handle
-                if (object && object.name) {
+                // Check if the intersected 3D object (`object`) is a metaframe handle.
+                // `intersectedGraphNode` is the node whose mesh was hit (could be the same as `graphNode` or different).
+                // `object` is the specific THREE.Object3D from the raycaster.
+                if (object && object.name && intersectedGraphNode && intersectedGraphNode.metaframe?.isVisible) {
+                    const ownerNode = intersectedGraphNode; // The node that owns the metaframe and potentially this handle.
+
                     if (object.name.startsWith('resizeHandle-')) {
-                        // Ensure this handle belongs to the currently selected node's metaframe
-                        const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
-                        const primarySelectedNode = selectedNodes.values().next().value;
-                        if (primarySelectedNode && primarySelectedNode.metaframe?.isVisible) {
-                            const handleType = object.name.substring('resizeHandle-'.length);
-                            if (primarySelectedNode.metaframe.resizeHandles[handleType] === object) {
-                                metaframeHandleInfo = { type: handleType, object: object, node: primarySelectedNode };
-                                graphNode = primarySelectedNode;
-                            }
+                        const handleType = object.name.substring('resizeHandle-'.length);
+                        // Verify that the intersected 'object' is indeed one of the known resize handle meshes
+                        // belonging to the 'ownerNode's metaframe.
+                        if (ownerNode.metaframe.resizeHandles && ownerNode.metaframe.resizeHandles[handleType] === object) {
+                            metaframeHandleInfo = { type: handleType, object: object, node: ownerNode };
+                            // If a handle is hit, the 'effective' graph node for interaction purposes is the owner of the handle.
+                            graphNode = ownerNode;
                         }
                     } else if (object.name === 'dragHandle') {
-                        const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
-                        const primarySelectedNode = selectedNodes.values().next().value;
-                        if (primarySelectedNode && primarySelectedNode.metaframe?.isVisible && primarySelectedNode.metaframe.dragHandle === object) {
-                            metaframeHandleInfo = { type: 'dragHandle', object: object, node: primarySelectedNode };
-                            graphNode = primarySelectedNode;
+                        // Verify that the intersected 'object' is the drag handle mesh
+                        // belonging to the 'ownerNode's metaframe.
+                        if (ownerNode.metaframe.dragHandle === object) {
+                            metaframeHandleInfo = { type: 'dragHandle', object: object, node: ownerNode };
+                            // If the drag handle is hit, the 'effective' graph node is its owner.
+                            graphNode = ownerNode;
                         }
                     }
                 }
@@ -842,78 +847,119 @@ export class UIManager {
     }
 
     _handleHover(e) {
+        const selectedNodes = this._uiPluginCallbacks.getSelectedNodes() || new Set();
+
+        // If an interaction (drag, resize, pan, link) is active, or pointer is down,
+        // clear all hover effects and do not process new ones.
         if (this.pointerState.down || this.currentState !== InteractionState.IDLE) {
-            // Reset cursor and tooltip if an interaction starts while hovering a handle
-            if (this.hoveredHandleType) {
-                document.body.style.cursor = 'default'; // Or restore to previous if tracked
-                if (this.currentHoveredGLHandle && this.currentHoveredGLHandle.node && this.currentHoveredGLHandle.node.metaframe) {
-                    const prevMetaframe = this.currentHoveredGLHandle.node.metaframe;
-                    prevMetaframe.highlightHandle(this.currentHoveredGLHandle.handleMesh, false);
-                    prevMetaframe.setHandleTooltip(this.hoveredHandleType, '', false); // Hide tooltip
-                }
-                this.hoveredHandleType = null;
-                this.currentHoveredGLHandle = null;
+            // If an interaction starts, hide any metaframe that was visible purely due to hover.
+            // Selected nodes (managed by UIPlugin callbacks) keep their metaframes.
+            if (this.hoveredNodeForMetaframe && !selectedNodes.has(this.hoveredNodeForMetaframe)) {
+                this.hoveredNodeForMetaframe.metaframe?.hide();
             }
-            // Reset edge highlight
+            this.hoveredNodeForMetaframe = null; // Reset node hovered for metaframe visibility
+
+            // Cleanup active handle highlighting and tooltips
+            if (this.currentHoveredGLHandle && this.currentHoveredGLHandle.node?.metaframe) {
+                this.currentHoveredGLHandle.node.metaframe.highlightHandle(this.currentHoveredGLHandle.handleMesh, false);
+                this.currentHoveredGLHandle.node.metaframe.setHandleTooltip(this.hoveredHandleType, '', false);
+            }
+            this.currentHoveredGLHandle = null;
+            this.hoveredHandleType = null;
+
+            // Cleanup edge highlighting (if not selected)
             if (this.hoveredEdge) {
-                const selectedEdges = this._uiPluginCallbacks.getSelectedEdges();
-                if (!selectedEdges.has(this.hoveredEdge)) {
+                 const selectedEdges = this._uiPluginCallbacks.getSelectedEdges() || new Set();
+                 // Only de-highlight if it's not a selected edge (selected edges maintain their highlight)
+                 if(!selectedEdges.has(this.hoveredEdge)) {
                     this.hoveredEdge.setHighlight(false);
-                }
-                this.hoveredEdge = null;
+                 }
             }
-            return;
+            this.hoveredEdge = null;
+            return; // Exit early, active interaction state will manage cursors etc.
         }
 
+        // Get information about the object(s) under the cursor. _getTargetInfo now also considers metaframe handles.
         const targetInfo = this._getTargetInfo(e);
+        const newlyHoveredNode = targetInfo.node; // This could be a node mesh or a node owning an intersected handle.
         const newHoveredEdge = targetInfo.intersectedEdge;
+        const newHoveredHandleInfo = targetInfo.metaframeHandleInfo; // Info if a handle is directly hit.
 
-        const newHoveredHandleInfo = targetInfo.metaframeHandleInfo; // This is { type, object, node } or null
+        // --- Part 1: Manage Metaframe visibility for hovered nodes ---
+        // Handles showing/hiding metaframes for nodes that are hovered but NOT selected.
+        // Selected nodes manage their metaframe visibility via their `setSelectedStyle` method (called by UIPlugin).
+        if (this.hoveredNodeForMetaframe !== newlyHoveredNode) {
+            // If the previously hover-shown metaframe's node is no longer hovered and isn't selected, hide its metaframe.
+            if (this.hoveredNodeForMetaframe && !selectedNodes.has(this.hoveredNodeForMetaframe)) {
+                this.hoveredNodeForMetaframe.metaframe?.hide();
+            }
+            // If a new node is hovered and it's not selected, show its metaframe.
+            if (newlyHoveredNode && !selectedNodes.has(newlyHoveredNode)) {
+                newlyHoveredNode.metaframe?.show();
+                // When a metaframe is freshly shown due to hover, ensure its handles are in their default visual state
+                // (i.e., not carrying over a highlight from a previous interaction if the metaframe was hidden and re-shown).
+                if (newlyHoveredNode.metaframe) {
+                     Object.values(newlyHoveredNode.metaframe.resizeHandles).forEach(handle => newlyHoveredNode.metaframe.highlightHandle(handle, false));
+                     if(newlyHoveredNode.metaframe.dragHandle) {
+                        newlyHoveredNode.metaframe.highlightHandle(newlyHoveredNode.metaframe.dragHandle, false);
+                     }
+                }
+            }
+            this.hoveredNodeForMetaframe = newlyHoveredNode; // Update the record of which node's metaframe is shown by hover.
+        }
 
-        // Handle Metaframe Handle Hover Effects (Cursor and Visual Highlight)
+        // --- Part 2: Handle Metaframe Handle Hover Effects (highlights, tooltips, cursor) ---
+        // This applies if a specific handle (of any visible metaframe) is hovered.
+        // newHoveredHandleInfo.node is the owner of the handle.
         if (this.hoveredHandleType !== newHoveredHandleInfo?.type || this.currentHoveredGLHandle?.handleMesh !== newHoveredHandleInfo?.object) {
-            // De-highlight previous handle and hide its tooltip
-            if (this.currentHoveredGLHandle && this.currentHoveredGLHandle.node && this.currentHoveredGLHandle.node.metaframe) {
-                const prevMetaframe = this.currentHoveredGLHandle.node.metaframe;
-                prevMetaframe.highlightHandle(this.currentHoveredGLHandle.handleMesh, false);
-                prevMetaframe.setHandleTooltip(this.hoveredHandleType, '', false);
+            // De-highlight previous handle and hide its tooltip if it exists.
+            if (this.currentHoveredGLHandle && this.currentHoveredGLHandle.node?.metaframe) {
+                this.currentHoveredGLHandle.node.metaframe.highlightHandle(this.currentHoveredGLHandle.handleMesh, false);
+                this.currentHoveredGLHandle.node.metaframe.setHandleTooltip(this.hoveredHandleType, '', false);
             }
 
-            if (newHoveredHandleInfo) {
+            if (newHoveredHandleInfo && newHoveredHandleInfo.node?.metaframe?.isVisible) {
+                // If a new handle is hovered and its parent metaframe is visible:
                 document.body.style.cursor = this._getCursorForHandle(newHoveredHandleInfo.type);
                 const currentMetaframe = newHoveredHandleInfo.node.metaframe;
-                if (currentMetaframe) { // Ensure metaframe exists
-                    currentMetaframe.highlightHandle(newHoveredHandleInfo.object, true);
-                    const tooltipText = this._getTooltipTextForHandle(newHoveredHandleInfo.type);
-                    currentMetaframe.setHandleTooltip(newHoveredHandleInfo.type, tooltipText, true);
-                }
+                currentMetaframe.highlightHandle(newHoveredHandleInfo.object, true); // Highlight the handle mesh itself.
+                const tooltipText = this._getTooltipTextForHandle(newHoveredHandleInfo.type);
+                currentMetaframe.setHandleTooltip(newHoveredHandleInfo.type, tooltipText, true); // Show tooltip.
                 this.currentHoveredGLHandle = { node: newHoveredHandleInfo.node, handleMesh: newHoveredHandleInfo.object };
             } else {
-                document.body.style.cursor = 'grab'; // Default cursor when not on a handle
+                // No specific handle is hovered, or its metaframe is not visible.
+                // Cursor will be set by general logic below.
                 this.currentHoveredGLHandle = null;
             }
-            this.hoveredHandleType = newHoveredHandleInfo?.type || null;
+            this.hoveredHandleType = newHoveredHandleInfo?.type || null; // Update record of hovered handle type.
         }
 
-        // Handle Edge Hover Highlight
+        // --- Part 3: Handle Edge Hover Highlight ---
+        const currentlySelectedEdges = this._uiPluginCallbacks.getSelectedEdges() || new Set();
         if (this.hoveredEdge !== newHoveredEdge) {
-            const selectedEdges = this._uiPluginCallbacks.getSelectedEdges();
-            if (this.hoveredEdge && !selectedEdges.has(this.hoveredEdge)) {
+            // If previously hovered edge is no longer hovered and not selected, remove its highlight.
+            if (this.hoveredEdge && !currentlySelectedEdges.has(this.hoveredEdge)) {
                 this.hoveredEdge.setHighlight(false);
             }
-            this.hoveredEdge = newHoveredEdge;
-            if (this.hoveredEdge && !selectedEdges.has(this.hoveredEdge)) {
+            this.hoveredEdge = newHoveredEdge; // Update record of hovered edge.
+            // If new edge is hovered and not selected, highlight it.
+            if (this.hoveredEdge && !currentlySelectedEdges.has(this.hoveredEdge)) {
                 this.hoveredEdge.setHighlight(true);
             }
         }
 
-        // If not hovering over a handle or an edge, ensure default cursor
-        if (!newHoveredHandleInfo?.type && !newHoveredEdge) {
+        // --- Part 4: Final cursor setting based on hover hierarchy ---
+        if (this.currentHoveredGLHandle) {
+            // Cursor is already set by handle hover logic.
+        } else if (this.hoveredEdge) {
+            document.body.style.cursor = 'pointer'; // Generic pointer for clickable edges.
+        } else if (this.hoveredNodeForMetaframe || (newlyHoveredNode && selectedNodes.has(newlyHoveredNode))) {
+            // If hovering a node (either its metaframe is shown by hover, or it's selected and its metaframe is visible),
+            // set cursor to 'grab' indicating it might be draggable or the area is interactive.
             document.body.style.cursor = 'grab';
-        } else if (newHoveredHandleInfo?.type) { // If on a handle, ensure its cursor is set
-            document.body.style.cursor = this._getCursorForHandle(newHoveredHandleInfo.type);
+        } else {
+            document.body.style.cursor = 'grab'; // Default cursor for empty pannable space.
         }
-        // If only on an edge, cursor is not changed by edge hover itself currently.
     }
 
     _createTempLinkLine(sourceNode) {
@@ -945,14 +991,36 @@ export class UIManager {
             return;
 
         const sourceNode = this._uiPluginCallbacks.getLinkSourceNode();
-        const targetPos = this.space.screenToWorld(screenX, screenY, sourceNode.position.z);
+
+        let projectionZ = sourceNode.position.z; // Default to source node's Z depth.
+
+        // Raycast to find if a potential target node is under the cursor.
+        const potentialTargetInfo = this.space.intersectedObjects(screenX, screenY);
+
+        // If hovering over a different node, use its Z depth for the projection plane.
+        // This makes the temporary linking line visually connect more accurately to the
+        // apparent depth of the object under the cursor.
+        if (potentialTargetInfo?.node && potentialTargetInfo.node !== sourceNode) {
+            projectionZ = potentialTargetInfo.node.position.z;
+        }
+        // Alternative fallback (optional): Use camera's focal depth if no node is hit.
+        // else {
+        //    const cameraControls = this.space.plugins.getPlugin('CameraPlugin')?.getControls();
+        //    if (cameraControls) {
+        //        projectionZ = cameraControls.targetLookAt.z;
+        //    }
+        // }
+
+        // Project the screen cursor onto the determined Z-plane to get the world coordinates for the line's end.
+        const targetPos = this.space.screenToWorld(screenX, screenY, projectionZ);
 
         if (targetPos) {
             const positions = this.tempLinkLine.geometry.attributes.position;
+            // Update the second point (index 1) of the line.
             positions.setXYZ(1, targetPos.x, targetPos.y, targetPos.z);
             positions.needsUpdate = true;
-            this.tempLinkLine.geometry.computeBoundingSphere();
-            this.tempLinkLine.computeLineDistances();
+            this.tempLinkLine.geometry.computeBoundingSphere(); // Important for frustum culling.
+            this.tempLinkLine.computeLineDistances(); // Required for dashed line rendering.
         }
     }
 

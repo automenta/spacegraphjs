@@ -61,8 +61,9 @@ export class Metaframe {
         for (const key in handlePositions) {
             const handleMaterial = handleMaterialTemplate.clone();
             const handle = new THREE.Mesh(handleGeometry, handleMaterial);
-            handle.name = `resizeHandle-${key}`;
-            handle.userData.handleType = key;
+            handle.name = `resizeHandle-${key}`; // Used by UIManager to identify handle type
+            handle.userData.handleType = key; // Store specific type (e.g., 'topLeft')
+            handle.userData.ownerNode = this.node; // Critical: associate handle with its parent node for raycasting logic
             handle.renderOrder = 1000; // Ensure handles render on top of border
             this.resizeHandles[key] = handle;
             this._originalHandleMaterials.set(handle, {
@@ -85,8 +86,9 @@ export class Metaframe {
             depthTest: false
         });
         this.dragHandle = new THREE.Mesh(dragHandleGeometry, dragHandleMaterial);
-        this.dragHandle.name = 'dragHandle';
+        this.dragHandle.name = 'dragHandle'; // Used by UIManager
         this.dragHandle.userData.handleType = 'drag';
+        this.dragHandle.userData.ownerNode = this.node; // Critical: associate handle with its parent node
         this.dragHandle.renderOrder = 1000; // Ensure drag handle renders on top
         this._originalHandleMaterials.set(this.dragHandle, {
             color: dragHandleMaterial.color.clone(),
