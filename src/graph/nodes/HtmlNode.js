@@ -41,6 +41,15 @@ export class HtmlNode extends Node {
         this.setBackgroundColor(this.data.backgroundColor ?? '#333344');
     }
 
+    getCapabilities() {
+        const capabilities = super.getCapabilities(); // Get base capabilities
+        capabilities.canEditContent = this.data.editable === true; // Can toggle contentEditable
+        capabilities.canZoomContent = true;    // HtmlNode content can be zoomed
+        // canBeResized is true by default from Node.js, which is correct for HtmlNode via Metaframe
+        // canEditProperties is true by default (for general props like color, label etc.)
+        return capabilities;
+    }
+
     getDefaultData() {
         return {
             label: '',
@@ -71,36 +80,62 @@ export class HtmlNode extends Node {
                     ${this.data.content || this.data.label || ''}
                 </div>
                 <div class="node-controls">
-                    <button class="node-quick-button node-content-zoom-in" title="Zoom In Content (+)">➕</button>
-                    <button class="node-quick-button node-content-zoom-out" title="Zoom Out Content (-)">➖</button>
-                    ${/* Removed Grow, Shrink, Delete buttons. Resize handle also removed. */''}
+                    ${/* Zoom In/Out buttons removed, will be handled by Metaframe */''}
+                    ${/* Other quick buttons like Delete were already removed or will be part of Metaframe */''}
                 </div>
             </div>
-            ${/* Removed <div class="resize-handle" title="Resize Node"></div> */''}
         `;
-        this._initContentEditable(el);
+        this._initContentEditable(el); // Attaches general interaction listeners
+        this.updateEditableState(); // Sets initial contentEditable state and input listener
         return el;
+    }
+
+    // Debounced input handler
+    _onContentInput = Utils.debounce(() => {
+        const contentDiv = $('.node-content', this.htmlElement);
+        if (contentDiv && this.data.editable) { // Check data.editable for safety
+            this.data.content = contentDiv.innerHTML;
+            this.space?.emit('graph:node:dataChanged', {
+                node: this,
+                property: 'content',
+                value: this.data.content,
+            });
+        }
+    }, 300);
+
+    updateEditableState() {
+        const contentDiv = $('.node-content', this.htmlElement);
+        if (!contentDiv) return;
+
+        contentDiv.contentEditable = this.data.editable.toString();
+
+        // Remove existing listener to avoid duplicates
+        contentDiv.removeEventListener('input', this._onContentInput);
+
+        if (this.data.editable) {
+            contentDiv.addEventListener('input', this._onContentInput);
+            // Optionally focus when made editable, but not on initial load.
+            // This might be better handled in toggleContentEditable.
+        }
     }
 
     _initContentEditable(element) {
         const contentDiv = $('.node-content', element);
-        if (contentDiv && this.data.editable) {
-            contentDiv.contentEditable = 'true';
-            let debounceTimer;
-            contentDiv.addEventListener('input', () => {
-                clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(() => {
-                    this.data.content = contentDiv.innerHTML;
-                    this.space?.emit('graph:node:dataChanged', {
-                        node: this,
-                        property: 'content',
-                        value: this.data.content,
-                    });
-                }, 300);
-            });
-            contentDiv.addEventListener('pointerdown', (e) => e.stopPropagation());
-            contentDiv.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
-            contentDiv.addEventListener(
+        if (!contentDiv) return;
+
+        // These listeners are always attached.
+        contentDiv.addEventListener('pointerdown', (e) => {
+            if (this.data.editable || e.target.closest('button, input, textarea, select, a')) {
+                e.stopPropagation();
+            }
+        });
+        contentDiv.addEventListener('touchstart', (e) => {
+             if (this.data.editable || e.target.closest('button, input, textarea, select, a')) {
+                e.stopPropagation();
+            }
+        }, { passive: true });
+
+        contentDiv.addEventListener(
                 'wheel',
                 (e) => {
                     const isScrollable =
@@ -225,5 +260,32 @@ export class HtmlNode extends Node {
             console.error('Error releasing node during resize:', error);
         }
         this.space?.emit('graph:node:resizeend', { node: this, finalSize: { ...this.size } });
+    }
+
+    toggleContentEditable() {
+        this.setContentEditableState(!this.data.editable);
+        // Focus when toggling to editable state
+        if (this.data.editable) {
+            const contentDiv = $('.node-content', this.htmlElement);
+            contentDiv?.focus();
+        }
+    }
+
+    setContentEditableState(isEditable) {
+        if (this.data.editable === isEditable) return; // No change
+
+        this.data.editable = isEditable;
+        this.updateEditableState(); // This will set contentEditable attr and manage input listener
+
+        this.space?.emit('graph:node:dataChanged', {
+            node: this,
+            property: 'editable',
+            value: this.data.editable,
+        });
+
+        // If metaframe button text needs to change (e.g. "Edit Content" vs "Stop Edit"),
+        // or if button presence depends on this state (which it does via getCapabilities),
+        // we need to refresh the metaframe's buttons.
+        this.metaframe?.refreshButtons();
     }
 }

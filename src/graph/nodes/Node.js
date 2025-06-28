@@ -26,6 +26,18 @@ export class Node {
         return { label: '' };
     }
 
+    getCapabilities() {
+        return {
+            canEditContent: false,      // e.g., for direct text editing or specific content UI
+            canZoomContent: false,      // e.g., for scaling content within an HtmlNode
+            canEditProperties: true,    // General properties panel
+            canLink: true,              // Can be a source/target for links
+            canDelete: true,            // Can be deleted
+            canBeResized: true,         // If the node's bounding box/scale can be changed. Metaframe handles will honor this.
+            canBeDragged: true,         // If the node can be moved. Metaframe drag handle will honor this.
+        };
+    }
+
     update(_space) {
         if (this.mesh) this.mesh.position.copy(this.position);
         if (this.cssObject) this.cssObject.position.copy(this.position);

@@ -968,9 +968,11 @@ body {
 .metaframe-controls button:hover {
     background-color: var(--sg-node-button-bg-hover);
     border-color: var(--sg-accent-primary);
+    transform: translateY(-1px); /* Slight lift effect */
 }
 
 .metaframe-controls button:active {
     background-color: var(--sg-accent-primary);
     color: var(--sg-text-on-accent);
+    transform: translateY(0px); /* Remove lift, simulate press */
 }

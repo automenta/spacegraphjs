@@ -2,9 +2,10 @@ import { Plugin } from '../core/Plugin.js';
 import { UIManager } from '../ui/UIManager.js';
 import { InteractionState } from '../ui/InteractionState.js';
 import * as THREE from 'three';
+import { HtmlNode } from '../graph/nodes/HtmlNode.js'; // Import HtmlNode
 
-const raycaster = new THREE.Raycaster();
-const dragPlane = new THREE.Plane();
+// const raycaster = new THREE.Raycaster(); // Managed by UIManager or SpaceGraph
+// const dragPlane = new THREE.Plane(); // Managed by UIManager
 
 export class UIPlugin extends Plugin {
     uiManager = null;
@@ -15,14 +16,14 @@ export class UIPlugin extends Plugin {
     hoveredNode = null; // Track the currently hovered node
     renderingPlugin = null; // Reference to the RenderingPlugin
 
-    // Interaction state for drag/resize
-    activeInteraction = InteractionState.IDLE;
-    draggedNode = null;
-    resizedNode = null;
-    initialPointerPosition = new THREE.Vector2();
-    initialNodePosition = new THREE.Vector3();
-    initialNodeScale = new THREE.Vector3();
-    activeResizeHandle = null;
+    // Removed interaction state for drag/resize, as UIManager will handle it
+    // activeInteraction = InteractionState.IDLE;
+    // draggedNode = null;
+    // resizedNode = null;
+    // initialPointerPosition = new THREE.Vector2();
+    // initialNodePosition = new THREE.Vector3();
+    // initialNodeScale = new THREE.Vector3();
+    // activeResizeHandle = null;
 
     constructor(spaceGraph, pluginManager, contextMenuElement, confirmDialogElement) {
         super(spaceGraph, pluginManager);
@@ -56,145 +57,104 @@ export class UIPlugin extends Plugin {
         this.space.on('metaframe:editNode', this._onMetaframeEditNode);
         this.space.on('metaframe:linkNode', this._onMetaframeLinkNode);
         this.space.on('metaframe:deleteNode', this._onMetaframeDeleteNode);
+        this.space.on('metaframe:toggleNodeContentEditable', this._onToggleNodeContentEditable);
+
+        this.space.on('ui:request:adjustContentScale', this._onAdjustContentScale);
+        this.space.on('ui:request:adjustNodeSize', this._onAdjustNodeSize);
     }
+
+    _onToggleNodeContentEditable = ({ node }) => {
+        if (node instanceof HtmlNode && typeof node.toggleContentEditable === 'function') {
+            node.toggleContentEditable();
+        }
+    };
+
+    _onAdjustContentScale = (payload) => {
+        // Ensure node is an HtmlNode and has the method, and factor is present
+        if (payload && payload.node instanceof HtmlNode &&
+            typeof payload.node.adjustContentScale === 'function' &&
+            payload.factor !== undefined
+        ) {
+            payload.node.adjustContentScale(payload.factor);
+        }
+    };
+
+    _onAdjustNodeSize = (payload) => {
+        if (payload && payload.node &&
+            typeof payload.node.adjustNodeSize === 'function' &&
+            payload.factor !== undefined
+        ) {
+            payload.node.adjustNodeSize(payload.factor);
+        }
+    };
 
     _addEventListeners() {
         const domElement = this.renderingPlugin?.renderGL?.domElement;
         if (domElement) {
-            domElement.addEventListener('pointermove', this._onPointerMove);
-            domElement.addEventListener('pointerdown', this._onPointerDown);
-            domElement.addEventListener('pointerup', this._onPointerUp);
+            // These listeners are now primarily for hover effects on nodes (showing/hiding metaframe)
+            // and potentially other UI interactions not directly handled by UIManager's core states.
+            // UIManager binds its own listeners to space.container for primary interactions.
+            domElement.addEventListener('pointermove', this._onPointerMoveGeneral);
+            // domElement.addEventListener('pointerdown', this._onPointerDown); // UIManager handles pointerdown
+            // domElement.addEventListener('pointerup', this._onPointerUp); // UIManager handles pointerup
         }
     }
 
     _removeEventListeners() {
         const domElement = this.renderingPlugin?.renderGL?.domElement;
         if (domElement) {
-            domElement.removeEventListener('pointermove', this._onPointerMove);
-            domElement.removeEventListener('pointerdown', this._onPointerDown);
-            domElement.removeEventListener('pointerup', this._onPointerUp);
+            domElement.removeEventListener('pointermove', this._onPointerMoveGeneral);
+            // domElement.removeEventListener('pointerdown', this._onPointerDown);
+            // domElement.removeEventListener('pointerup', this._onPointerUp);
         }
     }
 
-    _onPointerDown = (event) => {
-        if (event.button !== 0) return; // Only left mouse button or touch
+    // _onPointerDown is effectively removed as UIManager._onPointerDown will take precedence
+    // for initiating drags, resizes, pans, and linking.
+    // If UIPlugin needs to react to a simple click on a node for selection,
+    // that logic would need to be reconciled with UIManager's _onPointerDown.
+    // UIManager._onPointerDown already calls this._uiPluginCallbacks.setSelectedNode.
+    // So, direct node selection is already covered by UIManager.
 
-        const intersected = this.space.intersectedObjects(event.clientX, event.clientY);
-        const intersectedObject = intersected?.object;
-        const intersectedNode = intersected?.node;
-
-        if (intersectedObject?.userData?.handleType === 'drag' && intersectedNode) {
-            this.activeInteraction = InteractionState.DRAGGING_NODE;
-            this.draggedNode = intersectedNode;
-            this.initialPointerPosition.set(event.clientX, event.clientY);
-            this.initialNodePosition.copy(intersectedNode.position);
-
-            // Set up the drag plane at the node's current Z position, facing the camera
-            dragPlane.setFromNormalAndCoplanarPoint(
-                this.space._cam.getWorldDirection(new THREE.Vector3()).negate(),
-                intersectedNode.position
-            );
-
-            this.space.isDragging = true; // Indicate that a drag operation is active
-            this.draggedNode.startDrag();
-            event.preventDefault();
-        } else if (intersectedObject?.userData?.handleType?.startsWith('resize') && intersectedNode) {
-            this.activeInteraction = InteractionState.RESIZING_NODE;
-            this.resizedNode = intersectedNode;
-            this.initialPointerPosition.set(event.clientX, event.clientY);
-            this.initialNodeScale.copy(intersectedNode.mesh.scale);
-            this.activeResizeHandle = intersectedObject.userData.handleType;
-
-            // Set up the resize plane at the node's current Z position, facing the camera
-            // This plane will be used to project the 2D pointer movement into 3D space consistently
-            dragPlane.setFromNormalAndCoplanarPoint(
-                this.space._cam.getWorldDirection(new THREE.Vector3()).negate(),
-                intersectedNode.position
-            );
-
-            // Store the initial intersection point on the dragPlane for resizing calculations
-            raycaster.setFromCamera(this.space.getPointerNDC(event.clientX, event.clientY), this.space._cam);
-            const initialIntersection = new THREE.Vector3();
-            if (raycaster.ray.intersectPlane(dragPlane, initialIntersection)) {
-                this.initialIntersectionPoint = initialIntersection.clone();
-            } else {
-                // Fallback if intersection fails (e.g., camera perfectly aligned with plane)
-                this.initialIntersectionPoint = intersectedNode.position.clone();
+    // _onPointerMove is renamed to _onPointerMoveGeneral and simplified
+    // to only handle node hover for showing/hiding metaframes.
+    // The drag/resize logic is removed as UIManager._onPointerMove handles it.
+    _onPointerMoveGeneral = (event) => {
+        // Do not interfere if UIManager is actively managing an interaction or if linking
+        if (this.uiManager?.currentState !== InteractionState.IDLE || this.isLinking) {
+            // If a node was hovered and its metaframe shown by UIPlugin,
+            // but UIManager took over (e.g., started dragging), hide the metaframe.
+            if (this.hoveredNode && this.hoveredNode.metaframe?.isVisible) {
+                // Check if the current interaction is related to this hovered node.
+                // If UIManager is dragging/resizing *this* node, its metaframe should be visible.
+                // This check might need refinement based on how UIManager shows/hides metaframes during its operations.
+                // For now, if UIManager is not IDLE, we assume it controls metaframe visibility.
+                // A simpler approach: UIManager explicitly shows the metaframe of the node it's interacting with.
             }
-
-            this.space.isDragging = true; // Use isDragging to prevent camera pan
-            event.preventDefault();
-        } else if (intersectedNode) {
-            this.setSelectedNode(intersectedNode);
-        }
-    };
-
-    _onPointerMove = (event) => {
-        const pointerNDC = this.space.getPointerNDC(event.clientX, event.clientY);
-        raycaster.setFromCamera(pointerNDC, this.space._cam);
-
-        if (this.activeInteraction === InteractionState.DRAGGING_NODE && this.draggedNode) {
-            const intersection = new THREE.Vector3();
-            if (raycaster.ray.intersectPlane(dragPlane, intersection)) {
-                const newPosition = intersection.clone();
-                this.draggedNode.drag(newPosition);
-            }
-            return; // Do not process hover while dragging
-        } else if (
-            this.activeInteraction === InteractionState.RESIZING_NODE &&
-            this.resizedNode &&
-            this.initialIntersectionPoint
-        ) {
-            const currentIntersection = new THREE.Vector3();
-            if (raycaster.ray.intersectPlane(dragPlane, currentIntersection)) {
-                const delta = currentIntersection.clone().sub(this.initialIntersectionPoint);
-
-                const newScale = this.initialNodeScale.clone();
-                const scaleFactor = 0.02; // Adjust sensitivity as needed
-
-                // Determine the direction of scaling based on the handle
-                // and apply the delta to the appropriate scale components
-                switch (this.activeResizeHandle) {
-                    case 'topLeft':
-                        newScale.x -= delta.x * scaleFactor;
-                        newScale.y += delta.y * scaleFactor;
-                        break;
-                    case 'topRight':
-                        newScale.x += delta.x * scaleFactor;
-                        newScale.y += delta.y * scaleFactor;
-                        break;
-                    case 'bottomLeft':
-                        newScale.x -= delta.x * scaleFactor;
-                        newScale.y -= delta.y * scaleFactor;
-                        break;
-                    case 'bottomRight':
-                        newScale.x += delta.x * scaleFactor;
-                        newScale.y -= delta.y * scaleFactor;
-                        break;
-                }
-
-                // Ensure scale doesn't go below a minimum
-                newScale.x = Math.max(0.1, newScale.x);
-                newScale.y = Math.max(0.1, newScale.y);
-                newScale.z = Math.max(0.1, newScale.z); // Maintain Z scale or adjust as needed
-
-                this.resizedNode.resize(newScale);
-            }
-            return; // Do not process hover while resizing
+            return;
         }
 
-        // Original hover logic
-        if (this.isLinking || this.space.isDragging) return; // Don't show metaframe during linking or dragging
-
-        const intersected = this.space.intersectedObjects(event.clientX, event.clientY);
         const newHoveredNode = intersected?.node || null;
 
         if (this.hoveredNode && this.hoveredNode !== newHoveredNode) {
-            this.hoveredNode.metaframe?.hide();
+            // Only hide if UIManager is not currently interacting with this hovered node.
+            // This logic might need to be more robust: UIPlugin should generally not interfere
+            // with a metaframe that UIManager is actively using (e.g. during resize).
+            if (this.uiManager?.currentState === InteractionState.IDLE ||
+                (this.uiManager?.resizedNode !== this.hoveredNode && this.uiManager?.draggedNode !== this.hoveredNode)) {
+                this.hoveredNode.metaframe?.hide();
+            }
         }
 
         if (newHoveredNode && newHoveredNode !== this.hoveredNode) {
-            newHoveredNode.metaframe?.show();
+            // Only show if UIManager is IDLE. If UIManager is active, it controls metaframe visibility.
+            if (this.uiManager?.currentState === InteractionState.IDLE) {
+                // Ensure the metaframe is not already visible due to selection by UIManager
+                const selectedNodes = this.uiManager?._uiPluginCallbacks?.getSelectedNodes() || new Set();
+                if (!selectedNodes.has(newHoveredNode) || !newHoveredNode.metaframe?.isVisible) {
+                     newHoveredNode.metaframe?.show();
+                }
+            }
         }
         this.hoveredNode = newHoveredNode;
     };
@@ -315,19 +275,25 @@ export class UIPlugin extends Plugin {
     getIsLinking = () => this.isLinking;
     getLinkSourceNode = () => this.linkSourceNode;
 
-    _onPointerUp = () => {
-        if (this.activeInteraction === InteractionState.DRAGGING_NODE && this.draggedNode) {
-            this.draggedNode.endDrag();
-            this.space.emit('node:dragged', { node: this.draggedNode });
-        } else if (this.activeInteraction === InteractionState.RESIZING_NODE && this.resizedNode) {
-            this.space.emit('node:resized', { node: this.resizedNode });
-        }
+    // _onPointerUp is removed as UIManager._onPointerUp handles the state transitions
+    // and emitting relevant events like 'node:dragged' or 'node:resized' via UIManager's logic.
+    // UIManager will also manage space.isDragging.
 
-        this.activeInteraction = InteractionState.IDLE;
-        this.draggedNode = null;
-        this.resizedNode = null;
-        this.activeResizeHandle = null;
-        this.space.isDragging = false; // Reset dragging flag
+    // Metaframe event handlers, originally from _subscribeToEvents
+    // These are fine here as they are reactions to events, not direct pointer handling.
+    _onMetaframeEditNode = ({ node }) => {
+        this.space.emit('ui:node:editRequested', { node });
+    };
+
+    _onMetaframeLinkNode = ({ node }) => {
+        this.startLinking(node);
+    };
+
+    _onMetaframeDeleteNode = ({ node }) => {
+        this.space.emit('ui:request:confirm', {
+            message: `Delete node "${node.id.substring(0, 10)}..."?`,
+            onConfirm: () => this.space.emit('ui:request:removeNode', node.id),
+        });
     };
 
     update() {
@@ -347,6 +313,9 @@ export class UIPlugin extends Plugin {
         this.space.off('metaframe:editNode', this._onMetaframeEditNode);
         this.space.off('metaframe:linkNode', this._onMetaframeLinkNode);
         this.space.off('metaframe:deleteNode', this._onMetaframeDeleteNode);
+        this.space.off('metaframe:toggleNodeContentEditable', this._onToggleNodeContentEditable);
+        this.space.off('ui:request:adjustContentScale', this._onAdjustContentScale);
+        this.space.off('ui:request:adjustNodeSize', this._onAdjustNodeSize);
 
         this.uiManager?.dispose();
         this.uiManager = null;
