@@ -51,10 +51,10 @@ export class UIManager {
     resizeNodeInitialMatrixWorld = new THREE.Matrix4();
 
     // --- Gizmo Interaction ---
-    /** @type {TranslationGizmo | null} The translation gizmo instance. */
-    translationGizmo = null;
-    /** @type {'translate' | 'rotate' | 'scale' | null} The currently active gizmo type. */
-    activeGizmo = null;
+    /** @type {TranslationGizmo | null} The main gizmo instance (handles translation, rotation, scale). */
+    gizmo = null;
+    /** @type {'translate' | 'rotate' | 'scale' | null} The currently active gizmo *mode* (selected via toolbar, e.g.). */
+    activeGizmoMode = 'translate'; // Default to translate
     /** @type {THREE.Mesh | null} The THREE.Mesh of the currently hovered gizmo handle part. */
     hoveredGizmoHandle = null;
     /**
@@ -71,6 +71,13 @@ export class UIManager {
     gizmoDragStartPointerWorldPos = new THREE.Vector3();
     /** @type {Map<string, THREE.Vector3>} Stores initial positions of selected nodes at the start of a gizmo drag. Key is node ID. */
     selectedNodesInitialPositions = new Map();
+    /** @type {Map<string, THREE.Quaternion>} Stores initial quaternions of selected nodes at the start of a gizmo drag. Key is node ID. */
+    selectedNodesInitialQuaternions = new Map();
+    /** @type {Map<string, THREE.Vector3>} Stores initial scales of selected nodes at the start of a gizmo drag. Key is node ID. */
+    selectedNodesInitialScales = new Map();
+    /** @type {THREE.Object3D | null} Helper object to represent the center of multi-selection for gizmo operations, storing its initial transform. */
+    multiSelectionHelper = null;
+
 
     // --- General Hover/Selection ---
     hoveredEdge = null;
@@ -124,9 +131,12 @@ export class UIManager {
         this.toolbar = new Toolbar(this.space, $('#toolbar'));
 
         // Initialize Gizmos
-        this.translationGizmo = new TranslationGizmo();
-        this.space.plugins.getPlugin('RenderingPlugin')?.getWebGLScene()?.add(this.translationGizmo);
-        this.translationGizmo.hide();
+        this.gizmo = new TranslationGizmo(); // Renamed from translationGizmo
+        this.space.plugins.getPlugin('RenderingPlugin')?.getWebGLScene()?.add(this.gizmo);
+        this.gizmo.hide();
+
+        this.multiSelectionHelper = new THREE.Object3D();
+
 
         this._applySavedTheme();
         this._bindEvents();
@@ -169,10 +179,10 @@ export class UIManager {
      * @private
      */
     _onGraphCleared = () => {
-        if (this.translationGizmo) {
-            this.translationGizmo.hide();
+        if (this.gizmo) {
+            this.gizmo.hide();
         }
-        this.activeGizmo = null;
+        // this.activeGizmoMode remains, it's a user setting
     }
 
     _onRequestConfirm = (payload) => {
@@ -218,23 +228,32 @@ export class UIManager {
 
         const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
 
-        if (selectedNodes.size === 1) {
-            const node = selectedNodes.values().next().value;
-            this.translationGizmo.position.copy(node.position);
-            if (camera) this.translationGizmo.updateScale(camera);
-            this.translationGizmo.show();
-            this.activeGizmo = 'translate';
-        } else if (selectedNodes.size > 1) {
+        if (selectedNodes.size > 0) {
             const center = new THREE.Vector3();
             selectedNodes.forEach(n => center.add(n.position));
             center.divideScalar(selectedNodes.size);
-            this.translationGizmo.position.copy(center);
-            if (camera) this.translationGizmo.updateScale(camera);
-            this.translationGizmo.show();
-            this.activeGizmo = 'translate';
+            this.gizmo.position.copy(center);
+
+            // For rotation and scaling of multiple nodes, the gizmo should align with the multiSelectionHelper's orientation
+            if (selectedNodes.size > 1) {
+                 // If there's a meaningful average orientation, apply it. Otherwise, world default.
+                 // For now, keep it simple: use world orientation for multi-select gizmo rotation/scale.
+                 // A more advanced approach might involve calculating an average quaternion or using the first selected node's orientation.
+                this.gizmo.quaternion.identity(); // Reset to world orientation for multi-select
+            } else if (selectedNodes.size === 1) {
+                const node = selectedNodes.values().next().value;
+                if (node.mesh) { // ShapeNodes have a mesh with world quaternion
+                    this.gizmo.quaternion.copy(node.mesh.getWorldQuaternion(new THREE.Quaternion()));
+                } else { // HTML nodes don't have a direct 3D mesh rotation by default
+                    this.gizmo.quaternion.identity();
+                }
+            }
+
+            if (camera) this.gizmo.updateScale(camera);
+            this.gizmo.show();
+            // activeGizmoMode is set by toolbar, not selection
         } else {
-            this.translationGizmo.hide();
-            this.activeGizmo = null;
+            this.gizmo.hide();
         }
         this.hudManager.updateHudSelectionInfo();
     };
@@ -279,11 +298,18 @@ export class UIManager {
                 this.space.isDragging = false;
                 break;
             case InteractionState.GIZMO_DRAGGING:
-                if (this.translationGizmo && this.draggedGizmoHandleInfo?.object) {
-                     this.translationGizmo.setHandleActive(this.draggedGizmoHandleInfo.object, false);
+                if (this.gizmo && this.draggedGizmoHandleInfo?.object) {
+                     this.gizmo.setHandleActive(this.draggedGizmoHandleInfo.object, false);
                 }
                 this.draggedGizmoHandleInfo = null;
-                document.body.style.cursor = this.activeGizmo ? 'default' : 'grab';
+                this.selectedNodesInitialPositions.clear();
+                this.selectedNodesInitialQuaternions.clear();
+                this.selectedNodesInitialScales.clear();
+                this.multiSelectionHelper?.position.set(0,0,0);
+                this.multiSelectionHelper?.quaternion.identity();
+                this.multiSelectionHelper?.scale.set(1,1,1);
+
+                document.body.style.cursor = this.gizmo?.visible ? 'default' : 'grab';
                 this.space.isDragging = false;
                 break;
             case InteractionState.PANNING:
@@ -366,9 +392,37 @@ export class UIManager {
             case InteractionState.GIZMO_DRAGGING: {
                 this.draggedGizmoHandleInfo = data.gizmoHandleInfo;
                 this.gizmoDragStartPointerWorldPos.copy(data.initialPointerWorldPos);
-                this.selectedNodesInitialPositions = data.selectedNodesInitialPositions;
-                if (this.translationGizmo && this.draggedGizmoHandleInfo.type === 'translate' && this.draggedGizmoHandleInfo.object) {
-                    this.translationGizmo.setHandleActive(this.draggedGizmoHandleInfo.object, true);
+
+                this.selectedNodesInitialPositions.clear();
+                this.selectedNodesInitialQuaternions.clear();
+                this.selectedNodesInitialScales.clear();
+                data.selectedNodes.forEach(node => {
+                    this.selectedNodesInitialPositions.set(node.id, node.position.clone());
+                    const worldQuaternion = node.mesh ? node.mesh.getWorldQuaternion(new THREE.Quaternion()) : new THREE.Quaternion();
+                    this.selectedNodesInitialQuaternions.set(node.id, worldQuaternion);
+                     const worldScale = node.mesh ? node.mesh.getWorldScale(new THREE.Vector3()) : new THREE.Vector3(1,1,1);
+                    this.selectedNodesInitialScales.set(node.id, worldScale);
+                });
+
+                if (data.selectedNodes.size > 1 && this.multiSelectionHelper && this.gizmo) {
+                    this.multiSelectionHelper.position.copy(this.gizmo.position);
+                    this.multiSelectionHelper.quaternion.copy(this.gizmo.quaternion); // Align helper with gizmo itself
+                    this.multiSelectionHelper.scale.set(1,1,1); // Reset scale for helper
+                    this.multiSelectionHelper.updateMatrixWorld(true);
+
+                    data.selectedNodes.forEach(node => {
+                        const initialPos = this.selectedNodesInitialPositions.get(node.id);
+                        if (initialPos) {
+                            // Store offset in local coords of the multiSelectionHelper
+                            const localOffset = this.multiSelectionHelper.worldToLocal(initialPos.clone());
+                            node.userData.initialOffsetFromMultiSelectCenter = localOffset;
+                        }
+                    });
+                }
+
+
+                if (this.gizmo && this.draggedGizmoHandleInfo.object) {
+                    this.gizmo.setHandleActive(this.draggedGizmoHandleInfo.object, true);
                 }
                 document.body.style.cursor = 'grabbing';
                 this.space.isDragging = true;
@@ -406,9 +460,9 @@ export class UIManager {
             e.preventDefault();
             e.stopPropagation();
             const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
-            if (selectedNodes && selectedNodes.size > 0) {
-                const initialPositions = new Map();
-                selectedNodes.forEach(node => initialPositions.set(node.id, node.position.clone()));
+            if (selectedNodes && selectedNodes.size > 0 && this.gizmo) { // Ensure gizmo exists
+                // Store initial transforms for all selected nodes
+                // This is now handled inside _transitionToState GIZMO_DRAGGING block
 
                 const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
                 const raycaster = new THREE.Raycaster();
@@ -416,22 +470,26 @@ export class UIManager {
                 raycaster.setFromCamera(pointerNDC, camera);
 
                 let initialPointerWorldPosOnGizmo = new THREE.Vector3();
+                // Intersect with the specific handle mesh
                 const intersects = raycaster.intersectObject(targetInfo.gizmoHandleInfo.object, false);
                 if (intersects.length > 0) {
                     initialPointerWorldPosOnGizmo.copy(intersects[0].point);
                 } else {
+                    // Fallback: project onto a plane facing the camera, centered at the gizmo
+                    // This is crucial for rotation handles where the click might not be exactly on the mesh
                     const gizmoPlaneNormal = new THREE.Vector3();
-                    camera.getWorldDirection(gizmoPlaneNormal);
-                    const interactionPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(gizmoPlaneNormal, this.translationGizmo.position);
+                    camera.getWorldDirection(gizmoPlaneNormal); // Normal faces away from camera
+                    const interactionPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(gizmoPlaneNormal.negate(), this.gizmo.position);
                     if (!raycaster.ray.intersectPlane(interactionPlane, initialPointerWorldPosOnGizmo)) {
-                        initialPointerWorldPosOnGizmo.copy(this.translationGizmo.position);
+                        // Further fallback if plane intersection fails (should be rare)
+                        initialPointerWorldPosOnGizmo.copy(this.gizmo.position);
                     }
                 }
 
                 this._transitionToState(InteractionState.GIZMO_DRAGGING, {
                     gizmoHandleInfo: targetInfo.gizmoHandleInfo,
                     initialPointerWorldPos: initialPointerWorldPosOnGizmo,
-                    selectedNodesInitialPositions: initialPositions
+                    selectedNodes: selectedNodes // Pass the set of selected nodes
                 });
             }
             this.contextMenu.hide();
@@ -764,16 +822,22 @@ export class UIManager {
                 const pointerNDC = this.space.getPointerNDC(event.clientX, event.clientY);
                 raycaster.setFromCamera(pointerNDC, camera);
 
-                if (this.translationGizmo && this.translationGizmo.visible) {
-                    const gizmoIntersects = raycaster.intersectObjects(this.translationGizmo.handles.children, false);
+                // Check for gizmo intersection only if the current mode matches the handle type or if it's a general part like uniform scale
+                if (this.gizmo && this.gizmo.visible) {
+                    const gizmoIntersects = raycaster.intersectObjects(this.gizmo.handles.children, true); // Check children recursively
                     if (gizmoIntersects.length > 0) {
-                        const intersectedHandle = gizmoIntersects[0].object;
-                        if (intersectedHandle.userData?.isGizmoHandle) {
+                        const intersectedHandleMesh = gizmoIntersects[0].object;
+                        if (intersectedHandleMesh.userData?.isGizmoHandle) {
+                            // Basic check: does the handle's type match the active gizmo mode?
+                            // (e.g. if mode is 'translate', only allow 'translate' handles)
+                            // This can be refined later with specific toolbar logic to show/hide handles.
+                            // For now, we assume all handles of the gizmo are potentially interactive.
+                            // The activeGizmoMode will primarily dictate how _handleGizmoDrag behaves.
                             gizmoHandleInfo = {
-                                axis: intersectedHandle.userData.axis,
-                                type: intersectedHandle.userData.gizmoType,
-                                part: intersectedHandle.userData.part,
-                                object: intersectedHandle,
+                                axis: intersectedHandleMesh.userData.axis,
+                                type: intersectedHandleMesh.userData.gizmoType, // 'translate', 'rotate', or 'scale'
+                                part: intersectedHandleMesh.userData.part,
+                                object: intersectedHandleMesh, // The actual mesh hit
                                 distance: gizmoIntersects[0].distance
                             };
                         }
@@ -835,7 +899,7 @@ export class UIManager {
                 this.currentHoveredGLHandle.node.metaframe.setHandleTooltip(this.hoveredHandleType, '', false);
             }
             this.currentHoveredGLHandle = null; this.hoveredHandleType = null;
-            if (this.hoveredGizmoHandle && this.translationGizmo) this.translationGizmo.setHandleActive(this.hoveredGizmoHandle, false);
+            if (this.hoveredGizmoHandle && this.gizmo) this.gizmo.setHandleActive(this.hoveredGizmoHandle, false); // Use this.gizmo
             this.hoveredGizmoHandle = null;
             if (this.hoveredEdge) {
                 const selectedEdges = this._uiPluginCallbacks.getSelectedEdges() || new Set();
@@ -849,9 +913,9 @@ export class UIManager {
         const { node: newlyHoveredNode, intersectedEdge: newHoveredEdge, metaframeHandleInfo: newMFHInfo, gizmoHandleInfo: newGizmoHInfo } = targetInfo;
 
         if (this.hoveredGizmoHandle !== newGizmoHInfo?.object) {
-            if (this.hoveredGizmoHandle && this.translationGizmo) this.translationGizmo.setHandleActive(this.hoveredGizmoHandle, false);
+            if (this.hoveredGizmoHandle && this.gizmo) this.gizmo.setHandleActive(this.hoveredGizmoHandle, false); // Use this.gizmo
             this.hoveredGizmoHandle = newGizmoHInfo?.object || null;
-            if (this.hoveredGizmoHandle && this.translationGizmo) this.translationGizmo.setHandleActive(this.hoveredGizmoHandle, true);
+            if (this.hoveredGizmoHandle && this.gizmo) this.gizmo.setHandleActive(this.hoveredGizmoHandle, true); // Use this.gizmo
         }
 
         if (this.hoveredNodeForMetaframe !== newlyHoveredNode) {
@@ -894,17 +958,20 @@ export class UIManager {
             if (this.hoveredEdge && !currentlySelectedEdges.has(this.hoveredEdge)) this.hoveredEdge.setHoverStyle(true);
         }
 
-        if (this.hoveredGizmoHandle) document.body.style.cursor = 'pointer';
-        else if (this.currentHoveredGLHandle) { /* cursor set by metaframe logic */ }
+        if (this.hoveredGizmoHandle) {
+            // TODO: Set cursor based on gizmo handle type (e.g., rotate cursor, scale cursor)
+            // For now, generic pointer for any gizmo handle
+            document.body.style.cursor = 'pointer';
+        } else if (this.currentHoveredGLHandle) { /* cursor set by metaframe logic */ }
         else if (this.hoveredEdge) document.body.style.cursor = 'pointer';
-        else if (this.activeGizmo || this.hoveredNodeForMetaframe || (newlyHoveredNode && selectedNodes.has(newlyHoveredNode))) {
-            document.body.style.cursor = this.activeGizmo ? 'default' : 'grab';
+        else if (this.gizmo?.visible || this.hoveredNodeForMetaframe || (newlyHoveredNode && selectedNodes.has(newlyHoveredNode))) {
+            document.body.style.cursor = this.gizmo?.visible ? 'default' : 'grab';
         }
         else document.body.style.cursor = 'grab';
 
-        if (this.translationGizmo?.visible) {
+        if (this.gizmo?.visible) { // Use this.gizmo
             const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
-            if (camera) this.translationGizmo.updateScale(camera);
+            if (camera) this.gizmo.updateScale(camera); // Use this.gizmo
         }
     }
 
@@ -979,10 +1046,14 @@ export class UIManager {
         this.hudManager.dispose();
         this.toolbar.dispose();
 
-        if (this.translationGizmo) {
-            this.space.plugins.getPlugin('RenderingPlugin')?.getWebGLScene()?.remove(this.translationGizmo);
-            this.translationGizmo.dispose();
-            this.translationGizmo = null;
+        if (this.gizmo) { // Use this.gizmo
+            this.space.plugins.getPlugin('RenderingPlugin')?.getWebGLScene()?.remove(this.gizmo);
+            this.gizmo.dispose();
+            this.gizmo = null;
+        }
+        if (this.multiSelectionHelper) {
+            // If it was added to any scene, remove it. Typically not added to scene directly.
+            this.multiSelectionHelper = null;
         }
 
         this.space = null; this.container = null; this.draggedNode = null; this.resizedNode = null;
@@ -998,7 +1069,7 @@ export class UIManager {
      * @param {PointerEvent} event - The pointer move event.
      */
     _handleGizmoDrag(event) {
-        if (!this.draggedGizmoHandleInfo || !this.translationGizmo || !this.space.isDragging) return;
+        if (!this.draggedGizmoHandleInfo || !this.gizmo || !this.space.isDragging) return;
         const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
         if (!camera) return;
         const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
@@ -1009,50 +1080,238 @@ export class UIManager {
         raycaster.setFromCamera(pointerNDC, camera);
 
         const gizmoInfo = this.draggedGizmoHandleInfo;
-        let dragDelta = new THREE.Vector3();
         const currentPointerWorldPos = new THREE.Vector3();
+        // const gizmoWorldPosition = this.gizmo.position.clone();
+        // const gizmoWorldQuaternion = this.gizmo.quaternion.clone();
 
+
+        // --- Translation ---
         if (gizmoInfo.type === 'translate') {
-            const gizmoWorldPosition = this.translationGizmo.position.clone();
+            let dragDelta = new THREE.Vector3();
             if (gizmoInfo.part === 'arrow') {
-                const axisVectorWorld = TranslationGizmo.getAxisVector(gizmoInfo.axis).clone().applyQuaternion(this.translationGizmo.quaternion);
-                const dragLine = new THREE.Line3(gizmoWorldPosition.clone().sub(axisVectorWorld.clone().multiplyScalar(10000)), gizmoWorldPosition.clone().add(axisVectorWorld.clone().multiplyScalar(10000)));
+                const axisVectorWorld = TranslationGizmo.getAxisVector(gizmoInfo.axis).clone().applyQuaternion(this.gizmo.quaternion);
+                const dragLine = new THREE.Line3(this.gizmo.position.clone().sub(axisVectorWorld.clone().multiplyScalar(10000)), this.gizmo.position.clone().add(axisVectorWorld.clone().multiplyScalar(10000)));
                 raycaster.ray.closestPointToLine(dragLine, false, currentPointerWorldPos);
             } else if (gizmoInfo.part === 'plane') {
-                const planeNormalWorld = TranslationGizmo.getPlaneNormal(gizmoInfo.axis).clone().applyQuaternion(this.translationGizmo.quaternion);
+                const planeNormalWorld = TranslationGizmo.getPlaneNormal(gizmoInfo.axis).clone().applyQuaternion(this.gizmo.quaternion);
                 const dragPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(planeNormalWorld, this.gizmoDragStartPointerWorldPos);
-                if (!raycaster.ray.intersectPlane(dragPlane, currentPointerWorldPos)) {
-                     return;
+                if (!raycaster.ray.intersectPlane(dragPlane, currentPointerWorldPos)) return;
+            }
+            if (this.gizmoDragStartPointerWorldPos.lengthSq() > 0) {
+                dragDelta.subVectors(currentPointerWorldPos, this.gizmoDragStartPointerWorldPos);
+            } else return;
+
+            selectedNodes.forEach(node => {
+                const initialPos = this.selectedNodesInitialPositions.get(node.id);
+                if (initialPos) {
+                    const newPos = initialPos.clone().add(dragDelta);
+                    node.setPosition(newPos.x, newPos.y, newPos.z); // Use Node's method if available for side effects
                 }
+            });
+            this.space.emit('graph:nodes:transformed', { nodes: Array.from(selectedNodes), transformationType: 'translate' });
+        }
+        // --- Rotation ---
+        else if (gizmoInfo.type === 'rotate') {
+            const rotationSpeed = 0.025; // Adjust for sensitivity
+            const deltaPointer = new THREE.Vector2(event.movementX, event.movementY);
+            const rotationAxisWorld = TranslationGizmo.getAxisVector(gizmoInfo.axis).clone().applyQuaternion(this.gizmo.quaternion);
+
+            // Project pointer movement onto a vector perpendicular to both camera view and rotation axis
+            // This gives a more intuitive rotation control based on mouse direction
+            const viewDirection = camera.getWorldDirection(new THREE.Vector3()).negate();
+            let rotationSign = 1;
+
+            // Determine dominant component of pointer movement relative to screen axes
+            // and align with the rotation axis projected to screen space
+            const screenPerpendicularToAxis = rotationAxisWorld.clone().cross(viewDirection);
+
+            // The sign of rotation depends on the dot product of pointer movement and screenPerpendicularToAxis
+            // Simplified: Use movementX for Y-axis rotation, movementY for X-axis rotation. Z-axis is trickier.
+            let angleIncrement = 0;
+            if (gizmoInfo.axis === 'y') { // Rotation around world Y (or gizmo's Y)
+                angleIncrement = -deltaPointer.x * rotationSpeed;
+            } else if (gizmoInfo.axis === 'x') { // Rotation around world X (or gizmo's X)
+                angleIncrement = deltaPointer.y * rotationSpeed;
+            } else { // Z-axis rotation
+                // Project gizmo center and current pointer to screen space
+                const gizmoScreenPos = this.gizmo.position.clone().project(camera);
+                const prevPointerScreenPos = new THREE.Vector2(this.pointerState.clientX - event.movementX, this.pointerState.clientY - event.movementY)
+                                                .sub(new THREE.Vector2(window.innerWidth/2, window.innerHeight/2))
+                                                .multiply(new THREE.Vector2(1/ (window.innerWidth/2), -1/(window.innerHeight/2)));
+                const currentPointerScreenPos = new THREE.Vector2(this.pointerState.clientX, this.pointerState.clientY)
+                                                .sub(new THREE.Vector2(window.innerWidth/2, window.innerHeight/2))
+                                                .multiply(new THREE.Vector2(1/ (window.innerWidth/2), -1/(window.innerHeight/2)));
+
+                const prevAngle = Math.atan2(prevPointerScreenPos.y - gizmoScreenPos.y, prevPointerScreenPos.x - gizmoScreenPos.x);
+                const currentAngle = Math.atan2(currentPointerScreenPos.y - gizmoScreenPos.y, currentPointerScreenPos.x - gizmoScreenPos.x);
+                angleIncrement = currentAngle - prevAngle;
             }
 
-            if (this.gizmoDragStartPointerWorldPos.lengthSq() > 0) {
-                 dragDelta.subVectors(currentPointerWorldPos, this.gizmoDragStartPointerWorldPos);
-            } else {
-                return;
+            const deltaRotation = new THREE.Quaternion().setFromAxisAngle(rotationAxisWorld, angleIncrement);
+
+            if (selectedNodes.size > 1 && this.multiSelectionHelper) {
+                this.multiSelectionHelper.quaternion.premultiply(deltaRotation); // Rotate the helper
+                this.multiSelectionHelper.updateMatrixWorld(true);
+
+                selectedNodes.forEach(node => {
+                    const initialLocalOffset = node.userData.initialOffsetFromMultiSelectCenter;
+                    const initialQuaternion = this.selectedNodesInitialQuaternions.get(node.id);
+                    if (initialLocalOffset && initialQuaternion) {
+                        const newWorldPos = this.multiSelectionHelper.localToWorld(initialLocalOffset.clone());
+                        node.setPosition(newWorldPos.x, newWorldPos.y, newWorldPos.z);
+
+                        // Calculate node's new world rotation
+                        // Node's new orientation = helper's new orientation * initial orientation relative to helper
+                        // Initial orientation relative to helper = helper_initial_inverse * node_initial_world
+                        // For simplicity now, let's assume nodes adopt the helper's rotation directly if they started aligned,
+                        // or maintain their relative rotation to it.
+                        // This requires storing initial relative quaternions or a more complex calculation.
+                        // Simplest for now: apply the delta rotation to each node's current world rotation.
+                        // This is not quite right for multi-select usually. The helper method is better.
+
+                        // To correctly apply rotation around a common pivot (multiSelectionHelper.position)
+                        // to nodes that might have their own orientations:
+                        // 1. Get node's initial world quaternion: initialNodeWorldQuaternion
+                        // 2. Get helper's initial world quaternion: initialHelperWorldQuaternion
+                        // 3. Calculate node's quaternion relative to helper: initialNodeRelativeQuaternion = initialHelperWorldQuaternion.clone().invert().multiply(initialNodeWorldQuaternion)
+                        // 4. New node world quaternion = newHelperWorldQuaternion.multiply(initialNodeRelativeQuaternion)
+                        // For now, a simpler approach for HTML nodes (which don't have intrinsic rotation)
+                        // and shape nodes (where we directly set mesh quaternion):
+                        if (node.mesh) {
+                             const newWorldQuaternion = this.multiSelectionHelper.quaternion.clone(); // Simplified: align with helper
+                             // A more correct approach would be:
+                             // const initialRelQuaternion = node.userData.initialRelativeQuaternion; (if stored)
+                             // const newWorldQuaternion = this.multiSelectionHelper.quaternion.clone().multiply(initialRelQuaternion);
+                             node.mesh.quaternion.copy(newWorldQuaternion);
+                        }
+                    }
+                });
+            } else { // Single node selection
+                selectedNodes.forEach(node => {
+                    const initialPos = this.selectedNodesInitialPositions.get(node.id);
+                    const initialQuaternion = this.selectedNodesInitialQuaternions.get(node.id);
+                    if (initialPos && initialQuaternion) {
+                        // Rotate position around gizmo center
+                        const offset = initialPos.clone().sub(this.gizmo.position);
+                        offset.applyQuaternion(deltaRotation);
+                        const newPos = this.gizmo.position.clone().add(offset);
+                        node.setPosition(newPos.x, newPos.y, newPos.z);
+
+                        if (node.mesh) { // Only ShapeNodes usually have a mesh to rotate
+                            const newQuaternion = deltaRotation.clone().multiply(initialQuaternion);
+                            node.mesh.quaternion.copy(newQuaternion);
+                        }
+                    }
+                });
             }
+            this.space.emit('graph:nodes:transformed', { nodes: Array.from(selectedNodes), transformationType: 'rotate' });
+        }
+        // --- Scaling ---
+        else if (gizmoInfo.type === 'scale') {
+            const scaleSpeed = 0.01; // Adjust for sensitivity
+            let scaleFactorDelta = new THREE.Vector3(event.movementX, event.movementY, 0).length() * scaleSpeed;
+            if (event.movementX + event.movementY < 0) scaleFactorDelta *= -1; // Simplistic direction check
+
+            let scaleDeltaVec = new THREE.Vector3(1,1,1);
+
+            if (gizmoInfo.axis === 'xyz') { // Uniform scale
+                const scaleVal = 1 + scaleFactorDelta;
+                scaleDeltaVec.set(scaleVal, scaleVal, scaleVal);
+            } else { // Axis-specific scale
+                const axisVectorGizmoSpace = TranslationGizmo.getAxisVector(gizmoInfo.axis);
+                if (gizmoInfo.axis === 'x') scaleDeltaVec.x += scaleFactorDelta;
+                else if (gizmoInfo.axis === 'y') scaleDeltaVec.y += scaleFactorDelta;
+                else if (gizmoInfo.axis === 'z') scaleDeltaVec.z += scaleFactorDelta;
+            }
+
+            // Ensure scale factors are positive
+            scaleDeltaVec.x = Math.max(0.01, scaleDeltaVec.x);
+            scaleDeltaVec.y = Math.max(0.01, scaleDeltaVec.y);
+            scaleDeltaVec.z = Math.max(0.01, scaleDeltaVec.z);
+
+            if (selectedNodes.size > 1 && this.multiSelectionHelper) {
+                // Apply scale to the helper. Nodes will be scaled relative to this helper.
+                this.multiSelectionHelper.scale.multiply(scaleDeltaVec);
+                this.multiSelectionHelper.updateMatrixWorld(true);
+
+                selectedNodes.forEach(node => {
+                    const initialLocalOffset = node.userData.initialOffsetFromMultiSelectCenter;
+                    const initialScale = this.selectedNodesInitialScales.get(node.id); // World scale initially
+                    if (initialLocalOffset && initialScale) {
+                        const newWorldPos = this.multiSelectionHelper.localToWorld(initialLocalOffset.clone());
+                        node.setPosition(newWorldPos.x, newWorldPos.y, newWorldPos.z);
+
+                        if (node.mesh) { // For ShapeNodes primarily
+                            // New scale = initial_node_scale_relative_to_helper * helper_new_scale
+                            // This requires storing initial relative scales.
+                            // Simplest: apply the same world scale delta. This might not be visually perfect for complex hierarchies.
+                            // For now, let's assume nodes adopt the helper's scale change directly applied to their original scale
+                            const newScale = initialScale.clone().multiply(scaleDeltaVec);
+                            node.setScale(newScale.x, newScale.y, newScale.z); // Assuming node.setScale exists
+                        } else if (node instanceof HtmlNode) {
+                             // For HTML nodes, scaling is often about width/height of the HTML element.
+                             // This needs a different approach, possibly by scaling the node's 'size' property.
+                             // This part of the scaling logic for HTML nodes via gizmo needs careful thought.
+                             // For now, we might just scale their visual representation if they have one (e.g. via CSS transform scale)
+                             // or adjust their width/height properties.
+                             // Let's try to apply to node.size if it exists and it's an HtmlNode.
+                            const newSize = {
+                                width: (node.size?.width || node.baseSize.width) * scaleDeltaVec.x,
+                                height: (node.size?.height || node.baseSize.height) * scaleDeltaVec.y,
+                            };
+                            node.setSize(newSize.width, newSize.height);
+                        }
+                    }
+                });
+
+            } else { // Single node selection
+                selectedNodes.forEach(node => {
+                    const initialScale = this.selectedNodesInitialScales.get(node.id);
+                    if (initialScale) {
+                        if (node.mesh) { // ShapeNode
+                            const newScale = initialScale.clone().multiply(scaleDeltaVec);
+                            node.setScale(newScale.x, newScale.y, newScale.z);
+                        } else if (node instanceof HtmlNode) {
+                            // Apply scaleDeltaVec to node's size, respecting aspect ratio if uniform scaling
+                            let newWidth, newHeight;
+                            if (gizmoInfo.axis === 'xyz') { // Uniform
+                                newWidth = (node.size?.width || node.baseSize.width) * scaleDeltaVec.x;
+                                newHeight = (node.size?.height || node.baseSize.height) * scaleDeltaVec.y; // Should be same as x for uniform
+                            } else { // Axis specific - might be tricky for HTML nodes, usually they are 2D scaled
+                                newWidth = (node.size?.width || node.baseSize.width) * (gizmoInfo.axis === 'x' || gizmoInfo.axis === 'xy' ? scaleDeltaVec.x : 1);
+                                newHeight = (node.size?.height || node.baseSize.height) * (gizmoInfo.axis === 'y' || gizmoInfo.axis === 'xy' ? scaleDeltaVec.y : 1);
+                            }
+                            node.setSize(Math.max(20, newWidth), Math.max(20, newHeight));
+                        }
+                    }
+                });
+            }
+            this.space.emit('graph:nodes:transformed', { nodes: Array.from(selectedNodes), transformationType: 'scale' });
         }
 
-        selectedNodes.forEach(node => {
-            const initialPos = this.selectedNodesInitialPositions.get(node.id);
-            if (initialPos) {
-                const newPos = initialPos.clone().add(dragDelta);
-                node.position.copy(newPos);
-                if (node.isHtmlNode && node.cssObject) node.cssObject.position.copy(newPos);
-            }
-        });
 
-        this.space.emit('graph:nodes:transformed', { nodes: Array.from(selectedNodes), transformationType: 'translate' });
-
-        if (selectedNodes.size > 1) {
+        // Update Gizmo Position (always to center of selection)
+        if (selectedNodes.size > 0) {
             const center = new THREE.Vector3();
             selectedNodes.forEach(n => center.add(n.position));
             center.divideScalar(selectedNodes.size);
-            this.translationGizmo.position.copy(center);
-        } else if (selectedNodes.size === 1) {
-            this.translationGizmo.position.copy(selectedNodes.values().next().value.position);
+            this.gizmo.position.copy(center);
+
+            // Update Gizmo Orientation for single selection
+            if (selectedNodes.size === 1) {
+                const node = selectedNodes.values().next().value;
+                if (node.mesh) this.gizmo.quaternion.copy(node.mesh.getWorldQuaternion(new THREE.Quaternion()));
+                else this.gizmo.quaternion.identity(); // HTML nodes typically don't have own 3D orientation
+            } else {
+                // For multi-select, gizmo orientation is aligned with multiSelectionHelper if rotation/scale, or world if translate
+                 if (gizmoInfo.type === 'rotate' || gizmoInfo.type === 'scale') {
+                    if(this.multiSelectionHelper) this.gizmo.quaternion.copy(this.multiSelectionHelper.quaternion);
+                 } else {
+                    this.gizmo.quaternion.identity(); // World aligned for multi-translate
+                 }
+            }
         }
 
-        if (camera) this.translationGizmo.updateScale(camera);
+        if (camera) this.gizmo.updateScale(camera);
     }
 }
