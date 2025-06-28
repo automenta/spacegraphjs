@@ -154,7 +154,7 @@ export class HtmlNode extends Node {
                 { passive: false }
             );
         }
-    }
+    
 
     setSize(width, height, scaleContent = false) {
         const oldSize = { ...this.size };
