@@ -4,7 +4,7 @@
     "description": "A general-purpose, extensible JavaScript library for creating Zooming User Interfaces (ZUI) with 2D and 3D visualizations.",
     "main": "dist/spacegraph.umd.js",
     "module": "dist/spacegraph.es.js",
-    "types": "dist/spacegraph.d.ts",
+    "types": "dist/index.d.ts",
     "files": [
         "dist",
         "src",
@@ -12,8 +12,9 @@
         ".github"
     ],
     "scripts": {
-        "build": "vite build --config vite.lib.config.js",
-        "build:demo": "vite build --outDir dist-demo",
+        "build:types": "tsc --emitDeclarationOnly --outDir dist",
+        "build": "npm run format && npm run lint && npm run build:types && vite build --config vite.lib.config.js",
+        "build:demo": "npm run format && npm run lint && vite build --outDir dist-demo",
         "test": "vitest --run",
         "docs:build": "jsdoc -c jsdoc.conf.json",
         "docs:view": "serve ./docs/api -l 8080",
