@@ -281,27 +281,43 @@ export class UIManager {
         if (this.gizmo) this.gizmo.hide(); // Assuming TranslationGizmo has a hide method
         if (this.adaptiveGeometricHub) this.adaptiveGeometricHub.visible = false;
 
-        // Reset zoom levels on fractal manipulators if they are about to be hidden
-        const resetZoomLevels = (manipulatorGroup) => {
-            if (manipulatorGroup && manipulatorGroup.visible) {
-                manipulatorGroup.children.forEach(child => {
-                    if (child.userData.isFractalUIElement && child.userData.axis) { // Also check type if rings have different zoom logic
-                        child.userData.zoomLevel = 0;
-                        // todo: re-apply base semantic zoom visuals if necessary
-                    }
-                });
-            }
-        };
+        // Hide all manipulator groups and reset their zoom levels and visual states.
+        const manipulatorGroupsToReset = [
+            this.fractalAxisManipulators,
+            this.fractalRotationManipulators,
+            this.fractalScaleManipulators
+        ];
 
-        const groupsToHide = [this.fractalAxisManipulators, this.fractalRotationManipulators, this.fractalScaleManipulators];
-        groupsToHide.forEach(group => {
+        manipulatorGroupsToReset.forEach(group => {
             if (group) {
-                resetZoomLevels(group); // Reset zoom levels before hiding
                 group.children.forEach(child => {
-                    if (this.hoveredFractalElement === child) {
-                        const originalColor = child.userData.originalColor || new THREE.Color(0xffffff);
-                        setFractalElementActive(child, false, originalColor, false);
-                        this.hoveredFractalElement = null;
+                    if (child.userData.isFractalUIElement) {
+                        child.userData.zoomLevel = 0; // Reset zoom level data
+
+                        // If this child was the currently hovered fractal element, deactivate its hover state.
+                        // Note: this.hoveredFractalElement itself will be updated by _handleHover on next mouse move if needed.
+                        if (this.hoveredFractalElement === child) {
+                            const originalColor = child.userData.originalColor ||
+                                                  (child.material.color ? child.material.color.clone() : new THREE.Color(0xffffff));
+                            setFractalElementActive(child, false, originalColor, false);
+                            // No need to null this.hoveredFractalElement here; _handleHover will manage it.
+                        }
+
+                        // Apply semantic zoom visuals for zoom level 0 to ensure clean state.
+                        // This relies on setFractalElementActive having already potentially restored originalColor if unhovering.
+                        // The applySemanticZoomToAxis will then use that restored originalColor for its emissive calculations if needed.
+                        if (child.userData.axis && typeof applySemanticZoomToAxis === 'function') {
+                            const elementType = child.userData.type;
+                            let manipulatorType = 'translate'; // Default
+                            if (elementType === 'rotate_axis') {
+                                manipulatorType = 'rotate';
+                            } else if (elementType === 'scale_axis' || elementType === 'scale_uniform') {
+                                manipulatorType = elementType;
+                            } else if (elementType === 'translate_axis') {
+                                manipulatorType = 'translate';
+                            }
+                            applySemanticZoomToAxis(group, child.userData.axis, 0, manipulatorType);
+                        }
                     }
                 });
                 group.visible = false;
@@ -1259,10 +1275,33 @@ export class UIManager {
                     // This is tricky. A simpler approach: use screenDelta.x or .y based on axis.
                     // Or, use the dot product of screenDelta with the projected axis on screen.
                     // For now, let's use a simpler combined delta:
-                    scaleMultiplierDelta = 1.0 + (screenDelta.x - screenDelta.y) * sensitivity;
+                    // For axial scale, use mouse delta along a screen direction that "feels" like the axis
+                    const axialSensitivity = 0.005; // Sensitivity for axial scaling
+
+                    let axisWorldDir = new THREE.Vector3();
+                    if (scaleAxis === 'x') axisWorldDir.set(1, 0, 0);
+                    else if (scaleAxis === 'y') axisWorldDir.set(0, 1, 0);
+                    else if (scaleAxis === 'z') axisWorldDir.set(0, 0, 1);
+
+                    // Project the world axis onto the screen
+                    const p1World = pivotPoint.clone(); // Center of the manipulator group
+                    const p2World = pivotPoint.clone().add(axisWorldDir);
+
+                    const p1ScreenNDC = new THREE.Vector2(p1World.clone().project(camera).x, p1World.clone().project(camera).y);
+                    const p2ScreenNDC = new THREE.Vector2(p2World.clone().project(camera).x, p2World.clone().project(camera).y);
+
+                    const screenAxisDirectionNDC = p2ScreenNDC.clone().sub(p1ScreenNDC).normalize();
+
+                    // screenDelta is the pointer movement in pixels from the last frame
+                    // (currentPointerScreenPos - startPointerScreenPos, where startPointerScreenPos was last frame's current)
+                    const pointerMovementPixels = screenDelta.clone(); // screenDelta is already (current - previous_current)
+
+                    // Dot product of pixel pointer movement with the normalized screen direction of the axis
+                    const projectionOfMovement = pointerMovementPixels.dot(screenAxisDirectionNDC);
+
+                    scaleMultiplierDelta = 1.0 + projectionOfMovement * axialSensitivity;
                 }
                 scaleMultiplierDelta = Math.max(0.01, scaleMultiplierDelta); // Prevent zero or negative scale
-
 
                 // Store cumulative scale factor if not present
                 if (this.draggedFractalElementInfo.cumulativeScaleMultiplier === undefined) {

@@ -221,7 +221,14 @@ export function setFractalElementActive(fractalMesh, isActive, originalColor, is
                 // If it's zoomed, its appearance (including emissive) should be dictated by applySemanticZoomToAxis.
                 // This re-applies the zoom visuals, including emissive, for the current zoom level.
                 if (fractalMesh.parent && fractalMesh.userData.axis && typeof applySemanticZoomToAxis === 'function') {
-                    applySemanticZoomToAxis(fractalMesh.parent, fractalMesh.userData.axis, currentZoomLevel);
+                    let manipulatorType = 'translate'; // Default
+                    const elementType = fractalMesh.userData.type;
+                    if (elementType === 'rotate_axis') {
+                        manipulatorType = 'rotate';
+                    } else if (elementType === 'scale_axis' || elementType === 'scale_uniform') {
+                        manipulatorType = elementType;
+                    }
+                    applySemanticZoomToAxis(fractalMesh.parent, fractalMesh.userData.axis, currentZoomLevel, manipulatorType);
                 } else {
                     // Fallback if proper re-application of zoom visuals isn't possible here
                     fractalMesh.material.emissive.setHex(baseEmissiveHex);
@@ -400,10 +407,16 @@ export function applySemanticZoomToAxis(manipulatorGroup, axisType, zoomLevel, m
 
 
         const markers = ringMesh.userData.degreeMarkers || [];
-        let showMarkersLevel = 0; // 0: none, 1: 90deg (4 markers), 2: 45deg (8 markers), 3: 30deg (12 markers)
+        const maxMarkers = ringMesh.userData.maxMarkers || 12; // Retrieve stored maxMarkers, fallback to 12
+        // With maxMarkers = 12 (30-deg steps):
+        // Level 0: none
+        // Level 1: 90deg (4 markers: 0, 90, 180, 270)
+        // Level 2: 45deg multiples that align with 30deg steps (4 markers: 0, 90, 180, 270)
+        // Level 3: 30deg (all 12 markers)
+        let showMarkersLevel = 0;
 
-        if (zoomLevel === 1) showMarkersLevel = 1;
-        else if (zoomLevel === 2) showMarkersLevel = 2;
+        if (zoomLevel === 1) showMarkersLevel = 1; // Show 90-deg markers
+        else if (zoomLevel === 2) showMarkersLevel = 2; // Show 45-deg aligned markers
         else if (zoomLevel >= 3) showMarkersLevel = 3;
 
         markers.forEach((marker, index) => {
@@ -558,6 +571,8 @@ export function createFractalRingManipulator(axis = 'y') {
     // Create degree markers (initially hidden)
     ringMesh.userData.degreeMarkers = [];
     const markerGeometry = new THREE.SphereGeometry(AXIS_RADIUS * 0.4, 6, 6); // Smaller markers
+    const maxMarkers = 12; // Max markers for highest zoom level (e.g., 30 deg increments)
+    ringMesh.userData.maxMarkers = maxMarkers; // Store for semantic zoom access
 
     // Create a distinct material for markers to avoid shared state issues with the ring's material
     const markerMaterial = new THREE.MeshStandardMaterial({
