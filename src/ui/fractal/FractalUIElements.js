@@ -151,43 +151,48 @@ export function setFractalElementActive(fractalMesh, isActive, originalColor, is
     const baseOpacity = fractalMesh.userData.originalOpacity !== undefined ? fractalMesh.userData.originalOpacity : 0.7;
     const baseEmissive = fractalMesh.userData.originalEmissive !== undefined ? fractalMesh.userData.originalEmissive : 0x000000;
 
+    // Check current zoom level. If zoomed, zoom's emissive takes precedence.
+    const currentZoomLevel = fractalMesh.userData.zoomLevel;
+    const isZoomed = currentZoomLevel !== undefined && currentZoomLevel !== 0;
 
     if (isActive) {
-        let activeColor;
-        let activeOpacity;
-        // Default emissive intensity for grab. For hover, it's smaller.
+        let activeColorValue;
+        let activeOpacityValue;
         let emissiveIntensity = isGrabbed ? 0.5 : 0.2;
 
         if (isGrabbed) {
-            // Grabbed state: significantly brighter, more opaque, and stronger emissive effect.
-            activeColor = baseColor.clone().lerp(new THREE.Color(0xffffff), 0.5); // Lerp towards white.
-            activeOpacity = Math.min(1, baseOpacity * 1.3); // Increase opacity.
-            if (fractalMesh.material.emissive) {
-                // Use the brightened color as the emissive base, then scale by intensity.
-                fractalMesh.material.emissive.copy(activeColor).multiplyScalar(emissiveIntensity);
+            activeColorValue = baseColor.clone().lerp(new THREE.Color(0xffffff), 0.5);
+            activeOpacityValue = Math.min(1, baseOpacity * 1.3);
+            if (fractalMesh.material.emissive && !isZoomed) { // Only set grab emissive if not actively zoomed
+                fractalMesh.material.emissive.copy(activeColorValue).multiplyScalar(emissiveIntensity);
             }
-        } else {
-            // Hovered state (active but not grabbed): moderately brighter, slightly more opaque, slight emissive.
-            activeColor = baseColor.clone().multiplyScalar(1.5); // Standard hover brighten.
-            activeColor.r = Math.max(0, Math.min(1, activeColor.r));
-            activeColor.g = Math.max(0, Math.min(1, activeColor.g));
-            activeColor.b = Math.max(0, Math.min(1, activeColor.b));
-            activeOpacity = Math.min(1, baseOpacity * 1.1);
-            if (fractalMesh.material.emissive) {
-                 // Slight emissive for hover
-                fractalMesh.material.emissive.copy(activeColor).multiplyScalar(0.2);
+        } else { // Hovered state (active but not grabbed)
+            activeColorValue = baseColor.clone().multiplyScalar(1.5); // Standard hover brighten
+            activeColorValue.r = Math.max(0, Math.min(1, activeColorValue.r));
+            activeColorValue.g = Math.max(0, Math.min(1, activeColorValue.g));
+            activeColorValue.b = Math.max(0, Math.min(1, activeColorValue.b));
+            activeOpacityValue = Math.min(1, baseOpacity * 1.1);
+            if (fractalMesh.material.emissive && !isZoomed) { // Only set hover emissive if not actively zoomed
+                fractalMesh.material.emissive.copy(activeColorValue).multiplyScalar(0.2);
             }
         }
-        fractalMesh.material.color.set(activeColor);
-        fractalMesh.material.opacity = activeOpacity;
-
+        fractalMesh.material.color.set(activeColorValue);
+        fractalMesh.material.opacity = activeOpacityValue;
     } else { // Not active (neither hovered nor grabbed)
         fractalMesh.material.color.set(baseColor);
         fractalMesh.material.opacity = baseOpacity;
-        if (fractalMesh.material.emissive) {
+        if (fractalMesh.material.emissive && !isZoomed) { // Only reset to base emissive if not actively zoomed
             fractalMesh.material.emissive.setHex(baseEmissive);
         }
     }
+
+    // If the element is zoomed, its emissive color is managed by applySemanticZoomToAxis.
+    // If it's NOT zoomed, and it became inactive, ensure its emissive is reset to base.
+    // If it IS zoomed, and it became inactive, its emissive should remain the zoom emissive.
+    // The logic above handles not touching emissive if isZoomed.
+    // If !isActive && isZoomed, emissive is already what it should be (zoom emissive).
+    // If !isActive && !isZoomed, emissive is reset to baseEmissive.
+
     fractalMesh.material.needsUpdate = true;
 }
 
@@ -221,7 +226,7 @@ export function applySemanticZoomToAxis(manipulatorGroup, axisType, zoomLevel) {
     }
 
     const baseScaleCylinder = axisCylinder.userData.originalScale;
-    const baseScaleCylinder = axisCylinder.userData.originalScale;
+    // const baseScaleCylinder = axisCylinder.userData.originalScale; // Duplicate line removed
     const baseScaleCone = axisCone.userData.originalScale;
 
     let radialScaleFactor = 1.0; // Factor to scale the thickness/radius
@@ -230,56 +235,62 @@ export function applySemanticZoomToAxis(manipulatorGroup, axisType, zoomLevel) {
     } else if (zoomLevel < 0) { // Zoom out
         radialScaleFactor = Math.max(0.5, 1.0 + zoomLevel * 0.2); // Decrease thickness, min 50%
     }
-    // Note: Length of the axis manipulators is not changed by semantic zoom here, only thickness.
 
-    // Apply non-uniform scale: keep length axis at 1 (relative to base), scale other two for thickness.
-    // The specific axes to scale for thickness depend on the initial orientation of the geometry
-    // and the rotations applied to align them with world X, Y, Z.
+    // Helper function to manage emissive color for zoom
+    const manageEmissiveForZoom = (element, targetAxisType, currentZoomLevel) => {
+        if (!element.material || !element.material.emissive) return;
+
+        // Store original emissive if not already stored by setFractalElementActive or a previous zoom
+        if (element.userData.originalEmissive === undefined && element.userData.originalEmissiveForZoom === undefined) {
+            element.userData.originalEmissiveForZoom = element.material.emissive.getHex();
+        }
+        // If originalEmissive was set by setFractalElementActive, prioritize that for reset,
+        // unless originalEmissiveForZoom was specifically set (e.g. if element wasn't 'active' but got zoomed)
+        const resetEmissiveHex = element.userData.originalEmissive !== undefined
+            ? element.userData.originalEmissive
+            : (element.userData.originalEmissiveForZoom !== undefined ? element.userData.originalEmissiveForZoom : 0x000000);
+
+
+        if (currentZoomLevel !== 0) {
+            let emissiveHex = 0x000000;
+            switch (targetAxisType) {
+                case 'x':
+                    emissiveHex = currentZoomLevel > 0 ? 0x550000 : 0x220000; // Dark red
+                    break;
+                case 'y':
+                    emissiveHex = currentZoomLevel > 0 ? 0x005500 : 0x002200; // Dark green
+                    break;
+                case 'z':
+                    emissiveHex = currentZoomLevel > 0 ? 0x000055 : 0x000022; // Dark blue
+                    break;
+            }
+            element.material.emissive.setHex(emissiveHex);
+        } else {
+            // Reset emissive to its original state before zoom
+            element.material.emissive.setHex(resetEmissiveHex);
+        }
+        element.material.needsUpdate = true;
+    };
+
+    // Apply scaling and emissive changes
     if (axisType === 'x') {
-        // X-axis manipulator (cylinder/cone) is typically rotated -90deg around Z.
-        // Its original geometry's height (length) is along its local Y.
-        // Its radius is defined by its local X and Z.
-        // So, to change thickness, scale local Y and Z of the mesh. Length is local X.
         axisCylinder.scale.set(baseScaleCylinder.x, baseScaleCylinder.y * radialScaleFactor, baseScaleCylinder.z * radialScaleFactor);
         axisCone.scale.set(baseScaleCone.x, baseScaleCone.y * radialScaleFactor, baseScaleCone.z * radialScaleFactor);
-
-        // Visual cue for X-axis zoom: temporary emissive change (as per plan for Iteration 1).
-        if (zoomLevel !== 0) {
-            if (axisCylinder.material.emissive && axisCylinder.userData.originalEmissive === undefined) {
-                // Store original emissive only if not already stored by setFractalElementActive
-                axisCylinder.userData.originalEmissiveForZoom = axisCylinder.material.emissive.getHex();
-            }
-            if (axisCylinder.material.emissive) {
-                axisCylinder.material.emissive.setHex(zoomLevel > 0 ? 0x550000 : 0x220000); // Dark red emissive, slightly brighter for zoom in
-            }
-        } else {
-            // Reset emissive if it was changed by zoom
-            if (axisCylinder.material.emissive && axisCylinder.userData.originalEmissiveForZoom !== undefined) {
-                axisCylinder.material.emissive.setHex(axisCylinder.userData.originalEmissiveForZoom);
-            } else if (axisCylinder.material.emissive && axisCylinder.userData.originalEmissive !== undefined) {
-                // Fallback to the general original emissive if one for zoom wasn't specifically set
-                 axisCylinder.material.emissive.setHex(axisCylinder.userData.originalEmissive);
-            } else if (axisCylinder.material.emissive) {
-                axisCylinder.material.emissive.setHex(0x000000); // Default to no emissive
-            }
-        }
-        if (axisCylinder.material.needsUpdate) axisCylinder.material.needsUpdate = true;
-
+        manageEmissiveForZoom(axisCylinder, 'x', zoomLevel);
+        manageEmissiveForZoom(axisCone, 'x', zoomLevel); // Also apply to cone head
     } else if (axisType === 'y') {
-        // Y-axis manipulator is typically not rotated.
-        // Its original geometry's height (length) is along its local Y.
-        // Its radius is defined by its local X and Z.
-        // To change thickness, scale local X and Z of the mesh. Length is local Y.
         axisCylinder.scale.set(baseScaleCylinder.x * radialScaleFactor, baseScaleCylinder.y, baseScaleCylinder.z * radialScaleFactor);
         axisCone.scale.set(baseScaleCone.x * radialScaleFactor, baseScaleCone.y, baseScaleCone.z * radialScaleFactor);
+        manageEmissiveForZoom(axisCylinder, 'y', zoomLevel);
+        manageEmissiveForZoom(axisCone, 'y', zoomLevel);
     } else if (axisType === 'z') {
-        // Z-axis manipulator is typically rotated 90deg around X.
-        // Its original geometry's height (length) is along its local Y.
-        // Its radius is defined by its local X and Z.
-        // After rotation, to change thickness, scale local X and Y of the mesh. Length is local Z.
         axisCylinder.scale.set(baseScaleCylinder.x * radialScaleFactor, baseScaleCylinder.y * radialScaleFactor, baseScaleCylinder.z);
         axisCone.scale.set(baseScaleCone.x * radialScaleFactor, baseScaleCone.y * radialScaleFactor, baseScaleCone.z);
+        manageEmissiveForZoom(axisCylinder, 'z', zoomLevel);
+        manageEmissiveForZoom(axisCone, 'z', zoomLevel);
     }
-    // For this iteration, only X-axis gets the special emissive visual cue as per plan.
-    // Other axes just get scaling. The main material's needsUpdate is handled by UIManager when resetting hover.
+
+    // Ensure materials update if not handled by manageEmissiveForZoom (e.g. if only scale changed)
+    if (!axisCylinder.material.needsUpdate) axisCylinder.material.needsUpdate = true;
+    if (!axisCone.material.needsUpdate) axisCone.material.needsUpdate = true;
 }
