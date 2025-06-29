@@ -10,7 +10,7 @@ import { InteractionState } from './InteractionState.js';
 import { TranslationGizmo } from './gizmos/TranslationGizmo.js'; // Added Gizmo
 import { ConfirmDialog } from './dialogs/ConfirmDialog.js';
 import { ContextMenu } from './menus/ContextMenu.js';
-import { createAdaptiveGeometricHub, createFractalAxisManipulators, updateFractalUIScale, setFractalElementActive } from './fractal/FractalUIElements.js';
+import { createAdaptiveGeometricHub, createFractalAxisManipulators, updateFractalUIScale, setFractalElementActive, applySemanticZoomToAxis } from './fractal/FractalUIElements.js';
 import { EdgeMenu } from './menus/EdgeMenu.js';
 import { HudManager } from './hud/HudManager.js';
 import { Toolbar } from './Toolbar.js';
@@ -587,7 +587,18 @@ export class UIManager {
                 if (this.fractalAxisManipulators) {
                     if (this.fractalAxisManipulators.visible) {
                         this.fractalAxisManipulators.visible = false;
-                        this._transitionToState(InteractionState.IDLE); // Or a FRACTAL_HUB_ONLY state
+                        // If a manipulator element was hovered, deactivate it and clear the hover state,
+                        // as the manipulators are now hidden. This prevents unintended interactions (like semantic zoom)
+                        // with a now-hidden element if the pointer hasn't moved.
+                        if (this.hoveredFractalElement && this.fractalAxisManipulators.children.includes(this.hoveredFractalElement)) {
+                            const originalColor = this.hoveredFractalElement.userData.originalColor ||
+                                                  (this.hoveredFractalElement.material.color ?
+                                                   this.hoveredFractalElement.material.color.clone() :
+                                                   new THREE.Color(0xffffff)); // Fallback
+                            setFractalElementActive(this.hoveredFractalElement, false, originalColor, false);
+                            this.hoveredFractalElement = null;
+                        }
+                        this._transitionToState(InteractionState.IDLE);
                     } else {
                         const node = selectedNodes.values().next().value;
                         this.fractalAxisManipulators.position.copy(node.position);
@@ -641,7 +652,13 @@ export class UIManager {
                 const viewDirection = camera.getWorldDirection(new THREE.Vector3()).negate();
                 this.fractalUIInteractionPlane.setFromNormalAndCoplanarPoint(viewDirection, initialPointerWorldPos);
 
-                setFractalElementActive(fractalObject, true, fractalObject.material.color.clone());
+                // Ensure originalColor is available or use current material color
+                const originalColorForGrab = fractalObject.userData.originalColor ||
+                                           (fractalObject.material.color ?
+                                            fractalObject.material.color.clone() :
+                                            new THREE.Color(0xffffff)); // Fallback
+                setFractalElementActive(fractalObject, true, originalColorForGrab, true); // isGrabbed = true
+
                 this._transitionToState(InteractionState.FRACTAL_DRAGGING, {
                     draggedFractalInfo: this.draggedFractalElementInfo,
                     selectedNodes: selectedNodes
@@ -958,9 +975,11 @@ export class UIManager {
 
         if (currentInteractionState === InteractionState.FRACTAL_DRAGGING) {
             if (this.draggedFractalElementInfo?.element) {
-                // Use the stored original color for deactivation
-                const originalColor = this.draggedFractalElementInfo.element.userData.originalColor || this.draggedFractalElementInfo.element.material.color.clone();
-                setFractalElementActive(this.draggedFractalElementInfo.element, false, originalColor);
+                const element = this.draggedFractalElementInfo.element;
+                // Use the stored original color for deactivation, isGrabbed defaults to false
+                const originalColor = element.userData.originalColor ||
+                                      (element.material.color ? element.material.color.clone() : new THREE.Color(0xffffff));
+                setFractalElementActive(element, false, originalColor, false);
             }
             this.draggedFractalElementInfo = null;
             this.selectedNodesInitialPositions.clear();
@@ -1194,29 +1213,61 @@ export class UIManager {
                 console.log("Semantic zoom on axis:", this.hoveredFractalElement.userData.axis, "deltaY:", e.deltaY);
 
                 // Placeholder visual feedback: temporarily change color
-                // Ensure originalColor is stored if not already
-                if (!this.hoveredFractalElement.userData.originalColor && this.hoveredFractalElement.material.color) {
-                    this.hoveredFractalElement.userData.originalColor = this.hoveredFractalElement.material.color.clone();
+                const axisType = this.hoveredFractalElement.userData.axis;
+                console.log("Semantic zoom on axis:", axisType, "deltaY:", e.deltaY); // Per TODO_FractalUI.md placeholder
+
+                // Initialize or update zoom level stored on the hovered element's userData
+                if (this.hoveredFractalElement.userData.zoomLevel === undefined) {
+                    this.hoveredFractalElement.userData.zoomLevel = 0;
                 }
-                const originalColor = this.hoveredFractalElement.userData.originalColor || new THREE.Color(0xffffff); // Fallback
+                const currentZoomLevel = this.hoveredFractalElement.userData.zoomLevel;
+                let newZoomLevel = currentZoomLevel;
 
-                this.hoveredFractalElement.material.color.set(e.deltaY < 0 ? 0x00ffff : 0xffff00); // Cyan for zoom in, Yellow for zoom out
-
-                // Store original opacity if not already stored
-                if (this.hoveredFractalElement.userData.originalOpacity === undefined && this.hoveredFractalElement.material.opacity) {
-                    this.hoveredFractalElement.userData.originalOpacity = this.hoveredFractalElement.material.opacity;
+                if (e.deltaY < 0) { // Zoom in
+                    newZoomLevel = Math.min(3, currentZoomLevel + 1); // Cap zoom-in level
+                } else { // Zoom out
+                    newZoomLevel = Math.max(-2, currentZoomLevel - 1); // Cap zoom-out level
                 }
+                this.hoveredFractalElement.userData.zoomLevel = newZoomLevel;
 
-                setTimeout(() => {
-                    if(this.hoveredFractalElement && this.hoveredFractalElement.userData.originalColor) {
-                       setFractalElementActive(this.hoveredFractalElement, true); // Re-apply active state (which uses originalColor as base)
-                    } else if (this.hoveredFractalElement) {
-                       this.hoveredFractalElement.material.color.set(originalColor); // Fallback if no original color was set
+                // Apply the semantic zoom visual change only for the X-axis in this iteration
+                if (this.fractalAxisManipulators && axisType === 'x') {
+                    applySemanticZoomToAxis(this.fractalAxisManipulators, axisType, newZoomLevel);
+
+                    // Clear any existing timeout to prevent multiple reverts or premature resets
+                    if (this.hoveredFractalElement.userData.zoomResetTimeout) {
+                        clearTimeout(this.hoveredFractalElement.userData.zoomResetTimeout);
+                        this.hoveredFractalElement.userData.zoomResetTimeout = null;
                     }
-                }, 200);
+
+                    // Set a timeout to revert the semantic zoom effect to the normal hover state.
+                    // This makes the zoom visual "temporary" for this iteration.
+                    this.hoveredFractalElement.userData.zoomResetTimeout = setTimeout(() => {
+                        // Check if the element is still part of the visible manipulators and still the one that was zoomed
+                        if (this.fractalAxisManipulators &&
+                            this.hoveredFractalElement &&
+                            this.hoveredFractalElement.userData.axis === axisType &&
+                            this.hoveredFractalElement.userData.zoomResetTimeout) { // Check if this timeout is still the active one
+
+                            applySemanticZoomToAxis(this.fractalAxisManipulators, axisType, 0); // Reset visual scale to normal
+                            this.hoveredFractalElement.userData.zoomLevel = 0; // Reset stored zoom level
+
+                            // Re-apply the standard hover effect if the element is still hovered.
+                            // setFractalElementActive handles storing/using originalColor internally.
+                            const originalColor = this.hoveredFractalElement.userData.originalColor ||
+                                                  (this.hoveredFractalElement.material.color ? this.hoveredFractalElement.material.color.clone() : new THREE.Color(0xffffff));
+                            setFractalElementActive(this.hoveredFractalElement, true, originalColor, false);
+                        }
+                        if (this.hoveredFractalElement) { // Ensure hoveredFractalElement still exists before trying to clear timeout property
+                           this.hoveredFractalElement.userData.zoomResetTimeout = null;
+                        }
+                    }, 500); // Revert after 0.5 seconds
+                } else {
+                     // Placeholder for other axes or if manipulators are not found
+                    console.log(`Semantic zoom visual not yet implemented for axis ${axisType} or manipulators not found.`);
+                }
                 return; // Prevent camera zoom
             }
-
             // Default camera zoom
             e.preventDefault();
             this.space.emit('ui:request:zoomCamera', e.deltaY);
@@ -1405,20 +1456,20 @@ export class UIManager {
         // 1. Handle Fractal UI Hover
         if (this.hoveredFractalElement !== newFractalElInfo?.object) {
             if (this.hoveredFractalElement) {
-                // Retrieve original color if stored, otherwise it will use current material color as base
-                const originalColor = this.hoveredFractalElement.userData.originalColor || (this.hoveredFractalElement.material.color ? this.hoveredFractalElement.material.color.clone() : undefined);
-                setFractalElementActive(this.hoveredFractalElement, false, originalColor);
+                const oldHoveredElement = this.hoveredFractalElement;
+                const originalColor = oldHoveredElement.userData.originalColor ||
+                                      (oldHoveredElement.material.color ? oldHoveredElement.material.color.clone() : new THREE.Color(0xffffff));
+                setFractalElementActive(oldHoveredElement, false, originalColor, false); // isActive = false, isGrabbed = false
             }
+
             this.hoveredFractalElement = newFractalElInfo?.object || null;
+
             if (this.hoveredFractalElement) {
-                 // Store original color before highlighting if not already stored
-                if (!this.hoveredFractalElement.userData.originalColor && this.hoveredFractalElement.material.color) {
-                    this.hoveredFractalElement.userData.originalColor = this.hoveredFractalElement.material.color.clone();
-                }
-                 if (!this.hoveredFractalElement.userData.originalOpacity && this.hoveredFractalElement.material.opacity) {
-                    this.hoveredFractalElement.userData.originalOpacity = this.hoveredFractalElement.material.opacity;
-                }
-                setFractalElementActive(this.hoveredFractalElement, true);
+                const newHoveredElement = this.hoveredFractalElement;
+                 // Store original color before highlighting if not already stored (setFractalElementActive handles this internally now)
+                const originalColor = newHoveredElement.userData.originalColor ||
+                                      (newHoveredElement.material.color ? newHoveredElement.material.color.clone() : new THREE.Color(0xffffff));
+                setFractalElementActive(newHoveredElement, true, originalColor, false); // isActive = true, isGrabbed = false
             }
         }
 
