@@ -98,6 +98,8 @@ export class UIManager {
     //   initialPointerWorldPos?: THREE.Vector3, initialProjectedPointOnAxis?: THREE.Vector3, axisDirection?: THREE.Vector3,
     //   initialRotationAngle?: number, rotationPlane?: THREE.Plane }
     fractalUIInteractionPlane = new THREE.Plane(); // Used for some fractal interactions, might be deprecated for axis-specific logic
+    /** @type {number} Current mode for AGH cycling: 0=None, 1=Translate, 2=Rotate, 3=Scale */
+    aghCurrentModeCycle = 0;
 
     // --- General Hover/Selection ---
     hoveredEdge = null;
@@ -297,6 +299,7 @@ export class UIManager {
         this.fractalAxisManipulators?.hide();
         this.fractalRotationManipulators?.hide();
         this.fractalScaleManipulators?.hide();
+        this.aghCurrentModeCycle = 0; // Reset AGH cycle state
 
         if (selectedNodes.size === 1 && this.adaptiveGeometricHub) {
             const node = selectedNodes.values().next().value;
@@ -305,7 +308,7 @@ export class UIManager {
 
             if (camera) updateFractalUIScale(this.adaptiveGeometricHub, camera, REFERENCE_DISTANCE_FRACTAL_UI, node.position);
             this.adaptiveGeometricHub.show();
-            // Fractal manipulators (translation/rotation) are not shown until AGH is interacted with.
+            // Manipulators are hidden by default, shown by AGH interaction.
 
         } else if (selectedNodes.size > 0 && this.gizmo) { // Fallback to old gizmo for multi-select
             const center = new THREE.Vector3();
@@ -631,55 +634,82 @@ export class UIManager {
             const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
 
             if (fractalType === 'agh' && selectedNodes.size === 1) {
-                // Clicked on the Adaptive Geometric Hub: Toggle visibility of all manipulators
-                const manipulatorsAreVisible = this.fractalAxisManipulators?.visible ||
-                                               this.fractalRotationManipulators?.visible ||
-                                               this.fractalScaleManipulators?.visible;
-                const node = selectedNodes.values().next().value; // Assuming single selected node for AGH
+                // Clicked on the Adaptive Geometric Hub: Cycle through manipulator modes
+                this.aghCurrentModeCycle = (this.aghCurrentModeCycle + 1) % 4; // 0:None, 1:Translate, 2:Rotate, 3:Scale
+
+                const node = selectedNodes.values().next().value;
                 const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
 
-                if (manipulatorsAreVisible) {
-                    this.fractalAxisManipulators.visible = false;
-                    this.fractalRotationManipulators.visible = false;
-                    this.fractalScaleManipulators.visible = false;
-                    // Reset zoom levels when hiding
-                    [this.fractalAxisManipulators, this.fractalRotationManipulators, this.fractalScaleManipulators].forEach(group => {
-                        group?.children.forEach(child => {
-                            if (child.userData.isFractalUIElement && child.userData.axis) { // Check type if zoom logic differs
-                                child.userData.zoomLevel = 0;
+                // Hide all first, then show the current mode's manipulators
+                this.fractalAxisManipulators.visible = false;
+                this.fractalRotationManipulators.visible = false;
+                this.fractalScaleManipulators.visible = false;
+
+                // Reset zoom levels when hiding manipulators explicitly or switching
+                const resetZoomAndUnhighlight = (group) => {
+                    if (!group) return;
+                    group.children.forEach(child => {
+                        if (child.userData.isFractalUIElement) {
+                            child.userData.zoomLevel = 0;
+                            // If this child was the hovered one, unhighlight it
+                            if (this.hoveredFractalElement === child) {
+                                const originalColor = child.userData.originalColor || new THREE.Color(0xffffff);
+                                setFractalElementActive(child, false, originalColor, false);
+                                this.hoveredFractalElement = null;
                             }
-                        });
-                    });
-                    if (this.hoveredFractalElement &&
-                        (this.fractalAxisManipulators?.children.includes(this.hoveredFractalElement) ||
-                         this.fractalRotationManipulators?.children.includes(this.hoveredFractalElement) ||
-                         this.fractalScaleManipulators?.children.includes(this.hoveredFractalElement))
-                    ) {
-                        const originalColor = this.hoveredFractalElement.userData.originalColor || new THREE.Color(0xffffff);
-                        setFractalElementActive(this.hoveredFractalElement, false, originalColor, false);
-                        this.hoveredFractalElement = null;
-                    }
-                } else {
-                    // Position and show manipulators
-                    [this.fractalAxisManipulators, this.fractalRotationManipulators, this.fractalScaleManipulators].forEach(group => {
-                        if (group) {
-                            group.position.copy(node.position);
-                            group.quaternion.identity(); // World aligned
-                            group.children.forEach(child => {
-                                if (child.userData.isFractalUIElement && child.userData.axis) {
-                                    child.userData.zoomLevel = 0;
-                                    // Apply base semantic zoom state if applicable (e.g. for axes)
-                                    if (group === this.fractalAxisManipulators && typeof applySemanticZoomToAxis === 'function') {
-                                        applySemanticZoomToAxis(group, child.userData.axis, 0);
-                                    }
-                                    // TODO: Add applySemanticZoomToRing if exists for rotation manipulators
-                                }
-                            });
-                            if (camera) updateFractalUIScale(group, camera, REFERENCE_DISTANCE_FRACTAL_UI, node.position);
-                            group.visible = true;
+                            // Apply base semantic zoom to reset visuals
+                            if (child.userData.axis && typeof applySemanticZoomToAxis === 'function') {
+                                const elementType = child.userData.type; // e.g. 'translate_axis', 'rotate_axis', 'scale_axis', 'scale_uniform'
+                                let manipulatorType = 'translate'; // default
+                                if (elementType === 'rotate_axis') manipulatorType = 'rotate';
+                                else if (elementType === 'scale_axis' || elementType === 'scale_uniform') manipulatorType = elementType;
+
+                                applySemanticZoomToAxis(group, child.userData.axis, 0, manipulatorType);
+                            }
                         }
                     });
+                };
+
+                resetZoomAndUnhighlight(this.fractalAxisManipulators);
+                resetZoomAndUnhighlight(this.fractalRotationManipulators);
+                resetZoomAndUnhighlight(this.fractalScaleManipulators);
+
+
+                let activeManipulatorGroup = null;
+                switch (this.aghCurrentModeCycle) {
+                    case 1: // Translate
+                        activeManipulatorGroup = this.fractalAxisManipulators;
+                        break;
+                    case 2: // Rotate
+                        activeManipulatorGroup = this.fractalRotationManipulators;
+                        break;
+                    case 3: // Scale
+                        activeManipulatorGroup = this.fractalScaleManipulators;
+                        break;
+                    case 0: // None
+                    default:
+                        // All are already hidden
+                        break;
                 }
+
+                if (activeManipulatorGroup) {
+                    activeManipulatorGroup.position.copy(node.position);
+                    activeManipulatorGroup.quaternion.identity(); // World aligned
+                    // Reset zoom levels for all children of the now active group before making visible
+                    activeManipulatorGroup.children.forEach(child => {
+                        if (child.userData.isFractalUIElement && child.userData.axis) {
+                            child.userData.zoomLevel = 0;
+                             const elementType = child.userData.type;
+                             let manipulatorType = 'translate'; // default
+                             if (elementType === 'rotate_axis') manipulatorType = 'rotate';
+                             else if (elementType === 'scale_axis' || elementType === 'scale_uniform') manipulatorType = elementType;
+                             applySemanticZoomToAxis(activeManipulatorGroup, child.userData.axis, 0, manipulatorType);
+                        }
+                    });
+                    if (camera) updateFractalUIScale(activeManipulatorGroup, camera, REFERENCE_DISTANCE_FRACTAL_UI, node.position);
+                    activeManipulatorGroup.visible = true;
+                }
+
                 this._transitionToState(InteractionState.FRACTAL_HUB_ACTIVE);
 
             } else if (fractalType === 'translate_axis' && selectedNodes.size > 0) {
