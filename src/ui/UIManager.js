@@ -2100,17 +2100,8 @@ export class UIManager {
         const primarySelectedNode = selectedNodes.size > 0 ? selectedNodes.values().next().value : null;
         const primarySelectedEdge = selectedEdges.size > 0 ? selectedEdges.values().next().value : null;
         let msg = ''; // msg variable declared here
-        const activeEl = document.activeElement;
-        const isEditingText =
-            activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable);
-        if (isEditingText && e.key !== 'Escape') return;
-
-        const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
-        const selectedEdges = this._uiPluginCallbacks.getSelectedEdges();
-        const primarySelectedNode = selectedNodes.size > 0 ? selectedNodes.values().next().value : null;
-        const primarySelectedEdge = selectedEdges.size > 0 ? selectedEdges.values().next().value : null;
+        // Removed redundant declarations of activeEl, isEditingText, selectedNodes, selectedEdges, primarySelectedNode, primarySelectedEdge
         let handled = false;
-        // Removed duplicated lines that were here
 
         switch (e.key) {
             case 'Delete':
@@ -2168,7 +2159,8 @@ export class UIManager {
                     handled = true;
                 }
                 break;
-            }
+            // Moved the switch's closing brace to encompass all cases
+            // case 'Enter': was here, now correctly inside the switch
             case 'Enter':
                 if (primarySelectedNode instanceof HtmlNode && primarySelectedNode.data.editable && !isEditingText) {
                     primarySelectedNode.htmlElement?.querySelector('.node-content')?.focus();
@@ -2217,7 +2209,7 @@ export class UIManager {
                     handled = true;
                 }
                 break;
-            }
+            // This is the correct location for the switch statement's closing brace
         }
         if (handled) {
             e.preventDefault();
