@@ -212,19 +212,23 @@ export function setFractalElementActive(fractalMesh, isActive, originalColor, is
     const baseOpacity = fractalMesh.userData.originalOpacity !== undefined ? fractalMesh.userData.originalOpacity : 0.7;
     const baseEmissiveHex = fractalMesh.userData.originalEmissive !== undefined ? fractalMesh.userData.originalEmissive : 0x000000;
 
-    const currentZoomLevel = fractalMesh.userData.zoomLevel;
-    const isZoomed = currentZoomLevel !== undefined && currentZoomLevel !== 0;
+    // Store the true original emissive (pre-any-effect)
+    if (fractalMesh.material.emissive && fractalMesh.userData.originalEmissive === undefined) {
+        fractalMesh.userData.originalEmissive = fractalMesh.material.emissive.getHex();
+    }
 
-    // Handle SCALING for grab first
-    if (isGrabbed) {
+    const baseColor = fractalMesh.userData.originalColor || (fractalMesh.material.color ? fractalMesh.material.color.clone() : new THREE.Color(0xffffff));
+    const baseOpacity = fractalMesh.userData.originalOpacity !== undefined ? fractalMesh.userData.originalOpacity : 0.7;
+    // originalEmissive is the true base, before any zoom or hover/grab effect.
+    const baseEmissiveHex = fractalMesh.userData.originalEmissive !== undefined ? fractalMesh.userData.originalEmissive : 0x000000;
+
+    // Handle SCALING for grab effect
+    if (isGrabbed && isActive) { // Apply scale effect only when grab starts
         if (fractalMesh.userData.preGrabScale === undefined) {
-            // If starting a grab, store current scale (which might include semantic zoom scaling)
             fractalMesh.userData.preGrabScale = fractalMesh.scale.clone();
         }
-        // Apply grab scale effect on top of the stored pre-grab scale
-        fractalMesh.scale.copy(fractalMesh.userData.preGrabScale).multiplyScalar(1.05); // Subtle 5% increase
-    } else {
-        // If not grabbed (either hover or inactive), restore pre-grab scale if it exists
+        fractalMesh.scale.copy(fractalMesh.userData.preGrabScale).multiplyScalar(1.10); // 10% increase for grab
+    } else if (!isActive || !isGrabbed) { // Restore scale if not grabbed or if deactivating
         if (fractalMesh.userData.preGrabScale !== undefined) {
             fractalMesh.scale.copy(fractalMesh.userData.preGrabScale);
             delete fractalMesh.userData.preGrabScale;
@@ -232,41 +236,49 @@ export function setFractalElementActive(fractalMesh, isActive, originalColor, is
     }
 
     if (isActive) {
-        let activeColorValue;
-        let activeOpacityValue;
-        let emissiveIntensity;
+        const activeColorMod = new THREE.Color(0xffffff); // Color to lerp towards for highlight
 
         if (isGrabbed) {
-            activeColorValue = baseColor.clone().lerp(new THREE.Color(0xffffff), 0.6);
-            activeOpacityValue = Math.min(1, baseOpacity * 1.4);
-            emissiveIntensity = 0.65;
-        } else { // Hovered state
-            activeColorValue = baseColor.clone().lerp(new THREE.Color(0xffffff), 0.25);
-            activeOpacityValue = Math.min(1, baseOpacity * 1.2);
-            emissiveIntensity = 0.35;
+            fractalMesh.material.color.copy(baseColor).lerp(activeColorMod, 0.55); // Brighter color
+            fractalMesh.material.opacity = Math.min(1, baseOpacity * 1.35); // More opaque
+            if (fractalMesh.material.emissive) {
+                fractalMesh.material.emissive.setHex(0xFFFF77); // Distinct bright yellow emissive for grab
+            }
+        } else { // Hovered (isActive = true, but not grabbed)
+            fractalMesh.material.color.copy(baseColor).lerp(activeColorMod, 0.25);
+            fractalMesh.material.opacity = Math.min(1, baseOpacity * 1.2);
+            if (fractalMesh.material.emissive) {
+                // For hover, make its current color (which might be from zoom) a bit emissive
+                const currentEmissiveVal = fractalMesh.material.color.clone().multiplyScalar(0.35);
+                fractalMesh.material.emissive.copy(currentEmissiveVal);
+            }
         }
-
-        fractalMesh.material.color.set(activeColorValue);
-        fractalMesh.material.opacity = activeOpacityValue;
-        if (fractalMesh.material.emissive && !isZoomed) { // Only apply hover/grab emissive if not overridden by zoom emissive
-            fractalMesh.material.emissive.copy(activeColorValue).multiplyScalar(emissiveIntensity);
-        }
-    } else { // Not active (reset to base)
-        fractalMesh.material.color.set(baseColor);
+    } else { // Not active (isActive = false), restore to appropriate state
+        fractalMesh.material.color.copy(baseColor);
         fractalMesh.material.opacity = baseOpacity;
-        if (fractalMesh.material.emissive && !isZoomed) { // Reset emissive if not zoomed
-            fractalMesh.material.emissive.setHex(baseEmissiveHex);
+
+        const currentZoomLevel = fractalMesh.userData.zoomLevel;
+        const isZoomed = currentZoomLevel !== undefined && currentZoomLevel !== 0;
+
+        if (fractalMesh.material.emissive) {
+            if (isZoomed) {
+                // If it's zoomed, its appearance (including emissive) should be dictated by applySemanticZoomToAxis.
+                // This re-applies the zoom visuals, including emissive, for the current zoom level.
+                if (fractalMesh.parent && fractalMesh.userData.axis && typeof applySemanticZoomToAxis === 'function') {
+                    applySemanticZoomToAxis(fractalMesh.parent, fractalMesh.userData.axis, currentZoomLevel);
+                } else {
+                    // Fallback if proper re-application of zoom visuals isn't possible here
+                    fractalMesh.material.emissive.setHex(baseEmissiveHex);
+                }
+            } else {
+                // Not zoomed, restore to the true original base emissive
+                fractalMesh.material.emissive.setHex(baseEmissiveHex);
+            }
         }
     }
-
-    // If the element is zoomed, its emissive color is managed by applySemanticZoomToAxis.
-    // If it's NOT zoomed:
-    //   - If active (hover/grab), emissive is set above.
-    //   - If inactive, emissive is reset above.
-    // This logic ensures that zoom-specific emissive states take precedence.
-
     fractalMesh.material.needsUpdate = true;
 }
+
 
 /**
  * Applies a visual change to an axis manipulator for semantic zoom.

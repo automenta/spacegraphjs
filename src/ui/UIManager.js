@@ -613,7 +613,10 @@ export class UIManager {
                             setFractalElementActive(this.hoveredFractalElement, false, originalColor, false);
                             this.hoveredFractalElement = null;
                         }
-                        this._transitionToState(InteractionState.IDLE);
+                        // If AGH is still visible (node selected), stay in FRACTAL_HUB_ACTIVE, otherwise IDLE.
+                        // _onSelectionChanged handles hiding AGH if selection is lost.
+                        // Here, AGH is assumed to be visible as we just clicked it.
+                        this._transitionToState(InteractionState.FRACTAL_HUB_ACTIVE);
                     } else {
                         const node = selectedNodes.values().next().value;
                         this.fractalAxisManipulators.position.copy(node.position);
@@ -659,19 +662,27 @@ export class UIManager {
                     type: fractalType,
                     axis: fractalAxis,
                     initialPointerWorldPos: initialPointerWorldPos.clone(),
-                    // Store initial positions of selected nodes
+                    // initialProjectedPointOnAxis and axisDirection will be added below
                 };
 
-                this.selectedNodesInitialPositions.clear();
-                 selectedNodes.forEach(node => {
-                    this.selectedNodesInitialPositions.set(node.id, node.position.clone());
-                });
+                const manipulatorWorldPosition = this.fractalAxisManipulators.getWorldPosition(new THREE.Vector3());
+                const axisD = new THREE.Vector3(); // axisDirection
+                if (fractalAxis === 'x') axisD.set(1, 0, 0);
+                else if (fractalAxis === 'y') axisD.set(0, 1, 0);
+                else if (fractalAxis === 'z') axisD.set(0, 0, 1);
+                // Assuming fractalAxisManipulators are world-aligned. If they could rotate with node,
+                // axisD.applyQuaternion(this.fractalAxisManipulators.quaternion) would be needed here.
 
-                // Setup interaction plane (e.g., perpendicular to drag axis, or view plane)
-                // For axis drag, often a line-plane intersection or point projection is used.
-                // Let's use a view-aligned plane for simplicity for now, passing through the initial hit point.
-                const viewDirection = camera.getWorldDirection(new THREE.Vector3()).negate();
-                this.fractalUIInteractionPlane.setFromNormalAndCoplanarPoint(viewDirection, initialPointerWorldPos);
+                // Project initialPointerWorldPos (the click on the mesh) onto the axis line
+                const vecFromManipulatorOriginToClick = new THREE.Vector3().subVectors(initialPointerWorldPos, manipulatorWorldPosition);
+                const t = vecFromManipulatorOriginToClick.dot(axisD); // axisD is unit length
+                const initialProjectedPntOnAxis = manipulatorWorldPosition.clone().addScaledVector(axisD, t);
+
+                this.draggedFractalElementInfo.initialProjectedPointOnAxis = initialProjectedPntOnAxis;
+                this.draggedFractalElementInfo.axisDirection = axisD.clone(); // Store world-space axis direction
+
+                // The fractalUIInteractionPlane is no longer used for this specific drag logic.
+                // However, selectedNodesInitialPositions will be populated in _transitionToState.
 
                 // Ensure originalColor is available or use current material color
                 const originalColorForGrab = fractalObject.userData.originalColor ||
@@ -810,35 +821,31 @@ export class UIManager {
                 const pointerNDC = this.space.getPointerNDC(this.pointerState.clientX, this.pointerState.clientY);
                 raycaster.setFromCamera(pointerNDC, camera);
 
-                const currentPointerWorldPos = new THREE.Vector3();
-                if (!raycaster.ray.intersectPlane(this.fractalUIInteractionPlane, currentPointerWorldPos)) break;
+                // New method: Project pointer ray onto the drag axis line
+                const { axisDirection, initialProjectedPointOnAxis } = this.draggedFractalElementInfo;
 
-                const dragDelta = new THREE.Vector3().subVectors(currentPointerWorldPos, this.draggedFractalElementInfo.initialPointerWorldPos);
+                // The manipulator group (and thus its conceptual origin for the drag line) moves with the node.
+                // For calculating the current point on the axis, we use its current world position.
+                const currentManipulatorWorldPosition = this.fractalAxisManipulators.getWorldPosition(new THREE.Vector3());
 
-                const axisVector = new THREE.Vector3();
-                const draggedAxis = this.draggedFractalElementInfo.axis;
+                // Define the infinite line for dragging based on its current position and stored world-space direction
+                const dragLine = new THREE.Line3(
+                    currentManipulatorWorldPosition.clone().addScaledVector(axisDirection, -100000), // A point far behind
+                    currentManipulatorWorldPosition.clone().addScaledVector(axisDirection, 100000)  // A point far ahead
+                );
 
-                if (draggedAxis === 'x') {
-                    axisVector.set(1, 0, 0);
-                } else if (draggedAxis === 'y') {
-                    axisVector.set(0, 1, 0);
-                } else if (draggedAxis === 'z') {
-                    axisVector.set(0, 0, 1);
-                } else {
-                    console.warn(`Unknown axis: ${draggedAxis}`);
-                    break; // Don't proceed if axis is unknown
-                }
+                const currentProjectedPointOnAxis = new THREE.Vector3();
+                // Project the mouse ray (raycaster.ray) onto the dragLine
+                raycaster.ray.closestPointToLine(dragLine, false, currentProjectedPointOnAxis); // clampToLine = false for infinite line
 
-                // TODO: Consider fractalAxisManipulators' world orientation if not identity.
-                // For prototype, assume world axes alignment for the manipulators.
-                // If manipulators could be oriented with the node, apply this.fractalAxisManipulators.quaternion to axisVector.
-                // For now, fractalAxisManipulators are always world-aligned (quaternion.identity()).
-                // So, axisVector directly represents the world axis of translation.
-
-                const projectedDelta = dragDelta.clone().projectOnVector(axisVector);
+                // The projectedDelta is the movement ALONG THE AXIS from its initial projected point.
+                const projectedDelta = new THREE.Vector3().subVectors(
+                    currentProjectedPointOnAxis,
+                    initialProjectedPointOnAxis // initialProjectedPointOnAxis was calculated at drag start, in world space.
+                );
 
                 selectedNodes.forEach(node => {
-                    const initialPos = this.selectedNodesInitialPositions.get(node.id);
+                    const initialPos = this.selectedNodesInitialPositions.get(node.id); // Node's position at the very start of drag
                     if (initialPos) {
                         const newPos = initialPos.clone().add(projectedDelta);
                         node.setPosition(newPos.x, newPos.y, newPos.z);
