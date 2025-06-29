@@ -4,6 +4,7 @@ import { $, $$ } from '../utils.js';
 import { HtmlNode } from '../graph/nodes/HtmlNode.js';
 
 const ALT_Z_DRAG_SENSITIVITY = 1.0;
+const REFERENCE_DISTANCE_FRACTAL_UI = 500; // Reference distance for fractal UI scaling
 
 // Import decomposed modules
 import { InteractionState } from './InteractionState.js';
@@ -271,7 +272,7 @@ export class UIManager {
             // Initial orientation for AGH (e.g., identity or match node if meaningful)
             this.adaptiveGeometricHub.quaternion.identity();
 
-            if (camera) updateFractalUIScale(this.adaptiveGeometricHub, camera, 500, node.position);
+            if (camera) updateFractalUIScale(this.adaptiveGeometricHub, camera, REFERENCE_DISTANCE_FRACTAL_UI, node.position);
             this.adaptiveGeometricHub.show();
             // Fractal axis manipulators are not shown until AGH is interacted with.
 
@@ -625,7 +626,7 @@ export class UIManager {
                             }
                         });
                         const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
-                        if (camera) updateFractalUIScale(this.fractalAxisManipulators, camera, 500, node.position);
+                        if (camera) updateFractalUIScale(this.fractalAxisManipulators, camera, REFERENCE_DISTANCE_FRACTAL_UI, node.position);
                         this.fractalAxisManipulators.visible = true;
                         this._transitionToState(InteractionState.FRACTAL_HUB_ACTIVE);
                     }
@@ -850,8 +851,8 @@ export class UIManager {
                     this.adaptiveGeometricHub.position.copy(primaryNode.position);
                     this.fractalAxisManipulators.position.copy(primaryNode.position);
                      if (camera) { // Also update their scale as they move
-                        updateFractalUIScale(this.adaptiveGeometricHub, camera, 500, primaryNode.position);
-                        updateFractalUIScale(this.fractalAxisManipulators, camera, 500, primaryNode.position);
+                        updateFractalUIScale(this.adaptiveGeometricHub, camera, REFERENCE_DISTANCE_FRACTAL_UI, primaryNode.position);
+                        updateFractalUIScale(this.fractalAxisManipulators, camera, REFERENCE_DISTANCE_FRACTAL_UI, primaryNode.position);
                     }
                 }
                 this.space.emit('graph:nodes:transformed', { nodes: Array.from(selectedNodes), transformationType: 'translate' });
@@ -1570,11 +1571,11 @@ export class UIManager {
         if (camera) {
             if (this.adaptiveGeometricHub?.visible && this.adaptiveGeometricHub.parent) { // Check parent as it might be removed from scene
                  const worldPosAGH = this.adaptiveGeometricHub.getWorldPosition(new THREE.Vector3());
-                 updateFractalUIScale(this.adaptiveGeometricHub, camera, 500, worldPosAGH);
+                 updateFractalUIScale(this.adaptiveGeometricHub, camera, REFERENCE_DISTANCE_FRACTAL_UI, worldPosAGH);
             }
             if (this.fractalAxisManipulators?.visible && this.fractalAxisManipulators.parent) {
                 const worldPosAxes = this.fractalAxisManipulators.getWorldPosition(new THREE.Vector3());
-                updateFractalUIScale(this.fractalAxisManipulators, camera, 500, worldPosAxes);
+                updateFractalUIScale(this.fractalAxisManipulators, camera, REFERENCE_DISTANCE_FRACTAL_UI, worldPosAxes);
             }
             if (this.gizmo?.visible && this.gizmo.parent) {
                 this.gizmo.updateScale(camera);

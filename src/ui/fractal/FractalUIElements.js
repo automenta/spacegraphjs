@@ -59,37 +59,26 @@ export function createFractalAxisManipulators() {
     xAxisMesh.position.x = AXIS_LENGTH / 2;
     axisGroup.add(xAxisMesh);
 
-    // X-axis Tick Marks (for semantic zoom)
-    const tickGeometry = new THREE.CylinderGeometry(AXIS_RADIUS * 0.5, AXIS_RADIUS * 0.5, AXIS_RADIUS * 2.5, 6);
+    // X-axis Tick Marks (for semantic zoom L2)
+    // These are small cylinders perpendicular to the X-axis.
+    const perpendicularTickGeom = new THREE.CylinderGeometry(AXIS_RADIUS * 1.2, AXIS_RADIUS * 1.2, AXIS_RADIUS * 0.5, 8);
     for (let i = 0; i < 3; i++) {
-        const tick = new THREE.Mesh(tickGeometry, axisMaterialX.clone());
-        tick.name = `FractalAxisTick_X_${i}`;
-        tick.userData.isFractalUIElement = true; // So hover/selection can ignore if needed, or treat specially
-        tick.userData.axis = 'x';
-        tick.userData.isDetail = true; // Mark as a detail element
-        tick.rotation.z = -Math.PI / 2; // Align with X-axis cylinder
-        // Position along the main X-axis cylinder, offset slightly radially
-        tick.position.x = (AXIS_LENGTH / 4) * (i + 1) - AXIS_LENGTH/2 + xAxisMesh.position.x; // Spread along the bar
-        // tick.position.y = AXIS_RADIUS * 1.5; // Offset from the main cylinder's surface - this would be local Y if parented
-        tick.visible = false; // Initially hidden
-        // To make ticks appear perpendicular to the axis body, they need to be rotated relative to the axis body if parented
-        // Or, if added to axisGroup directly, their primary axis needs to be different.
-        // For simplicity, let's make them small cylinders extending perpendicular to the main axis.
-        // The tickGeometry is a cylinder along its local Y. If main axis is X, ticks should be along Y or Z.
-        // Let's re-orient tickGeometry or ticks themselves.
-        // New tick geometry: small flat cylinders/disks or short cylinders.
-        // Let's use short cylinders perpendicular to the X-axis.
-        const perpendicularTickGeom = new THREE.CylinderGeometry(AXIS_RADIUS * 1.2, AXIS_RADIUS * 1.2, AXIS_RADIUS * 0.5, 8);
         const tickMesh = new THREE.Mesh(perpendicularTickGeom, axisMaterialX.clone());
         tickMesh.name = `FractalAxisTick_X_${i}`;
-        tickMesh.userData.isFractalUIElement = true; tickMesh.userData.axis = 'x'; tickMesh.userData.isDetail = true;
-        // Position along X axis, at 1/4, 1/2, 3/4 of its length
+        tickMesh.userData.isFractalUIElement = true;
+        tickMesh.userData.axis = 'x';
+        tickMesh.userData.isDetail = true; // Mark as a detail element for semantic zoom
+        // Position along X axis, at 1/4, 1/2, 3/4 of its length relative to the manipulator group's origin
+        // Assuming the main axis cylinder starts at 0 and extends to AXIS_LENGTH along X.
+        // The current xAxisMesh is positioned at AXIS_LENGTH / 2.
+        // To place ticks along the bar from one end to the other, relative to axisGroup:
+        // If xAxisMesh itself runs from 0 to AXIS_LENGTH, ticks would be at AXIS_LENGTH * (i+1)/4
+        // Given current xAxisMesh.position.x = AXIS_LENGTH / 2, its ends are at 0 and AXIS_LENGTH.
+        // So, ticks at AXIS_LENGTH * 1/4, AXIS_LENGTH * 1/2, AXIS_LENGTH * 3/4 is fine.
         tickMesh.position.x = (AXIS_LENGTH / (3 + 1)) * (i + 1);
-        // No rotation needed if Cylinder's main axis is Y and we position along X.
-        tickMesh.visible = false;
-        axisGroup.add(tickMesh); // Add directly to axisGroup, positions are relative to axisGroup origin
+        tickMesh.visible = false; // Initially hidden, shown at specific zoom levels
+        axisGroup.add(tickMesh);
     }
-
 
     // Y-axis
     const yAxisMesh = new THREE.Mesh(axisGeometry, axisMaterialY.clone());
