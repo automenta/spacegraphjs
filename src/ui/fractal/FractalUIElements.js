@@ -425,16 +425,95 @@ export function applySemanticZoomToAxis(manipulatorGroup, axisType, zoomLevel, m
         }
 
 
-        // Example: Add temporary degree markers (small dots) for positive zoom levels
-        // This is a complex addition for a placeholder, so just logging for now.
-        if (zoomLevel > 0) {
-            console.log(`Semantic Zoom L${zoomLevel} for ${axisType}-axis rotation: Show degree markers (placeholder).`);
-            // To implement: create small dot meshes, position them around the ring, make visible.
-        } else {
-            // Hide degree markers if they were visible.
-        }
+        const markers = ringMesh.userData.degreeMarkers || [];
+        let numMarkersToShow = 0;
+        if (zoomLevel === 1) numMarkersToShow = 4; // 90 deg
+        else if (zoomLevel === 2) numMarkersToShow = 8; // 45 deg
+        else if (zoomLevel >= 3) numMarkersToShow = 12; // 30 deg
+
+        markers.forEach((marker, index) => {
+            // The markers are already positioned for 12 segments (30 deg).
+            // We control visibility based on how many segments are needed.
+            // e.g., for 4 markers (90 deg), we show markers 0, 3, 6, 9.
+            // e.g., for 8 markers (45 deg), we show markers 0, 1, 2, 3, ... (no, this is wrong)
+            // We need to show markers at appropriate intervals.
+            // If maxMarkers is 12:
+            // numMarkersToShow = 4 (90 deg): show index 0, 3, 6, 9 (12/4 = 3, so every 3rd marker)
+            // numMarkersToShow = 8 (45 deg): show index 0, 1*1.5 (skip), 3, 4.5 (skip)... (12/8 = 1.5, so every 1.5th marker - tricky)
+            // A simpler way: just show the first `numMarkersToShow` and their positions are already spread out.
+            // No, that's not right. The markers are created for 30-degree increments.
+            // If we want 90-degree increments (4 markers), we show marker 0, marker 3, marker 6, marker 9. (index % (12/4) === 0)
+            // If we want 45-degree increments (8 markers), we show marker 0, (skip 1), marker (12/8 = 1.5) -> index % 1.5 === 0 doesn't work for integers.
+            // Let's rethink. Markers are at 0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330 degrees.
+            let showThisMarker = false;
+            if (numMarkersToShow === 4) { // 0, 90, 180, 270
+                if (index % 3 === 0) showThisMarker = true;
+            } else if (numMarkersToShow === 8) { // 0, 45, 90, 135 ...
+                 // index 0 (0), 1.5 (45), 3 (90), 4.5 (135), 6 (180), 7.5 (225), 9 (270), 10.5 (315)
+                 // This means we have 12 markers. For 8 markers, we need to enable markers that are multiples of 45 degrees.
+                 // 360/45 = 8. So we need 8 markers.
+                 // Our 12 markers are at 30 deg intervals.
+                 // 0 deg (idx 0), 30 deg (idx 1), 60 deg (idx 2), 90 deg (idx 3), ...
+                 // To show 45 deg:
+                 // idx 0 (0 deg)
+                 // idx between 1 and 2 (45 deg) -> we can show idx 1 (30) or idx 2 (60) or average.
+                 // For simplicity, let's just show a subset of the 12 markers.
+                 // If numMarkersToShow is 8, we want roughly every 360/8 = 45 degrees.
+                 // Our markers are at 30 deg. So, we can't hit 45 perfectly with a subset of 12.
+                 // Let's make it simple:
+                 // zoom 1 (4 markers): 0, 90, 180, 270 (index 0, 3, 6, 9)
+                 // zoom 2 (8 markers): 0, 45 (approx index 1 or 2), 90, 135 ... -> Use 12 markers for zoom >=2 for simplicity for now.
+                if (index % (12 / 8) === 0) { // This will not be integer.
+                    // If zoomLevel 2, let's show all 12 for now, or choose 8 of them.
+                    // Showing all 12 (30 deg increments) is fine for zoomLevel 2 or higher.
+                     showThisMarker = true; // Show all for zoom 2+
+                }
+
+            }
+             if (zoomLevel === 1 && index % 3 === 0) showThisMarker = true; // 4 markers
+             else if (zoomLevel >= 2) showThisMarker = true; // 12 markers for zoom 2+
+
+            marker.visible = showThisMarker;
+
+            if (showThisMarker) {
+                // Optionally, scale markers or change opacity with zoom level too
+                marker.scale.setScalar(radialScaleFactor * 0.5); // Make markers scale with ring thickness a bit
+                if (marker.material.opacity !== undefined && ringMesh.userData.originalOpacity !== undefined) {
+                     marker.material.opacity = ringMesh.userData.originalOpacity * (0.8 + zoomLevel * 0.1); // slightly more opaque at higher zoom
+                }
+            }
+        });
+
         manageEmissiveForZoom(ringMesh, axisType, zoomLevel);
         if (ringMesh && !ringMesh.material.needsUpdate) ringMesh.material.needsUpdate = true;
+    } else if (manipulatorType === 'scale_axis' || manipulatorType === 'scale_uniform') {
+        // Handle scale manipulator (e.g., a cube)
+        // The `axisType` here will be 'x', 'y', 'z', or 'xyz'
+        const scaleCubeName = manipulatorType === 'scale_uniform' ? 'FractalScaleCube_XYZ' : `FractalScaleCube_${axisType.toUpperCase()}`;
+        const scaleCube = manipulatorGroup.getObjectByName(scaleCubeName);
+
+        if (!scaleCube) {
+            console.warn(`Scale cube not found for ${axisType} (type: ${manipulatorType})`);
+            return;
+        }
+
+        if (scaleCube.userData.originalScaleLocal === undefined) { // Using originalScaleLocal to avoid conflict with world scale factor
+            scaleCube.userData.originalScaleLocal = scaleCube.scale.clone();
+        }
+        const baseLocalScale = scaleCube.userData.originalScaleLocal;
+
+        // Basic semantic zoom: make the cube slightly larger or smaller, or change emissiveness
+        let localScaleMultiplier = 1.0;
+        if (zoomLevel === 1) localScaleMultiplier = 1.15;
+        else if (zoomLevel === 2) localScaleMultiplier = 1.3;
+        else if (zoomLevel > 2) localScaleMultiplier = 1.3 + (zoomLevel - 2) * 0.05;
+        else if (zoomLevel === -1) localScaleMultiplier = 0.85;
+        else if (zoomLevel < -1) localScaleMultiplier = Math.max(0.7, 0.85 + (zoomLevel + 1) * 0.05);
+
+        scaleCube.scale.copy(baseLocalScale).multiplyScalar(localScaleMultiplier);
+
+        manageEmissiveForZoom(scaleCube, axisType, zoomLevel);
+        if (scaleCube && !scaleCube.material.needsUpdate) scaleCube.material.needsUpdate = true;
     }
 }
 
@@ -489,20 +568,19 @@ export function createFractalRingManipulator(axis = 'y') {
     ringMesh.userData.axis = axis;
     ringMesh.userData.zoomLevel = 0; // Initialize zoom level
 
-    // Set orientation for X and Z rings
+    // Set orientation for the rings
+    // A torus default geometry lies in the XY plane.
     if (axis === 'x') {
-        ringMesh.rotation.y = Math.PI / 2; // Ring lies in YZ plane for X-axis rotation
-    } else if (axis === 'z') {
-        ringMesh.rotation.x = Math.PI / 2; // Ring lies in XY plane for Z-axis rotation (torus default is XY, so this is correct)
-    }
-    // Y-axis ring (default Torus orientation is in XY plane, rotating around Z)
-    // To rotate around Y, the torus itself needs to be perpendicular to Y.
-    // Default TorusGeometry is in the XY plane. To make it rotate around Y, it needs to be rotated.
-    // For a Y-axis rotation manipulator, the ring itself should be in the XZ plane.
-    // So, it needs to be rotated by PI/2 around the X-axis.
-    if (axis === 'y') { // This was incorrect in the original thinking, correcting now.
+        // For X-axis rotation, the ring should be in the YZ plane.
+        // Rotate the default XY torus around Y-axis by PI/2.
+        ringMesh.rotation.y = Math.PI / 2;
+    } else if (axis === 'y') {
+        // For Y-axis rotation, the ring should be in the XZ plane.
+        // Rotate the default XY torus around X-axis by PI/2.
         ringMesh.rotation.x = Math.PI / 2;
     }
+    // For Z-axis rotation, the ring should be in the XY plane.
+    // Default TorusGeometry is already in XY plane, so no rotation needed for Z-axis.
 
 
     // Store original properties for hover/active states
@@ -517,5 +595,105 @@ export function createFractalRingManipulator(axis = 'y') {
     // Ring should not be initially visible, UIManager will handle this.
     // ringMesh.visible = false; // This will be handled by its parent group's visibility
 
+    // Create degree markers (initially hidden)
+    ringMesh.userData.degreeMarkers = [];
+    const markerGeometry = new THREE.SphereGeometry(AXIS_RADIUS * 0.4, 6, 6); // Smaller markers
+    const markerMaterial = material.clone(); // Share material properties initially
+    markerMaterial.color = new THREE.Color(0xffffff); // White markers for contrast
+    markerMaterial.emissive = new THREE.Color(0x999999);
+    markerMaterial.opacity = (material.opacity || 0.65) * 0.8;
+
+
+    const maxMarkers = 12; // Max markers for highest zoom level (e.g., 30 deg increments)
+    for (let i = 0; i < maxMarkers; i++) {
+        const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+        marker.visible = false; // Initially hidden
+        // Position them in the ring's local XY plane
+        const angle = (i / maxMarkers) * Math.PI * 2;
+        marker.position.x = ringRadius * Math.cos(angle);
+        marker.position.y = ringRadius * Math.sin(angle);
+        marker.position.z = 0; // In the plane of the ring
+        ringMesh.add(marker); // Add as child of the ring
+        ringMesh.userData.degreeMarkers.push(marker);
+    }
+
     return ringMesh;
+}
+
+/**
+ * Creates the fractal scale manipulator meshes (X, Y, Z cubes and a central uniform scale cube).
+ * @returns {THREE.Group} A group containing the scale manipulator meshes.
+ */
+export function createFractalScaleManipulators() {
+    const scaleGroup = new THREE.Group();
+    scaleGroup.name = 'FractalScaleManipulators';
+
+    const CUBE_SIZE = AXIS_RADIUS * 3; // Make cubes noticeable
+    const AXIAL_OFFSET = AXIS_LENGTH * 0.8; // Position axial cubes at the end of a shorter conceptual axis
+
+    const cubeGeometry = new THREE.BoxGeometry(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE);
+
+    // Material function to easily create slightly different colored materials
+    const createScaleMaterial = (baseColorHex) => {
+        const baseColor = new THREE.Color(baseColorHex);
+        return new THREE.MeshStandardMaterial({
+            color: baseColor,
+            roughness: 0.6,
+            metalness: 0.1,
+            transparent: true,
+            opacity: 0.75,
+            emissive: baseColor.clone().multiplyScalar(0.2), // Slight emissive glow
+            emissiveIntensity: 0.2,
+        });
+    };
+
+    // X-axis scale cube
+    const scaleMaterialX = createScaleMaterial(0xff3333); // Lighter red
+    const xScaleCube = new THREE.Mesh(cubeGeometry, scaleMaterialX);
+    xScaleCube.name = 'FractalScaleCube_X';
+    xScaleCube.userData = { isFractalUIElement: true, type: 'scale_axis', axis: 'x', zoomLevel: 0 };
+    xScaleCube.position.x = AXIAL_OFFSET;
+    scaleGroup.add(xScaleCube);
+
+    // Y-axis scale cube
+    const scaleMaterialY = createScaleMaterial(0x33ff33); // Lighter green
+    const yScaleCube = new THREE.Mesh(cubeGeometry, scaleMaterialY);
+    yScaleCube.name = 'FractalScaleCube_Y';
+    yScaleCube.userData = { isFractalUIElement: true, type: 'scale_axis', axis: 'y', zoomLevel: 0 };
+    yScaleCube.position.y = AXIAL_OFFSET;
+    scaleGroup.add(yScaleCube);
+
+    // Z-axis scale cube
+    const scaleMaterialZ = createScaleMaterial(0x3333ff); // Lighter blue
+    const zScaleCube = new THREE.Mesh(cubeGeometry, scaleMaterialZ);
+    zScaleCube.name = 'FractalScaleCube_Z';
+    zScaleCube.userData = { isFractalUIElement: true, type: 'scale_axis', axis: 'z', zoomLevel: 0 };
+    zScaleCube.position.z = AXIAL_OFFSET;
+    scaleGroup.add(zScaleCube);
+
+    // Uniform scale cube (central)
+    const uniformScaleMaterial = createScaleMaterial(0xaaaaaa); // Grey
+    const uniformScaleCube = new THREE.Mesh(cubeGeometry, uniformScaleMaterial);
+    uniformScaleCube.name = 'FractalScaleCube_XYZ';
+    uniformScaleCube.userData = { isFractalUIElement: true, type: 'scale_uniform', axis: 'xyz', zoomLevel: 0 };
+    uniformScaleCube.position.set(0, 0, 0); // At the origin of the manipulator group
+    // Optionally make it slightly larger or different shape
+    uniformScaleCube.scale.setScalar(1.2); // Make central cube a bit bigger
+    scaleGroup.add(uniformScaleCube);
+
+    // Store original properties for hover/active states and zoom
+    scaleGroup.children.forEach(cube => {
+        if (cube.material) {
+            cube.userData.originalColor = cube.material.color.clone();
+            cube.userData.originalOpacity = cube.material.opacity;
+            if (cube.material.emissive) {
+                cube.userData.originalEmissive = cube.material.emissive.getHex();
+                cube.userData.originalEmissiveIntensity = cube.material.emissiveIntensity;
+            }
+            cube.userData.originalScale = cube.scale.clone();
+        }
+    });
+
+    scaleGroup.visible = false; // Initially hidden
+    return scaleGroup;
 }

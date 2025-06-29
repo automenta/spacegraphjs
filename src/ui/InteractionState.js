@@ -9,7 +9,11 @@ export const InteractionState = {
     /** Adaptive Geometric Hub is active, awaiting specific fractal tool interaction. */
     FRACTAL_HUB_ACTIVE: 'FRACTAL_HUB_ACTIVE',
     /** User is actively dragging a fractal UI manipulator element. */
-    FRACTAL_DRAGGING: 'FRACTAL_DRAGGING',
+    FRACTAL_DRAGGING: 'FRACTAL_DRAGGING', // For translation
+    /** User is actively rotating using a fractal UI manipulator element. */
+    FRACTAL_ROTATING: 'FRACTAL_ROTATING',
+    /** User is actively scaling using a fractal UI manipulator element. */
+    FRACTAL_SCALING: 'FRACTAL_SCALING',
     // Future gizmo states could be more specific:
     // GIZMO_TRANSLATE_X: 'GIZMO_TRANSLATE_X',
     // GIZMO_ROTATE_Y: 'GIZMO_ROTATE_Y',
