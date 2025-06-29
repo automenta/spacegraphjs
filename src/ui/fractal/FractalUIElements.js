@@ -20,6 +20,7 @@ export function createAdaptiveGeometricHub() {
     const agh = new THREE.Mesh(geometry, material);
     agh.name = 'AdaptiveGeometricHub';
     agh.userData.isFractalUIElement = true;
+    agh.userData.tooltipText = 'Adaptive Hub: Click to cycle modes (Translate/Rotate/Scale)';
     agh.visible = false; // Initially hidden
     return agh;
 }
@@ -67,7 +68,7 @@ export function createFractalAxisManipulators() {
         // Axis Cylinder
         axisMesh = new THREE.Mesh(axisGeometry, material.clone());
         axisMesh.name = `FractalAxis_${axis.toUpperCase()}`;
-        axisMesh.userData = { isFractalUIElement: true, axis: axis, type: 'translate_axis' };
+        axisMesh.userData = { isFractalUIElement: true, axis: axis, type: 'translate_axis', tooltipText: `Translate ${axis.toUpperCase()}` };
         if (axis === 'x') { axisMesh.rotation.z = -Math.PI / 2; axisMesh.position.x = AXIS_LENGTH / 2; }
         else if (axis === 'y') { axisMesh.position.y = AXIS_LENGTH / 2; }
         else if (axis === 'z') { axisMesh.rotation.x = Math.PI / 2; axisMesh.position.z = AXIS_LENGTH / 2; }
@@ -76,7 +77,7 @@ export function createFractalAxisManipulators() {
         // Standard Cone
         standardCone = new THREE.Mesh(coneGeometry, material.clone());
         standardCone.name = `FractalAxisHead_${axis.toUpperCase()}_Standard`;
-        standardCone.userData = { isFractalUIElement: true, axis: axis, type: 'translate_axis', isDetail: false };
+        standardCone.userData = { isFractalUIElement: true, axis: axis, type: 'translate_axis', isDetail: false, tooltipText: `Translate ${axis.toUpperCase()}` };
         if (axis === 'x') { standardCone.position.x = AXIS_LENGTH; standardCone.rotation.z = -Math.PI / 2; }
         else if (axis === 'y') { standardCone.position.y = AXIS_LENGTH; }
         else if (axis === 'z') { standardCone.position.z = AXIS_LENGTH; standardCone.rotation.x = Math.PI / 2; }
@@ -85,7 +86,7 @@ export function createFractalAxisManipulators() {
         // Elaborate Cone
         elaborateCone = new THREE.Mesh(elaborateConeGeometry, material.clone());
         elaborateCone.name = `FractalAxisHead_${axis.toUpperCase()}_Elaborate`;
-        elaborateCone.userData = { isFractalUIElement: true, axis: axis, type: 'translate_axis', isDetail: true };
+        elaborateCone.userData = { isFractalUIElement: true, axis: axis, type: 'translate_axis', isDetail: true, tooltipText: `Translate ${axis.toUpperCase()}` };
         if (axis === 'x') { elaborateCone.position.x = AXIS_LENGTH; elaborateCone.rotation.z = -Math.PI / 2; }
         else if (axis === 'y') { elaborateCone.position.y = AXIS_LENGTH; }
         else if (axis === 'z') { elaborateCone.position.z = AXIS_LENGTH; elaborateCone.rotation.x = Math.PI / 2; }
@@ -96,7 +97,7 @@ export function createFractalAxisManipulators() {
         for (let i = 0; i < 3; i++) {
             const tickMesh = new THREE.Mesh(perpendicularTickGeom, material.clone());
             tickMesh.name = `FractalAxisTick_${axis.toUpperCase()}_${i}`;
-            tickMesh.userData = { isFractalUIElement: true, axis: axis, type: 'translate_axis', isDetail: true };
+            tickMesh.userData = { isFractalUIElement: true, axis: axis, type: 'translate_axis', isDetail: true, tooltipText: `Translate ${axis.toUpperCase()}` };
             const pos = (AXIS_LENGTH / 4) * (i + 1);
             if (axis === 'x') { tickMesh.position.x = pos; }
             else if (axis === 'y') { tickMesh.position.y = pos; tickMesh.rotation.x = Math.PI / 2; } // Rotate ticks to be perpendicular to Y
@@ -109,6 +110,8 @@ export function createFractalAxisManipulators() {
         axisMesh.userData.standardCone = standardCone;
         axisMesh.userData.elaborateCone = elaborateCone;
         axisMesh.userData.tickMarks = tickMarks;
+        // Ensure main axisMesh also has the tooltipText directly for broader hover target
+        axisMesh.userData.tooltipText = `Translate ${axis.toUpperCase()}`;
     });
 
     axisGroup.visible = false; // Initially hidden
@@ -289,7 +292,7 @@ export function applySemanticZoomToAxis(manipulatorGroup, axisType, zoomLevel, m
         const axisCylinder = manipulatorGroup.getObjectByName(axisCylinderName);
 
         if (!axisCylinder || !axisCylinder.userData || !axisCylinder.userData.standardCone || !axisCylinder.userData.elaborateCone) {
-            console.warn(`Translation axis parts (cylinder, cones, or userData) not found for ${axisType}`);
+            // console.warn(`Translation axis parts (cylinder, cones, or userData) not found for ${axisType}`);
             return;
         }
 
@@ -374,7 +377,7 @@ export function applySemanticZoomToAxis(manipulatorGroup, axisType, zoomLevel, m
         const ringMesh = manipulatorGroup.getObjectByName(ringName);
 
         if (!ringMesh) {
-            console.warn(`Rotation ring not found for ${axisType}`);
+            // console.warn(`Rotation ring not found for ${axisType}`);
             return;
         }
 
@@ -464,7 +467,7 @@ export function applySemanticZoomToAxis(manipulatorGroup, axisType, zoomLevel, m
         const scaleCube = manipulatorGroup.getObjectByName(scaleCubeName);
 
         if (!scaleCube) {
-            console.warn(`Scale cube not found for ${axisType} (type: ${manipulatorType})`);
+            // console.warn(`Scale cube not found for ${axisType} (type: ${manipulatorType})`);
             return;
         }
 
@@ -538,6 +541,7 @@ export function createFractalRingManipulator(axis = 'y') {
     ringMesh.userData.type = 'rotate_axis'; // Consistent with TODO for TF type
     ringMesh.userData.axis = axis;
     ringMesh.userData.zoomLevel = 0; // Initialize zoom level
+    ringMesh.userData.tooltipText = `Rotate ${axis.toUpperCase()}`;
 
     // Set orientation for the rings
     // A torus default geometry lies in the XY plane.
@@ -587,11 +591,11 @@ export function createFractalRingManipulator(axis = 'y') {
 
 
     const maxMarkers = 12; // Max markers for highest zoom level (e.g., 30 deg increments)
-    for (let i = 0; i < maxMarkers; i++) {
+    for (let _i = 0; _i < maxMarkers; _i++) {
         const marker = new THREE.Mesh(markerGeometry, markerMaterial);
         marker.visible = false; // Initially hidden
         // Position them in the ring's local XY plane
-        const angle = (i / maxMarkers) * Math.PI * 2;
+        const angle = (_i / maxMarkers) * Math.PI * 2;
         marker.position.x = ringRadius * Math.cos(angle);
         marker.position.y = ringRadius * Math.sin(angle);
         marker.position.z = 0; // In the plane of the ring
@@ -633,7 +637,7 @@ export function createFractalScaleManipulators() {
     const scaleMaterialX = createScaleMaterial(0xff3333); // Lighter red
     const xScaleCube = new THREE.Mesh(cubeGeometry, scaleMaterialX);
     xScaleCube.name = 'FractalScaleCube_X';
-    xScaleCube.userData = { isFractalUIElement: true, type: 'scale_axis', axis: 'x', zoomLevel: 0 };
+    xScaleCube.userData = { isFractalUIElement: true, type: 'scale_axis', axis: 'x', zoomLevel: 0, tooltipText: 'Scale X' };
     xScaleCube.position.x = AXIAL_OFFSET;
     scaleGroup.add(xScaleCube);
 
@@ -641,7 +645,7 @@ export function createFractalScaleManipulators() {
     const scaleMaterialY = createScaleMaterial(0x33ff33); // Lighter green
     const yScaleCube = new THREE.Mesh(cubeGeometry, scaleMaterialY);
     yScaleCube.name = 'FractalScaleCube_Y';
-    yScaleCube.userData = { isFractalUIElement: true, type: 'scale_axis', axis: 'y', zoomLevel: 0 };
+    yScaleCube.userData = { isFractalUIElement: true, type: 'scale_axis', axis: 'y', zoomLevel: 0, tooltipText: 'Scale Y' };
     yScaleCube.position.y = AXIAL_OFFSET;
     scaleGroup.add(yScaleCube);
 
@@ -649,7 +653,7 @@ export function createFractalScaleManipulators() {
     const scaleMaterialZ = createScaleMaterial(0x3333ff); // Lighter blue
     const zScaleCube = new THREE.Mesh(cubeGeometry, scaleMaterialZ);
     zScaleCube.name = 'FractalScaleCube_Z';
-    zScaleCube.userData = { isFractalUIElement: true, type: 'scale_axis', axis: 'z', zoomLevel: 0 };
+    zScaleCube.userData = { isFractalUIElement: true, type: 'scale_axis', axis: 'z', zoomLevel: 0, tooltipText: 'Scale Z' };
     zScaleCube.position.z = AXIAL_OFFSET;
     scaleGroup.add(zScaleCube);
 
@@ -657,7 +661,7 @@ export function createFractalScaleManipulators() {
     const uniformScaleMaterial = createScaleMaterial(0xaaaaaa); // Grey
     const uniformScaleCube = new THREE.Mesh(cubeGeometry, uniformScaleMaterial);
     uniformScaleCube.name = 'FractalScaleCube_XYZ';
-    uniformScaleCube.userData = { isFractalUIElement: true, type: 'scale_uniform', axis: 'xyz', zoomLevel: 0 };
+    uniformScaleCube.userData = { isFractalUIElement: true, type: 'scale_uniform', axis: 'xyz', zoomLevel: 0, tooltipText: 'Scale Uniformly' };
     uniformScaleCube.position.set(0, 0, 0); // At the origin of the manipulator group
     // Optionally make it slightly larger or different shape
     uniformScaleCube.scale.setScalar(1.2); // Make central cube a bit bigger
