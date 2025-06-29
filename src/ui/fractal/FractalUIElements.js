@@ -52,44 +52,90 @@ export function createFractalAxisManipulators() {
     const axisGeometry = new THREE.CylinderGeometry(AXIS_RADIUS, AXIS_RADIUS, AXIS_LENGTH, 8);
     const coneGeometry = new THREE.ConeGeometry(AXIS_RADIUS * 2, AXIS_RADIUS * 4, 8);
     const elaborateConeGeometry = new THREE.ConeGeometry(AXIS_RADIUS * 2.5, AXIS_RADIUS * 5, 10);
-    const perpendicularTickGeom = new THREE.CylinderGeometry(AXIS_RADIUS * 1.2, AXIS_RADIUS * 1.2, AXIS_RADIUS * 0.5, 8);
+    const perpendicularTickGeom = new THREE.CylinderGeometry(
+        AXIS_RADIUS * 1.2,
+        AXIS_RADIUS * 1.2,
+        AXIS_RADIUS * 0.5,
+        8
+    );
 
-    ['x', 'y', 'z'].forEach(axis => {
+    ['x', 'y', 'z'].forEach((axis) => {
         let axisMesh, standardCone, elaborateCone;
         let material;
         const tickMarks = [];
 
         switch (axis) {
-            case 'x': material = axisMaterialX; break;
-            case 'y': material = axisMaterialY; break;
-            case 'z': material = axisMaterialZ; break;
+            case 'x':
+                material = axisMaterialX;
+                break;
+            case 'y':
+                material = axisMaterialY;
+                break;
+            case 'z':
+                material = axisMaterialZ;
+                break;
         }
 
         // Axis Cylinder
         axisMesh = new THREE.Mesh(axisGeometry, material.clone());
         axisMesh.name = `FractalAxis_${axis.toUpperCase()}`;
-        axisMesh.userData = { isFractalUIElement: true, axis: axis, type: 'translate_axis', tooltipText: `Translate ${axis.toUpperCase()}` };
-        if (axis === 'x') { axisMesh.rotation.z = -Math.PI / 2; axisMesh.position.x = AXIS_LENGTH / 2; }
-        else if (axis === 'y') { axisMesh.position.y = AXIS_LENGTH / 2; }
-        else if (axis === 'z') { axisMesh.rotation.x = Math.PI / 2; axisMesh.position.z = AXIS_LENGTH / 2; }
+        axisMesh.userData = {
+            isFractalUIElement: true,
+            axis: axis,
+            type: 'translate_axis',
+            tooltipText: `Translate ${axis.toUpperCase()}`,
+        };
+        if (axis === 'x') {
+            axisMesh.rotation.z = -Math.PI / 2;
+            axisMesh.position.x = AXIS_LENGTH / 2;
+        } else if (axis === 'y') {
+            axisMesh.position.y = AXIS_LENGTH / 2;
+        } else if (axis === 'z') {
+            axisMesh.rotation.x = Math.PI / 2;
+            axisMesh.position.z = AXIS_LENGTH / 2;
+        }
         axisGroup.add(axisMesh);
 
         // Standard Cone
         standardCone = new THREE.Mesh(coneGeometry, material.clone());
         standardCone.name = `FractalAxisHead_${axis.toUpperCase()}_Standard`;
-        standardCone.userData = { isFractalUIElement: true, axis: axis, type: 'translate_axis', isDetail: false, tooltipText: `Translate ${axis.toUpperCase()}` };
-        if (axis === 'x') { standardCone.position.x = AXIS_LENGTH; standardCone.rotation.z = -Math.PI / 2; }
-        else if (axis === 'y') { standardCone.position.y = AXIS_LENGTH; }
-        else if (axis === 'z') { standardCone.position.z = AXIS_LENGTH; standardCone.rotation.x = Math.PI / 2; }
+        standardCone.userData = {
+            isFractalUIElement: true,
+            axis: axis,
+            type: 'translate_axis',
+            isDetail: false,
+            tooltipText: `Translate ${axis.toUpperCase()}`,
+        };
+        if (axis === 'x') {
+            standardCone.position.x = AXIS_LENGTH;
+            standardCone.rotation.z = -Math.PI / 2;
+        } else if (axis === 'y') {
+            standardCone.position.y = AXIS_LENGTH;
+        } else if (axis === 'z') {
+            standardCone.position.z = AXIS_LENGTH;
+            standardCone.rotation.x = Math.PI / 2;
+        }
         axisGroup.add(standardCone);
 
         // Elaborate Cone
         elaborateCone = new THREE.Mesh(elaborateConeGeometry, material.clone());
         elaborateCone.name = `FractalAxisHead_${axis.toUpperCase()}_Elaborate`;
-        elaborateCone.userData = { isFractalUIElement: true, axis: axis, type: 'translate_axis', isDetail: true, tooltipText: `Translate ${axis.toUpperCase()}` };
-        if (axis === 'x') { elaborateCone.position.x = AXIS_LENGTH; elaborateCone.rotation.z = -Math.PI / 2; }
-        else if (axis === 'y') { elaborateCone.position.y = AXIS_LENGTH; }
-        else if (axis === 'z') { elaborateCone.position.z = AXIS_LENGTH; elaborateCone.rotation.x = Math.PI / 2; }
+        elaborateCone.userData = {
+            isFractalUIElement: true,
+            axis: axis,
+            type: 'translate_axis',
+            isDetail: true,
+            tooltipText: `Translate ${axis.toUpperCase()}`,
+        };
+        if (axis === 'x') {
+            elaborateCone.position.x = AXIS_LENGTH;
+            elaborateCone.rotation.z = -Math.PI / 2;
+        } else if (axis === 'y') {
+            elaborateCone.position.y = AXIS_LENGTH;
+        } else if (axis === 'z') {
+            elaborateCone.position.z = AXIS_LENGTH;
+            elaborateCone.rotation.x = Math.PI / 2;
+        }
         elaborateCone.visible = false;
         axisGroup.add(elaborateCone);
 
@@ -97,11 +143,24 @@ export function createFractalAxisManipulators() {
         for (let i = 0; i < 3; i++) {
             const tickMesh = new THREE.Mesh(perpendicularTickGeom, material.clone());
             tickMesh.name = `FractalAxisTick_${axis.toUpperCase()}_${i}`;
-            tickMesh.userData = { isFractalUIElement: true, axis: axis, type: 'translate_axis', isDetail: true, tooltipText: `Translate ${axis.toUpperCase()}` };
+            tickMesh.userData = {
+                isFractalUIElement: true,
+                axis: axis,
+                type: 'translate_axis',
+                isDetail: true,
+                tooltipText: `Translate ${axis.toUpperCase()}`,
+            };
             const pos = (AXIS_LENGTH / 4) * (i + 1);
-            if (axis === 'x') { tickMesh.position.x = pos; }
-            else if (axis === 'y') { tickMesh.position.y = pos; tickMesh.rotation.x = Math.PI / 2; } // Rotate ticks to be perpendicular to Y
-            else if (axis === 'z') { tickMesh.position.z = pos; tickMesh.rotation.z = Math.PI / 2; } // Rotate ticks to be perpendicular to Z
+            if (axis === 'x') {
+                tickMesh.position.x = pos;
+            } else if (axis === 'y') {
+                tickMesh.position.y = pos;
+                tickMesh.rotation.x = Math.PI / 2;
+            } // Rotate ticks to be perpendicular to Y
+            else if (axis === 'z') {
+                tickMesh.position.z = pos;
+                tickMesh.rotation.z = Math.PI / 2;
+            } // Rotate ticks to be perpendicular to Z
             tickMesh.visible = false;
             axisGroup.add(tickMesh);
             tickMarks.push(tickMesh);
@@ -177,17 +236,22 @@ export function setFractalElementActive(fractalMesh, isActive, originalColor, is
         fractalMesh.userData.originalEmissive = fractalMesh.material.emissive.getHex();
     }
 
-    const baseColor = fractalMesh.userData.originalColor || (fractalMesh.material.color ? fractalMesh.material.color.clone() : new THREE.Color(0xffffff));
+    const baseColor =
+        fractalMesh.userData.originalColor ||
+        (fractalMesh.material.color ? fractalMesh.material.color.clone() : new THREE.Color(0xffffff));
     const baseOpacity = fractalMesh.userData.originalOpacity !== undefined ? fractalMesh.userData.originalOpacity : 0.7;
-    const baseEmissiveHex = fractalMesh.userData.originalEmissive !== undefined ? fractalMesh.userData.originalEmissive : 0x000000; // This now correctly refers to the true original
+    const baseEmissiveHex =
+        fractalMesh.userData.originalEmissive !== undefined ? fractalMesh.userData.originalEmissive : 0x000000; // This now correctly refers to the true original
 
     // Handle SCALING for grab effect
-    if (isGrabbed && isActive) { // Apply scale effect only when grab starts
+    if (isGrabbed && isActive) {
+        // Apply scale effect only when grab starts
         if (fractalMesh.userData.preGrabScale === undefined) {
             fractalMesh.userData.preGrabScale = fractalMesh.scale.clone();
         }
-        fractalMesh.scale.copy(fractalMesh.userData.preGrabScale).multiplyScalar(1.10); // 10% increase for grab
-    } else if (!isActive || !isGrabbed) { // Restore scale if not grabbed or if deactivating
+        fractalMesh.scale.copy(fractalMesh.userData.preGrabScale).multiplyScalar(1.1); // 10% increase for grab
+    } else if (!isActive || !isGrabbed) {
+        // Restore scale if not grabbed or if deactivating
         if (fractalMesh.userData.preGrabScale !== undefined) {
             fractalMesh.scale.copy(fractalMesh.userData.preGrabScale);
             delete fractalMesh.userData.preGrabScale;
@@ -201,9 +265,10 @@ export function setFractalElementActive(fractalMesh, isActive, originalColor, is
             fractalMesh.material.color.copy(baseColor).lerp(activeColorMod, 0.55); // Brighter color
             fractalMesh.material.opacity = Math.min(1, baseOpacity * 1.35); // More opaque
             if (fractalMesh.material.emissive) {
-                fractalMesh.material.emissive.setHex(0xFFFF77); // Distinct bright yellow emissive for grab
+                fractalMesh.material.emissive.setHex(0xffff77); // Distinct bright yellow emissive for grab
             }
-        } else { // Hovered (isActive = true, but not grabbed)
+        } else {
+            // Hovered (isActive = true, but not grabbed)
             fractalMesh.material.color.copy(baseColor).lerp(activeColorMod, 0.25);
             fractalMesh.material.opacity = Math.min(1, baseOpacity * 1.2);
             if (fractalMesh.material.emissive) {
@@ -212,7 +277,8 @@ export function setFractalElementActive(fractalMesh, isActive, originalColor, is
                 fractalMesh.material.emissive.copy(currentEmissiveVal);
             }
         }
-    } else { // Not active (isActive = false), restore to appropriate state
+    } else {
+        // Not active (isActive = false), restore to appropriate state
         fractalMesh.material.color.copy(baseColor);
         fractalMesh.material.opacity = baseOpacity;
 
@@ -231,7 +297,12 @@ export function setFractalElementActive(fractalMesh, isActive, originalColor, is
                     } else if (elementType === 'scale_axis' || elementType === 'scale_uniform') {
                         manipulatorType = elementType;
                     }
-                    applySemanticZoomToAxis(fractalMesh.parent, fractalMesh.userData.axis, currentZoomLevel, manipulatorType);
+                    applySemanticZoomToAxis(
+                        fractalMesh.parent,
+                        fractalMesh.userData.axis,
+                        currentZoomLevel,
+                        manipulatorType
+                    );
                 } else {
                     // Fallback if proper re-application of zoom visuals isn't possible here
                     fractalMesh.material.emissive.setHex(baseEmissiveHex);
@@ -244,7 +315,6 @@ export function setFractalElementActive(fractalMesh, isActive, originalColor, is
     }
     fractalMesh.material.needsUpdate = true;
 }
-
 
 /**
  * Applies a visual change to an axis manipulator for semantic zoom.
@@ -262,7 +332,8 @@ export function applySemanticZoomToAxis(manipulatorGroup, axisType, zoomLevel, m
     // More pronounced changes for L1 and L2
     if (zoomLevel === 1) radialScaleFactor = 1.3;
     else if (zoomLevel === 2) radialScaleFactor = 1.6;
-    else if (zoomLevel > 2) radialScaleFactor = 1.6 + (zoomLevel - 2) * 0.1; // Diminishing returns beyond L2
+    else if (zoomLevel > 2)
+        radialScaleFactor = 1.6 + (zoomLevel - 2) * 0.1; // Diminishing returns beyond L2
     else if (zoomLevel === -1) radialScaleFactor = 0.7;
     else if (zoomLevel < -1) radialScaleFactor = Math.max(0.5, 0.7 + (zoomLevel + 1) * 0.1); // Cap at 0.5
 
@@ -279,7 +350,10 @@ export function applySemanticZoomToAxis(manipulatorGroup, axisType, zoomLevel, m
             else if (currentZoomLevel > 2) intensityFactor = 1.1 + (currentZoomLevel - 2) * 0.1;
             else if (currentZoomLevel < 0) intensityFactor = 0.4;
             const baseColor = element.userData.originalColor || element.material.color;
-            let emissiveHex = baseColor.clone().multiplyScalar(currentZoomLevel > 0 ? intensityFactor : intensityFactor * 0.5).getHex();
+            let emissiveHex = baseColor
+                .clone()
+                .multiplyScalar(currentZoomLevel > 0 ? intensityFactor : intensityFactor * 0.5)
+                .getHex();
             element.material.emissive.setHex(emissiveHex);
         } else {
             element.material.emissive.setHex(baseEmissiveHex);
@@ -291,7 +365,12 @@ export function applySemanticZoomToAxis(manipulatorGroup, axisType, zoomLevel, m
         const axisCylinderName = `FractalAxis_${axisType.toUpperCase()}`;
         const axisCylinder = manipulatorGroup.getObjectByName(axisCylinderName);
 
-        if (!axisCylinder || !axisCylinder.userData || !axisCylinder.userData.standardCone || !axisCylinder.userData.elaborateCone) {
+        if (
+            !axisCylinder ||
+            !axisCylinder.userData ||
+            !axisCylinder.userData.standardCone ||
+            !axisCylinder.userData.elaborateCone
+        ) {
             // console.warn(`Translation axis parts (cylinder, cones, or userData) not found for ${axisType}`);
             return;
         }
@@ -301,10 +380,13 @@ export function applySemanticZoomToAxis(manipulatorGroup, axisType, zoomLevel, m
         const tickMarks = axisCylinder.userData.tickMarks || [];
 
         // Ensure original scales are stored
-        if (axisCylinder.userData.originalScale === undefined) axisCylinder.userData.originalScale = axisCylinder.scale.clone();
-        if (standardCone.userData.originalScale === undefined) standardCone.userData.originalScale = standardCone.scale.clone();
-        if (elaborateCone.userData.originalScale === undefined) elaborateCone.userData.originalScale = elaborateCone.scale.clone();
-        tickMarks.forEach(tick => {
+        if (axisCylinder.userData.originalScale === undefined)
+            axisCylinder.userData.originalScale = axisCylinder.scale.clone();
+        if (standardCone.userData.originalScale === undefined)
+            standardCone.userData.originalScale = standardCone.scale.clone();
+        if (elaborateCone.userData.originalScale === undefined)
+            elaborateCone.userData.originalScale = elaborateCone.scale.clone();
+        tickMarks.forEach((tick) => {
             if (tick.userData.originalScale === undefined) tick.userData.originalScale = tick.scale.clone();
         });
 
@@ -315,15 +397,29 @@ export function applySemanticZoomToAxis(manipulatorGroup, axisType, zoomLevel, m
         // Apply radial scale to cylinder thickness
         // Cylinder's length is along its local Y if not rotated (Y-axis), or along X/Z if rotated.
         // Radial scale affects the other two dimensions.
-        if (axisType === 'x') { // Rotated on Z by -PI/2. Length is local Y, radius is local X and Z.
-            axisCylinder.scale.set(baseScaleCylinder.x * radialScaleFactor, baseScaleCylinder.y, baseScaleCylinder.z * radialScaleFactor);
-        } else if (axisType === 'y') { // No rotation. Length is local Y, radius is local X and Z.
-            axisCylinder.scale.set(baseScaleCylinder.x * radialScaleFactor, baseScaleCylinder.y, baseScaleCylinder.z * radialScaleFactor);
-        } else { // axisType === 'z'. Rotated on X by PI/2. Length is local Y, radius is local X and Z.
-             axisCylinder.scale.set(baseScaleCylinder.x * radialScaleFactor, baseScaleCylinder.y, baseScaleCylinder.z * radialScaleFactor);
+        if (axisType === 'x') {
+            // Rotated on Z by -PI/2. Length is local Y, radius is local X and Z.
+            axisCylinder.scale.set(
+                baseScaleCylinder.x * radialScaleFactor,
+                baseScaleCylinder.y,
+                baseScaleCylinder.z * radialScaleFactor
+            );
+        } else if (axisType === 'y') {
+            // No rotation. Length is local Y, radius is local X and Z.
+            axisCylinder.scale.set(
+                baseScaleCylinder.x * radialScaleFactor,
+                baseScaleCylinder.y,
+                baseScaleCylinder.z * radialScaleFactor
+            );
+        } else {
+            // axisType === 'z'. Rotated on X by PI/2. Length is local Y, radius is local X and Z.
+            axisCylinder.scale.set(
+                baseScaleCylinder.x * radialScaleFactor,
+                baseScaleCylinder.y,
+                baseScaleCylinder.z * radialScaleFactor
+            );
         }
         manageEmissiveForZoom(axisCylinder, axisType, zoomLevel);
-
 
         // Manage cone visibility and scale
         const showElaborate = zoomLevel >= 2;
@@ -333,7 +429,8 @@ export function applySemanticZoomToAxis(manipulatorGroup, axisType, zoomLevel, m
         if (showElaborate) {
             elaborateCone.scale.copy(baseScaleConeElab).multiplyScalar(1.1 + Math.max(0, zoomLevel - 2) * 0.05); // Slightly grow more at L3+
             manageEmissiveForZoom(elaborateCone, axisType, zoomLevel);
-        } else { // Standard cone is visible
+        } else {
+            // Standard cone is visible
             let coneScaleFactor = 1.0;
             if (zoomLevel === 1) coneScaleFactor = 1.2;
             else if (zoomLevel === 0) coneScaleFactor = 1.0;
@@ -369,8 +466,9 @@ export function applySemanticZoomToAxis(manipulatorGroup, axisType, zoomLevel, m
         axisCylinder.material.needsUpdate = true;
         standardCone.material.needsUpdate = true;
         elaborateCone.material.needsUpdate = true;
-        tickMarks.forEach(tick => { if (tick.visible) tick.material.needsUpdate = true; });
-
+        tickMarks.forEach((tick) => {
+            if (tick.visible) tick.material.needsUpdate = true;
+        });
     } else if (manipulatorType === 'rotate') {
         // Handle rotation manipulator (e.g., a ring)
         const ringName = `FractalRing_${axisType.toUpperCase()}`;
@@ -408,7 +506,6 @@ export function applySemanticZoomToAxis(manipulatorGroup, axisType, zoomLevel, m
         ringMesh.scale.copy(baseRingScale).multiplyScalar(radialScaleFactor);
         manageEmissiveForZoom(ringMesh, axisType, zoomLevel);
 
-
         const markers = ringMesh.userData.degreeMarkers || [];
         const maxMarkers = ringMesh.userData.maxMarkers || 12; // Retrieve stored maxMarkers, fallback to 12
         // With maxMarkers = 12 (30-deg steps):
@@ -418,17 +515,23 @@ export function applySemanticZoomToAxis(manipulatorGroup, axisType, zoomLevel, m
         // Level 3: 30deg (all 12 markers)
         let showMarkersLevel = 0;
 
-        if (zoomLevel === 1) showMarkersLevel = 1; // Show 90-deg markers
-        else if (zoomLevel === 2) showMarkersLevel = 2; // Show 45-deg aligned markers
+        if (zoomLevel === 1)
+            showMarkersLevel = 1; // Show 90-deg markers
+        else if (zoomLevel === 2)
+            showMarkersLevel = 2; // Show 45-deg aligned markers
         else if (zoomLevel >= 3) showMarkersLevel = 3;
 
-        markers.forEach((marker, index) => {
+        markers.forEach((marker, _index) => {
+            // Changed index to _index
             let showThisMarker = false;
-            if (showMarkersLevel === 1) { // 90-degree markers (0, 90, 180, 270)
-                if (index % (maxMarkers / 4) === 0) showThisMarker = true; // maxMarkers is 12, so 12/4 = 3. Index 0,3,6,9
-            } else if (showMarkersLevel === 2) { // 45-degree markers
-                if (index * (360 / maxMarkers) % 45 === 0) showThisMarker = true;
-            } else if (showMarkersLevel === 3) { // 30-degree markers (all)
+            if (showMarkersLevel === 1) {
+                // 90-degree markers (0, 90, 180, 270)
+                if (_index % (maxMarkers / 4) === 0) showThisMarker = true; // maxMarkers is 12, so 12/4 = 3. Index 0,3,6,9
+            } else if (showMarkersLevel === 2) {
+                // 45-degree markers
+                if ((_index * (360 / maxMarkers)) % 45 === 0) showThisMarker = true;
+            } else if (showMarkersLevel === 3) {
+                // 30-degree markers (all)
                 showThisMarker = true;
             }
             marker.visible = showThisMarker;
@@ -448,22 +551,26 @@ export function applySemanticZoomToAxis(manipulatorGroup, axisType, zoomLevel, m
                 // We adjust this local scale.
                 marker.scale.setScalar(markerLocalScale);
 
-
                 if (marker.material.opacity !== undefined && ringMesh.userData.originalOpacity !== undefined) {
-                     marker.material.opacity = Math.min(1, (ringMesh.userData.originalOpacity || 0.65) * (0.9 + Math.max(0,zoomLevel) * 0.05));
+                    marker.material.opacity = Math.min(
+                        1,
+                        (ringMesh.userData.originalOpacity || 0.65) * (0.9 + Math.max(0, zoomLevel) * 0.05)
+                    );
                 }
                 // Make markers slightly less emissive or differently colored than the main ring at high zoom
-                manageEmissiveForZoom(marker, axisType, Math.max(0, zoomLevel -1));
+                manageEmissiveForZoom(marker, axisType, Math.max(0, zoomLevel - 1));
             }
         });
 
         if (ringMesh.material) ringMesh.material.needsUpdate = true;
-        markers.forEach(m => { if(m.visible && m.material) m.material.needsUpdate = true; });
-
+        markers.forEach((m) => {
+            if (m.visible && m.material) m.material.needsUpdate = true;
+        });
     } else if (manipulatorType === 'scale_axis' || manipulatorType === 'scale_uniform') {
         // Handle scale manipulator (e.g., a cube)
         // The `axisType` here will be 'x', 'y', 'z', or 'xyz'
-        const scaleCubeName = manipulatorType === 'scale_uniform' ? 'FractalScaleCube_XYZ' : `FractalScaleCube_${axisType.toUpperCase()}`;
+        const scaleCubeName =
+            manipulatorType === 'scale_uniform' ? 'FractalScaleCube_XYZ' : `FractalScaleCube_${axisType.toUpperCase()}`;
         const scaleCube = manipulatorGroup.getObjectByName(scaleCubeName);
 
         if (!scaleCube) {
@@ -471,7 +578,8 @@ export function applySemanticZoomToAxis(manipulatorGroup, axisType, zoomLevel, m
             return;
         }
 
-        if (scaleCube.userData.originalScaleLocal === undefined) { // Using originalScaleLocal to avoid conflict with world scale factor
+        if (scaleCube.userData.originalScaleLocal === undefined) {
+            // Using originalScaleLocal to avoid conflict with world scale factor
             scaleCube.userData.originalScaleLocal = scaleCube.scale.clone();
         }
         const baseLocalScale = scaleCube.userData.originalScaleLocal;
@@ -557,7 +665,6 @@ export function createFractalRingManipulator(axis = 'y') {
     // For Z-axis rotation, the ring should be in the XY plane.
     // Default TorusGeometry is already in XY plane, so no rotation needed for Z-axis.
 
-
     // Store original properties for hover/active states
     ringMesh.userData.originalColor = material.color.clone();
     ringMesh.userData.originalOpacity = material.opacity;
@@ -567,7 +674,6 @@ export function createFractalRingManipulator(axis = 'y') {
     }
     // Store original scale for semantic zoom adjustments
     ringMesh.userData.originalScale = ringMesh.scale.clone();
-
 
     // Ring should not be initially visible, UIManager will handle this.
     // ringMesh.visible = false; // This will be handled by its parent group's visibility
@@ -586,16 +692,16 @@ export function createFractalRingManipulator(axis = 'y') {
         transparent: true,
         opacity: (material.opacity || 0.65) * 0.8, // Slightly less opaque than ring
         emissive: new THREE.Color(0x999999),
-        emissiveIntensity: 0.3
+        emissiveIntensity: 0.3,
     });
 
-
     const maxMarkers = 12; // Max markers for highest zoom level (e.g., 30 deg increments)
-    for (let _i = 0; _i < maxMarkers; _i++) {
+    for (let i = 0; i < maxMarkers; i++) {
+        // Changed _i to i for clarity if it's used below, or can be _i if not
         const marker = new THREE.Mesh(markerGeometry, markerMaterial);
         marker.visible = false; // Initially hidden
         // Position them in the ring's local XY plane
-        const angle = (_i / maxMarkers) * Math.PI * 2;
+        const angle = (i / maxMarkers) * Math.PI * 2; // Use i here
         marker.position.x = ringRadius * Math.cos(angle);
         marker.position.y = ringRadius * Math.sin(angle);
         marker.position.z = 0; // In the plane of the ring
@@ -637,7 +743,13 @@ export function createFractalScaleManipulators() {
     const scaleMaterialX = createScaleMaterial(0xff3333); // Lighter red
     const xScaleCube = new THREE.Mesh(cubeGeometry, scaleMaterialX);
     xScaleCube.name = 'FractalScaleCube_X';
-    xScaleCube.userData = { isFractalUIElement: true, type: 'scale_axis', axis: 'x', zoomLevel: 0, tooltipText: 'Scale X' };
+    xScaleCube.userData = {
+        isFractalUIElement: true,
+        type: 'scale_axis',
+        axis: 'x',
+        zoomLevel: 0,
+        tooltipText: 'Scale X',
+    };
     xScaleCube.position.x = AXIAL_OFFSET;
     scaleGroup.add(xScaleCube);
 
@@ -645,7 +757,13 @@ export function createFractalScaleManipulators() {
     const scaleMaterialY = createScaleMaterial(0x33ff33); // Lighter green
     const yScaleCube = new THREE.Mesh(cubeGeometry, scaleMaterialY);
     yScaleCube.name = 'FractalScaleCube_Y';
-    yScaleCube.userData = { isFractalUIElement: true, type: 'scale_axis', axis: 'y', zoomLevel: 0, tooltipText: 'Scale Y' };
+    yScaleCube.userData = {
+        isFractalUIElement: true,
+        type: 'scale_axis',
+        axis: 'y',
+        zoomLevel: 0,
+        tooltipText: 'Scale Y',
+    };
     yScaleCube.position.y = AXIAL_OFFSET;
     scaleGroup.add(yScaleCube);
 
@@ -653,7 +771,13 @@ export function createFractalScaleManipulators() {
     const scaleMaterialZ = createScaleMaterial(0x3333ff); // Lighter blue
     const zScaleCube = new THREE.Mesh(cubeGeometry, scaleMaterialZ);
     zScaleCube.name = 'FractalScaleCube_Z';
-    zScaleCube.userData = { isFractalUIElement: true, type: 'scale_axis', axis: 'z', zoomLevel: 0, tooltipText: 'Scale Z' };
+    zScaleCube.userData = {
+        isFractalUIElement: true,
+        type: 'scale_axis',
+        axis: 'z',
+        zoomLevel: 0,
+        tooltipText: 'Scale Z',
+    };
     zScaleCube.position.z = AXIAL_OFFSET;
     scaleGroup.add(zScaleCube);
 
@@ -661,14 +785,20 @@ export function createFractalScaleManipulators() {
     const uniformScaleMaterial = createScaleMaterial(0xaaaaaa); // Grey
     const uniformScaleCube = new THREE.Mesh(cubeGeometry, uniformScaleMaterial);
     uniformScaleCube.name = 'FractalScaleCube_XYZ';
-    uniformScaleCube.userData = { isFractalUIElement: true, type: 'scale_uniform', axis: 'xyz', zoomLevel: 0, tooltipText: 'Scale Uniformly' };
+    uniformScaleCube.userData = {
+        isFractalUIElement: true,
+        type: 'scale_uniform',
+        axis: 'xyz',
+        zoomLevel: 0,
+        tooltipText: 'Scale Uniformly',
+    };
     uniformScaleCube.position.set(0, 0, 0); // At the origin of the manipulator group
     // Optionally make it slightly larger or different shape
     uniformScaleCube.scale.setScalar(1.2); // Make central cube a bit bigger
     scaleGroup.add(uniformScaleCube);
 
     // Store original properties for hover/active states and zoom
-    scaleGroup.children.forEach(cube => {
+    scaleGroup.children.forEach((cube) => {
         if (cube.material) {
             cube.userData.originalColor = cube.material.color.clone();
             cube.userData.originalOpacity = cube.material.opacity;
