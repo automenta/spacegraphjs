@@ -252,6 +252,16 @@ export class UIManager {
         // Hide all transform UIs by default, then show the appropriate one.
         this.gizmo?.hide();
         this.adaptiveGeometricHub?.hide();
+
+        // Reset zoom levels on fractal manipulators if they are about to be hidden
+        if (this.fractalAxisManipulators && this.fractalAxisManipulators.visible) {
+            this.fractalAxisManipulators.children.forEach(child => {
+                if (child.userData.isFractalUIElement && child.userData.axis) {
+                    child.userData.zoomLevel = 0;
+                    // No need to call applySemanticZoomToAxis if they are being hidden anyway
+                }
+            });
+        }
         this.fractalAxisManipulators?.hide();
 
         if (selectedNodes.size === 1 && this.adaptiveGeometricHub) {
@@ -587,14 +597,18 @@ export class UIManager {
                 if (this.fractalAxisManipulators) {
                     if (this.fractalAxisManipulators.visible) {
                         this.fractalAxisManipulators.visible = false;
-                        // If a manipulator element was hovered, deactivate it and clear the hover state,
-                        // as the manipulators are now hidden. This prevents unintended interactions (like semantic zoom)
-                        // with a now-hidden element if the pointer hasn't moved.
+                        // Reset zoom levels when hiding
+                        this.fractalAxisManipulators.children.forEach(child => {
+                            if (child.userData.isFractalUIElement && child.userData.axis) {
+                                child.userData.zoomLevel = 0;
+                                // Visuals will be reset by applySemanticZoomToAxis if/when they become visible again and are hovered/wheeled on
+                            }
+                        });
                         if (this.hoveredFractalElement && this.fractalAxisManipulators.children.includes(this.hoveredFractalElement)) {
                             const originalColor = this.hoveredFractalElement.userData.originalColor ||
                                                   (this.hoveredFractalElement.material.color ?
                                                    this.hoveredFractalElement.material.color.clone() :
-                                                   new THREE.Color(0xffffff)); // Fallback
+                                                   new THREE.Color(0xffffff));
                             setFractalElementActive(this.hoveredFractalElement, false, originalColor, false);
                             this.hoveredFractalElement = null;
                         }
@@ -602,8 +616,14 @@ export class UIManager {
                     } else {
                         const node = selectedNodes.values().next().value;
                         this.fractalAxisManipulators.position.copy(node.position);
-                        // TODO: Set orientation of manipulators based on node or world, similar to gizmo
                         this.fractalAxisManipulators.quaternion.identity();
+                        // Reset zoom levels and apply visuals when showing
+                        this.fractalAxisManipulators.children.forEach(child => {
+                            if (child.userData.isFractalUIElement && child.userData.axis) {
+                                child.userData.zoomLevel = 0;
+                                applySemanticZoomToAxis(this.fractalAxisManipulators, child.userData.axis, 0);
+                            }
+                        });
                         const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
                         if (camera) updateFractalUIScale(this.fractalAxisManipulators, camera, 500, node.position);
                         this.fractalAxisManipulators.visible = true;
@@ -795,13 +815,25 @@ export class UIManager {
                 const dragDelta = new THREE.Vector3().subVectors(currentPointerWorldPos, this.draggedFractalElementInfo.initialPointerWorldPos);
 
                 const axisVector = new THREE.Vector3();
-                if (this.draggedFractalElementInfo.axis === 'x') axisVector.set(1,0,0);
-                else if (this.draggedFractalElementInfo.axis === 'y') axisVector.set(0,1,0);
-                else if (this.draggedFractalElementInfo.axis === 'z') axisVector.set(0,0,1);
+                const draggedAxis = this.draggedFractalElementInfo.axis;
+
+                if (draggedAxis === 'x') {
+                    axisVector.set(1, 0, 0);
+                } else if (draggedAxis === 'y') {
+                    axisVector.set(0, 1, 0);
+                } else if (draggedAxis === 'z') {
+                    axisVector.set(0, 0, 1);
+                } else {
+                    console.warn(`Unknown axis: ${draggedAxis}`);
+                    break; // Don't proceed if axis is unknown
+                }
 
                 // TODO: Consider fractalAxisManipulators' world orientation if not identity.
                 // For prototype, assume world axes alignment for the manipulators.
                 // If manipulators could be oriented with the node, apply this.fractalAxisManipulators.quaternion to axisVector.
+                // For now, fractalAxisManipulators are always world-aligned (quaternion.identity()).
+                // So, axisVector directly represents the world axis of translation.
+
                 const projectedDelta = dragDelta.clone().projectOnVector(axisVector);
 
                 selectedNodes.forEach(node => {
@@ -1230,41 +1262,20 @@ export class UIManager {
                 }
                 this.hoveredFractalElement.userData.zoomLevel = newZoomLevel;
 
-                // Apply the semantic zoom visual change only for the X-axis in this iteration
-                if (this.fractalAxisManipulators && axisType === 'x') {
+                // Apply the semantic zoom visual change for the hovered axis
+                if (this.fractalAxisManipulators && axisType && ['x', 'y', 'z'].includes(axisType)) {
                     applySemanticZoomToAxis(this.fractalAxisManipulators, axisType, newZoomLevel);
 
-                    // Clear any existing timeout to prevent multiple reverts or premature resets
-                    if (this.hoveredFractalElement.userData.zoomResetTimeout) {
-                        clearTimeout(this.hoveredFractalElement.userData.zoomResetTimeout);
-                        this.hoveredFractalElement.userData.zoomResetTimeout = null;
-                    }
+                    // The timeout logic for reverting the zoom is removed.
+                    // The visual state will persist based on newZoomLevel.
+                    // setFractalElementActive in _handleHover will be responsible for
+                    // applying hover effects, which should ideally compose with or be
+                    // overridden by the semantic zoom state if zoomLevel !== 0.
+                    // If zoomLevel becomes 0, applySemanticZoomToAxis should reset the visuals
+                    // to a base state, allowing normal hover effects to take over.
 
-                    // Set a timeout to revert the semantic zoom effect to the normal hover state.
-                    // This makes the zoom visual "temporary" for this iteration.
-                    this.hoveredFractalElement.userData.zoomResetTimeout = setTimeout(() => {
-                        // Check if the element is still part of the visible manipulators and still the one that was zoomed
-                        if (this.fractalAxisManipulators &&
-                            this.hoveredFractalElement &&
-                            this.hoveredFractalElement.userData.axis === axisType &&
-                            this.hoveredFractalElement.userData.zoomResetTimeout) { // Check if this timeout is still the active one
-
-                            applySemanticZoomToAxis(this.fractalAxisManipulators, axisType, 0); // Reset visual scale to normal
-                            this.hoveredFractalElement.userData.zoomLevel = 0; // Reset stored zoom level
-
-                            // Re-apply the standard hover effect if the element is still hovered.
-                            // setFractalElementActive handles storing/using originalColor internally.
-                            const originalColor = this.hoveredFractalElement.userData.originalColor ||
-                                                  (this.hoveredFractalElement.material.color ? this.hoveredFractalElement.material.color.clone() : new THREE.Color(0xffffff));
-                            setFractalElementActive(this.hoveredFractalElement, true, originalColor, false);
-                        }
-                        if (this.hoveredFractalElement) { // Ensure hoveredFractalElement still exists before trying to clear timeout property
-                           this.hoveredFractalElement.userData.zoomResetTimeout = null;
-                        }
-                    }, 500); // Revert after 0.5 seconds
                 } else {
-                     // Placeholder for other axes or if manipulators are not found
-                    console.log(`Semantic zoom visual not yet implemented for axis ${axisType} or manipulators not found.`);
+                    console.log(`Semantic zoom not applied: Invalid axisType (${axisType}) or manipulators not found.`);
                 }
                 return; // Prevent camera zoom
             }
