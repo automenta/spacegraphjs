@@ -146,39 +146,25 @@ export function setFractalElementActive(fractalMesh, isActive, originalColor, is
     if (!fractalMesh || !fractalMesh.material) return;
 
     // Ensure original properties are stored in userData for restoration
-    if (originalColor && !fractalMesh.userData.originalColor) {
+    if (originalColor && fractalMesh.userData.originalColor === undefined) {
         fractalMesh.userData.originalColor = originalColor.clone();
     }
-    if (fractalMesh.material.opacity && fractalMesh.userData.originalOpacity === undefined) {
-        fractalMesh.userData.originalOpacity = fractalMesh.material.opacity;
+    // Use current material color as original if no explicit one provided and not stored yet
+    if (fractalMesh.userData.originalColor === undefined && fractalMesh.material.color) {
+        fractalMesh.userData.originalColor = fractalMesh.material.color.clone();
     }
-    if (fractalMesh.material.emissive && fractalMesh.userData.originalEmissive === undefined) {
-        fractalMesh.userData.originalEmissive = fractalMesh.material.emissive.getHex();
-    }
-    // Store original scale for grab effect, if not already present
-    // Ensure original visual properties are stored in userData for restoration
-    if (originalColor && !fractalMesh.userData.originalColor) {
-        fractalMesh.userData.originalColor = originalColor.clone();
-    }
+
     if (fractalMesh.material.opacity !== undefined && fractalMesh.userData.originalOpacity === undefined) {
         fractalMesh.userData.originalOpacity = fractalMesh.material.opacity;
     }
     if (fractalMesh.material.emissive && fractalMesh.userData.originalEmissive === undefined) {
+        // Store the hex value of the emissive color
         fractalMesh.userData.originalEmissive = fractalMesh.material.emissive.getHex();
     }
     // Note: originalScaleForTransform is not used here anymore, using preGrabScale for temporary grab scaling
 
-    const baseColor = fractalMesh.userData.originalColor || (fractalMesh.material.color ? fractalMesh.material.color.clone() : new THREE.Color(0xffffff));
-    const baseOpacity = fractalMesh.userData.originalOpacity !== undefined ? fractalMesh.userData.originalOpacity : 0.7;
-    const baseEmissiveHex = fractalMesh.userData.originalEmissive !== undefined ? fractalMesh.userData.originalEmissive : 0x000000;
-
-    // Store the true original emissive (pre-any-effect)
-    if (fractalMesh.material.emissive && fractalMesh.userData.originalEmissive === undefined) {
-        fractalMesh.userData.originalEmissive = fractalMesh.material.emissive.getHex();
-    }
-
-    const baseColor = fractalMesh.userData.originalColor || (fractalMesh.material.color ? fractalMesh.material.color.clone() : new THREE.Color(0xffffff));
-    const baseOpacity = fractalMesh.userData.originalOpacity !== undefined ? fractalMesh.userData.originalOpacity : 0.7;
+    const baseColor = fractalMesh.userData.originalColor || new THREE.Color(0xffffff); // Fallback if somehow still undefined
+    const baseOpacity = fractalMesh.userData.originalOpacity !== undefined ? fractalMesh.userData.originalOpacity : (fractalMesh.material.opacity !== undefined ? fractalMesh.material.opacity : 0.7);
     // originalEmissive is the true base, before any zoom or hover/grab effect.
     const baseEmissiveHex = fractalMesh.userData.originalEmissive !== undefined ? fractalMesh.userData.originalEmissive : 0x000000;
 
