@@ -2099,13 +2099,12 @@ export class UIManager {
         const selectedEdges = this._uiPluginCallbacks.getSelectedEdges();
         const primarySelectedNode = selectedNodes.size > 0 ? selectedNodes.values().next().value : null;
         const primarySelectedEdge = selectedEdges.size > 0 ? selectedEdges.values().next().value : null;
-        let msg = ''; // msg variable declared here
-        // Removed redundant declarations of activeEl, isEditingText, selectedNodes, selectedEdges, primarySelectedNode, primarySelectedEdge
+        let msg = '';
         let handled = false;
 
         switch (e.key) {
             case 'Delete':
-            case 'Backspace':
+            case 'Backspace': {
                 if (primarySelectedNode) {
                     msg =
                         selectedNodes.size > 1
@@ -2130,7 +2129,8 @@ export class UIManager {
                     handled = true;
                 }
                 break;
-            case 'Escape':
+            }
+            case 'Escape': {
                 if (this._uiPluginCallbacks.getIsLinking()) {
                     this._uiPluginCallbacks.cancelLinking();
                     handled = true;
@@ -2159,14 +2159,14 @@ export class UIManager {
                     handled = true;
                 }
                 break;
-            // Moved the switch's closing brace to encompass all cases
-            // case 'Enter': was here, now correctly inside the switch
-            case 'Enter':
+            }
+            case 'Enter': {
                 if (primarySelectedNode instanceof HtmlNode && primarySelectedNode.data.editable && !isEditingText) {
                     primarySelectedNode.htmlElement?.querySelector('.node-content')?.focus();
                     handled = true;
                 }
                 break;
+            }
             case '+':
             case '=': {
                 if (primarySelectedNode instanceof HtmlNode) {
@@ -2209,7 +2209,7 @@ export class UIManager {
                     handled = true;
                 }
                 break;
-            // This is the correct location for the switch statement's closing brace
+            }
         }
         if (handled) {
             e.preventDefault();
@@ -2311,6 +2311,8 @@ export class UIManager {
         let metaframeHandleInfo = null;
         let gizmoHandleInfo = null;
         let fractalElementInfo = null; // Added for fractal UI
+        let selectionScaleHandleInfo = null; // Added for selection scale handles
+
 
         if (!nodeControlsButton && !contentEditableEl && !interactiveEl) {
             const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
@@ -2319,58 +2321,108 @@ export class UIManager {
                 const pointerNDC = this.space.getPointerNDC(event.clientX, event.clientY);
                 raycaster.setFromCamera(pointerNDC, camera);
 
-                // 1. Check for Fractal UI intersection first
-                // Check AGH
-                if (this.adaptiveGeometricHub && this.adaptiveGeometricHub.visible) {
-                    const aghIntersect = raycaster.intersectObject(this.adaptiveGeometricHub, false);
-                    if (aghIntersect.length > 0 && aghIntersect[0].object.userData.isFractalUIElement) {
-                        fractalElementInfo = { object: aghIntersect[0].object, type: 'agh', distance: aghIntersect[0].distance };
-                    }
-                }
-                // Check Translation Axes
-                if (!fractalElementInfo && this.fractalAxisManipulators && this.fractalAxisManipulators.visible) {
-                    const intersects = raycaster.intersectObjects(this.fractalAxisManipulators.children, true);
-                    const validIntersect = intersects.find(i => i.object.userData.isFractalUIElement && i.object.userData.type === 'translate_axis');
-                    if (validIntersect) {
-                        fractalElementInfo = { object: validIntersect.object, type: 'translate_axis', axis: validIntersect.object.userData.axis, distance: validIntersect.distance };
-                    }
-                }
-                // Check Rotation Rings
-                if (!fractalElementInfo && this.fractalRotationManipulators && this.fractalRotationManipulators.visible) {
-                    const intersects = raycaster.intersectObjects(this.fractalRotationManipulators.children, true);
-                    const validIntersect = intersects.find(i => i.object.userData.isFractalUIElement && i.object.userData.type === 'rotate_axis');
-                    if (validIntersect) {
-                        fractalElementInfo = { object: validIntersect.object, type: 'rotate_axis', axis: validIntersect.object.userData.axis, distance: validIntersect.distance };
-                    }
-                }
-                // Check Scale Cubes
-                if (!fractalElementInfo && this.fractalScaleManipulators && this.fractalScaleManipulators.visible) {
-                    const intersects = raycaster.intersectObjects(this.fractalScaleManipulators.children, true);
-                    const validIntersect = intersects.find(i => i.object.userData.isFractalUIElement && (i.object.userData.type === 'scale_axis' || i.object.userData.type === 'scale_uniform'));
-                    if (validIntersect) {
-                        fractalElementInfo = { object: validIntersect.object, type: validIntersect.object.userData.type, axis: validIntersect.object.userData.axis, distance: validIntersect.distance };
-                    }
-                }
+                let closestHit = null;
 
-                // 2. If no fractal UI hit, check for old Gizmo
-                if (!fractalElementInfo && this.gizmo && this.gizmo.visible) {
-                    const gizmoIntersects = raycaster.intersectObjects(this.gizmo.handles.children, true);
-                    if (gizmoIntersects.length > 0) {
-                        const intersectedHandleMesh = gizmoIntersects[0].object;
-                        if (intersectedHandleMesh.userData?.isGizmoHandle) {
-                            gizmoHandleInfo = {
-                                axis: intersectedHandleMesh.userData.axis,
-                                type: intersectedHandleMesh.userData.gizmoType,
-                                part: intersectedHandleMesh.userData.part,
-                                object: intersectedHandleMesh,
-                                distance: gizmoIntersects[0].distance,
+                // 1. Check Selection Scale Handles
+                if (this.selectionScaleHandlesGroup && this.selectionScaleHandlesGroup.visible) {
+                    const handleIntersects = raycaster.intersectObjects(this.selectionScaleHandles, false); // false for non-recursive
+                    if (handleIntersects.length > 0) {
+                        const firstHit = handleIntersects[0];
+                        if (firstHit.object.userData.isSelectionScaleHandle) {
+                             closestHit = {
+                                type: 'selectionScaleHandle',
+                                info: {
+                                    handle: firstHit.object,
+                                    type: firstHit.object.userData.handleType, // e.g., 'corner'
+                                    name: firstHit.object.name,
+                                },
+                                distance: firstHit.distance
                             };
                         }
                     }
                 }
 
-                // 3. If no UI controls hit, check for graph elements (nodes, edges, metaframes)
-                if (!fractalElementInfo && !gizmoHandleInfo) {
+
+                // 2. Check for Fractal UI intersection if no closer selection handle hit
+                if (!closestHit || (newFractalElInfo && newFractalElInfo.distance < closestHit.distance)) {
+                    // Check AGH
+                    if (this.adaptiveGeometricHub && this.adaptiveGeometricHub.visible) {
+                        const aghIntersect = raycaster.intersectObject(this.adaptiveGeometricHub, false);
+                        if (aghIntersect.length > 0 && aghIntersect[0].object.userData.isFractalUIElement) {
+                            if (!closestHit || aghIntersect[0].distance < closestHit.distance) {
+                                closestHit = { type: 'fractal', info: { object: aghIntersect[0].object, type: 'agh', distance: aghIntersect[0].distance }, distance: aghIntersect[0].distance };
+                            }
+                        }
+                    }
+                    // Check Translation Axes
+                    if (this.fractalAxisManipulators && this.fractalAxisManipulators.visible) {
+                        const intersects = raycaster.intersectObjects(this.fractalAxisManipulators.children, true);
+                        const validIntersect = intersects.find(i => i.object.userData.isFractalUIElement && i.object.userData.type === 'translate_axis');
+                        if (validIntersect) {
+                             if (!closestHit || validIntersect.distance < closestHit.distance) {
+                                closestHit = { type: 'fractal', info: { object: validIntersect.object, type: 'translate_axis', axis: validIntersect.object.userData.axis, distance: validIntersect.distance }, distance: validIntersect.distance };
+                            }
+                        }
+                    }
+                    // Check Rotation Rings
+                    if (this.fractalRotationManipulators && this.fractalRotationManipulators.visible) {
+                        const intersects = raycaster.intersectObjects(this.fractalRotationManipulators.children, true);
+                        const validIntersect = intersects.find(i => i.object.userData.isFractalUIElement && i.object.userData.type === 'rotate_axis');
+                        if (validIntersect) {
+                            if (!closestHit || validIntersect.distance < closestHit.distance) {
+                                closestHit = { type: 'fractal', info: { object: validIntersect.object, type: 'rotate_axis', axis: validIntersect.object.userData.axis, distance: validIntersect.distance }, distance: validIntersect.distance };
+                            }
+                        }
+                    }
+                    // Check Scale Cubes
+                    if (this.fractalScaleManipulators && this.fractalScaleManipulators.visible) {
+                        const intersects = raycaster.intersectObjects(this.fractalScaleManipulators.children, true);
+                        const validIntersect = intersects.find(i => i.object.userData.isFractalUIElement && (i.object.userData.type === 'scale_axis' || i.object.userData.type === 'scale_uniform'));
+                        if (validIntersect) {
+                             if (!closestHit || validIntersect.distance < closestHit.distance) {
+                                closestHit = { type: 'fractal', info: { object: validIntersect.object, type: validIntersect.object.userData.type, axis: validIntersect.object.userData.axis, distance: validIntersect.distance }, distance: validIntersect.distance };
+                            }
+                        }
+                    }
+                }
+
+
+                // 3. If no UI controls hit or closer fractal/selection hit, check for old Gizmo
+                if (!closestHit || (newGizmoHInfo && newGizmoHInfo.distance < closestHit.distance)) {
+                    if (this.gizmo && this.gizmo.visible) {
+                        const gizmoIntersects = raycaster.intersectObjects(this.gizmo.handles.children, true);
+                        if (gizmoIntersects.length > 0) {
+                            const intersectedHandleMesh = gizmoIntersects[0].object;
+                            if (intersectedHandleMesh.userData?.isGizmoHandle) {
+                                if (!closestHit || gizmoIntersects[0].distance < closestHit.distance) {
+                                    closestHit = {
+                                        type: 'gizmo',
+                                        info: {
+                                            axis: intersectedHandleMesh.userData.axis,
+                                            type: intersectedHandleMesh.userData.gizmoType,
+                                            part: intersectedHandleMesh.userData.part,
+                                            object: intersectedHandleMesh,
+                                            distance: gizmoIntersects[0].distance,
+                                        },
+                                        distance: gizmoIntersects[0].distance
+                                    };
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Assign based on closest hit
+                if (closestHit) {
+                    if (closestHit.type === 'selectionScaleHandle') selectionScaleHandleInfo = closestHit.info;
+                    else if (closestHit.type === 'fractal') fractalElementInfo = closestHit.info;
+                    else if (closestHit.type === 'gizmo') gizmoHandleInfo = closestHit.info;
+                }
+
+
+                // 4. If no UI controls hit, check for graph elements (nodes, edges, metaframes)
+                // This should only happen if none of the above specific UI elements were hit closer or at all.
+                if (!selectionScaleHandleInfo && !fractalElementInfo && !gizmoHandleInfo) {
                     const generalIntersect = this.space.intersectedObjects(event.clientX, event.clientY);
                     if (generalIntersect) {
                         const { object, node: resolvedNode, edge: resolvedEdge } = generalIntersect;
@@ -2399,7 +2451,8 @@ export class UIManager {
             intersectedEdge,
             metaframeHandleInfo,
             gizmoHandleInfo,
-            fractalElementInfo, // Added
+            fractalElementInfo,
+            selectionScaleHandleInfo,
         };
     }
 
@@ -2464,8 +2517,13 @@ export class UIManager {
                 if (!selectedEdges.has(this.hoveredEdge)) this.hoveredEdge.setHoverStyle(false);
             }
             this.hoveredEdge = null;
-            // Note: We don't return early here if exiting hover, as we need to check for new hovers below.
-            // The actual hoveredFractalElement is cleared/updated after checking new target.
+
+            // Handle selection scale handle unhover
+            if (this.hoveredSelectionScaleHandle) {
+                this.hoveredSelectionScaleHandle.material.color.copy(this.hoveredSelectionScaleHandle.userData.originalColor);
+                this.hoveredSelectionScaleHandle = null;
+                // Hide tooltip if one was shown for scale handles
+            }
         }
 
         const targetInfo = this._getTargetInfo(e);
@@ -2474,91 +2532,131 @@ export class UIManager {
             intersectedEdge: newHoveredEdge,
             metaframeHandleInfo: newMFHInfo,
             gizmoHandleInfo: newGizmoHInfo,
-            fractalElementInfo: newFractalElInfo, // Added
+            fractalElementInfo: newFractalElInfo,
+            selectionScaleHandleInfo: newScaleHandleInfo,
         } = targetInfo;
 
-        // 1. Handle Fractal UI Hover
-        if (this.hoveredFractalElement !== newFractalElInfo?.object) {
-            if (this.hoveredFractalElement) {
-                const oldHoveredElement = this.hoveredFractalElement;
-                const originalColor = oldHoveredElement.userData.originalColor ||
-                                      (oldHoveredElement.material.color ? oldHoveredElement.material.color.clone() : new THREE.Color(0xffffff));
-                setFractalElementActive(oldHoveredElement, false, originalColor, false); // isActive = false, isGrabbed = false
-                this.hudManager.hideFractalTooltip();
+
+        // --- Priority Hover Handling ---
+        // 1. Selection Scale Handles
+        if (this.hoveredSelectionScaleHandle !== newScaleHandleInfo?.handle) {
+            if (this.hoveredSelectionScaleHandle) {
+                this.hoveredSelectionScaleHandle.material.color.copy(this.hoveredSelectionScaleHandle.userData.originalColor);
             }
+            this.hoveredSelectionScaleHandle = newScaleHandleInfo?.handle || null;
+            if (this.hoveredSelectionScaleHandle) {
+                this.hoveredSelectionScaleHandle.material.color.setHex(SELECTION_HANDLE_HOVER_COLOR);
+            }
+        }
 
-            this.hoveredFractalElement = newFractalElInfo?.object || null;
-
-            if (this.hoveredFractalElement) {
-                const newHoveredElement = this.hoveredFractalElement;
-                const originalColor = newHoveredElement.userData.originalColor ||
-                                      (newHoveredElement.material.color ? newHoveredElement.material.color.clone() : new THREE.Color(0xffffff));
-                setFractalElementActive(newHoveredElement, true, originalColor, false); // isActive = true, isGrabbed = false
-                if (newHoveredElement.userData.tooltipText) {
-                    this.hudManager.showFractalTooltip(newHoveredElement.userData.tooltipText, e.clientX, e.clientY);
+        // 2. Fractal UI Hover (only if no scale handle is hovered)
+        if (!this.hoveredSelectionScaleHandle) {
+            if (this.hoveredFractalElement !== newFractalElInfo?.object) {
+                if (this.hoveredFractalElement) {
+                    const oldHoveredElement = this.hoveredFractalElement;
+                    const originalColor = oldHoveredElement.userData.originalColor ||
+                                          (oldHoveredElement.material.color ? oldHoveredElement.material.color.clone() : new THREE.Color(0xffffff));
+                    setFractalElementActive(oldHoveredElement, false, originalColor, false);
+                    this.hudManager.hideFractalTooltip();
+                }
+                this.hoveredFractalElement = newFractalElInfo?.object || null;
+                if (this.hoveredFractalElement) {
+                    const newHoveredElement = this.hoveredFractalElement;
+                    const originalColor = newHoveredElement.userData.originalColor ||
+                                          (newHoveredElement.material.color ? newHoveredElement.material.color.clone() : new THREE.Color(0xffffff));
+                    setFractalElementActive(newHoveredElement, true, originalColor, false);
+                    if (newHoveredElement.userData.tooltipText) {
+                        this.hudManager.showFractalTooltip(newHoveredElement.userData.tooltipText, e.clientX, e.clientY);
+                    }
+                }
+            } else if (this.hoveredFractalElement && newFractalElInfo?.object === this.hoveredFractalElement) {
+                if (this.hoveredFractalElement.userData.tooltipText) {
+                    this.hudManager.showFractalTooltip(this.hoveredFractalElement.userData.tooltipText, e.clientX, e.clientY);
                 }
             }
-        } else if (this.hoveredFractalElement && newFractalElInfo?.object === this.hoveredFractalElement) {
-            // If still hovering the same fractal element, update tooltip position
-            if (this.hoveredFractalElement.userData.tooltipText) {
-                this.hudManager.showFractalTooltip(this.hoveredFractalElement.userData.tooltipText, e.clientX, e.clientY);
+        } else { // If a scale handle is hovered, ensure fractal element is unhovered
+            if (this.hoveredFractalElement) {
+                 const oldHoveredElement = this.hoveredFractalElement;
+                 const originalColor = oldHoveredElement.userData.originalColor || new THREE.Color(0xffffff);
+                 setFractalElementActive(oldHoveredElement, false, originalColor, false);
+                 this.hudManager.hideFractalTooltip();
+                 this.hoveredFractalElement = null;
+            }
+        }
+
+        // 3. Gizmo Hover (only if no scale handle or fractal element is hovered)
+        if (!this.hoveredSelectionScaleHandle && !this.hoveredFractalElement) {
+            if (this.hoveredGizmoHandle !== newGizmoHInfo?.object) {
+                if (this.hoveredGizmoHandle && this.gizmo) this.gizmo.setHandleActive(this.hoveredGizmoHandle, false);
+                this.hoveredGizmoHandle = newGizmoHInfo?.object || null;
+                if (this.hoveredGizmoHandle && this.gizmo) this.gizmo.setHandleActive(this.hoveredGizmoHandle, true);
+            }
+        } else { // If scale handle or fractal is hovered, ensure gizmo is not highlighted
+            if (this.hoveredGizmoHandle && this.gizmo) {
+                this.gizmo.setHandleActive(this.hoveredGizmoHandle, false);
+                this.hoveredGizmoHandle = null;
             }
         }
 
 
-        // 2. Handle Gizmo Hover (original)
-        // Ensure gizmo hover doesn't interfere if fractal hover is active
-        if (!this.hoveredFractalElement && this.hoveredGizmoHandle !== newGizmoHInfo?.object) {
-            if (this.hoveredGizmoHandle && this.gizmo) this.gizmo.setHandleActive(this.hoveredGizmoHandle, false);
-            this.hoveredGizmoHandle = newGizmoHInfo?.object || null;
-            if (this.hoveredGizmoHandle && this.gizmo) this.gizmo.setHandleActive(this.hoveredGizmoHandle, true);
-        } else if (this.hoveredFractalElement && this.hoveredGizmoHandle) {
-            // If fractal element is hovered, ensure gizmo is not also highlighted
-            if (this.gizmo) this.gizmo.setHandleActive(this.hoveredGizmoHandle, false);
-            this.hoveredGizmoHandle = null;
-        }
-
-        // 3. Handle Metaframe Hover (original)
-        if (this.hoveredNodeForMetaframe !== newlyHoveredNode) {
-            if (this.hoveredNodeForMetaframe && !selectedNodes.has(this.hoveredNodeForMetaframe))
-                this.hoveredNodeForMetaframe.ensureMetaframe()?.hide();
-            if (newlyHoveredNode && !selectedNodes.has(newlyHoveredNode) && newlyHoveredNode.metaframe) {
-                const mf = newlyHoveredNode.ensureMetaframe();
-                if (mf) {
-                    mf.show();
-                    Object.values(mf.resizeHandles).forEach((h) => mf.highlightHandle(h, false));
-                    if (mf.dragHandle) mf.highlightHandle(mf.dragHandle, false);
+        // 4. Metaframe Hover (lowest priority among 3D handles)
+        if (!this.hoveredSelectionScaleHandle && !this.hoveredFractalElement && !this.hoveredGizmoHandle) {
+            if (this.hoveredNodeForMetaframe !== newlyHoveredNode) {
+                if (this.hoveredNodeForMetaframe && !selectedNodes.has(this.hoveredNodeForMetaframe))
+                    this.hoveredNodeForMetaframe.ensureMetaframe()?.hide();
+                if (newlyHoveredNode && !selectedNodes.has(newlyHoveredNode) && newlyHoveredNode.metaframe) {
+                    const mf = newlyHoveredNode.ensureMetaframe();
+                    if (mf) {
+                        mf.show();
+                        Object.values(mf.resizeHandles).forEach((h) => mf.highlightHandle(h, false));
+                        if (mf.dragHandle) mf.highlightHandle(mf.dragHandle, false);
+                    }
                 }
+                this.hoveredNodeForMetaframe = newlyHoveredNode;
             }
-            this.hoveredNodeForMetaframe = newlyHoveredNode;
-        }
 
-        if (
-            this.hoveredHandleType !== newMFHInfo?.type ||
-            this.currentHoveredGLHandle?.handleMesh !== newMFHInfo?.object
-        ) {
-            if (this.currentHoveredGLHandle) {
+            if (
+                this.hoveredHandleType !== newMFHInfo?.type ||
+                this.currentHoveredGLHandle?.handleMesh !== newMFHInfo?.object
+            ) {
+                if (this.currentHoveredGLHandle) {
+                    const oldMf = this.currentHoveredGLHandle.node?.ensureMetaframe();
+                    if (oldMf) {
+                        oldMf.highlightHandle(this.currentHoveredGLHandle.handleMesh, false);
+                        oldMf.setHandleTooltip(this.hoveredHandleType, '', false);
+                    }
+                }
+                if (newMFHInfo) {
+                    const curMf = newMFHInfo.node?.ensureMetaframe();
+                    if (curMf?.isVisible) {
+                        document.body.style.cursor = this._getCursorForHandle(newMFHInfo.type);
+                        curMf.highlightHandle(newMFHInfo.object, true);
+                        curMf.setHandleTooltip(newMFHInfo.type, this._getTooltipTextForHandle(newMFHInfo.type), true);
+                    }
+                    this.currentHoveredGLHandle = { node: newMFHInfo.node, handleMesh: newMFHInfo.object };
+                } else {
+                    this.currentHoveredGLHandle = null;
+                }
+                this.hoveredHandleType = newMFHInfo?.type || null;
+            }
+        } else { // If any higher priority handle is hovered, ensure metaframe is not active
+             if (this.currentHoveredGLHandle) {
                 const oldMf = this.currentHoveredGLHandle.node?.ensureMetaframe();
                 if (oldMf) {
                     oldMf.highlightHandle(this.currentHoveredGLHandle.handleMesh, false);
                     oldMf.setHandleTooltip(this.hoveredHandleType, '', false);
                 }
-            }
-            if (newMFHInfo) {
-                const curMf = newMFHInfo.node?.ensureMetaframe();
-                if (curMf?.isVisible) {
-                    document.body.style.cursor = this._getCursorForHandle(newMFHInfo.type);
-                    curMf.highlightHandle(newMFHInfo.object, true);
-                    curMf.setHandleTooltip(newMFHInfo.type, this._getTooltipTextForHandle(newMFHInfo.type), true);
-                }
-                this.currentHoveredGLHandle = { node: newMFHInfo.node, handleMesh: newMFHInfo.object };
-            } else {
                 this.currentHoveredGLHandle = null;
             }
-            this.hoveredHandleType = newMFHInfo?.type || null;
+            this.hoveredHandleType = null;
+            if (this.hoveredNodeForMetaframe && !selectedNodes.has(this.hoveredNodeForMetaframe)) {
+                 this.hoveredNodeForMetaframe.ensureMetaframe()?.hide();
+                 this.hoveredNodeForMetaframe = null;
+            }
         }
 
-        // 4. Handle Edge Hover (original)
+
+        // 5. Edge Hover (original)
         const currentlySelectedEdges = this._uiPluginCallbacks.getSelectedEdges() || new Set();
         if (this.hoveredEdge !== newHoveredEdge) {
             if (this.hoveredEdge && !currentlySelectedEdges.has(this.hoveredEdge))
@@ -2567,25 +2665,29 @@ export class UIManager {
             if (this.hoveredEdge && !currentlySelectedEdges.has(this.hoveredEdge)) this.hoveredEdge.setHoverStyle(true);
         }
 
-        // Cursor logic prioritizing fractal, then gizmo, then metaframe, etc.
-        if (this.hoveredFractalElement) {
-            document.body.style.cursor = 'pointer'; // Generic pointer for fractal elements
+        // Cursor logic based on hover priority
+        if (this.hoveredSelectionScaleHandle) {
+            document.body.style.cursor = 'nwse-resize'; // Or more specific if different handle types
+        } else if (this.hoveredFractalElement) {
+            document.body.style.cursor = 'pointer';
         } else if (this.hoveredGizmoHandle) {
             document.body.style.cursor = 'pointer';
         } else if (this.currentHoveredGLHandle) {
-            /* cursor set by metaframe logic */
+            // Cursor set by metaframe logic
         } else if (this.hoveredEdge) {
             document.body.style.cursor = 'pointer';
         } else if (
-            this.adaptiveGeometricHub?.visible || // if fractal UI is active
+            this.adaptiveGeometricHub?.visible ||
             this.gizmo?.visible ||
+            this.selectionScaleHandlesGroup?.visible || // Added this condition
             this.hoveredNodeForMetaframe ||
             (newlyHoveredNode && selectedNodes.has(newlyHoveredNode))
         ) {
-            document.body.style.cursor = (this.adaptiveGeometricHub?.visible || this.gizmo?.visible) ? 'default' : 'grab';
+            document.body.style.cursor = (this.adaptiveGeometricHub?.visible || this.gizmo?.visible || this.selectionScaleHandlesGroup?.visible) ? 'default' : 'grab';
         } else {
             document.body.style.cursor = 'grab';
         }
+
 
         // Update scaling for visible UI elements
         const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
@@ -2608,6 +2710,12 @@ export class UIManager {
             }
             if (this.gizmo?.visible && this.gizmo.parent) {
                 this.gizmo.updateScale(camera);
+            }
+            if (this.selectionScaleHandlesGroup?.visible && this.selectionScaleHandlesGroup.parent) {
+                const groupWorldPos = this.selectionScaleHandlesGroup.getWorldPosition(new THREE.Vector3());
+                const dist = Math.max(1, groupWorldPos.distanceTo(camera.position));
+                const scaleFactor = Math.max(0.01, dist / REFERENCE_DISTANCE_FRACTAL_UI);
+                this.selectionScaleHandlesGroup.scale.set(scaleFactor, scaleFactor, scaleFactor);
             }
         }
     }
@@ -2747,6 +2855,18 @@ export class UIManager {
             });
             this.fractalScaleManipulators = null;
         }
+
+        if (this.selectionScaleHandlesGroup) {
+            this.space.plugins.getPlugin('RenderingPlugin')?.getWebGLScene()?.remove(this.selectionScaleHandlesGroup);
+            this.selectionScaleHandles.forEach(handle => {
+                handle.geometry?.dispose();
+                handle.material?.dispose();
+            });
+            this.selectionScaleHandles = [];
+            this.selectionScaleHandlesGroup = null;
+        }
+
+
         if (this.multiSelectionHelper) {
             // If it was added to any scene, remove it. Typically not added to scene directly.
             this.multiSelectionHelper = null;

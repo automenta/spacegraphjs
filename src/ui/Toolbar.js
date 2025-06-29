@@ -45,7 +45,8 @@ export class Toolbar {
             toolButtonGroup.className = 'toolbar-button-group';
             toolButtonsData.forEach((btnData) => {
                 const button = createButton(btnData, toolButtonGroup);
-                if (btnData.mode) { // Should always be true for tool buttons
+                if (btnData.mode) {
+                    // Should always be true for tool buttons
                     this._gizmoModeButtons[btnData.mode] = button; // Reusing _gizmoModeButtons for general tool modes
                 }
             });
@@ -71,8 +72,10 @@ export class Toolbar {
         this.updateActiveToolButton(data ? data.mode : null);
     };
 
-    updateActiveToolButton(activeMode) { // Renamed from updateActiveGizmoButton
-        for (const mode in this._gizmoModeButtons) { // Still using _gizmoModeButtons map
+    updateActiveToolButton(activeMode) {
+        // Renamed from updateActiveGizmoButton
+        for (const mode in this._gizmoModeButtons) {
+            // Still using _gizmoModeButtons map
             if (this._gizmoModeButtons[mode]) {
                 this._gizmoModeButtons[mode].classList.remove('active');
             }

@@ -136,9 +136,15 @@ export class HudManager {
         if (!this.hudAGHModeIndicator) return;
         let modeText = 'AGH: -';
         switch (modeCycle) {
-            case 1: modeText = 'AGH: Translate'; break;
-            case 2: modeText = 'AGH: Rotate'; break;
-            case 3: modeText = 'AGH: Scale'; break;
+            case 1:
+                modeText = 'AGH: Translate';
+                break;
+            case 2:
+                modeText = 'AGH: Rotate';
+                break;
+            case 3:
+                modeText = 'AGH: Scale';
+                break;
         }
         this.hudAGHModeIndicator.textContent = modeText;
         // Show if a specific mode is active, hide or show "None" otherwise

@@ -290,7 +290,7 @@ export class TranslationGizmo extends THREE.Object3D {
      */
     hide() {
         this.visible = false;
-        this.handles.children.forEach(handle => {
+        this.handles.children.forEach((handle) => {
             if (handle.userData.isGizmoHandle) {
                 handle.visible = false;
             }
@@ -303,7 +303,7 @@ export class TranslationGizmo extends THREE.Object3D {
      */
     showOnly(mode) {
         this.visible = true;
-        this.handles.children.forEach(handle => {
+        this.handles.children.forEach((handle) => {
             if (handle.userData.isGizmoHandle) {
                 if (mode === null) {
                     handle.visible = false;
@@ -313,7 +313,6 @@ export class TranslationGizmo extends THREE.Object3D {
             }
         });
     }
-
 
     /**
      * Sets the visual state of a specific gizmo handle (e.g., on hover or during drag).
