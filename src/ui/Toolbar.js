@@ -16,16 +16,10 @@ export class Toolbar {
 
         const mainButtons = [{ id: 'tb-add-node', text: '➕', title: 'Add Default Node (N)', action: 'addNode' }];
 
-        const gizmoButtonsData = [
-            {
-                id: 'tb-gizmo-translate',
-                text: '✥',
-                title: 'Translate Gizmo (T)',
-                action: 'setGizmoMode',
-                mode: 'translate',
-            },
-            { id: 'tb-gizmo-rotate', text: '↷', title: 'Rotate Gizmo (R)', action: 'setGizmoMode', mode: 'rotate' },
-            { id: 'tb-gizmo-scale', text: '↔', title: 'Scale Gizmo (S)', action: 'setGizmoMode', mode: 'scale' },
+        // Translate and Scale are now default interactions. Only Rotate remains as an explicit tool.
+        const toolButtonsData = [
+            { id: 'tb-tool-rotate', text: '↷', title: 'Rotate Tool (R)', action: 'setToolMode', mode: 'rotate' },
+            // Future tools could be added here
         ];
 
         const utilityButtons = [
@@ -46,51 +40,50 @@ export class Toolbar {
 
         mainButtons.forEach((btnData) => createButton(btnData));
 
-        const gizmoButtonGroup = document.createElement('div');
-        gizmoButtonGroup.className = 'toolbar-button-group';
-        gizmoButtonsData.forEach((btnData) => {
-            const button = createButton(btnData, gizmoButtonGroup);
-            if (btnData.mode) {
-                this._gizmoModeButtons[btnData.mode] = button;
-            }
-        });
-        this.toolbarElement.appendChild(gizmoButtonGroup);
+        if (toolButtonsData.length > 0) {
+            const toolButtonGroup = document.createElement('div');
+            toolButtonGroup.className = 'toolbar-button-group';
+            toolButtonsData.forEach((btnData) => {
+                const button = createButton(btnData, toolButtonGroup);
+                if (btnData.mode) { // Should always be true for tool buttons
+                    this._gizmoModeButtons[btnData.mode] = button; // Reusing _gizmoModeButtons for general tool modes
+                }
+            });
+            this.toolbarElement.appendChild(toolButtonGroup);
+        }
 
         utilityButtons.forEach((btnData) => createButton(btnData));
 
-        // UIManager will emit 'ui:gizmoModeViewUpdated' with the initial mode.
-        // For now, let's assume 'translate' is the default and set it.
-        this.updateActiveGizmoButton('translate');
+        // UIManager will emit 'ui:activeToolViewUpdated' with the initial mode (likely null or default).
+        this.updateActiveToolButton(null); // No tool active by default
     }
 
     _subscribeToSpaceEvents() {
-        this.space.on('ui:gizmoModeViewUpdated', this._onGizmoModeViewUpdated);
+        this.space.on('ui:activeToolViewUpdated', this._onActiveToolViewUpdated);
     }
 
     _unsubscribeFromSpaceEvents() {
-        this.space.off('ui:gizmoModeViewUpdated', this._onGizmoModeViewUpdated);
+        this.space.off('ui:activeToolViewUpdated', this._onActiveToolViewUpdated);
     }
 
-    _onGizmoModeViewUpdated = (data) => {
-        if (data && data.mode) {
-            this.updateActiveGizmoButton(data.mode);
-        }
+    _onActiveToolViewUpdated = (data) => {
+        // data might be null if no tool is active, or { mode: 'rotate' }
+        this.updateActiveToolButton(data ? data.mode : null);
     };
 
-    updateActiveGizmoButton(activeMode) {
-        for (const mode in this._gizmoModeButtons) {
+    updateActiveToolButton(activeMode) { // Renamed from updateActiveGizmoButton
+        for (const mode in this._gizmoModeButtons) { // Still using _gizmoModeButtons map
             if (this._gizmoModeButtons[mode]) {
-                // Check if button exists
                 this._gizmoModeButtons[mode].classList.remove('active');
             }
         }
-        if (this._gizmoModeButtons[activeMode]) {
+        if (activeMode && this._gizmoModeButtons[activeMode]) {
             this._gizmoModeButtons[activeMode].classList.add('active');
         }
     }
 
     _handleToolbarAction(action, data = {}) {
-        // data can carry mode for setGizmoMode
+        // data can carry mode for setToolMode
         switch (action) {
             case 'addNode': {
                 const camPlugin = this.space.plugins.getPlugin('CameraPlugin');
@@ -129,9 +122,12 @@ export class Toolbar {
                 this.space.emit('theme:changed', { theme: currentTheme });
                 break;
             }
-            case 'setGizmoMode':
+            case 'setToolMode': // Renamed from setGizmoMode
                 if (data.mode) {
-                    this.space.emit('toolbar:gizmoModeChangeRequested', { mode: data.mode });
+                    // If the clicked tool is already active, request to deactivate it (set mode to null)
+                    // Otherwise, request to activate the new tool mode.
+                    // UIManager will handle the actual state of activeGizmoMode.
+                    this.space.emit('toolbar:toolModeChangeRequested', { mode: data.mode });
                 }
                 break;
             default:

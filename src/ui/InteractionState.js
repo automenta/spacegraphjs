@@ -14,6 +14,8 @@ export const InteractionState = {
     FRACTAL_ROTATING: 'FRACTAL_ROTATING',
     /** User is actively scaling using a fractal UI manipulator element. */
     FRACTAL_SCALING: 'FRACTAL_SCALING',
+    /** User is actively scaling the current selection using direct manipulation handles. */
+    SCALING_SELECTION: 'SCALING_SELECTION',
     // Future gizmo states could be more specific:
     // GIZMO_TRANSLATE_X: 'GIZMO_TRANSLATE_X',
     // GIZMO_ROTATE_Y: 'GIZMO_ROTATE_Y',

@@ -290,7 +290,30 @@ export class TranslationGizmo extends THREE.Object3D {
      */
     hide() {
         this.visible = false;
+        this.handles.children.forEach(handle => {
+            if (handle.userData.isGizmoHandle) {
+                handle.visible = false;
+            }
+        });
     }
+
+    /**
+     * Shows only specific parts of the gizmo based on mode.
+     * @param {'translate' | 'rotate' | 'scale' | null} mode - The mode to show. If null, hides all.
+     */
+    showOnly(mode) {
+        this.visible = true;
+        this.handles.children.forEach(handle => {
+            if (handle.userData.isGizmoHandle) {
+                if (mode === null) {
+                    handle.visible = false;
+                } else {
+                    handle.visible = handle.userData.gizmoType === mode;
+                }
+            }
+        });
+    }
+
 
     /**
      * Sets the visual state of a specific gizmo handle (e.g., on hover or during drag).
