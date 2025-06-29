@@ -571,8 +571,8 @@ export function createFractalRingManipulator(axis = 'y') {
     // Create degree markers (initially hidden)
     ringMesh.userData.degreeMarkers = [];
     const markerGeometry = new THREE.SphereGeometry(AXIS_RADIUS * 0.4, 6, 6); // Smaller markers
-    const maxMarkers = 12; // Max markers for highest zoom level (e.g., 30 deg increments)
-    ringMesh.userData.maxMarkers = maxMarkers; // Store for semantic zoom access
+
+    ringMesh.userData.maxMarkers = 12; // Store for semantic zoom access
 
     // Create a distinct material for markers to avoid shared state issues with the ring's material
     const markerMaterial = new THREE.MeshStandardMaterial({
