@@ -10,6 +10,7 @@ import { InteractionState } from './InteractionState.js';
 import { TranslationGizmo } from './gizmos/TranslationGizmo.js'; // Added Gizmo
 import { ConfirmDialog } from './dialogs/ConfirmDialog.js';
 import { ContextMenu } from './menus/ContextMenu.js';
+import { createAdaptiveGeometricHub, createFractalAxisManipulators, updateFractalUIScale, setFractalElementActive } from './fractal/FractalUIElements.js';
 import { EdgeMenu } from './menus/EdgeMenu.js';
 import { HudManager } from './hud/HudManager.js';
 import { Toolbar } from './Toolbar.js';
@@ -78,6 +79,18 @@ export class UIManager {
     /** @type {THREE.Object3D | null} Helper object to represent the center of multi-selection for gizmo operations, storing its initial transform. */
     multiSelectionHelper = null;
 
+    // --- Fractal UI Interaction ---
+    /** @type {THREE.Mesh | null} The Adaptive Geometric Hub instance. */
+    adaptiveGeometricHub = null;
+    /** @type {THREE.Group | null} Group containing fractal axis manipulators. */
+    fractalAxisManipulators = null;
+    /** @type {THREE.Mesh | null} The currently hovered fractal UI element. */
+    hoveredFractalElement = null;
+    /** @type {object | null} Information about the fractal element currently being dragged. */
+    draggedFractalElementInfo = null;
+    // draggedFractalElementInfo might include: { element: THREE.Mesh, type: 'translate_axis', axis: 'x', initialOffset: THREE.Vector3 }
+    fractalUIInteractionPlane = new THREE.Plane();
+
     // --- General Hover/Selection ---
     hoveredEdge = null;
     hoveredHandleType = null; // For Metaframe handles
@@ -135,6 +148,16 @@ export class UIManager {
         this.gizmo.hide();
 
         this.multiSelectionHelper = new THREE.Object3D();
+
+        // Initialize Fractal UI Elements
+        this.adaptiveGeometricHub = createAdaptiveGeometricHub();
+        this.fractalAxisManipulators = createFractalAxisManipulators();
+        const webglScene = this.space.plugins.getPlugin('RenderingPlugin')?.getWebGLScene();
+        if (webglScene) {
+            webglScene.add(this.adaptiveGeometricHub);
+            webglScene.add(this.fractalAxisManipulators);
+        }
+        // adaptiveGeometricHub and fractalAxisManipulators are set to visible = false by default in their creation functions
 
         this._applySavedTheme();
         this._bindEvents();
@@ -226,35 +249,34 @@ export class UIManager {
 
         const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
 
-        if (selectedNodes.size > 0) {
+        // Hide all transform UIs by default, then show the appropriate one.
+        this.gizmo?.hide();
+        this.adaptiveGeometricHub?.hide();
+        this.fractalAxisManipulators?.hide();
+
+        if (selectedNodes.size === 1 && this.adaptiveGeometricHub) {
+            const node = selectedNodes.values().next().value;
+            this.adaptiveGeometricHub.position.copy(node.position);
+
+            // Initial orientation for AGH (e.g., identity or match node if meaningful)
+            this.adaptiveGeometricHub.quaternion.identity();
+
+            if (camera) updateFractalUIScale(this.adaptiveGeometricHub, camera, 500, node.position);
+            this.adaptiveGeometricHub.show();
+            // Fractal axis manipulators are not shown until AGH is interacted with.
+
+        } else if (selectedNodes.size > 0 && this.gizmo) { // Fallback to old gizmo for multi-select for now
             const center = new THREE.Vector3();
             selectedNodes.forEach((n) => center.add(n.position));
             center.divideScalar(selectedNodes.size);
             this.gizmo.position.copy(center);
-
-            // For rotation and scaling of multiple nodes, the gizmo should align with the multiSelectionHelper's orientation
-            if (selectedNodes.size > 1) {
-                // If there's a meaningful average orientation, apply it. Otherwise, world default.
-                // For now, keep it simple: use world orientation for multi-select gizmo rotation/scale.
-                // A more advanced approach might involve calculating an average quaternion or using the first selected node's orientation.
-                this.gizmo.quaternion.identity(); // Reset to world orientation for multi-select
-            } else if (selectedNodes.size === 1) {
-                const node = selectedNodes.values().next().value;
-                if (node.mesh) {
-                    // ShapeNodes have a mesh with world quaternion
-                    this.gizmo.quaternion.copy(node.mesh.getWorldQuaternion(new THREE.Quaternion()));
-                } else {
-                    // HTML nodes don't have a direct 3D mesh rotation by default
-                    this.gizmo.quaternion.identity();
-                }
-            }
+            this.gizmo.quaternion.identity(); // World orientation for multi-select
 
             if (camera) this.gizmo.updateScale(camera);
             this.gizmo.show();
-            // activeGizmoMode is set by toolbar, not selection
-        } else {
-            this.gizmo.hide();
         }
+        // If selectedNodes.size is 0, all transform UIs remain hidden.
+
         this.hudManager.updateHudSelectionInfo();
     };
 
@@ -320,8 +342,30 @@ export class UIManager {
                 document.body.style.cursor = 'grab';
                 $$('.node-common.linking-target').forEach((el) => el.classList.remove('linking-target'));
                 break;
+            case InteractionState.FRACTAL_HUB_ACTIVE: // Cleanup when leaving FRACTAL_HUB_ACTIVE
+                // If manipulators were visible and we are not transitioning to FRACTAL_DRAGGING,
+                // they might need to be explicitly hidden if the new state is IDLE.
+                // However, _onSelectionChanged or specific actions should handle hiding them.
+                // For now, just reset cursor if not handled by subsequent state.
+                document.body.style.cursor = 'grab';
+                break;
+            case InteractionState.FRACTAL_DRAGGING: // Cleanup when leaving FRACTAL_DRAGGING
+                if (this.draggedFractalElementInfo?.element) {
+                     // Ensure originalColor is available or use current material color
+                    const originalColor = this.draggedFractalElementInfo.element.userData.originalColor ||
+                                          (this.draggedFractalElementInfo.element.material.color ?
+                                           this.draggedFractalElementInfo.element.material.color.clone() :
+                                           new THREE.Color(0xffffff)); // Fallback
+                    setFractalElementActive(this.draggedFractalElementInfo.element, false, originalColor);
+                }
+                this.draggedFractalElementInfo = null;
+                this.selectedNodesInitialPositions.clear(); // Clear stored initial positions
+                // Cursor will be set by the new state (e.g., FRACTAL_HUB_ACTIVE or IDLE)
+                this.space.isDragging = false;
+                break;
         }
 
+        const oldState = this.currentState; // Store old state before updating
         this.currentState = newState;
 
         switch (newState) {
@@ -473,12 +517,48 @@ export class UIManager {
                 this._createTempLinkLine(data.sourceNode);
                 break;
             }
+            case InteractionState.FRACTAL_HUB_ACTIVE: {
+                // AGH is visible, manipulators might be too. Cursor is default or pointer if over element.
+                document.body.style.cursor = 'default'; // Or handled by _handleHover
+                // This state implies AGH is visible. Manipulators visibility is toggled by direct AGH click.
+                // Ensure scaling is updated if necessary.
+                const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
+                if (camera && this.adaptiveGeometricHub?.visible) {
+                    const worldPosAGH = this.adaptiveGeometricHub.getWorldPosition(new THREE.Vector3());
+                    updateFractalUIScale(this.adaptiveGeometricHub, camera, 500, worldPosAGH);
+                    if (this.fractalAxisManipulators?.visible) {
+                        const worldPosAxes = this.fractalAxisManipulators.getWorldPosition(new THREE.Vector3());
+                        updateFractalUIScale(this.fractalAxisManipulators, camera, 500, worldPosAxes);
+                    }
+                }
+                break;
+            }
+            case InteractionState.FRACTAL_DRAGGING: {
+                // Data should include { draggedFractalInfo, selectedNodes }
+                // this.draggedFractalElementInfo is set by _onPointerDown before transitioning to this state.
+                // this.selectedNodesInitialPositions is also set in _onPointerDown.
+                document.body.style.cursor = 'grabbing';
+                this.space.isDragging = true;
+                break;
+            }
             case InteractionState.IDLE: {
-                document.body.style.cursor = this.activeGizmo ? 'default' : 'grab';
+                // Ensure fractal UI elements are hidden if we transition to IDLE and they shouldn't be visible.
+                // _onSelectionChanged normally handles this if selection is cleared.
+                // If selection persists but interaction ends (e.g. Esc), AGH might stay if a node is selected.
+                if (this._uiPluginCallbacks.getSelectedNodes()?.size === 0) {
+                    this.adaptiveGeometricHub?.hide();
+                    this.fractalAxisManipulators?.hide();
+                } else if (this.adaptiveGeometricHub?.visible && !this.fractalAxisManipulators?.visible) {
+                    // If only AGH is visible (manipulators were hidden), cursor can be default
+                     document.body.style.cursor = 'default';
+                } else {
+                    // Fallback cursor if gizmo or nothing is relevant
+                    document.body.style.cursor = this.gizmo?.visible ? 'default' : 'grab';
+                }
                 break;
             }
         }
-        this.space.emit('interaction:stateChanged', { newState, oldState: this.currentState, data });
+        this.space.emit('interaction:stateChanged', { newState, oldState: oldState, data });
     }
 
     _onPointerDown = (e) => {
@@ -495,7 +575,83 @@ export class UIManager {
         )
             return;
 
-        // Gizmo Interaction takes precedence
+        // Fractal UI Interaction takes highest precedence
+        if (this.pointerState.button === 0 && targetInfo.fractalElementInfo) {
+            e.preventDefault();
+            e.stopPropagation();
+            const { object: fractalObject, type: fractalType, axis: fractalAxis } = targetInfo.fractalElementInfo;
+            const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
+
+            if (fractalType === 'agh' && selectedNodes.size === 1) {
+                // Clicked on the Adaptive Geometric Hub
+                if (this.fractalAxisManipulators) {
+                    if (this.fractalAxisManipulators.visible) {
+                        this.fractalAxisManipulators.visible = false;
+                        this._transitionToState(InteractionState.IDLE); // Or a FRACTAL_HUB_ONLY state
+                    } else {
+                        const node = selectedNodes.values().next().value;
+                        this.fractalAxisManipulators.position.copy(node.position);
+                        // TODO: Set orientation of manipulators based on node or world, similar to gizmo
+                        this.fractalAxisManipulators.quaternion.identity();
+                        const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
+                        if (camera) updateFractalUIScale(this.fractalAxisManipulators, camera, 500, node.position);
+                        this.fractalAxisManipulators.visible = true;
+                        this._transitionToState(InteractionState.FRACTAL_HUB_ACTIVE);
+                    }
+                }
+            } else if (fractalType === 'translate_axis' && selectedNodes.size > 0) {
+                // Clicked on a fractal axis manipulator
+                const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
+                if (!camera) return;
+
+                const raycaster = new THREE.Raycaster();
+                const pointerNDC = this.space.getPointerNDC(this.pointerState.clientX, this.pointerState.clientY);
+                raycaster.setFromCamera(pointerNDC, camera);
+
+                const intersects = raycaster.intersectObject(fractalObject, false);
+                let initialPointerWorldPos = new THREE.Vector3();
+                if (intersects.length > 0) {
+                    initialPointerWorldPos.copy(intersects[0].point);
+                } else {
+                    // Fallback: project onto a plane (similar to gizmo logic)
+                    const planeNormal = new THREE.Vector3();
+                    camera.getWorldDirection(planeNormal).negate();
+                    const interactionPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(planeNormal, fractalObject.getWorldPosition(new THREE.Vector3()));
+                    if (!raycaster.ray.intersectPlane(interactionPlane, initialPointerWorldPos)) {
+                        initialPointerWorldPos.copy(fractalObject.getWorldPosition(new THREE.Vector3()));
+                    }
+                }
+
+                this.draggedFractalElementInfo = {
+                    element: fractalObject,
+                    type: fractalType,
+                    axis: fractalAxis,
+                    initialPointerWorldPos: initialPointerWorldPos.clone(),
+                    // Store initial positions of selected nodes
+                };
+
+                this.selectedNodesInitialPositions.clear();
+                 selectedNodes.forEach(node => {
+                    this.selectedNodesInitialPositions.set(node.id, node.position.clone());
+                });
+
+                // Setup interaction plane (e.g., perpendicular to drag axis, or view plane)
+                // For axis drag, often a line-plane intersection or point projection is used.
+                // Let's use a view-aligned plane for simplicity for now, passing through the initial hit point.
+                const viewDirection = camera.getWorldDirection(new THREE.Vector3()).negate();
+                this.fractalUIInteractionPlane.setFromNormalAndCoplanarPoint(viewDirection, initialPointerWorldPos);
+
+                setFractalElementActive(fractalObject, true, fractalObject.material.color.clone());
+                this._transitionToState(InteractionState.FRACTAL_DRAGGING, {
+                    draggedFractalInfo: this.draggedFractalElementInfo,
+                    selectedNodes: selectedNodes
+                });
+            }
+            this.contextMenu.hide();
+            return;
+        }
+
+        // Gizmo Interaction (original)
         if (this.pointerState.button === 0 && targetInfo.gizmoHandleInfo) {
             e.preventDefault();
             e.stopPropagation();
@@ -604,6 +760,54 @@ export class UIManager {
             case InteractionState.IDLE:
                 this._handleHover(e);
                 break;
+            case InteractionState.FRACTAL_DRAGGING: {
+                e.preventDefault();
+                if (!this.draggedFractalElementInfo || !this.space.isDragging) break;
+                const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
+                if (!camera) break;
+                const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
+                if (!selectedNodes || selectedNodes.size === 0) break;
+
+                const raycaster = new THREE.Raycaster();
+                const pointerNDC = this.space.getPointerNDC(this.pointerState.clientX, this.pointerState.clientY);
+                raycaster.setFromCamera(pointerNDC, camera);
+
+                const currentPointerWorldPos = new THREE.Vector3();
+                if (!raycaster.ray.intersectPlane(this.fractalUIInteractionPlane, currentPointerWorldPos)) break;
+
+                const dragDelta = new THREE.Vector3().subVectors(currentPointerWorldPos, this.draggedFractalElementInfo.initialPointerWorldPos);
+
+                const axisVector = new THREE.Vector3();
+                if (this.draggedFractalElementInfo.axis === 'x') axisVector.set(1,0,0);
+                else if (this.draggedFractalElementInfo.axis === 'y') axisVector.set(0,1,0);
+                else if (this.draggedFractalElementInfo.axis === 'z') axisVector.set(0,0,1);
+
+                // TODO: Consider fractalAxisManipulators' world orientation if not identity.
+                // For prototype, assume world axes alignment for the manipulators.
+                // If manipulators could be oriented with the node, apply this.fractalAxisManipulators.quaternion to axisVector.
+                const projectedDelta = dragDelta.clone().projectOnVector(axisVector);
+
+                selectedNodes.forEach(node => {
+                    const initialPos = this.selectedNodesInitialPositions.get(node.id);
+                    if (initialPos) {
+                        const newPos = initialPos.clone().add(projectedDelta);
+                        node.setPosition(newPos.x, newPos.y, newPos.z);
+                    }
+                });
+
+                // Update AGH and Manipulators to follow the (first) selected node
+                const primaryNode = selectedNodes.values().next().value;
+                if (primaryNode && this.adaptiveGeometricHub && this.fractalAxisManipulators) {
+                    this.adaptiveGeometricHub.position.copy(primaryNode.position);
+                    this.fractalAxisManipulators.position.copy(primaryNode.position);
+                     if (camera) { // Also update their scale as they move
+                        updateFractalUIScale(this.adaptiveGeometricHub, camera, 500, primaryNode.position);
+                        updateFractalUIScale(this.fractalAxisManipulators, camera, 500, primaryNode.position);
+                    }
+                }
+                this.space.emit('graph:nodes:transformed', { nodes: Array.from(selectedNodes), transformationType: 'translate' });
+                break;
+            }
             case InteractionState.GIZMO_DRAGGING:
                 e.preventDefault();
                 this._handleGizmoDrag(e);
@@ -749,7 +953,36 @@ export class UIManager {
         if (currentInteractionState === InteractionState.LINKING_NODE && e.button === 0) {
             this._uiPluginCallbacks.completeLinking(this.pointerState.clientX, this.pointerState.clientY);
         }
-        this._transitionToState(InteractionState.IDLE);
+
+        const targetInfo = this._getTargetInfo(e); // Get target info for context on pointer up
+
+        if (currentInteractionState === InteractionState.FRACTAL_DRAGGING) {
+            if (this.draggedFractalElementInfo?.element) {
+                // Use the stored original color for deactivation
+                const originalColor = this.draggedFractalElementInfo.element.userData.originalColor || this.draggedFractalElementInfo.element.material.color.clone();
+                setFractalElementActive(this.draggedFractalElementInfo.element, false, originalColor);
+            }
+            this.draggedFractalElementInfo = null;
+            this.selectedNodesInitialPositions.clear();
+            // After dragging a fractal element, if manipulators are still meant to be visible,
+            // transition to FRACTAL_HUB_ACTIVE. Otherwise, IDLE.
+            if (this.fractalAxisManipulators && this.fractalAxisManipulators.visible) {
+                 this._transitionToState(InteractionState.FRACTAL_HUB_ACTIVE);
+            } else {
+                 this._transitionToState(InteractionState.IDLE);
+            }
+        } else if (targetInfo.fractalElementInfo?.type === 'agh' && this.fractalAxisManipulators?.visible && this.currentState !== InteractionState.FRACTAL_DRAGGING && !this.pointerState.isDraggingThresholdMet) {
+            // This case handles a click on AGH that toggled manipulators on. We want to stay in FRACTAL_HUB_ACTIVE.
+            // No explicit transition needed if already in FRACTAL_HUB_ACTIVE from _onPointerDown
+            // However, if _onPointerDown transitioned to FRACTAL_HUB_ACTIVE, and no drag occurred, we are good.
+            // If a drag *almost* happened but didn't meet threshold, pointerState.isDraggingThresholdMet is false.
+            // If we are in IDLE but AGH is clicked to show manipulators, _onPointerDown handles transition.
+            // This block might be redundant if _onPointerDown correctly sets FRACTAL_HUB_ACTIVE.
+            // The main goal is: if manipulators are visible after a click (not drag), state should reflect that.
+        } else if (this.currentState !== InteractionState.IDLE) {
+             this._transitionToState(InteractionState.IDLE);
+        }
+
         this.activePointerId = null;
     };
 
@@ -950,6 +1183,41 @@ export class UIManager {
             const scaleFactor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
             this.space.emit('ui:request:adjustContentScale', { node: targetInfo.node, factor: scaleFactor });
         } else {
+            // Semantic Zoom Placeholder for Fractal UI
+            if (this.hoveredFractalElement &&
+                this.hoveredFractalElement.userData.isFractalUIElement &&
+                this.hoveredFractalElement.userData.axis &&
+                (this.currentState === InteractionState.FRACTAL_HUB_ACTIVE || (this.currentState === InteractionState.IDLE && this.adaptiveGeometricHub?.visible))) {
+
+                e.preventDefault();
+                e.stopPropagation();
+                console.log("Semantic zoom on axis:", this.hoveredFractalElement.userData.axis, "deltaY:", e.deltaY);
+
+                // Placeholder visual feedback: temporarily change color
+                // Ensure originalColor is stored if not already
+                if (!this.hoveredFractalElement.userData.originalColor && this.hoveredFractalElement.material.color) {
+                    this.hoveredFractalElement.userData.originalColor = this.hoveredFractalElement.material.color.clone();
+                }
+                const originalColor = this.hoveredFractalElement.userData.originalColor || new THREE.Color(0xffffff); // Fallback
+
+                this.hoveredFractalElement.material.color.set(e.deltaY < 0 ? 0x00ffff : 0xffff00); // Cyan for zoom in, Yellow for zoom out
+
+                // Store original opacity if not already stored
+                if (this.hoveredFractalElement.userData.originalOpacity === undefined && this.hoveredFractalElement.material.opacity) {
+                    this.hoveredFractalElement.userData.originalOpacity = this.hoveredFractalElement.material.opacity;
+                }
+
+                setTimeout(() => {
+                    if(this.hoveredFractalElement && this.hoveredFractalElement.userData.originalColor) {
+                       setFractalElementActive(this.hoveredFractalElement, true); // Re-apply active state (which uses originalColor as base)
+                    } else if (this.hoveredFractalElement) {
+                       this.hoveredFractalElement.material.color.set(originalColor); // Fallback if no original color was set
+                    }
+                }, 200);
+                return; // Prevent camera zoom
+            }
+
+            // Default camera zoom
             e.preventDefault();
             this.space.emit('ui:request:zoomCamera', e.deltaY);
         }
@@ -984,6 +1252,7 @@ export class UIManager {
         let intersectedEdge = null;
         let metaframeHandleInfo = null;
         let gizmoHandleInfo = null;
+        let fractalElementInfo = null; // Added for fractal UI
 
         if (!nodeControlsButton && !contentEditableEl && !interactiveEl) {
             const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
@@ -992,28 +1261,49 @@ export class UIManager {
                 const pointerNDC = this.space.getPointerNDC(event.clientX, event.clientY);
                 raycaster.setFromCamera(pointerNDC, camera);
 
-                // Check for gizmo intersection only if the current mode matches the handle type or if it's a general part like uniform scale
-                if (this.gizmo && this.gizmo.visible) {
-                    const gizmoIntersects = raycaster.intersectObjects(this.gizmo.handles.children, true); // Check children recursively
+                // 1. Check for Fractal UI intersection first
+                if (this.adaptiveGeometricHub && this.adaptiveGeometricHub.visible) {
+                    const aghIntersect = raycaster.intersectObject(this.adaptiveGeometricHub, false);
+                    if (aghIntersect.length > 0 && aghIntersect[0].object.userData.isFractalUIElement) {
+                        fractalElementInfo = {
+                            object: aghIntersect[0].object,
+                            type: 'agh', // Adaptive Geometric Hub
+                            distance: aghIntersect[0].distance,
+                        };
+                    }
+                }
+                if (!fractalElementInfo && this.fractalAxisManipulators && this.fractalAxisManipulators.visible) {
+                    const axisIntersects = raycaster.intersectObjects(this.fractalAxisManipulators.children, false); // Non-recursive for simple axes group
+                    if (axisIntersects.length > 0 && axisIntersects[0].object.userData.isFractalUIElement) {
+                        const intersectedObject = axisIntersects[0].object;
+                        fractalElementInfo = {
+                            object: intersectedObject,
+                            type: 'translate_axis', // For now, all manipulators are translate axes
+                            axis: intersectedObject.userData.axis,
+                            distance: axisIntersects[0].distance,
+                        };
+                    }
+                }
+
+                // 2. If no fractal UI hit, check for old Gizmo
+                if (!fractalElementInfo && this.gizmo && this.gizmo.visible) {
+                    const gizmoIntersects = raycaster.intersectObjects(this.gizmo.handles.children, true);
                     if (gizmoIntersects.length > 0) {
                         const intersectedHandleMesh = gizmoIntersects[0].object;
                         if (intersectedHandleMesh.userData?.isGizmoHandle) {
-                            // Basic check: does the handle's type match the active gizmo mode?
-                            // (e.g. if mode is 'translate', only allow 'translate' handles)
-                            // This can be refined later with specific toolbar logic to show/hide handles.
-                            // For now, we assume all handles of the gizmo are potentially interactive.
-                            // The activeGizmoMode will primarily dictate how _handleGizmoDrag behaves.
                             gizmoHandleInfo = {
                                 axis: intersectedHandleMesh.userData.axis,
-                                type: intersectedHandleMesh.userData.gizmoType, // 'translate', 'rotate', or 'scale'
+                                type: intersectedHandleMesh.userData.gizmoType,
                                 part: intersectedHandleMesh.userData.part,
-                                object: intersectedHandleMesh, // The actual mesh hit
+                                object: intersectedHandleMesh,
                                 distance: gizmoIntersects[0].distance,
                             };
                         }
                     }
                 }
-                if (!gizmoHandleInfo) {
+
+                // 3. If no UI controls hit, check for graph elements (nodes, edges, metaframes)
+                if (!fractalElementInfo && !gizmoHandleInfo) {
                     const generalIntersect = this.space.intersectedObjects(event.clientX, event.clientY);
                     if (generalIntersect) {
                         const { object, node: resolvedNode, edge: resolvedEdge } = generalIntersect;
@@ -1042,6 +1332,7 @@ export class UIManager {
             intersectedEdge,
             metaframeHandleInfo,
             gizmoHandleInfo,
+            fractalElementInfo, // Added
         };
     }
 
@@ -1108,14 +1399,42 @@ export class UIManager {
             intersectedEdge: newHoveredEdge,
             metaframeHandleInfo: newMFHInfo,
             gizmoHandleInfo: newGizmoHInfo,
+            fractalElementInfo: newFractalElInfo, // Added
         } = targetInfo;
 
-        if (this.hoveredGizmoHandle !== newGizmoHInfo?.object) {
-            if (this.hoveredGizmoHandle && this.gizmo) this.gizmo.setHandleActive(this.hoveredGizmoHandle, false); // Use this.gizmo
-            this.hoveredGizmoHandle = newGizmoHInfo?.object || null;
-            if (this.hoveredGizmoHandle && this.gizmo) this.gizmo.setHandleActive(this.hoveredGizmoHandle, true); // Use this.gizmo
+        // 1. Handle Fractal UI Hover
+        if (this.hoveredFractalElement !== newFractalElInfo?.object) {
+            if (this.hoveredFractalElement) {
+                // Retrieve original color if stored, otherwise it will use current material color as base
+                const originalColor = this.hoveredFractalElement.userData.originalColor || (this.hoveredFractalElement.material.color ? this.hoveredFractalElement.material.color.clone() : undefined);
+                setFractalElementActive(this.hoveredFractalElement, false, originalColor);
+            }
+            this.hoveredFractalElement = newFractalElInfo?.object || null;
+            if (this.hoveredFractalElement) {
+                 // Store original color before highlighting if not already stored
+                if (!this.hoveredFractalElement.userData.originalColor && this.hoveredFractalElement.material.color) {
+                    this.hoveredFractalElement.userData.originalColor = this.hoveredFractalElement.material.color.clone();
+                }
+                 if (!this.hoveredFractalElement.userData.originalOpacity && this.hoveredFractalElement.material.opacity) {
+                    this.hoveredFractalElement.userData.originalOpacity = this.hoveredFractalElement.material.opacity;
+                }
+                setFractalElementActive(this.hoveredFractalElement, true);
+            }
         }
 
+        // 2. Handle Gizmo Hover (original)
+        // Ensure gizmo hover doesn't interfere if fractal hover is active
+        if (!this.hoveredFractalElement && this.hoveredGizmoHandle !== newGizmoHInfo?.object) {
+            if (this.hoveredGizmoHandle && this.gizmo) this.gizmo.setHandleActive(this.hoveredGizmoHandle, false);
+            this.hoveredGizmoHandle = newGizmoHInfo?.object || null;
+            if (this.hoveredGizmoHandle && this.gizmo) this.gizmo.setHandleActive(this.hoveredGizmoHandle, true);
+        } else if (this.hoveredFractalElement && this.hoveredGizmoHandle) {
+            // If fractal element is hovered, ensure gizmo is not also highlighted
+            if (this.gizmo) this.gizmo.setHandleActive(this.hoveredGizmoHandle, false);
+            this.hoveredGizmoHandle = null;
+        }
+
+        // 3. Handle Metaframe Hover (original)
         if (this.hoveredNodeForMetaframe !== newlyHoveredNode) {
             if (this.hoveredNodeForMetaframe && !selectedNodes.has(this.hoveredNodeForMetaframe))
                 this.hoveredNodeForMetaframe.ensureMetaframe()?.hide();
@@ -1155,6 +1474,7 @@ export class UIManager {
             this.hoveredHandleType = newMFHInfo?.type || null;
         }
 
+        // 4. Handle Edge Hover (original)
         const currentlySelectedEdges = this._uiPluginCallbacks.getSelectedEdges() || new Set();
         if (this.hoveredEdge !== newHoveredEdge) {
             if (this.hoveredEdge && !currentlySelectedEdges.has(this.hoveredEdge))
@@ -1163,25 +1483,40 @@ export class UIManager {
             if (this.hoveredEdge && !currentlySelectedEdges.has(this.hoveredEdge)) this.hoveredEdge.setHoverStyle(true);
         }
 
-        if (this.hoveredGizmoHandle) {
-            // TODO: Set cursor based on gizmo handle type (e.g., rotate cursor, scale cursor)
-            // For now, generic pointer for any gizmo handle
+        // Cursor logic prioritizing fractal, then gizmo, then metaframe, etc.
+        if (this.hoveredFractalElement) {
+            document.body.style.cursor = 'pointer'; // Generic pointer for fractal elements
+        } else if (this.hoveredGizmoHandle) {
             document.body.style.cursor = 'pointer';
         } else if (this.currentHoveredGLHandle) {
             /* cursor set by metaframe logic */
-        } else if (this.hoveredEdge) document.body.style.cursor = 'pointer';
-        else if (
+        } else if (this.hoveredEdge) {
+            document.body.style.cursor = 'pointer';
+        } else if (
+            this.adaptiveGeometricHub?.visible || // if fractal UI is active
             this.gizmo?.visible ||
             this.hoveredNodeForMetaframe ||
             (newlyHoveredNode && selectedNodes.has(newlyHoveredNode))
         ) {
-            document.body.style.cursor = this.gizmo?.visible ? 'default' : 'grab';
-        } else document.body.style.cursor = 'grab';
+            document.body.style.cursor = (this.adaptiveGeometricHub?.visible || this.gizmo?.visible) ? 'default' : 'grab';
+        } else {
+            document.body.style.cursor = 'grab';
+        }
 
-        if (this.gizmo?.visible) {
-            // Use this.gizmo
-            const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
-            if (camera) this.gizmo.updateScale(camera); // Use this.gizmo
+        // Update scaling for visible UI elements
+        const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
+        if (camera) {
+            if (this.adaptiveGeometricHub?.visible && this.adaptiveGeometricHub.parent) { // Check parent as it might be removed from scene
+                 const worldPosAGH = this.adaptiveGeometricHub.getWorldPosition(new THREE.Vector3());
+                 updateFractalUIScale(this.adaptiveGeometricHub, camera, 500, worldPosAGH);
+            }
+            if (this.fractalAxisManipulators?.visible && this.fractalAxisManipulators.parent) {
+                const worldPosAxes = this.fractalAxisManipulators.getWorldPosition(new THREE.Vector3());
+                updateFractalUIScale(this.fractalAxisManipulators, camera, 500, worldPosAxes);
+            }
+            if (this.gizmo?.visible && this.gizmo.parent) {
+                this.gizmo.updateScale(camera);
+            }
         }
     }
 
@@ -1278,10 +1613,23 @@ export class UIManager {
         this.toolbar.dispose();
 
         if (this.gizmo) {
-            // Use this.gizmo
             this.space.plugins.getPlugin('RenderingPlugin')?.getWebGLScene()?.remove(this.gizmo);
             this.gizmo.dispose();
             this.gizmo = null;
+        }
+        if (this.adaptiveGeometricHub) {
+            this.space.plugins.getPlugin('RenderingPlugin')?.getWebGLScene()?.remove(this.adaptiveGeometricHub);
+            this.adaptiveGeometricHub.geometry?.dispose();
+            this.adaptiveGeometricHub.material?.dispose();
+            this.adaptiveGeometricHub = null;
+        }
+        if (this.fractalAxisManipulators) {
+            this.space.plugins.getPlugin('RenderingPlugin')?.getWebGLScene()?.remove(this.fractalAxisManipulators);
+            this.fractalAxisManipulators.children.forEach(child => {
+                child.geometry?.dispose();
+                child.material?.dispose();
+            });
+            this.fractalAxisManipulators = null;
         }
         if (this.multiSelectionHelper) {
             // If it was added to any scene, remove it. Typically not added to scene directly.
