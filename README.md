@@ -10,15 +10,30 @@ SpaceGraphJS is a JavaScript library for creating interactive 3D force-directed 
 - **Force-Directed Layout**: Implements a force simulation to automatically arrange nodes and edges.
     - Customizable forces (repulsion, spring-like edges with configurable stiffness and length).
     - Support for different edge constraint types (elastic, rigid, weld).
-- **Interactive UI**:
-    - Drag & drop nodes.
-    - Resize HTML nodes (via Metaframe or potentially new scale gizmo in future).
-    - **3D Translation Gizmo**: Manipulate node positions along X, Y, Z axes or planes.
-    - Context menus for creating nodes, linking, deleting, etc.
-    - Interactive edge menu for adjusting properties like color and thickness.
-    - Smooth camera controls (pan, zoom, focus on node) with GSAP animations.
-    - History for camera movements (back/forward).
-- **Modular Design**: Core components like `SpaceGraph`, `UIManager`, `ForceLayout`, `Camera`, Gizmos, and Node types are organized into classes.
+- **Next-Generation Fractal UI (Experimental)**: SpaceGraphJS is introducing a revolutionary system designed to offer an ergonomic, intuitive, precise, and visually clear way to interact with and manipulate objects in the 3D space. It aims to unify various interaction mechanisms into a single, cohesive, and contextually adaptive interface.
+    - **Adaptive Geometric Hub (AGH)**: Appears automatically on selecting single or multiple nodes, serving as the central point for interactions.
+    - **Transform Mode Cycling**: Clicking the AGH cycles through available transformation modes: Translate, Rotate, and Scale.
+    - **Fractal Manipulators**:
+        - **Translation**: Dedicated X, Y, and Z axis manipulators (lines/cylinders with cones) for precise movement.
+        - **Rotation**: Ring-shaped manipulators for X, Y, and Z axis rotation.
+        - **Scaling**: Cube-based manipulators for individual X, Y, Z axial scaling and a central cube for uniform scaling.
+    - **Semantic Zoom**: Interacting with the mouse wheel while hovering over a manipulator part reveals finer details or different controls (e.g., changing cone heads on translation axes, showing degree markers on rotation rings, or adjusting scale cube appearance).
+    - **Interactive Feedback**: Manipulators provide clear visual feedback on hover (highlighting) and when grabbed.
+    - **Multi-Node Support**: Coherently transforms groups of selected objects around a common pivot point (the AGH).
+    - **Dynamic Scaling**: Fractal UI elements maintain a consistent apparent size on screen regardless of camera zoom.
+- **Interactive UI**: Provides a range of tools for graph interaction and navigation:
+    - **Direct Manipulation**:
+        - Drag & drop nodes for quick repositioning.
+        - Resize HTML nodes using their Metaframe interface.
+    - **Contextual Operations**:
+        - Context menus (right-click) for creating nodes, linking, deleting, and other actions.
+        - Interactive edge menu for adjusting edge properties like color and thickness.
+    - **Legacy Transformation Gizmo**:
+        - A traditional 3D gizmo is available for X, Y, Z axis and planar translations. (Note: The new Fractal UI is recommended for most transformations).
+    - **Camera Management**:
+        - Smooth camera controls (pan, zoom, orbit, focus on node) with GSAP animations.
+        - Camera movement history (back/forward).
+- **Modular Design**: Core components like `SpaceGraph`, `UIManager`, `ForceLayout`, `Camera`, Gizmos, Node types, and the Fractal UI are organized into classes.
 - **ES Module Support**: Can be easily integrated into modern JavaScript projects.
 
 ## Live Demo
