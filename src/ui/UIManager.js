@@ -257,6 +257,7 @@ export class UIManager {
                 if(this.fractalAxisManipulators) this.fractalAxisManipulators.visible = false;
                 if(this.fractalRotationManipulators) this.fractalRotationManipulators.visible = false;
                 if(this.fractalScaleManipulators) this.fractalScaleManipulators.visible = false;
+                this.hudManager.updateAGHModeIndicator(this.aghCurrentModeCycle); // Update HUD
             }
         } else {
             // Handle other tools if any, or set to null if an unknown tool is requested
@@ -268,6 +269,7 @@ export class UIManager {
             type: 'node' // Assume node selection for context, or get actual type
         });
         this.space.emit('ui:activeToolViewUpdated', { mode: this.activeGizmoMode });
+        this.hudManager.updateAGHModeIndicator(this.aghCurrentModeCycle); // Also update if tool mode changes affecting AGH
     };
 
     _createSelectionScaleHandles() {
@@ -414,6 +416,7 @@ export class UIManager {
         });
 
         this.aghCurrentModeCycle = 0; // Reset AGH cycle state
+        this.hudManager.updateAGHModeIndicator(this.aghCurrentModeCycle); // Update HUD on selection change
 
         if (selectedNodes.size > 0) {
             const selectionBoundingBox = new THREE.Box3();
@@ -447,12 +450,12 @@ export class UIManager {
             size.z = Math.max(size.z, minDim);
 
             let showAGH = false; // Default: direct manipulation handles take precedence
-            let showOldGizmo = false;
+            let _showOldGizmo = false;
             let showSelectionHandles = true;
 
             if (this.activeGizmoMode === 'rotate' || this.activeGizmoMode === 'translate') {
                 showSelectionHandles = false; // Don't show selection handles if an old gizmo tool is active
-                showOldGizmo = true;
+                _showOldGizmo = true;
                 showAGH = false; // Also hide AGH if old gizmo is active
             }
             // If AGH cycle is active for a transform, it might take precedence too.
@@ -544,6 +547,7 @@ export class UIManager {
             if (this.fractalAxisManipulators) this.fractalAxisManipulators.visible = false;
             if (this.fractalRotationManipulators) this.fractalRotationManipulators.visible = false;
             if (this.fractalScaleManipulators) this.fractalScaleManipulators.visible = false;
+            this.hudManager.updateAGHModeIndicator(0); // No nodes selected, so AGH mode is effectively None
         }
         this.hudManager.updateHudSelectionInfo();
     };
@@ -887,7 +891,7 @@ export class UIManager {
                 const selectedNodes = data.selectedNodes;
 
                 if (!this.selectionScaleHandlesGroup || !this.selectionScaleHandlesGroup.userData.currentBoundingBox || selectedNodes.size === 0) {
-                    console.warn("SCALING_SELECTION: Missing data for scaling operation.");
+                    // console.warn("SCALING_SELECTION: Missing data for scaling operation.");
                     this._transitionToState(InteractionState.IDLE);
                     return;
                 }
@@ -1055,6 +1059,7 @@ export class UIManager {
                 }
 
                 this._transitionToState(InteractionState.FRACTAL_HUB_ACTIVE);
+                this.hudManager.updateAGHModeIndicator(this.aghCurrentModeCycle); // Update HUD
 
             } else if (fractalType === 'translate_axis' && selectedNodes.size > 0) {
                 const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
@@ -1252,6 +1257,7 @@ export class UIManager {
                 });
             }
             this.contextMenu.hide();
+            this.hudManager.hideFractalTooltip(); // Hide tooltip on click/drag start
             return;
         }
 
@@ -1392,7 +1398,7 @@ export class UIManager {
 
                 const initialBBox = this.selectionScaleHandlesGroup.userData.originalBoundingBox;
                 const initialCentroid = this.selectionScaleHandlesGroup.userData.initialCentroid.clone();
-                const handleName = this.draggedSelectionScaleHandleInfo.handle.name;
+                const _handleName = this.draggedSelectionScaleHandleInfo.handle.name;
 
                 // Project pointer onto a plane for consistent interaction
                 // Plane is typically aligned with camera view, passing through the initial handle position
@@ -1450,7 +1456,7 @@ export class UIManager {
                         } else if (node.mesh) { // Fallback for simple mesh scaling
                            // This assumes the mesh's local scale directly corresponds to its world size
                            // relative to its initial world size.
-                           const baseSize = this.selectedNodesInitialScales.get(node.id); // This was world scale or actual size
+                           const _baseSize = this.selectedNodesInitialScales.get(node.id); // This was world scale or actual size
                            if (node.baseSize) { // HtmlNode like
                                 node.mesh.scale.set(newNodeSize.x / node.baseSize.width, newNodeSize.y / node.baseSize.height, newNodeSize.z / (node.baseSize.depth || 1));
                            } else { // ShapeNode like - assuming initial mesh scale was 1,1,1 for its 'size'
@@ -1481,6 +1487,7 @@ export class UIManager {
 
                 this.selectionScaleHandlesGroup.position.copy(newSelectionBBox.getCenter(new THREE.Vector3()));
                 const currentGroupSize = newSelectionBBox.getSize(new THREE.Vector3());
+                const minDim = 0.1; // Define minDim here
                 currentGroupSize.x = Math.max(minDim, currentGroupSize.x);
                 currentGroupSize.y = Math.max(minDim, currentGroupSize.y);
                 currentGroupSize.z = Math.max(minDim, currentGroupSize.z);
@@ -1682,8 +1689,8 @@ export class UIManager {
                 // Determine scale factor based on dominant screen delta component, relative to camera view
                 // This is a common approach for screen-space driven scaling.
                 // Project a unit vector along camera's right and up onto the screen plane.
-                const camRight = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
-                const camUp = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+                const _camRight = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
+                const _camUp = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
 
                 // For axial scaling, we want movement along the axis on screen to drive scale.
                 // For uniform, a general "outward" mouse movement from center.
@@ -1692,7 +1699,7 @@ export class UIManager {
                 // To make it more intuitive: movement away from the screen center (or manipulator center projected to screen)
                 // could mean scale up, towards means scale down.
 
-                const sensitivity = 0.005; // General sensitivity
+                const _sensitivity = 0.005; // General sensitivity
                 let scaleMultiplierDelta = 1.0;
 
                 if (scaleType === 'scale_uniform') {
@@ -1848,7 +1855,7 @@ export class UIManager {
                         // dy (vertical screen movement) controls Z depth
                         const zDelta = -dy * ALT_Z_DRAG_SENSITIVITY; // Invert dy for natural feel (drag up = move further)
                         nodesToMove.forEach(node => {
-                            const initialPos = this.selectedNodesInitialPositions.get(node.id) || this.draggedNodeInitialWorldPos;
+                            const _initialPos = this.selectedNodesInitialPositions.get(node.id) || this.draggedNodeInitialWorldPos;
                             // It's better to apply delta to the position at the start of the alt-drag or overall drag.
                             // For simplicity, we'll adjust current position based on delta from last frame.
                             // This requires storing the *absolute* initial position for each node if ALT is held.
@@ -2158,14 +2165,24 @@ export class UIManager {
         const selectedEdges = this._uiPluginCallbacks.getSelectedEdges();
         const primarySelectedNode = selectedNodes.size > 0 ? selectedNodes.values().next().value : null;
         const primarySelectedEdge = selectedEdges.size > 0 ? selectedEdges.values().next().value : null;
-        let handled = false;
         let msg = ''; // msg variable declared here
+        const activeEl = document.activeElement;
+        const isEditingText =
+            activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable);
+        if (isEditingText && e.key !== 'Escape') return;
+
+        const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
+        const selectedEdges = this._uiPluginCallbacks.getSelectedEdges();
+        const primarySelectedNode = selectedNodes.size > 0 ? selectedNodes.values().next().value : null;
+        const primarySelectedEdge = selectedEdges.size > 0 ? selectedEdges.values().next().value : null;
+        let handled = false;
+        // Removed duplicated lines that were here
 
         switch (e.key) {
             case 'Delete':
-            case 'Backspace': {
+            case 'Backspace':
                 if (primarySelectedNode) {
-                    msg = // msg is assigned here
+                    msg =
                         selectedNodes.size > 1
                             ? `Delete ${selectedNodes.size} selected nodes?`
                             : `Delete node "${primarySelectedNode.id.substring(0, 10)}..."?`;
@@ -2176,7 +2193,7 @@ export class UIManager {
                     });
                     handled = true;
                 } else if (primarySelectedEdge) {
-                    msg = // msg is assigned here
+                    msg =
                         selectedEdges.size > 1
                             ? `Delete ${selectedEdges.size} selected edges?`
                             : `Delete edge "${primarySelectedEdge.id.substring(0, 10)}..."?`;
@@ -2188,8 +2205,7 @@ export class UIManager {
                     handled = true;
                 }
                 break;
-            }
-            case 'Escape': {
+            case 'Escape':
                 if (this._uiPluginCallbacks.getIsLinking()) {
                     this._uiPluginCallbacks.cancelLinking();
                     handled = true;
@@ -2294,8 +2310,6 @@ export class UIManager {
 
                 e.preventDefault();
                 e.stopPropagation();
-                // console.log("Semantic zoom on axis:", this.hoveredFractalElement.userData.axis, "deltaY:", e.deltaY); // Debug
-
                 // Initialize or update zoom level stored on the hovered element's userData
                 if (this.hoveredFractalElement.userData.zoomLevel === undefined) {
                     this.hoveredFractalElement.userData.zoomLevel = 0;
@@ -2318,7 +2332,6 @@ export class UIManager {
                     applySemanticZoomToAxis(this.fractalAxisManipulators, elementAxis, newZoomLevel);
                 } else if (elementType === 'rotate_axis' && this.fractalRotationManipulators && elementAxis && ['x', 'y', 'z'].includes(elementAxis)) {
                     // Placeholder: Call a specific function for ring zoom or extend applySemanticZoomToAxis
-                    console.log(`Attempting semantic zoom on ${elementAxis}-axis rotation ring to level ${newZoomLevel}`);
                     // applySemanticZoomToRing(this.fractalRotationManipulators, elementAxis, newZoomLevel); // Future function
                     // For now, let's try to use applySemanticZoomToAxis if it can handle rings or add a simple case there.
                     // This might require applySemanticZoomToAxis to be more generic or to have specific handling for rings.
@@ -2332,7 +2345,7 @@ export class UIManager {
                         applySemanticZoomToAxis(this.fractalScaleManipulators, elementAxis, newZoomLevel, elementType); // Pass 'scale_axis' or 'scale_uniform' as type
                     }
                 } else {
-                    console.log(`Semantic zoom not applied: Invalid elementType (${elementType}), axisType (${elementAxis}), or manipulators not found.`);
+                    // console.log(`Semantic zoom not applied: Invalid elementType (${elementType}), axisType (${elementAxis}), or manipulators not found.`);
                 }
                 return; // Prevent camera zoom
             }
@@ -2511,14 +2524,22 @@ export class UIManager {
             }
             this.currentHoveredGLHandle = null;
             this.hoveredHandleType = null;
+
             if (this.hoveredGizmoHandle && this.gizmo) this.gizmo.setHandleActive(this.hoveredGizmoHandle, false); // Use this.gizmo
             this.hoveredGizmoHandle = null;
+
+            if (this.hoveredFractalElement) { // If exiting hover from a fractal element, hide its tooltip
+                this.hudManager.hideFractalTooltip();
+            }
+            // this.hoveredFractalElement will be nulled or updated below
+
             if (this.hoveredEdge) {
                 const selectedEdges = this._uiPluginCallbacks.getSelectedEdges() || new Set();
                 if (!selectedEdges.has(this.hoveredEdge)) this.hoveredEdge.setHoverStyle(false);
             }
             this.hoveredEdge = null;
-            return;
+            // Note: We don't return early here if exiting hover, as we need to check for new hovers below.
+            // The actual hoveredFractalElement is cleared/updated after checking new target.
         }
 
         const targetInfo = this._getTargetInfo(e);
@@ -2537,18 +2558,27 @@ export class UIManager {
                 const originalColor = oldHoveredElement.userData.originalColor ||
                                       (oldHoveredElement.material.color ? oldHoveredElement.material.color.clone() : new THREE.Color(0xffffff));
                 setFractalElementActive(oldHoveredElement, false, originalColor, false); // isActive = false, isGrabbed = false
+                this.hudManager.hideFractalTooltip();
             }
 
             this.hoveredFractalElement = newFractalElInfo?.object || null;
 
             if (this.hoveredFractalElement) {
                 const newHoveredElement = this.hoveredFractalElement;
-                 // Store original color before highlighting if not already stored (setFractalElementActive handles this internally now)
                 const originalColor = newHoveredElement.userData.originalColor ||
                                       (newHoveredElement.material.color ? newHoveredElement.material.color.clone() : new THREE.Color(0xffffff));
                 setFractalElementActive(newHoveredElement, true, originalColor, false); // isActive = true, isGrabbed = false
+                if (newHoveredElement.userData.tooltipText) {
+                    this.hudManager.showFractalTooltip(newHoveredElement.userData.tooltipText, e.clientX, e.clientY);
+                }
+            }
+        } else if (this.hoveredFractalElement && newFractalElInfo?.object === this.hoveredFractalElement) {
+            // If still hovering the same fractal element, update tooltip position
+            if (this.hoveredFractalElement.userData.tooltipText) {
+                this.hudManager.showFractalTooltip(this.hoveredFractalElement.userData.tooltipText, e.clientX, e.clientY);
             }
         }
+
 
         // 2. Handle Gizmo Hover (original)
         // Ensure gizmo hover doesn't interfere if fractal hover is active
@@ -2870,7 +2900,7 @@ export class UIManager {
         // --- Rotation ---
         else if (gizmoInfo.type === 'rotate') {
             if (!gizmoInfo.rotationPlane || gizmoInfo.initialAngle === undefined || !gizmoInfo.cumulativeDeltaQuaternion || !gizmoInfo.gizmoCenter) {
-                console.warn("Gizmo rotation not properly initialized.", gizmoInfo);
+                // console.warn("Gizmo rotation not properly initialized.", gizmoInfo);
                 return;
             }
 
