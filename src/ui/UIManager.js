@@ -278,8 +278,8 @@ export class UIManager {
         const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
 
         // Hide all transform UIs by default, then show the appropriate one.
-        this.gizmo?.hide();
-        this.adaptiveGeometricHub?.hide();
+        if (this.gizmo) this.gizmo.hide(); // Assuming TranslationGizmo has a hide method
+        if (this.adaptiveGeometricHub) this.adaptiveGeometricHub.visible = false;
 
         // Reset zoom levels on fractal manipulators if they are about to be hidden
         const resetZoomLevels = (manipulatorGroup) => {
@@ -287,6 +287,7 @@ export class UIManager {
                 manipulatorGroup.children.forEach(child => {
                     if (child.userData.isFractalUIElement && child.userData.axis) { // Also check type if rings have different zoom logic
                         child.userData.zoomLevel = 0;
+                        // todo: re-apply base semantic zoom visuals if necessary
                     }
                 });
             }
@@ -296,31 +297,33 @@ export class UIManager {
         resetZoomLevels(this.fractalRotationManipulators);
         resetZoomLevels(this.fractalScaleManipulators);
 
-        this.fractalAxisManipulators?.hide();
-        this.fractalRotationManipulators?.hide();
-        this.fractalScaleManipulators?.hide();
+        if (this.fractalAxisManipulators) this.fractalAxisManipulators.visible = false;
+        if (this.fractalRotationManipulators) this.fractalRotationManipulators.visible = false;
+        if (this.fractalScaleManipulators) this.fractalScaleManipulators.visible = false;
         this.aghCurrentModeCycle = 0; // Reset AGH cycle state
 
-        if (selectedNodes.size === 1 && this.adaptiveGeometricHub) {
-            const node = selectedNodes.values().next().value;
-            this.adaptiveGeometricHub.position.copy(node.position);
-            this.adaptiveGeometricHub.quaternion.identity(); // AGH is world-aligned
-
-            if (camera) updateFractalUIScale(this.adaptiveGeometricHub, camera, REFERENCE_DISTANCE_FRACTAL_UI, node.position);
-            this.adaptiveGeometricHub.show();
-            // Manipulators are hidden by default, shown by AGH interaction.
-
-        } else if (selectedNodes.size > 0 && this.gizmo) { // Fallback to old gizmo for multi-select
+        if (selectedNodes.size > 0 && this.adaptiveGeometricHub) {
             const center = new THREE.Vector3();
             selectedNodes.forEach((n) => center.add(n.position));
             center.divideScalar(selectedNodes.size);
-            this.gizmo.position.copy(center);
-            this.gizmo.quaternion.identity(); // World orientation for multi-select
 
-            if (camera) this.gizmo.updateScale(camera);
-            this.gizmo.show();
+            this.adaptiveGeometricHub.position.copy(center);
+            this.adaptiveGeometricHub.quaternion.identity(); // AGH is world-aligned
+
+            if (camera) updateFractalUIScale(this.adaptiveGeometricHub, camera, REFERENCE_DISTANCE_FRACTAL_UI, center);
+            this.adaptiveGeometricHub.visible = true;
+            // Manipulators are hidden by default, shown by AGH interaction (even for multi-select).
+            // The old gizmo is no longer shown for multi-node selections if AGH is active.
+            if (this.gizmo) this.gizmo.hide(); // Ensure old gizmo is hidden if fractal UI is taking over
+
+        } else if (selectedNodes.size === 0) {
+            // If selectedNodes.size is 0, all transform UIs (including AGH) remain hidden.
+            // This is implicitly handled by the initial hide calls and no subsequent show calls.
         }
-        // If selectedNodes.size is 0, all transform UIs remain hidden.
+        // Note: The original `else if (selectedNodes.size > 0 && this.gizmo)` for fallback to old gizmo
+        // is now superseded by showing the AGH for multi-node selections.
+        // If, for some reason, AGH is not available, then the old gizmo would not show either
+        // with this new structure. This assumes AGH is always the preferred method.
 
         this.hudManager.updateHudSelectionInfo();
     };
@@ -633,11 +636,15 @@ export class UIManager {
             const { object: fractalObject, type: fractalType, axis: fractalAxis } = targetInfo.fractalElementInfo;
             const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
 
-            if (fractalType === 'agh' && selectedNodes.size === 1) {
+            // AGH click behavior now applies if any nodes are selected (single or multiple)
+            if (fractalType === 'agh' && selectedNodes.size > 0 && this.adaptiveGeometricHub) {
                 // Clicked on the Adaptive Geometric Hub: Cycle through manipulator modes
                 this.aghCurrentModeCycle = (this.aghCurrentModeCycle + 1) % 4; // 0:None, 1:Translate, 2:Rotate, 3:Scale
 
-                const node = selectedNodes.values().next().value;
+                // Determine the pivot/center for the manipulators.
+                // This will be the AGH's current position, which is the centroid for multi-select
+                // or the single node's position for single-select.
+                const manipulatorPosition = this.adaptiveGeometricHub.position.clone();
                 const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
 
                 // Hide all first, then show the current mode's manipulators
@@ -693,7 +700,8 @@ export class UIManager {
                 }
 
                 if (activeManipulatorGroup) {
-                    activeManipulatorGroup.position.copy(node.position);
+                    // Position the active manipulator group at the AGH's position
+                    activeManipulatorGroup.position.copy(manipulatorPosition);
                     activeManipulatorGroup.quaternion.identity(); // World aligned
                     // Reset zoom levels for all children of the now active group before making visible
                     activeManipulatorGroup.children.forEach(child => {
@@ -706,7 +714,8 @@ export class UIManager {
                              applySemanticZoomToAxis(activeManipulatorGroup, child.userData.axis, 0, manipulatorType);
                         }
                     });
-                    if (camera) updateFractalUIScale(activeManipulatorGroup, camera, REFERENCE_DISTANCE_FRACTAL_UI, node.position);
+                    // Update scale based on AGH's position (centroid or single node)
+                    if (camera) updateFractalUIScale(activeManipulatorGroup, camera, REFERENCE_DISTANCE_FRACTAL_UI, manipulatorPosition);
                     activeManipulatorGroup.visible = true;
                 }
 
@@ -1041,14 +1050,18 @@ export class UIManager {
                     }
                 });
 
-                // Update AGH and Manipulators to follow the (first) selected node
-                const primaryNode = selectedNodes.values().next().value;
-                if (primaryNode && this.adaptiveGeometricHub && this.fractalAxisManipulators) {
-                    this.adaptiveGeometricHub.position.copy(primaryNode.position);
-                    this.fractalAxisManipulators.position.copy(primaryNode.position);
-                     if (camera) { // Also update their scale as they move
-                        updateFractalUIScale(this.adaptiveGeometricHub, camera, REFERENCE_DISTANCE_FRACTAL_UI, primaryNode.position);
-                        updateFractalUIScale(this.fractalAxisManipulators, camera, REFERENCE_DISTANCE_FRACTAL_UI, primaryNode.position);
+                // Update AGH and Manipulators to follow the centroid of the selected nodes
+                if (this.adaptiveGeometricHub && this.fractalAxisManipulators && selectedNodes.size > 0) {
+                    const currentCentroid = new THREE.Vector3();
+                    selectedNodes.forEach(node => currentCentroid.add(node.position));
+                    currentCentroid.divideScalar(selectedNodes.size);
+
+                    this.adaptiveGeometricHub.position.copy(currentCentroid);
+                    this.fractalAxisManipulators.position.copy(currentCentroid);
+
+                    if (camera) { // Also update their scale as they move
+                        updateFractalUIScale(this.adaptiveGeometricHub, camera, REFERENCE_DISTANCE_FRACTAL_UI, currentCentroid);
+                        updateFractalUIScale(this.fractalAxisManipulators, camera, REFERENCE_DISTANCE_FRACTAL_UI, currentCentroid);
                     }
                 }
                 this.space.emit('graph:nodes:transformed', { nodes: Array.from(selectedNodes), transformationType: 'translate' });
@@ -1056,7 +1069,7 @@ export class UIManager {
             }
             case InteractionState.FRACTAL_ROTATING: {
                 e.preventDefault();
-                if (!this.draggedFractalElementInfo || !this.space.isDragging) break;
+                if (!this.draggedFractalElementInfo || !this.space.isDragging) break; // Add null check for this.draggedFractalElementInfo
                 const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
                 if (!camera) break;
                 const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
@@ -1133,7 +1146,7 @@ export class UIManager {
             }
             case InteractionState.FRACTAL_SCALING: {
                 e.preventDefault();
-                if (!this.draggedFractalElementInfo || !this.space.isDragging) break;
+                if (!this.draggedFractalElementInfo || !this.space.isDragging) break; // Add null check for this.draggedFractalElementInfo
                 const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
                 if (!camera) break;
                 const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
@@ -1141,59 +1154,68 @@ export class UIManager {
 
                 const { axis: scaleAxis, type: scaleType, startPointerScreenPos } = this.draggedFractalElementInfo;
                 const currentPointerScreenPos = new THREE.Vector2(this.pointerState.clientX, this.pointerState.clientY);
-
-                // Calculate screen-space delta
                 const screenDelta = currentPointerScreenPos.clone().sub(startPointerScreenPos);
+                const sensitivity = 0.005;
+                let scaleFactorDelta = (screenDelta.x - screenDelta.y) * sensitivity;
 
-                // Determine scale factor based on screenDelta.
-                // A common approach: sum of dx and dy, or just dy if constrained.
-                // Positive delta for increase, negative for decrease.
-                // Sensitivity factor to control scaling speed.
-                const sensitivity = 0.005; // Adjust as needed
-                let scaleFactorDelta = (screenDelta.x - screenDelta.y) * sensitivity; // Using (dx - dy) for a diagonal-like control feel for uniform.
+                // Pivot for scaling: AGH center (which is the manipulators' group position)
+                const pivotPoint = this.fractalScaleManipulators.position.clone();
+                let overallScaleMultiplier = 1.0 + scaleFactorDelta;
+                overallScaleMultiplier = Math.max(0.01, overallScaleMultiplier); // Prevent zero or negative scale
 
                 selectedNodes.forEach(node => {
-                    const initialScale = this.selectedNodesInitialScales.get(node.id);
-                    const initialPos = this.selectedNodesInitialPositions.get(node.id); // For potential pivot
-                    if (!initialScale || !initialPos) return;
+                    const initialScaleVec = this.selectedNodesInitialScales.get(node.id); // This is initial world dimensions
+                    const initialPos = this.selectedNodesInitialPositions.get(node.id);
+                    if (!initialScaleVec || !initialPos) return;
 
-                    let newScale = initialScale.clone();
-                    let finalScaleMultiplier = 1.0 + scaleFactorDelta;
-                    finalScaleMultiplier = Math.max(0.01, finalScaleMultiplier); // Prevent zero or negative scale
+                    // 1. Scale node dimensions
+                    const newAbsoluteNodeDimensions = initialScaleVec.clone();
+                    if (scaleType === 'scale_uniform') {
+                        newAbsoluteNodeDimensions.multiplyScalar(overallScaleMultiplier);
+                    } else if (scaleType === 'scale_axis') {
+                        // Axial scaling needs to be applied in the object's local frame if the object is rotated.
+                        // However, the fractal manipulators are world-aligned.
+                        // For simplicity, this axial scale is also world-aligned.
+                        // If node.resize expects world dimensions, this is fine.
+                        if (scaleAxis === 'x') newAbsoluteNodeDimensions.x *= overallScaleMultiplier;
+                        else if (scaleAxis === 'y') newAbsoluteNodeDimensions.y *= overallScaleMultiplier;
+                        else if (scaleAxis === 'z') newAbsoluteNodeDimensions.z *= overallScaleMultiplier;
+                    }
+                    // Ensure minimum dimensions for the node
+                    newAbsoluteNodeDimensions.x = Math.max(1, newAbsoluteNodeDimensions.x);
+                    newAbsoluteNodeDimensions.y = Math.max(1, newAbsoluteNodeDimensions.y);
+                    newAbsoluteNodeDimensions.z = Math.max(1, newAbsoluteNodeDimensions.z);
+                    node.resize(newAbsoluteNodeDimensions);
+
+
+                    // 2. Scale node position relative to the pivot point
+                    const offsetFromPivot = initialPos.clone().sub(pivotPoint);
 
                     if (scaleType === 'scale_uniform') {
-                        newScale.multiplyScalar(finalScaleMultiplier);
+                        offsetFromPivot.multiplyScalar(overallScaleMultiplier);
                     } else if (scaleType === 'scale_axis') {
-                        if (scaleAxis === 'x') newScale.x *= finalScaleMultiplier;
-                        else if (scaleAxis === 'y') newScale.y *= finalScaleMultiplier;
-                        else if (scaleAxis === 'z') newScale.z *= finalScaleMultiplier;
+                        // Apply world-axis-aligned scale to the offset vector
+                        if (scaleAxis === 'x') offsetFromPivot.x *= overallScaleMultiplier;
+                        else if (scaleAxis === 'y') offsetFromPivot.y *= overallScaleMultiplier;
+                        else if (scaleAxis === 'z') offsetFromPivot.z *= overallScaleMultiplier;
                     }
-
-                    // Node's resize method expects world dimensions
-                    // If initialScale was already world dimensions (e.g. from getActualSize),
-                    // then newScale is the new target world dimensions.
-                    // If Node.resize takes absolute world dimensions:
-                    node.resize(newScale);
-
-                    // If scaling around a pivot (e.g., AGH center) and not node center:
-                    // This is more complex and depends on how Node.resize handles position.
-                    // For now, assuming Node.resize scales from its own center.
-                    // If pivot is this.fractalScaleManipulators.position:
-                    // const pivot = this.fractalScaleManipulators.position;
-                    // const offset = initialPos.clone().sub(pivot);
-                    // offset.multiplyScalar(finalScaleMultiplier); // This would be for uniform scale if pivot is involved
-                    // const newPos = pivot.clone().add(offset);
-                    // node.setPosition(newPos.x, newPos.y, newPos.z);
+                    const newPos = pivotPoint.clone().add(offsetFromPivot);
+                    node.setPosition(newPos.x, newPos.y, newPos.z);
                 });
 
-                // Update AGH and Manipulators (position and scale)
-                const primaryNode = selectedNodes.values().next().value;
-                if (primaryNode && this.adaptiveGeometricHub && this.fractalScaleManipulators) {
-                    this.adaptiveGeometricHub.position.copy(primaryNode.position);
-                    this.fractalScaleManipulators.position.copy(primaryNode.position);
-                     if (camera) {
-                        updateFractalUIScale(this.adaptiveGeometricHub, camera, REFERENCE_DISTANCE_FRACTAL_UI, primaryNode.position);
-                        updateFractalUIScale(this.fractalScaleManipulators, camera, REFERENCE_DISTANCE_FRACTAL_UI, primaryNode.position);
+                // Update AGH and Manipulators to follow the new centroid
+                // The pivotPoint (AGH position) itself does not change during a continuous scale drag.
+                // But the visual scale of AGH/manipulators might need update due to camera movement relative to it.
+                // The centroid of nodes might shift if scaling isn't perfectly symmetrical for all nodes from the group centroid.
+                // For now, we assume the AGH/manipulator group remains at the initial centroid during the drag.
+                // Its scale is updated by _handleHover or when transitioning to FRACTAL_HUB_ACTIVE.
+                // Let's ensure the AGH and manipulators stay at the pivotPoint established at drag start.
+                if (this.adaptiveGeometricHub && this.fractalScaleManipulators) {
+                    this.adaptiveGeometricHub.position.copy(pivotPoint); // Ensure it stays at pivot
+                    this.fractalScaleManipulators.position.copy(pivotPoint); // Ensure it stays at pivot
+                    if (camera) {
+                        updateFractalUIScale(this.adaptiveGeometricHub, camera, REFERENCE_DISTANCE_FRACTAL_UI, pivotPoint);
+                        updateFractalUIScale(this.fractalScaleManipulators, camera, REFERENCE_DISTANCE_FRACTAL_UI, pivotPoint);
                     }
                 }
                 this.space.emit('graph:nodes:transformed', { nodes: Array.from(selectedNodes), transformationType: 'scale' });

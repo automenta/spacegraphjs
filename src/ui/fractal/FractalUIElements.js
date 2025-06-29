@@ -168,19 +168,15 @@ export function setFractalElementActive(fractalMesh, isActive, originalColor, is
     }
     // Note: originalScaleForTransform is not used here anymore, using preGrabScale for temporary grab scaling
 
-    const baseColor = fractalMesh.userData.originalColor || (fractalMesh.material.color ? fractalMesh.material.color.clone() : new THREE.Color(0xffffff));
-    const baseOpacity = fractalMesh.userData.originalOpacity !== undefined ? fractalMesh.userData.originalOpacity : 0.7;
-    const baseEmissiveHex = fractalMesh.userData.originalEmissive !== undefined ? fractalMesh.userData.originalEmissive : 0x000000;
-
-    // Store the true original emissive (pre-any-effect)
+    // Store the true original emissive (pre-any-effect) if not already stored by earlier checks.
+    // This ensures baseEmissiveHex uses the absolute original value.
     if (fractalMesh.material.emissive && fractalMesh.userData.originalEmissive === undefined) {
         fractalMesh.userData.originalEmissive = fractalMesh.material.emissive.getHex();
     }
 
     const baseColor = fractalMesh.userData.originalColor || (fractalMesh.material.color ? fractalMesh.material.color.clone() : new THREE.Color(0xffffff));
     const baseOpacity = fractalMesh.userData.originalOpacity !== undefined ? fractalMesh.userData.originalOpacity : 0.7;
-    // originalEmissive is the true base, before any zoom or hover/grab effect.
-    const baseEmissiveHex = fractalMesh.userData.originalEmissive !== undefined ? fractalMesh.userData.originalEmissive : 0x000000;
+    const baseEmissiveHex = fractalMesh.userData.originalEmissive !== undefined ? fractalMesh.userData.originalEmissive : 0x000000; // This now correctly refers to the true original
 
     // Handle SCALING for grab effect
     if (isGrabbed && isActive) { // Apply scale effect only when grab starts
