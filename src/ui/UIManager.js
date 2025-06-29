@@ -281,27 +281,43 @@ export class UIManager {
         if (this.gizmo) this.gizmo.hide(); // Assuming TranslationGizmo has a hide method
         if (this.adaptiveGeometricHub) this.adaptiveGeometricHub.visible = false;
 
-        // Reset zoom levels on fractal manipulators if they are about to be hidden
-        const resetZoomLevels = (manipulatorGroup) => {
-            if (manipulatorGroup && manipulatorGroup.visible) {
-                manipulatorGroup.children.forEach(child => {
-                    if (child.userData.isFractalUIElement && child.userData.axis) { // Also check type if rings have different zoom logic
-                        child.userData.zoomLevel = 0;
-                        // todo: re-apply base semantic zoom visuals if necessary
-                    }
-                });
-            }
-        };
+        // Hide all manipulator groups and reset their zoom levels and visual states.
+        const manipulatorGroupsToReset = [
+            this.fractalAxisManipulators,
+            this.fractalRotationManipulators,
+            this.fractalScaleManipulators
+        ];
 
-        const groupsToHide = [this.fractalAxisManipulators, this.fractalRotationManipulators, this.fractalScaleManipulators];
-        groupsToHide.forEach(group => {
+        manipulatorGroupsToReset.forEach(group => {
             if (group) {
-                resetZoomLevels(group); // Reset zoom levels before hiding
                 group.children.forEach(child => {
-                    if (this.hoveredFractalElement === child) {
-                        const originalColor = child.userData.originalColor || new THREE.Color(0xffffff);
-                        setFractalElementActive(child, false, originalColor, false);
-                        this.hoveredFractalElement = null;
+                    if (child.userData.isFractalUIElement) {
+                        child.userData.zoomLevel = 0; // Reset zoom level data
+
+                        // If this child was the currently hovered fractal element, deactivate its hover state.
+                        // Note: this.hoveredFractalElement itself will be updated by _handleHover on next mouse move if needed.
+                        if (this.hoveredFractalElement === child) {
+                            const originalColor = child.userData.originalColor ||
+                                                  (child.material.color ? child.material.color.clone() : new THREE.Color(0xffffff));
+                            setFractalElementActive(child, false, originalColor, false);
+                            // No need to null this.hoveredFractalElement here; _handleHover will manage it.
+                        }
+
+                        // Apply semantic zoom visuals for zoom level 0 to ensure clean state.
+                        // This relies on setFractalElementActive having already potentially restored originalColor if unhovering.
+                        // The applySemanticZoomToAxis will then use that restored originalColor for its emissive calculations if needed.
+                        if (child.userData.axis && typeof applySemanticZoomToAxis === 'function') {
+                            const elementType = child.userData.type;
+                            let manipulatorType = 'translate'; // Default
+                            if (elementType === 'rotate_axis') {
+                                manipulatorType = 'rotate';
+                            } else if (elementType === 'scale_axis' || elementType === 'scale_uniform') {
+                                manipulatorType = elementType;
+                            } else if (elementType === 'translate_axis') {
+                                manipulatorType = 'translate';
+                            }
+                            applySemanticZoomToAxis(group, child.userData.axis, 0, manipulatorType);
+                        }
                     }
                 });
                 group.visible = false;
