@@ -49,107 +49,67 @@ export function createFractalAxisManipulators() {
     });
 
     const axisGeometry = new THREE.CylinderGeometry(AXIS_RADIUS, AXIS_RADIUS, AXIS_LENGTH, 8);
-
-    // X-axis
-    const xAxisMesh = new THREE.Mesh(axisGeometry, axisMaterialX.clone()); // Use cloned material for potential individual changes
-    xAxisMesh.name = 'FractalAxis_X';
-    xAxisMesh.userData.isFractalUIElement = true;
-    xAxisMesh.userData.axis = 'x';
-    xAxisMesh.rotation.z = -Math.PI / 2; // Align cylinder along X
-    xAxisMesh.position.x = AXIS_LENGTH / 2;
-    axisGroup.add(xAxisMesh);
-
-    // X-axis Tick Marks (for semantic zoom L2)
-    // These are small cylinders perpendicular to the X-axis.
-    const perpendicularTickGeom = new THREE.CylinderGeometry(AXIS_RADIUS * 1.2, AXIS_RADIUS * 1.2, AXIS_RADIUS * 0.5, 8);
-    for (let i = 0; i < 3; i++) {
-        const tickMesh = new THREE.Mesh(perpendicularTickGeom, axisMaterialX.clone());
-        tickMesh.name = `FractalAxisTick_X_${i}`;
-        tickMesh.userData.isFractalUIElement = true;
-        tickMesh.userData.axis = 'x';
-        tickMesh.userData.isDetail = true; // Mark as a detail element for semantic zoom
-        // Position along X axis, at 1/4, 1/2, 3/4 of its length relative to the manipulator group's origin
-        // Assuming the main axis cylinder starts at 0 and extends to AXIS_LENGTH along X.
-        // The current xAxisMesh is positioned at AXIS_LENGTH / 2.
-        // To place ticks along the bar from one end to the other, relative to axisGroup:
-        // If xAxisMesh itself runs from 0 to AXIS_LENGTH, ticks would be at AXIS_LENGTH * (i+1)/4
-        // Given current xAxisMesh.position.x = AXIS_LENGTH / 2, its ends are at 0 and AXIS_LENGTH.
-        // So, ticks at AXIS_LENGTH * 1/4, AXIS_LENGTH * 1/2, AXIS_LENGTH * 3/4 is fine.
-        tickMesh.position.x = (AXIS_LENGTH / (3 + 1)) * (i + 1);
-        tickMesh.visible = false; // Initially hidden, shown at specific zoom levels
-        axisGroup.add(tickMesh);
-    }
-
-    // Y-axis
-    const yAxisMesh = new THREE.Mesh(axisGeometry, axisMaterialY.clone());
-    yAxisMesh.name = 'FractalAxis_Y';
-    yAxisMesh.userData.isFractalUIElement = true;
-    yAxisMesh.userData.axis = 'y';
-    yAxisMesh.position.y = AXIS_LENGTH / 2; // Align cylinder along Y (default)
-    axisGroup.add(yAxisMesh);
-
-    // Z-axis
-    const zAxisMesh = new THREE.Mesh(axisGeometry, axisMaterialZ.clone());
-    zAxisMesh.name = 'FractalAxis_Z';
-    zAxisMesh.userData.isFractalUIElement = true;
-    zAxisMesh.userData.axis = 'z';
-    zAxisMesh.rotation.x = Math.PI / 2; // Align cylinder along Z
-    zAxisMesh.position.z = AXIS_LENGTH / 2;
-    axisGroup.add(zAxisMesh);
-
-    // Add cone heads for directionality
     const coneGeometry = new THREE.ConeGeometry(AXIS_RADIUS * 2, AXIS_RADIUS * 4, 8);
+    const elaborateConeGeometry = new THREE.ConeGeometry(AXIS_RADIUS * 2.5, AXIS_RADIUS * 5, 10);
+    const perpendicularTickGeom = new THREE.CylinderGeometry(AXIS_RADIUS * 1.2, AXIS_RADIUS * 1.2, AXIS_RADIUS * 0.5, 8);
 
-    // Standard X Cone
-    const xCone = new THREE.Mesh(coneGeometry, axisMaterialX.clone());
-    xCone.name = 'FractalAxisHead_X_Standard'; // Renamed for clarity
-    xCone.userData.isFractalUIElement = true;
-    xCone.userData.axis = 'x';
-    xCone.userData.isDetail = false; // Standard part
-    xCone.position.x = AXIS_LENGTH;
-    xCone.rotation.z = -Math.PI / 2;
-    axisGroup.add(xCone);
+    ['x', 'y', 'z'].forEach(axis => {
+        let axisMesh, standardCone, elaborateCone;
+        let material;
+        const tickMarks = [];
 
-    // Elaborate X Cone (for semantic zoom L2)
-    const elaborateConeGeometry = new THREE.ConeGeometry(AXIS_RADIUS * 2.5, AXIS_RADIUS * 5, 10); // Slightly larger, more segments
-    // Could also add a small torus: new THREE.TorusGeometry(AXIS_RADIUS * 1.8, AXIS_RADIUS * 0.3, 8, 12);
-    const xConeElaborate = new THREE.Mesh(elaborateConeGeometry, axisMaterialX.clone());
-    xConeElaborate.name = 'FractalAxisHead_X_Elaborate';
-    xConeElaborate.userData.isFractalUIElement = true;
-    xConeElaborate.userData.axis = 'x';
-    xConeElaborate.userData.isDetail = true; // Zoom-specific detail
-    xConeElaborate.position.x = AXIS_LENGTH; // Position same as standard, will be toggled
-    xConeElaborate.rotation.z = -Math.PI / 2;
-    xConeElaborate.visible = false; // Initially hidden
-    axisGroup.add(xConeElaborate);
+        switch (axis) {
+            case 'x': material = axisMaterialX; break;
+            case 'y': material = axisMaterialY; break;
+            case 'z': material = axisMaterialZ; break;
+        }
 
+        // Axis Cylinder
+        axisMesh = new THREE.Mesh(axisGeometry, material.clone());
+        axisMesh.name = `FractalAxis_${axis.toUpperCase()}`;
+        axisMesh.userData = { isFractalUIElement: true, axis: axis, type: 'translate_axis' };
+        if (axis === 'x') { axisMesh.rotation.z = -Math.PI / 2; axisMesh.position.x = AXIS_LENGTH / 2; }
+        else if (axis === 'y') { axisMesh.position.y = AXIS_LENGTH / 2; }
+        else if (axis === 'z') { axisMesh.rotation.x = Math.PI / 2; axisMesh.position.z = AXIS_LENGTH / 2; }
+        axisGroup.add(axisMesh);
 
-    const yCone = new THREE.Mesh(coneGeometry, axisMaterialY.clone());
-    yCone.name = 'FractalAxisHead_Y'; // Standard Y cone, no elaborate version for now
-    yCone.userData.isFractalUIElement = true;
-    yCone.userData.axis = 'y';
-    yCone.userData.isDetail = false;
-    yCone.position.y = AXIS_LENGTH;
-    axisGroup.add(yCone);
+        // Standard Cone
+        standardCone = new THREE.Mesh(coneGeometry, material.clone());
+        standardCone.name = `FractalAxisHead_${axis.toUpperCase()}_Standard`;
+        standardCone.userData = { isFractalUIElement: true, axis: axis, type: 'translate_axis', isDetail: false };
+        if (axis === 'x') { standardCone.position.x = AXIS_LENGTH; standardCone.rotation.z = -Math.PI / 2; }
+        else if (axis === 'y') { standardCone.position.y = AXIS_LENGTH; }
+        else if (axis === 'z') { standardCone.position.z = AXIS_LENGTH; standardCone.rotation.x = Math.PI / 2; }
+        axisGroup.add(standardCone);
 
-    const zCone = new THREE.Mesh(coneGeometry, axisMaterialZ.clone());
-    zCone.name = 'FractalAxisHead_Z'; // Standard Z cone
-    zCone.userData.isFractalUIElement = true;
-    zCone.userData.axis = 'z';
-    zCone.userData.isDetail = false;
-    zCone.position.z = AXIS_LENGTH;
-    zCone.rotation.x = Math.PI / 2;
-    axisGroup.add(zCone);
+        // Elaborate Cone
+        elaborateCone = new THREE.Mesh(elaborateConeGeometry, material.clone());
+        elaborateCone.name = `FractalAxisHead_${axis.toUpperCase()}_Elaborate`;
+        elaborateCone.userData = { isFractalUIElement: true, axis: axis, type: 'translate_axis', isDetail: true };
+        if (axis === 'x') { elaborateCone.position.x = AXIS_LENGTH; elaborateCone.rotation.z = -Math.PI / 2; }
+        else if (axis === 'y') { elaborateCone.position.y = AXIS_LENGTH; }
+        else if (axis === 'z') { elaborateCone.position.z = AXIS_LENGTH; elaborateCone.rotation.x = Math.PI / 2; }
+        elaborateCone.visible = false;
+        axisGroup.add(elaborateCone);
 
-    // Store references to these new detail elements for easy access in applySemanticZoomToAxis
-    xAxisMesh.userData.tickMarks = [];
-    for (let i = 0; i < 3; i++) {
-        const tick = axisGroup.getObjectByName(`FractalAxisTick_X_${i}`);
-        if (tick) xAxisMesh.userData.tickMarks.push(tick);
-    }
-    xAxisMesh.userData.standardCone = xCone;
-    xAxisMesh.userData.elaborateCone = xConeElaborate;
+        // Tick Marks
+        for (let i = 0; i < 3; i++) {
+            const tickMesh = new THREE.Mesh(perpendicularTickGeom, material.clone());
+            tickMesh.name = `FractalAxisTick_${axis.toUpperCase()}_${i}`;
+            tickMesh.userData = { isFractalUIElement: true, axis: axis, type: 'translate_axis', isDetail: true };
+            const pos = (AXIS_LENGTH / 4) * (i + 1);
+            if (axis === 'x') { tickMesh.position.x = pos; }
+            else if (axis === 'y') { tickMesh.position.y = pos; tickMesh.rotation.x = Math.PI / 2; } // Rotate ticks to be perpendicular to Y
+            else if (axis === 'z') { tickMesh.position.z = pos; tickMesh.rotation.z = Math.PI / 2; } // Rotate ticks to be perpendicular to Z
+            tickMesh.visible = false;
+            axisGroup.add(tickMesh);
+            tickMarks.push(tickMesh);
+        }
 
+        axisMesh.userData.standardCone = standardCone;
+        axisMesh.userData.elaborateCone = elaborateCone;
+        axisMesh.userData.tickMarks = tickMarks;
+    });
 
     axisGroup.visible = false; // Initially hidden
     return axisGroup;
@@ -208,19 +168,15 @@ export function setFractalElementActive(fractalMesh, isActive, originalColor, is
     }
     // Note: originalScaleForTransform is not used here anymore, using preGrabScale for temporary grab scaling
 
-    const baseColor = fractalMesh.userData.originalColor || (fractalMesh.material.color ? fractalMesh.material.color.clone() : new THREE.Color(0xffffff));
-    const baseOpacity = fractalMesh.userData.originalOpacity !== undefined ? fractalMesh.userData.originalOpacity : 0.7;
-    const baseEmissiveHex = fractalMesh.userData.originalEmissive !== undefined ? fractalMesh.userData.originalEmissive : 0x000000;
-
-    // Store the true original emissive (pre-any-effect)
+    // Store the true original emissive (pre-any-effect) if not already stored by earlier checks.
+    // This ensures baseEmissiveHex uses the absolute original value.
     if (fractalMesh.material.emissive && fractalMesh.userData.originalEmissive === undefined) {
         fractalMesh.userData.originalEmissive = fractalMesh.material.emissive.getHex();
     }
 
     const baseColor = fractalMesh.userData.originalColor || (fractalMesh.material.color ? fractalMesh.material.color.clone() : new THREE.Color(0xffffff));
     const baseOpacity = fractalMesh.userData.originalOpacity !== undefined ? fractalMesh.userData.originalOpacity : 0.7;
-    // originalEmissive is the true base, before any zoom or hover/grab effect.
-    const baseEmissiveHex = fractalMesh.userData.originalEmissive !== undefined ? fractalMesh.userData.originalEmissive : 0x000000;
+    const baseEmissiveHex = fractalMesh.userData.originalEmissive !== undefined ? fractalMesh.userData.originalEmissive : 0x000000; // This now correctly refers to the true original
 
     // Handle SCALING for grab effect
     if (isGrabbed && isActive) { // Apply scale effect only when grab starts
@@ -323,74 +279,88 @@ export function applySemanticZoomToAxis(manipulatorGroup, axisType, zoomLevel, m
 
     if (manipulatorType === 'translate') {
         const axisCylinderName = `FractalAxis_${axisType.toUpperCase()}`;
-        let axisStandardConeName = `FractalAxisHead_${axisType.toUpperCase()}`;
-        if (axisType === 'x') axisStandardConeName = `FractalAxisHead_X_Standard`;
-
         const axisCylinder = manipulatorGroup.getObjectByName(axisCylinderName);
-        const standardCone = manipulatorGroup.getObjectByName(axisStandardConeName);
 
-        if (!axisCylinder || !standardCone) {
-            console.warn(`Translation axis parts not found for ${axisType}`);
+        if (!axisCylinder || !axisCylinder.userData || !axisCylinder.userData.standardCone || !axisCylinder.userData.elaborateCone) {
+            console.warn(`Translation axis parts (cylinder, cones, or userData) not found for ${axisType}`);
             return;
         }
+
+        const standardCone = axisCylinder.userData.standardCone;
+        const elaborateCone = axisCylinder.userData.elaborateCone;
+        const tickMarks = axisCylinder.userData.tickMarks || [];
+
+        // Ensure original scales are stored
         if (axisCylinder.userData.originalScale === undefined) axisCylinder.userData.originalScale = axisCylinder.scale.clone();
         if (standardCone.userData.originalScale === undefined) standardCone.userData.originalScale = standardCone.scale.clone();
-        const baseScaleCylinder = axisCylinder.userData.originalScale;
-        const baseScaleCone = standardCone.userData.originalScale;
+        if (elaborateCone.userData.originalScale === undefined) elaborateCone.userData.originalScale = elaborateCone.scale.clone();
+        tickMarks.forEach(tick => {
+            if (tick.userData.originalScale === undefined) tick.userData.originalScale = tick.scale.clone();
+        });
 
-        if (axisType === 'x') {
-            axisCylinder.scale.set(baseScaleCylinder.x, baseScaleCylinder.y * radialScaleFactor, baseScaleCylinder.z * radialScaleFactor);
-            if (zoomLevel === -1) standardCone.scale.set(baseScaleCone.x * 0.8, baseScaleCone.y * 0.8, baseScaleCone.z * 0.8);
-            else if (zoomLevel < -1) standardCone.scale.set(baseScaleCone.x * 0.7, baseScaleCone.y * 0.7, baseScaleCone.z * 0.7);
-            else if (zoomLevel !== 2) standardCone.scale.set(baseScaleCone.x * Math.min(1.2, radialScaleFactor), baseScaleCone.y * Math.min(1.2, radialScaleFactor), baseScaleCone.z * Math.min(1.2, radialScaleFactor));
-            manageEmissiveForZoom(axisCylinder, 'x', zoomLevel);
-        } else if (axisType === 'y' || axisType === 'z') {
-            if (axisType === 'y') axisCylinder.scale.set(baseScaleCylinder.x * radialScaleFactor, baseScaleCylinder.y, baseScaleCylinder.z * radialScaleFactor);
-            else axisCylinder.scale.set(baseScaleCylinder.x * radialScaleFactor, baseScaleCylinder.y * radialScaleFactor, baseScaleCylinder.z);
-            if (zoomLevel < 0) standardCone.scale.set(baseScaleCone.x * 0.8, baseScaleCone.y * 0.8, baseScaleCone.z * 0.8);
-            else standardCone.scale.set(baseScaleCone.x * Math.min(1.2, radialScaleFactor), baseScaleCone.y * Math.min(1.2, radialScaleFactor), baseScaleCone.z * Math.min(1.2, radialScaleFactor));
-            manageEmissiveForZoom(axisCylinder, axisType, zoomLevel);
+        const baseScaleCylinder = axisCylinder.userData.originalScale;
+        const baseScaleConeStd = standardCone.userData.originalScale;
+        const baseScaleConeElab = elaborateCone.userData.originalScale;
+
+        // Apply radial scale to cylinder thickness
+        // Cylinder's length is along its local Y if not rotated (Y-axis), or along X/Z if rotated.
+        // Radial scale affects the other two dimensions.
+        if (axisType === 'x') { // Rotated on Z by -PI/2. Length is local Y, radius is local X and Z.
+            axisCylinder.scale.set(baseScaleCylinder.x * radialScaleFactor, baseScaleCylinder.y, baseScaleCylinder.z * radialScaleFactor);
+        } else if (axisType === 'y') { // No rotation. Length is local Y, radius is local X and Z.
+            axisCylinder.scale.set(baseScaleCylinder.x * radialScaleFactor, baseScaleCylinder.y, baseScaleCylinder.z * radialScaleFactor);
+        } else { // axisType === 'z'. Rotated on X by PI/2. Length is local Y, radius is local X and Z.
+             axisCylinder.scale.set(baseScaleCylinder.x * radialScaleFactor, baseScaleCylinder.y, baseScaleCylinder.z * radialScaleFactor);
+        }
+        manageEmissiveForZoom(axisCylinder, axisType, zoomLevel);
+
+
+        // Manage cone visibility and scale
+        const showElaborate = zoomLevel >= 2;
+        standardCone.visible = !showElaborate;
+        elaborateCone.visible = showElaborate;
+
+        if (showElaborate) {
+            elaborateCone.scale.copy(baseScaleConeElab).multiplyScalar(1.1 + Math.max(0, zoomLevel - 2) * 0.05); // Slightly grow more at L3+
+            manageEmissiveForZoom(elaborateCone, axisType, zoomLevel);
+        } else { // Standard cone is visible
+            let coneScaleFactor = 1.0;
+            if (zoomLevel === 1) coneScaleFactor = 1.2;
+            else if (zoomLevel === 0) coneScaleFactor = 1.0;
+            else if (zoomLevel === -1) coneScaleFactor = 0.8;
+            else if (zoomLevel <= -2) coneScaleFactor = 0.7;
+            standardCone.scale.copy(baseScaleConeStd).multiplyScalar(coneScaleFactor);
             manageEmissiveForZoom(standardCone, axisType, zoomLevel);
         }
 
-        if (axisType === 'x') {
-            const elaborateCone = manipulatorGroup.getObjectByName('FractalAxisHead_X_Elaborate');
-            const tickMarks = axisCylinder.userData.tickMarks || [];
-            if (zoomLevel === 2) {
-                standardCone.visible = false;
-                if (elaborateCone) {
-                    elaborateCone.visible = true;
-                    if (elaborateCone.userData.originalScale === undefined) elaborateCone.userData.originalScale = elaborateCone.scale.clone();
-                    elaborateCone.scale.copy(elaborateCone.userData.originalScale).multiplyScalar(1.25);
-                    if (elaborateCone.material.opacity !== undefined) elaborateCone.material.opacity = Math.min(1, (elaborateCone.userData.originalOpacity || 0.7) * 1.2);
-                    manageEmissiveForZoom(elaborateCone, 'x', zoomLevel);
-                }
-                tickMarks.forEach(tick => {
-                    tick.visible = true;
-                    if (tick.userData.originalScale === undefined) tick.userData.originalScale = tick.scale.clone();
-                    tick.scale.copy(tick.userData.originalScale).multiplyScalar(radialScaleFactor * 1.1);
-                    if (tick.material.opacity !== undefined) tick.material.opacity = Math.min(1, (tick.userData.originalOpacity || 0.7) * 1.3);
-                    manageEmissiveForZoom(tick, 'x', zoomLevel);
-                });
-            } else {
-                standardCone.visible = true;
-                manageEmissiveForZoom(standardCone, 'x', zoomLevel);
-                if (elaborateCone) elaborateCone.visible = false;
-                tickMarks.forEach(tick => {
-                    tick.visible = false;
-                    if (tick.material.opacity !== undefined && tick.userData.originalOpacity !== undefined) tick.material.opacity = tick.userData.originalOpacity;
-                });
+        // Manage tick marks
+        const showTicks = zoomLevel >= 1; // Show ticks from L1 upwards
+        tickMarks.forEach((tick, index) => {
+            tick.visible = showTicks;
+            if (showTicks) {
+                let tickScaleFactor = 1.0;
+                if (zoomLevel === 1) tickScaleFactor = 1.0;
+                else if (zoomLevel === 2) tickScaleFactor = 1.15;
+                else if (zoomLevel > 2) tickScaleFactor = 1.15 + (zoomLevel - 2) * 0.05;
+
+                // Make ticks slightly thinner at L1, normal at L2+
+                const tickRadialScale = zoomLevel === 1 ? 0.8 : 1.0;
+
+                tick.scale.set(
+                    tick.userData.originalScale.x * tickRadialScale,
+                    tick.userData.originalScale.y * tickScaleFactor, // Length scale
+                    tick.userData.originalScale.z * tickRadialScale
+                );
+                manageEmissiveForZoom(tick, axisType, zoomLevel);
             }
-        }
-        if (axisCylinder && !axisCylinder.material.needsUpdate) axisCylinder.material.needsUpdate = true;
-        if (standardCone && !standardCone.material.needsUpdate) standardCone.material.needsUpdate = true;
-        if (axisType === 'x') {
-            const elaborateCone = manipulatorGroup.getObjectByName('FractalAxisHead_X_Elaborate');
-            if (elaborateCone && elaborateCone.visible && !elaborateCone.material.needsUpdate) elaborateCone.material.needsUpdate = true;
-            (axisCylinder.userData.tickMarks || []).forEach(tick => {
-                if (tick.visible && !tick.material.needsUpdate) tick.material.needsUpdate = true;
-            });
-        }
+        });
+
+        // Ensure materials are updated
+        axisCylinder.material.needsUpdate = true;
+        standardCone.material.needsUpdate = true;
+        elaborateCone.material.needsUpdate = true;
+        tickMarks.forEach(tick => { if (tick.visible) tick.material.needsUpdate = true; });
+
     } else if (manipulatorType === 'rotate') {
         // Handle rotation manipulator (e.g., a ring)
         const ringName = `FractalRing_${axisType.toUpperCase()}`;
@@ -402,90 +372,78 @@ export function applySemanticZoomToAxis(manipulatorGroup, axisType, zoomLevel, m
         }
 
         if (ringMesh.userData.originalScale === undefined) {
-            ringMesh.userData.originalScale = ringMesh.scale.clone(); // Store original scale of the ring itself
+            ringMesh.userData.originalScale = ringMesh.scale.clone();
         }
-        // Placeholder: Change thickness (scale y for torus based on its orientation) or opacity
-        // Torus tube radius is affected by scale. If ring is XZ plane (rotates around Y), scale.y affects thickness.
-        // If ring is YZ plane (rotates around X), scale.y might affect thickness if geometry is aligned that way.
-        // If ring is XY plane (rotates around Z), scale.z might affect thickness.
-        // This depends on how createFractalRingManipulator aligns the TorusGeometry before adding to group.
-        // Assuming for Y-axis ring (rotated PI/2 on X), its local Y becomes world Y, local Z becomes world X.
-        // So, scaling its local X and Z would change its radius, scaling its local Y would change tube thickness.
-        const baseRingScale = ringMesh.userData.originalScale;
+        const baseRingScale = ringMesh.userData.originalScale.clone(); // Use a clone to avoid modifying the stored original
 
-        if (axisType === 'y') { // Y-axis ring is rotated on X by PI/2. Its local Y is tube thickness.
-            ringMesh.scale.set(baseRingScale.x, baseRingScale.y * radialScaleFactor, baseRingScale.z);
-        } else if (axisType === 'x') { // X-axis ring is rotated on Y by PI/2. Its local Y is tube thickness.
-             ringMesh.scale.set(baseRingScale.x * radialScaleFactor, baseRingScale.y, baseRingScale.z);
-        } else { // Z-axis ring is not rotated initially. Its local X/Y are main radius, local Z is thickness.
-            // This part is tricky: TorusGeometry's tube parameter affects thickness.
-            // Scaling the mesh might not be the best way.
-            // For now, let's apply a uniform scale to the ring as a simple placeholder.
-            ringMesh.scale.set(baseRingScale.x * radialScaleFactor, baseRingScale.y * radialScaleFactor, baseRingScale.z * radialScaleFactor);
-        }
+        // The TorusGeometry's tube radius is the second parameter.
+        // We want to scale the tube's thickness (local Y for the way rings are constructed)
+        // without scaling the overall ring radius (local X and Z).
+        // radialScaleFactor affects the tube thickness.
+        // The ring's overall radius is determined at creation by ringRadius.
+        // If the ringMesh itself is scaled uniformly, both tube and overall radius scale.
+        // We need to adjust the local scale of the ringMesh to specifically thicken the tube.
+
+        // For a TorusGeometry oriented by createFractalRingManipulator:
+        // - X-axis ring (rotated Y by PI/2): local Y is thickness.
+        // - Y-axis ring (rotated X by PI/2): local Y is thickness.
+        // - Z-axis ring (no rotation): local Y is thickness (assuming Torus tube is along its local Y before any mesh rotation).
+        // Let's assume the tube radius corresponds to the local Y scale of the ring mesh,
+        // and the overall radius to local X and Z scales.
+        // This is a simplification; precise control over Torus parameters (tube radius) after creation is hard via scale alone.
+        // A better way would be to regenerate geometry or use shaders.
+        // For now, we scale the entire ring mesh slightly, which will make it appear thicker and larger.
+        // This is consistent with how `radialScaleFactor` is used for translation axes.
+
+        ringMesh.scale.copy(baseRingScale).multiplyScalar(radialScaleFactor);
+        manageEmissiveForZoom(ringMesh, axisType, zoomLevel);
 
 
         const markers = ringMesh.userData.degreeMarkers || [];
-        let numMarkersToShow = 0;
-        if (zoomLevel === 1) numMarkersToShow = 4; // 90 deg
-        else if (zoomLevel === 2) numMarkersToShow = 8; // 45 deg
-        else if (zoomLevel >= 3) numMarkersToShow = 12; // 30 deg
+        let showMarkersLevel = 0; // 0: none, 1: 90deg (4 markers), 2: 45deg (8 markers), 3: 30deg (12 markers)
+
+        if (zoomLevel === 1) showMarkersLevel = 1;
+        else if (zoomLevel === 2) showMarkersLevel = 2;
+        else if (zoomLevel >= 3) showMarkersLevel = 3;
 
         markers.forEach((marker, index) => {
-            // The markers are already positioned for 12 segments (30 deg).
-            // We control visibility based on how many segments are needed.
-            // e.g., for 4 markers (90 deg), we show markers 0, 3, 6, 9.
-            // e.g., for 8 markers (45 deg), we show markers 0, 1, 2, 3, ... (no, this is wrong)
-            // We need to show markers at appropriate intervals.
-            // If maxMarkers is 12:
-            // numMarkersToShow = 4 (90 deg): show index 0, 3, 6, 9 (12/4 = 3, so every 3rd marker)
-            // numMarkersToShow = 8 (45 deg): show index 0, 1*1.5 (skip), 3, 4.5 (skip)... (12/8 = 1.5, so every 1.5th marker - tricky)
-            // A simpler way: just show the first `numMarkersToShow` and their positions are already spread out.
-            // No, that's not right. The markers are created for 30-degree increments.
-            // If we want 90-degree increments (4 markers), we show marker 0, marker 3, marker 6, marker 9. (index % (12/4) === 0)
-            // If we want 45-degree increments (8 markers), we show marker 0, (skip 1), marker (12/8 = 1.5) -> index % 1.5 === 0 doesn't work for integers.
-            // Let's rethink. Markers are at 0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330 degrees.
             let showThisMarker = false;
-            if (numMarkersToShow === 4) { // 0, 90, 180, 270
-                if (index % 3 === 0) showThisMarker = true;
-            } else if (numMarkersToShow === 8) { // 0, 45, 90, 135 ...
-                 // index 0 (0), 1.5 (45), 3 (90), 4.5 (135), 6 (180), 7.5 (225), 9 (270), 10.5 (315)
-                 // This means we have 12 markers. For 8 markers, we need to enable markers that are multiples of 45 degrees.
-                 // 360/45 = 8. So we need 8 markers.
-                 // Our 12 markers are at 30 deg intervals.
-                 // 0 deg (idx 0), 30 deg (idx 1), 60 deg (idx 2), 90 deg (idx 3), ...
-                 // To show 45 deg:
-                 // idx 0 (0 deg)
-                 // idx between 1 and 2 (45 deg) -> we can show idx 1 (30) or idx 2 (60) or average.
-                 // For simplicity, let's just show a subset of the 12 markers.
-                 // If numMarkersToShow is 8, we want roughly every 360/8 = 45 degrees.
-                 // Our markers are at 30 deg. So, we can't hit 45 perfectly with a subset of 12.
-                 // Let's make it simple:
-                 // zoom 1 (4 markers): 0, 90, 180, 270 (index 0, 3, 6, 9)
-                 // zoom 2 (8 markers): 0, 45 (approx index 1 or 2), 90, 135 ... -> Use 12 markers for zoom >=2 for simplicity for now.
-                if (index % (12 / 8) === 0) { // This will not be integer.
-                    // If zoomLevel 2, let's show all 12 for now, or choose 8 of them.
-                    // Showing all 12 (30 deg increments) is fine for zoomLevel 2 or higher.
-                     showThisMarker = true; // Show all for zoom 2+
-                }
-
+            if (showMarkersLevel === 1) { // 90-degree markers (0, 90, 180, 270)
+                if (index % (maxMarkers / 4) === 0) showThisMarker = true; // maxMarkers is 12, so 12/4 = 3. Index 0,3,6,9
+            } else if (showMarkersLevel === 2) { // 45-degree markers
+                if (index * (360 / maxMarkers) % 45 === 0) showThisMarker = true;
+            } else if (showMarkersLevel === 3) { // 30-degree markers (all)
+                showThisMarker = true;
             }
-             if (zoomLevel === 1 && index % 3 === 0) showThisMarker = true; // 4 markers
-             else if (zoomLevel >= 2) showThisMarker = true; // 12 markers for zoom 2+
-
             marker.visible = showThisMarker;
 
             if (showThisMarker) {
-                // Optionally, scale markers or change opacity with zoom level too
-                marker.scale.setScalar(radialScaleFactor * 0.5); // Make markers scale with ring thickness a bit
+                // Markers are children of the ring. Their scale is relative to the parent ring.
+                // We want markers to maintain a somewhat consistent visual size *relative to the ring's new thickness*.
+                // If the ring scales by radialScaleFactor, markers already scale by that.
+                // We can apply an additional local scale to markers to fine-tune.
+                let markerLocalScale = 1.0;
+                if (zoomLevel === 1) markerLocalScale = 0.9;
+                else if (zoomLevel === 2) markerLocalScale = 1.0;
+                else if (zoomLevel >= 3) markerLocalScale = 1.1;
+
+                // The markers were created with size AXIS_RADIUS * 0.4.
+                // Their default local scale is (1,1,1).
+                // We adjust this local scale.
+                marker.scale.setScalar(markerLocalScale);
+
+
                 if (marker.material.opacity !== undefined && ringMesh.userData.originalOpacity !== undefined) {
-                     marker.material.opacity = ringMesh.userData.originalOpacity * (0.8 + zoomLevel * 0.1); // slightly more opaque at higher zoom
+                     marker.material.opacity = Math.min(1, (ringMesh.userData.originalOpacity || 0.65) * (0.9 + Math.max(0,zoomLevel) * 0.05));
                 }
+                // Make markers slightly less emissive or differently colored than the main ring at high zoom
+                manageEmissiveForZoom(marker, axisType, Math.max(0, zoomLevel -1));
             }
         });
 
-        manageEmissiveForZoom(ringMesh, axisType, zoomLevel);
-        if (ringMesh && !ringMesh.material.needsUpdate) ringMesh.material.needsUpdate = true;
+        if (ringMesh.material) ringMesh.material.needsUpdate = true;
+        markers.forEach(m => { if(m.visible && m.material) m.material.needsUpdate = true; });
+
     } else if (manipulatorType === 'scale_axis' || manipulatorType === 'scale_uniform') {
         // Handle scale manipulator (e.g., a cube)
         // The `axisType` here will be 'x', 'y', 'z', or 'xyz'
@@ -590,6 +548,8 @@ export function createFractalRingManipulator(axis = 'y') {
         ringMesh.userData.originalEmissive = material.emissive.getHex();
         ringMesh.userData.originalEmissiveIntensity = material.emissiveIntensity;
     }
+    // Store original scale for semantic zoom adjustments
+    ringMesh.userData.originalScale = ringMesh.scale.clone();
 
 
     // Ring should not be initially visible, UIManager will handle this.
@@ -598,10 +558,17 @@ export function createFractalRingManipulator(axis = 'y') {
     // Create degree markers (initially hidden)
     ringMesh.userData.degreeMarkers = [];
     const markerGeometry = new THREE.SphereGeometry(AXIS_RADIUS * 0.4, 6, 6); // Smaller markers
-    const markerMaterial = material.clone(); // Share material properties initially
-    markerMaterial.color = new THREE.Color(0xffffff); // White markers for contrast
-    markerMaterial.emissive = new THREE.Color(0x999999);
-    markerMaterial.opacity = (material.opacity || 0.65) * 0.8;
+
+    // Create a distinct material for markers to avoid shared state issues with the ring's material
+    const markerMaterial = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(0xffffff), // White markers for contrast
+        roughness: 0.7,
+        metalness: 0.1,
+        transparent: true,
+        opacity: (material.opacity || 0.65) * 0.8, // Slightly less opaque than ring
+        emissive: new THREE.Color(0x999999),
+        emissiveIntensity: 0.3
+    });
 
 
     const maxMarkers = 12; // Max markers for highest zoom level (e.g., 30 deg increments)

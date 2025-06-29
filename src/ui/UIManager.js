@@ -98,6 +98,8 @@ export class UIManager {
     //   initialPointerWorldPos?: THREE.Vector3, initialProjectedPointOnAxis?: THREE.Vector3, axisDirection?: THREE.Vector3,
     //   initialRotationAngle?: number, rotationPlane?: THREE.Plane }
     fractalUIInteractionPlane = new THREE.Plane(); // Used for some fractal interactions, might be deprecated for axis-specific logic
+    /** @type {number} Current mode for AGH cycling: 0=None, 1=Translate, 2=Rotate, 3=Scale */
+    aghCurrentModeCycle = 0;
 
     // --- General Hover/Selection ---
     hoveredEdge = null;
@@ -276,8 +278,8 @@ export class UIManager {
         const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
 
         // Hide all transform UIs by default, then show the appropriate one.
-        this.gizmo?.hide();
-        this.adaptiveGeometricHub?.hide();
+        if (this.gizmo) this.gizmo.hide(); // Assuming TranslationGizmo has a hide method
+        if (this.adaptiveGeometricHub) this.adaptiveGeometricHub.visible = false;
 
         // Reset zoom levels on fractal manipulators if they are about to be hidden
         const resetZoomLevels = (manipulatorGroup) => {
@@ -285,39 +287,51 @@ export class UIManager {
                 manipulatorGroup.children.forEach(child => {
                     if (child.userData.isFractalUIElement && child.userData.axis) { // Also check type if rings have different zoom logic
                         child.userData.zoomLevel = 0;
+                        // todo: re-apply base semantic zoom visuals if necessary
                     }
                 });
             }
         };
 
-        resetZoomLevels(this.fractalAxisManipulators);
-        resetZoomLevels(this.fractalRotationManipulators);
-        resetZoomLevels(this.fractalScaleManipulators);
+        const groupsToHide = [this.fractalAxisManipulators, this.fractalRotationManipulators, this.fractalScaleManipulators];
+        groupsToHide.forEach(group => {
+            if (group) {
+                resetZoomLevels(group); // Reset zoom levels before hiding
+                group.children.forEach(child => {
+                    if (this.hoveredFractalElement === child) {
+                        const originalColor = child.userData.originalColor || new THREE.Color(0xffffff);
+                        setFractalElementActive(child, false, originalColor, false);
+                        this.hoveredFractalElement = null;
+                    }
+                });
+                group.visible = false;
+            }
+        });
 
-        this.fractalAxisManipulators?.hide();
-        this.fractalRotationManipulators?.hide();
-        this.fractalScaleManipulators?.hide();
+        this.aghCurrentModeCycle = 0; // Reset AGH cycle state
 
-        if (selectedNodes.size === 1 && this.adaptiveGeometricHub) {
-            const node = selectedNodes.values().next().value;
-            this.adaptiveGeometricHub.position.copy(node.position);
-            this.adaptiveGeometricHub.quaternion.identity(); // AGH is world-aligned
-
-            if (camera) updateFractalUIScale(this.adaptiveGeometricHub, camera, REFERENCE_DISTANCE_FRACTAL_UI, node.position);
-            this.adaptiveGeometricHub.show();
-            // Fractal manipulators (translation/rotation) are not shown until AGH is interacted with.
-
-        } else if (selectedNodes.size > 0 && this.gizmo) { // Fallback to old gizmo for multi-select
+        if (selectedNodes.size > 0 && this.adaptiveGeometricHub) {
             const center = new THREE.Vector3();
             selectedNodes.forEach((n) => center.add(n.position));
             center.divideScalar(selectedNodes.size);
-            this.gizmo.position.copy(center);
-            this.gizmo.quaternion.identity(); // World orientation for multi-select
 
-            if (camera) this.gizmo.updateScale(camera);
-            this.gizmo.show();
+            this.adaptiveGeometricHub.position.copy(center);
+            this.adaptiveGeometricHub.quaternion.identity(); // AGH is world-aligned
+
+            if (camera) updateFractalUIScale(this.adaptiveGeometricHub, camera, REFERENCE_DISTANCE_FRACTAL_UI, center);
+            this.adaptiveGeometricHub.visible = true;
+            // Manipulators are hidden by default, shown by AGH interaction (even for multi-select).
+            // The old gizmo is no longer shown for multi-node selections if AGH is active.
+            if (this.gizmo) this.gizmo.hide(); // Ensure old gizmo is hidden if fractal UI is taking over
+
+        } else if (selectedNodes.size === 0) {
+            // If selectedNodes.size is 0, all transform UIs (including AGH) remain hidden.
+            // This is implicitly handled by the initial hide calls and no subsequent show calls.
         }
-        // If selectedNodes.size is 0, all transform UIs remain hidden.
+        // Note: The original `else if (selectedNodes.size > 0 && this.gizmo)` for fallback to old gizmo
+        // is now superseded by showing the AGH for multi-node selections.
+        // If, for some reason, AGH is not available, then the old gizmo would not show either
+        // with this new structure. This assumes AGH is always the preferred method.
 
         this.hudManager.updateHudSelectionInfo();
     };
@@ -630,56 +644,89 @@ export class UIManager {
             const { object: fractalObject, type: fractalType, axis: fractalAxis } = targetInfo.fractalElementInfo;
             const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
 
-            if (fractalType === 'agh' && selectedNodes.size === 1) {
-                // Clicked on the Adaptive Geometric Hub: Toggle visibility of all manipulators
-                const manipulatorsAreVisible = this.fractalAxisManipulators?.visible ||
-                                               this.fractalRotationManipulators?.visible ||
-                                               this.fractalScaleManipulators?.visible;
-                const node = selectedNodes.values().next().value; // Assuming single selected node for AGH
+            // AGH click behavior now applies if any nodes are selected (single or multiple)
+            if (fractalType === 'agh' && selectedNodes.size > 0 && this.adaptiveGeometricHub) {
+                // Clicked on the Adaptive Geometric Hub: Cycle through manipulator modes
+                this.aghCurrentModeCycle = (this.aghCurrentModeCycle + 1) % 4; // 0:None, 1:Translate, 2:Rotate, 3:Scale
+
+                // Determine the pivot/center for the manipulators.
+                // This will be the AGH's current position, which is the centroid for multi-select
+                // or the single node's position for single-select.
+                const manipulatorPosition = this.adaptiveGeometricHub.position.clone();
                 const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
 
-                if (manipulatorsAreVisible) {
-                    this.fractalAxisManipulators.visible = false;
-                    this.fractalRotationManipulators.visible = false;
-                    this.fractalScaleManipulators.visible = false;
-                    // Reset zoom levels when hiding
-                    [this.fractalAxisManipulators, this.fractalRotationManipulators, this.fractalScaleManipulators].forEach(group => {
-                        group?.children.forEach(child => {
-                            if (child.userData.isFractalUIElement && child.userData.axis) { // Check type if zoom logic differs
-                                child.userData.zoomLevel = 0;
+                // Hide all first, then show the current mode's manipulators
+                this.fractalAxisManipulators.visible = false;
+                this.fractalRotationManipulators.visible = false;
+                this.fractalScaleManipulators.visible = false;
+
+                // Reset zoom levels when hiding manipulators explicitly or switching
+                const resetZoomAndUnhighlight = (group) => {
+                    if (!group) return;
+                    group.children.forEach(child => {
+                        if (child.userData.isFractalUIElement) {
+                            child.userData.zoomLevel = 0;
+                            // If this child was the hovered one, unhighlight it
+                            if (this.hoveredFractalElement === child) {
+                                const originalColor = child.userData.originalColor || new THREE.Color(0xffffff);
+                                setFractalElementActive(child, false, originalColor, false);
+                                this.hoveredFractalElement = null;
                             }
-                        });
-                    });
-                    if (this.hoveredFractalElement &&
-                        (this.fractalAxisManipulators?.children.includes(this.hoveredFractalElement) ||
-                         this.fractalRotationManipulators?.children.includes(this.hoveredFractalElement) ||
-                         this.fractalScaleManipulators?.children.includes(this.hoveredFractalElement))
-                    ) {
-                        const originalColor = this.hoveredFractalElement.userData.originalColor || new THREE.Color(0xffffff);
-                        setFractalElementActive(this.hoveredFractalElement, false, originalColor, false);
-                        this.hoveredFractalElement = null;
-                    }
-                } else {
-                    // Position and show manipulators
-                    [this.fractalAxisManipulators, this.fractalRotationManipulators, this.fractalScaleManipulators].forEach(group => {
-                        if (group) {
-                            group.position.copy(node.position);
-                            group.quaternion.identity(); // World aligned
-                            group.children.forEach(child => {
-                                if (child.userData.isFractalUIElement && child.userData.axis) {
-                                    child.userData.zoomLevel = 0;
-                                    // Apply base semantic zoom state if applicable (e.g. for axes)
-                                    if (group === this.fractalAxisManipulators && typeof applySemanticZoomToAxis === 'function') {
-                                        applySemanticZoomToAxis(group, child.userData.axis, 0);
-                                    }
-                                    // TODO: Add applySemanticZoomToRing if exists for rotation manipulators
-                                }
-                            });
-                            if (camera) updateFractalUIScale(group, camera, REFERENCE_DISTANCE_FRACTAL_UI, node.position);
-                            group.visible = true;
+                            // Apply base semantic zoom to reset visuals
+                            if (child.userData.axis && typeof applySemanticZoomToAxis === 'function') {
+                                const elementType = child.userData.type; // e.g. 'translate_axis', 'rotate_axis', 'scale_axis', 'scale_uniform'
+                                let manipulatorType = 'translate'; // default
+                                if (elementType === 'rotate_axis') manipulatorType = 'rotate';
+                                else if (elementType === 'scale_axis' || elementType === 'scale_uniform') manipulatorType = elementType;
+
+                                applySemanticZoomToAxis(group, child.userData.axis, 0, manipulatorType);
+                            }
                         }
                     });
+                };
+
+                resetZoomAndUnhighlight(this.fractalAxisManipulators);
+                resetZoomAndUnhighlight(this.fractalRotationManipulators);
+                resetZoomAndUnhighlight(this.fractalScaleManipulators);
+
+
+                let activeManipulatorGroup = null;
+                switch (this.aghCurrentModeCycle) {
+                    case 1: // Translate
+                        activeManipulatorGroup = this.fractalAxisManipulators;
+                        break;
+                    case 2: // Rotate
+                        activeManipulatorGroup = this.fractalRotationManipulators;
+                        break;
+                    case 3: // Scale
+                        activeManipulatorGroup = this.fractalScaleManipulators;
+                        break;
+                    case 0: // None
+                    default:
+                        // All are already hidden
+                        break;
                 }
+
+                if (activeManipulatorGroup) {
+                    // Position the active manipulator group at the AGH's position
+                    activeManipulatorGroup.position.copy(manipulatorPosition);
+                    activeManipulatorGroup.quaternion.identity(); // World aligned
+                    // Reset zoom levels for all children of the now active group before making visible
+                    activeManipulatorGroup.children.forEach(child => {
+                        if (child.userData.isFractalUIElement && child.userData.axis) {
+                            child.userData.zoomLevel = 0;
+                             const elementType = child.userData.type;
+                             let manipulatorType = 'translate'; // default
+                             if (elementType === 'rotate_axis') manipulatorType = 'rotate';
+                             else if (elementType === 'scale_axis' || elementType === 'scale_uniform') manipulatorType = elementType;
+                             applySemanticZoomToAxis(activeManipulatorGroup, child.userData.axis, 0, manipulatorType);
+                        }
+                    });
+                    // Update scale based on AGH's position (centroid or single node)
+                    if (camera) updateFractalUIScale(activeManipulatorGroup, camera, REFERENCE_DISTANCE_FRACTAL_UI, manipulatorPosition);
+                    activeManipulatorGroup.visible = true;
+                }
+
                 this._transitionToState(InteractionState.FRACTAL_HUB_ACTIVE);
 
             } else if (fractalType === 'translate_axis' && selectedNodes.size > 0) {
@@ -794,11 +841,25 @@ export class UIManager {
                     element: fractalObject,
                     type: fractalType,
                     axis: fractalAxis,
-                    initialPointerWorldPos: initialPointerOnPlane.clone(), // Store initial point on plane
+                    initialPointerWorldPos: initialPointerOnPlane.clone(),
                     rotationPlane: rotationPlane.clone(),
                     manipulatorCenter: manipulatorWorldPosition.clone(),
                     initialAngle: initialAngle,
+                    // Store initial world quaternions of nodes relative to the manipulator's (AGH's) orientation
+                    // For fractal manipulators, they are world-aligned, so their orientation is identity.
+                    // We need initial world quaternion of each node.
+                    // And initial position relative to pivot (manipulatorCenter).
                 };
+                selectedNodes.forEach(node => {
+                    const initialQuaternion = node.mesh ? node.mesh.getWorldQuaternion(new THREE.Quaternion()) : new THREE.Quaternion();
+                    this.selectedNodesInitialQuaternions.set(node.id, initialQuaternion);
+                    const initialPosition = node.position.clone();
+                    this.selectedNodesInitialPositions.set(node.id, initialPosition);
+
+                    // Store initial offset from the pivot (manipulatorCenter)
+                    node.userData.initialOffsetFromPivot = initialPosition.clone().sub(manipulatorWorldPosition);
+                });
+
 
                 const originalColorForGrab = fractalObject.userData.originalColor || new THREE.Color(0xffffff);
                 setFractalElementActive(fractalObject, true, originalColorForGrab, true); // isGrabbed = true
@@ -841,11 +902,19 @@ export class UIManager {
                     type: fractalType,
                     axis: fractalAxis,
                     initialPointerWorldPos: initialPointerWorldPos.clone(),
-                    // For scaling, we might need a reference direction/plane based on camera view
-                    // or simply use pointer's screen-space delta.
-                    // Let's start with screen-space delta for simplicity.
                     startPointerScreenPos: new THREE.Vector2(this.pointerState.clientX, this.pointerState.clientY),
+                    manipulatorCenter: this.fractalScaleManipulators.getWorldPosition(new THREE.Vector3()),
                 };
+
+                // Store initial world dimensions and initial offset from pivot for each node
+                selectedNodes.forEach(node => {
+                    const initialWorldScale = node.getActualSize ? node.getActualSize() : (node.mesh ? node.mesh.scale.clone() : new THREE.Vector3(100, 100, 100));
+                    this.selectedNodesInitialScales.set(node.id, initialWorldScale); // Store as world dimensions
+
+                    const initialPosition = node.position.clone();
+                    this.selectedNodesInitialPositions.set(node.id, initialPosition);
+                    node.userData.initialOffsetFromPivot = initialPosition.clone().sub(this.draggedFractalElementInfo.manipulatorCenter);
+                });
 
                 const originalColorForGrab = fractalObject.userData.originalColor || new THREE.Color(0xffffff);
                 setFractalElementActive(fractalObject, true, originalColorForGrab, true); // isGrabbed = true
@@ -1011,14 +1080,18 @@ export class UIManager {
                     }
                 });
 
-                // Update AGH and Manipulators to follow the (first) selected node
-                const primaryNode = selectedNodes.values().next().value;
-                if (primaryNode && this.adaptiveGeometricHub && this.fractalAxisManipulators) {
-                    this.adaptiveGeometricHub.position.copy(primaryNode.position);
-                    this.fractalAxisManipulators.position.copy(primaryNode.position);
-                     if (camera) { // Also update their scale as they move
-                        updateFractalUIScale(this.adaptiveGeometricHub, camera, REFERENCE_DISTANCE_FRACTAL_UI, primaryNode.position);
-                        updateFractalUIScale(this.fractalAxisManipulators, camera, REFERENCE_DISTANCE_FRACTAL_UI, primaryNode.position);
+                // Update AGH and Manipulators to follow the centroid of the selected nodes
+                if (this.adaptiveGeometricHub && this.fractalAxisManipulators && selectedNodes.size > 0) {
+                    const currentCentroid = new THREE.Vector3();
+                    selectedNodes.forEach(node => currentCentroid.add(node.position));
+                    currentCentroid.divideScalar(selectedNodes.size);
+
+                    this.adaptiveGeometricHub.position.copy(currentCentroid);
+                    this.fractalAxisManipulators.position.copy(currentCentroid);
+
+                    if (camera) { // Also update their scale as they move
+                        updateFractalUIScale(this.adaptiveGeometricHub, camera, REFERENCE_DISTANCE_FRACTAL_UI, currentCentroid);
+                        updateFractalUIScale(this.fractalAxisManipulators, camera, REFERENCE_DISTANCE_FRACTAL_UI, currentCentroid);
                     }
                 }
                 this.space.emit('graph:nodes:transformed', { nodes: Array.from(selectedNodes), transformationType: 'translate' });
@@ -1026,7 +1099,7 @@ export class UIManager {
             }
             case InteractionState.FRACTAL_ROTATING: {
                 e.preventDefault();
-                if (!this.draggedFractalElementInfo || !this.space.isDragging) break;
+                if (!this.draggedFractalElementInfo || !this.space.isDragging) break; // Add null check for this.draggedFractalElementInfo
                 const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
                 if (!camera) break;
                 const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
@@ -1065,105 +1138,210 @@ export class UIManager {
                 const deltaQuaternion = new THREE.Quaternion().setFromAxisAngle(rotationAxisVector, angleDelta);
 
                 // Pivot for rotation: AGH center (which is node's position for single selection, or manipulators' group position)
-                const pivotPoint = this.fractalRotationManipulators.position.clone(); // Or adaptiveGeometricHub position
+                const pivotPoint = this.draggedFractalElementInfo.manipulatorCenter.clone();
 
                 selectedNodes.forEach(node => {
-                    const initialPos = this.selectedNodesInitialPositions.get(node.id);
-                    const initialQuaternion = this.selectedNodesInitialQuaternions.get(node.id);
+                    const initialNodePos = this.selectedNodesInitialPositions.get(node.id);
+                    const initialNodeQuaternion = this.selectedNodesInitialQuaternions.get(node.id);
+                    const initialOffsetFromPivot = node.userData.initialOffsetFromPivot; // Recalling the stored offset
 
-                    if (initialPos && initialQuaternion) {
-                        // Rotate position around the pivot
-                        const offset = initialPos.clone().sub(pivotPoint);
-                        offset.applyQuaternion(deltaQuaternion);
-                        const newPos = pivotPoint.clone().add(offset);
+                    if (initialNodePos && initialNodeQuaternion && initialOffsetFromPivot) {
+                        // 1. Calculate new position
+                        // Rotate the initial offset vector by the deltaQuaternion
+                        const rotatedOffset = initialOffsetFromPivot.clone().applyQuaternion(deltaQuaternion);
+                        const newPos = pivotPoint.clone().add(rotatedOffset);
                         node.setPosition(newPos.x, newPos.y, newPos.z);
 
-                        // Apply rotation to the node's orientation
-                        if (node.mesh) { // Only ShapeNodes usually have a mesh to rotate directly
-                            const newQuaternion = deltaQuaternion.clone().multiply(initialQuaternion);
+                        // 2. Calculate new orientation
+                        // The node's new world orientation is its initial world orientation multiplied by the deltaQuaternion
+                        if (node.mesh) {
+                            const newQuaternion = deltaQuaternion.clone().multiply(initialNodeQuaternion);
                             node.mesh.quaternion.copy(newQuaternion);
-                        } else if (node.cssObject) { // For HTML nodes, direct quaternion might not apply.
-                            // This part is more complex for HTML nodes if they are to rotate in 3D.
-                            // For now, we assume ShapeNode or similar with a .mesh
                         }
+                        // For HTML nodes, true 3D rotation of the content is complex and typically not done by direct quaternion manipulation
+                        // of the CSS3DObject. If needed, this would involve CSS transforms.
+                        // For now, only ShapeNode .mesh objects are rotated.
                     }
                 });
 
                 // Update the initial angle for the next move event to represent the last angle
+                // This makes the rotation continuous from the last pointer position.
                 this.draggedFractalElementInfo.initialAngle = currentAngle;
-                // Also update initial quaternions and positions for continuous drag
-                selectedNodes.forEach(node => {
-                    this.selectedNodesInitialPositions.set(node.id, node.position.clone());
-                     if (node.mesh) this.selectedNodesInitialQuaternions.set(node.id, node.mesh.getWorldQuaternion(new THREE.Quaternion()));
-                });
 
+                // CRITICAL: For continuous drag, the "initial" transforms for the *next* delta calculation
+                // must be the ones *just applied*.
+                // So, we update selectedNodesInitialPositions and selectedNodesInitialQuaternions.
+                // And importantly, initialOffsetFromPivot needs to be relative to the *same original pivot* but rotated by the *total* delta so far.
+                // This is tricky. A simpler way for continuous rotation:
+                // Store the *cumulative* delta quaternion from the very start of the drag.
+                // Apply this cumulative delta to the *original* initial positions/quaternions each time.
+                // Let's adjust: Store cumulativeDeltaQuaternion in draggedFractalElementInfo.
+
+                if (!this.draggedFractalElementInfo.cumulativeDeltaQuaternion) {
+                    this.draggedFractalElementInfo.cumulativeDeltaQuaternion = new THREE.Quaternion();
+                }
+                this.draggedFractalElementInfo.cumulativeDeltaQuaternion.premultiply(deltaQuaternion); // Accumulate rotation
+
+                // Re-apply using the *cumulative* delta from the *original* start state.
+                selectedNodes.forEach(node => {
+                    const originalStartPos = this.selectedNodesInitialPositions.get(node.id); // The very first position
+                    const originalStartQuaternion = this.selectedNodesInitialQuaternions.get(node.id); // Very first quaternion
+                    // originalOffsetFromPivot is based on originalStartPos and original pivot, so it's constant.
+                    const originalOffsetFromPivot = node.userData.initialOffsetFromPivot;
+
+
+                    if (originalStartPos && originalStartQuaternion && originalOffsetFromPivot) {
+                        const cumulativeRotation = this.draggedFractalElementInfo.cumulativeDeltaQuaternion;
+
+                        const rotatedOffset = originalOffsetFromPivot.clone().applyQuaternion(cumulativeRotation);
+                        const newPos = pivotPoint.clone().add(rotatedOffset);
+                        node.setPosition(newPos.x, newPos.y, newPos.z);
+
+                        if (node.mesh) {
+                            const newQuaternion = cumulativeRotation.clone().multiply(originalStartQuaternion);
+                            node.mesh.quaternion.copy(newQuaternion);
+                        }
+                    }
+                });
+                // The initialAngle update is still correct for calculating the next frame's deltaQuaternion.
 
                 this.space.emit('graph:nodes:transformed', { nodes: Array.from(selectedNodes), transformationType: 'rotate' });
                 break;
             }
             case InteractionState.FRACTAL_SCALING: {
                 e.preventDefault();
-                if (!this.draggedFractalElementInfo || !this.space.isDragging) break;
+                if (!this.draggedFractalElementInfo || !this.space.isDragging) break; // Add null check for this.draggedFractalElementInfo
                 const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
                 if (!camera) break;
                 const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
                 if (!selectedNodes || selectedNodes.size === 0) break;
 
-                const { axis: scaleAxis, type: scaleType, startPointerScreenPos } = this.draggedFractalElementInfo;
+                const { axis: scaleAxis, type: scaleType, startPointerScreenPos, manipulatorCenter: pivotPoint } = this.draggedFractalElementInfo;
                 const currentPointerScreenPos = new THREE.Vector2(this.pointerState.clientX, this.pointerState.clientY);
-
-                // Calculate screen-space delta
                 const screenDelta = currentPointerScreenPos.clone().sub(startPointerScreenPos);
 
-                // Determine scale factor based on screenDelta.
-                // A common approach: sum of dx and dy, or just dy if constrained.
-                // Positive delta for increase, negative for decrease.
-                // Sensitivity factor to control scaling speed.
-                const sensitivity = 0.005; // Adjust as needed
-                let scaleFactorDelta = (screenDelta.x - screenDelta.y) * sensitivity; // Using (dx - dy) for a diagonal-like control feel for uniform.
+                // Determine scale factor based on dominant screen delta component, relative to camera view
+                // This is a common approach for screen-space driven scaling.
+                // Project a unit vector along camera's right and up onto the screen plane.
+                const camRight = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
+                const camUp = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
 
-                selectedNodes.forEach(node => {
-                    const initialScale = this.selectedNodesInitialScales.get(node.id);
-                    const initialPos = this.selectedNodesInitialPositions.get(node.id); // For potential pivot
-                    if (!initialScale || !initialPos) return;
+                // For axial scaling, we want movement along the axis on screen to drive scale.
+                // For uniform, a general "outward" mouse movement from center.
+                // A simpler, often effective method is to use combined X and Y screen movement.
+                // Positive delta (e.g. right or up) increases scale, negative decreases.
+                // To make it more intuitive: movement away from the screen center (or manipulator center projected to screen)
+                // could mean scale up, towards means scale down.
 
-                    let newScale = initialScale.clone();
-                    let finalScaleMultiplier = 1.0 + scaleFactorDelta;
-                    finalScaleMultiplier = Math.max(0.01, finalScaleMultiplier); // Prevent zero or negative scale
+                const sensitivity = 0.005; // General sensitivity
+                let scaleMultiplierDelta = 1.0;
 
-                    if (scaleType === 'scale_uniform') {
-                        newScale.multiplyScalar(finalScaleMultiplier);
-                    } else if (scaleType === 'scale_axis') {
-                        if (scaleAxis === 'x') newScale.x *= finalScaleMultiplier;
-                        else if (scaleAxis === 'y') newScale.y *= finalScaleMultiplier;
-                        else if (scaleAxis === 'z') newScale.z *= finalScaleMultiplier;
+                if (scaleType === 'scale_uniform') {
+                    // For uniform scale, consider radial distance change from projected manipulator center
+                    const manipulatorScreenPos = pivotPoint.clone().project(camera);
+                    const startPointerNdc = new THREE.Vector2(
+                        (startPointerScreenPos.x / window.innerWidth) * 2 - 1,
+                        -(startPointerScreenPos.y / window.innerHeight) * 2 + 1
+                    );
+                    const currentPointerNdc = new THREE.Vector2(
+                        (currentPointerScreenPos.x / window.innerWidth) * 2 - 1,
+                        -(currentPointerScreenPos.y / window.innerHeight) * 2 + 1
+                    );
+                    const distStart = startPointerNdc.distanceTo(manipulatorScreenPos);
+                    const distCurrent = currentPointerNdc.distanceTo(manipulatorScreenPos);
+
+                    if (distStart > 0.001) { // Avoid division by zero
+                         scaleMultiplierDelta = distCurrent / distStart;
                     }
 
-                    // Node's resize method expects world dimensions
-                    // If initialScale was already world dimensions (e.g. from getActualSize),
-                    // then newScale is the new target world dimensions.
-                    // If Node.resize takes absolute world dimensions:
-                    node.resize(newScale);
+                } else if (scaleType === 'scale_axis') {
+                    // For axial scale, use mouse delta along a screen direction that "feels" like the axis
+                    // This is tricky. A simpler approach: use screenDelta.x or .y based on axis.
+                    // Or, use the dot product of screenDelta with the projected axis on screen.
+                    // For now, let's use a simpler combined delta:
+                    scaleMultiplierDelta = 1.0 + (screenDelta.x - screenDelta.y) * sensitivity;
+                }
+                scaleMultiplierDelta = Math.max(0.01, scaleMultiplierDelta); // Prevent zero or negative scale
 
-                    // If scaling around a pivot (e.g., AGH center) and not node center:
-                    // This is more complex and depends on how Node.resize handles position.
-                    // For now, assuming Node.resize scales from its own center.
-                    // If pivot is this.fractalScaleManipulators.position:
-                    // const pivot = this.fractalScaleManipulators.position;
-                    // const offset = initialPos.clone().sub(pivot);
-                    // offset.multiplyScalar(finalScaleMultiplier); // This would be for uniform scale if pivot is involved
-                    // const newPos = pivot.clone().add(offset);
-                    // node.setPosition(newPos.x, newPos.y, newPos.z);
+
+                // Store cumulative scale factor if not present
+                if (this.draggedFractalElementInfo.cumulativeScaleMultiplier === undefined) {
+                    this.draggedFractalElementInfo.cumulativeScaleMultiplier = {x: 1, y: 1, z: 1, uniform: 1};
+                }
+
+                let appliedScaleFactorX = 1, appliedScaleFactorY = 1, appliedScaleFactorZ = 1;
+
+                if (scaleType === 'scale_uniform') {
+                    this.draggedFractalElementInfo.cumulativeScaleMultiplier.uniform *= scaleMultiplierDelta;
+                    const totalUniformScale = this.draggedFractalElementInfo.cumulativeScaleMultiplier.uniform;
+                    appliedScaleFactorX = totalUniformScale;
+                    appliedScaleFactorY = totalUniformScale;
+                    appliedScaleFactorZ = totalUniformScale;
+                } else { // scale_axis
+                    if (scaleAxis === 'x') {
+                        this.draggedFractalElementInfo.cumulativeScaleMultiplier.x *= scaleMultiplierDelta;
+                        appliedScaleFactorX = this.draggedFractalElementInfo.cumulativeScaleMultiplier.x;
+                    } else if (scaleAxis === 'y') {
+                        this.draggedFractalElementInfo.cumulativeScaleMultiplier.y *= scaleMultiplierDelta;
+                        appliedScaleFactorY = this.draggedFractalElementInfo.cumulativeScaleMultiplier.y;
+                    } else if (scaleAxis === 'z') {
+                        this.draggedFractalElementInfo.cumulativeScaleMultiplier.z *= scaleMultiplierDelta;
+                        appliedScaleFactorZ = this.draggedFractalElementInfo.cumulativeScaleMultiplier.z;
+                    }
+                }
+
+
+                selectedNodes.forEach(node => {
+                    const originalNodeDimensions = this.selectedNodesInitialScales.get(node.id); // Node's dimensions at drag start
+                    const originalOffsetFromPivot = node.userData.initialOffsetFromPivot; // Offset from pivot at drag start
+
+                    if (!originalNodeDimensions || !originalOffsetFromPivot) return;
+
+                    // 1. Calculate new node dimensions
+                    const newAbsoluteNodeDimensions = originalNodeDimensions.clone();
+                    newAbsoluteNodeDimensions.x *= appliedScaleFactorX;
+                    newAbsoluteNodeDimensions.y *= appliedScaleFactorY;
+                    newAbsoluteNodeDimensions.z *= appliedScaleFactorZ;
+
+                    // Ensure minimum dimensions for the node (e.g., 1 world unit)
+                    newAbsoluteNodeDimensions.x = Math.max(1, newAbsoluteNodeDimensions.x);
+                    newAbsoluteNodeDimensions.y = Math.max(1, newAbsoluteNodeDimensions.y);
+                    newAbsoluteNodeDimensions.z = Math.max(1, newAbsoluteNodeDimensions.z);
+
+                    if (typeof node.resize === 'function') {
+                        node.resize(newAbsoluteNodeDimensions);
+                    } else if (node.mesh) { // Fallback for simple mesh scaling
+                        const baseSize = node.baseSize || {width:1, height:1, depth:1}; // Assuming baseSize for HtmlNode like scaling
+                        node.mesh.scale.set(
+                            newAbsoluteNodeDimensions.x / (baseSize.width || 1),
+                            newAbsoluteNodeDimensions.y / (baseSize.height || 1),
+                            newAbsoluteNodeDimensions.z / (baseSize.depth || 1)
+                        );
+                    }
+
+
+                    // 2. Calculate new node position (scaled offset from pivot)
+                    const newOffsetFromPivot = originalOffsetFromPivot.clone();
+                    newOffsetFromPivot.x *= appliedScaleFactorX;
+                    newOffsetFromPivot.y *= appliedScaleFactorY;
+                    newOffsetFromPivot.z *= appliedScaleFactorZ;
+
+                    const newPos = pivotPoint.clone().add(newOffsetFromPivot);
+                    node.setPosition(newPos.x, newPos.y, newPos.z);
                 });
 
-                // Update AGH and Manipulators (position and scale)
-                const primaryNode = selectedNodes.values().next().value;
-                if (primaryNode && this.adaptiveGeometricHub && this.fractalScaleManipulators) {
-                    this.adaptiveGeometricHub.position.copy(primaryNode.position);
-                    this.fractalScaleManipulators.position.copy(primaryNode.position);
-                     if (camera) {
-                        updateFractalUIScale(this.adaptiveGeometricHub, camera, REFERENCE_DISTANCE_FRACTAL_UI, primaryNode.position);
-                        updateFractalUIScale(this.fractalScaleManipulators, camera, REFERENCE_DISTANCE_FRACTAL_UI, primaryNode.position);
+                // Update startPointerScreenPos for next delta calculation to make scaling continuous
+                this.draggedFractalElementInfo.startPointerScreenPos.copy(currentPointerScreenPos);
+                // Reset individual axis/uniform multipliers for next frame, as cumulative is now stored.
+                // This is slightly different from rotation. For scaling, each frame's delta is applied to the cumulative.
+                // So, the stored cumulative is the state, and startPointerScreenPos is reset.
+
+                if (this.adaptiveGeometricHub && this.fractalScaleManipulators) {
+                    this.adaptiveGeometricHub.position.copy(pivotPoint);
+                    this.fractalScaleManipulators.position.copy(pivotPoint);
+                    if (camera) {
+                        updateFractalUIScale(this.adaptiveGeometricHub, camera, REFERENCE_DISTANCE_FRACTAL_UI, pivotPoint);
+                        updateFractalUIScale(this.fractalScaleManipulators, camera, REFERENCE_DISTANCE_FRACTAL_UI, pivotPoint);
                     }
                 }
                 this.space.emit('graph:nodes:transformed', { nodes: Array.from(selectedNodes), transformationType: 'scale' });
@@ -1343,6 +1521,14 @@ export class UIManager {
             this.selectedNodesInitialPositions.clear();
             this.selectedNodesInitialQuaternions.clear();
             this.selectedNodesInitialScales.clear();
+            if (this.draggedFractalElementInfo) {
+                if (this.draggedFractalElementInfo.cumulativeDeltaQuaternion) {
+                    delete this.draggedFractalElementInfo.cumulativeDeltaQuaternion;
+                }
+                if (this.draggedFractalElementInfo.cumulativeScaleMultiplier) {
+                    delete this.draggedFractalElementInfo.cumulativeScaleMultiplier;
+                }
+            }
             if (this.areAnyFractalManipulatorsVisible()) {
                 this._transitionToState(InteractionState.FRACTAL_HUB_ACTIVE);
             } else {
@@ -1580,11 +1766,7 @@ export class UIManager {
 
                 e.preventDefault();
                 e.stopPropagation();
-                console.log("Semantic zoom on axis:", this.hoveredFractalElement.userData.axis, "deltaY:", e.deltaY);
-
-                // Placeholder visual feedback: temporarily change color
-                const axisType = this.hoveredFractalElement.userData.axis;
-                console.log("Semantic zoom on axis:", axisType, "deltaY:", e.deltaY); // Per TODO_FractalUI.md placeholder
+                // console.log("Semantic zoom on axis:", this.hoveredFractalElement.userData.axis, "deltaY:", e.deltaY); // Debug
 
                 // Initialize or update zoom level stored on the hovered element's userData
                 if (this.hoveredFractalElement.userData.zoomLevel === undefined) {
