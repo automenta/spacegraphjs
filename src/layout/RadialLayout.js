@@ -44,7 +44,7 @@ export class RadialLayout {
                 rootNode.position.copy(centerPos);
                 nodesToArrange = nodesToArrange.filter((n) => n.id !== rootNode.id);
             } else {
-                // console.warn(`RadialLayout: Center node with ID "${centerNodeId}" not found. Using geometric center.`);
+                console.warn(`RadialLayout: Center node with ID "${centerNodeId}" not found. Using geometric center.`);
             }
         }
 
