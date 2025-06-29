@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as THREE from 'three';
+// eslint-disable-next-line import/no-unresolved
 import { UIManager } from '../UIManager.js';
 import { SpaceGraph } from '../../core/SpaceGraph.js';
 import { Node } from '../../graph/nodes/Node.js';
@@ -7,9 +8,11 @@ import { TranslationGizmo } from './gizmos/TranslationGizmo.js';
 import { InteractionState } from './InteractionState.js';
 
 // Mock dependencies
+// eslint-disable-next-line import/no-unresolved
 vi.mock('../../core/SpaceGraph.js');
 vi.mock('../InteractionState.js'); // Assuming this is a simple enum or constants object
 vi.mock('./gizmos/TranslationGizmo.js');
+// eslint-disable-next-line import/no-unresolved
 vi.mock('../../graph/nodes/Node.js');
 
 
@@ -144,7 +147,8 @@ describe('UIManager - Gizmo Interactions', () => {
                 intersectPlane: vi.fn().mockReturnValue(mockIntersectionPoint) // For fallback in _onPointerDown
             }
         };
-        THREE.Raycaster = vi.fn(() => mockRaycaster);
+        // THREE.Raycaster = vi.fn(() => mockRaycaster); // Incorrect way to mock
+        vi.spyOn(THREE, 'Raycaster').mockImplementation(() => mockRaycaster);
 
 
         // Simulate pointer down event
@@ -179,7 +183,8 @@ describe('UIManager - Gizmo Interactions', () => {
                 intersectPlane: vi.fn((plane, target) => target.copy(mockCurrentPointerWorldPos)) // For plane drag
             }
         };
-        THREE.Raycaster = vi.fn(() => mockRaycaster);
+        // THREE.Raycaster = vi.fn(() => mockRaycaster); // Incorrect way to mock
+        vi.spyOn(THREE, 'Raycaster').mockImplementation(() => mockRaycaster);
 
         // Mock gizmo orientation (world aligned)
         uiManager.gizmo.quaternion.identity();
@@ -217,7 +222,7 @@ describe('UIManager - Gizmo Interactions', () => {
 
         // Simulate pointer move for rotation
         // Initial point on plane (e.g. along X axis from center)
-        const initialPointerOnPlane = gizmoCenter.clone().add(new THREE.Vector3(1,0,0));
+        // const initialPointerOnPlane = gizmoCenter.clone().add(new THREE.Vector3(1,0,0)); // Unused variable
         // Current point on plane (e.g. rotated 90deg around Y, now along Z axis)
         const currentPointerOnPlane = gizmoCenter.clone().add(new THREE.Vector3(0,0,1));
 
@@ -227,7 +232,8 @@ describe('UIManager - Gizmo Interactions', () => {
                 intersectPlane: vi.fn((plane, target) => target.copy(currentPointerOnPlane))
             }
         };
-        THREE.Raycaster = vi.fn(() => mockRaycaster);
+        // THREE.Raycaster = vi.fn(() => mockRaycaster); // Incorrect way to mock
+        vi.spyOn(THREE, 'Raycaster').mockImplementation(() => mockRaycaster);
 
         const pointerMoveEvent = { clientX: 100, clientY: 0, pointerId: 1, preventDefault: vi.fn() };
         uiManager._handleGizmoDrag(pointerMoveEvent);

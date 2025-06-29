@@ -2343,55 +2343,97 @@ export class UIManager {
                 }
 
 
-                // 2. Check for Fractal UI intersection if no closer selection handle hit
-                if (!closestHit || (newFractalElInfo && newFractalElInfo.distance < closestHit.distance)) {
-                    // Check AGH
-                    if (this.adaptiveGeometricHub && this.adaptiveGeometricHub.visible) {
-                        const aghIntersect = raycaster.intersectObject(this.adaptiveGeometricHub, false);
-                        if (aghIntersect.length > 0 && aghIntersect[0].object.userData.isFractalUIElement) {
-                            if (!closestHit || aghIntersect[0].distance < closestHit.distance) {
-                                closestHit = { type: 'fractal', info: { object: aghIntersect[0].object, type: 'agh', distance: aghIntersect[0].distance }, distance: aghIntersect[0].distance };
-                            }
+                // 2. Check for Fractal UI intersection
+                // Check AGH
+                if (this.adaptiveGeometricHub && this.adaptiveGeometricHub.visible) {
+                    const aghIntersect = raycaster.intersectObject(this.adaptiveGeometricHub, false);
+                    if (aghIntersect.length > 0 && aghIntersect[0].object.userData.isFractalUIElement) {
+                        if (!closestHit || aghIntersect[0].distance < closestHit.distance) {
+                            closestHit = { type: 'fractal', info: { object: aghIntersect[0].object, type: 'agh', distance: aghIntersect[0].distance }, distance: aghIntersect[0].distance };
                         }
                     }
-                    // Check Translation Axes
-                    if (this.fractalAxisManipulators && this.fractalAxisManipulators.visible) {
-                        const intersects = raycaster.intersectObjects(this.fractalAxisManipulators.children, true);
-                        const validIntersect = intersects.find(i => i.object.userData.isFractalUIElement && i.object.userData.type === 'translate_axis');
-                        if (validIntersect) {
-                             if (!closestHit || validIntersect.distance < closestHit.distance) {
-                                closestHit = { type: 'fractal', info: { object: validIntersect.object, type: 'translate_axis', axis: validIntersect.object.userData.axis, distance: validIntersect.distance }, distance: validIntersect.distance };
-                            }
+                }
+                // Check Translation Axes
+                if (this.fractalAxisManipulators && this.fractalAxisManipulators.visible) {
+                    const intersects = raycaster.intersectObjects(this.fractalAxisManipulators.children, true);
+                    const validIntersect = intersects.find(i => i.object.userData.isFractalUIElement && i.object.userData.type === 'translate_axis');
+                    if (validIntersect) {
+                         if (!closestHit || validIntersect.distance < closestHit.distance) {
+                            closestHit = { type: 'fractal', info: { object: validIntersect.object, type: 'translate_axis', axis: validIntersect.object.userData.axis, distance: validIntersect.distance }, distance: validIntersect.distance };
                         }
                     }
-                    // Check Rotation Rings
-                    if (this.fractalRotationManipulators && this.fractalRotationManipulators.visible) {
-                        const intersects = raycaster.intersectObjects(this.fractalRotationManipulators.children, true);
-                        const validIntersect = intersects.find(i => i.object.userData.isFractalUIElement && i.object.userData.type === 'rotate_axis');
-                        if (validIntersect) {
-                            if (!closestHit || validIntersect.distance < closestHit.distance) {
-                                closestHit = { type: 'fractal', info: { object: validIntersect.object, type: 'rotate_axis', axis: validIntersect.object.userData.axis, distance: validIntersect.distance }, distance: validIntersect.distance };
-                            }
+                }
+                // Check Rotation Rings
+                if (this.fractalRotationManipulators && this.fractalRotationManipulators.visible) {
+                    const intersects = raycaster.intersectObjects(this.fractalRotationManipulators.children, true);
+                    const validIntersect = intersects.find(i => i.object.userData.isFractalUIElement && i.object.userData.type === 'rotate_axis');
+                    if (validIntersect) {
+                        if (!closestHit || validIntersect.distance < closestHit.distance) {
+                            closestHit = { type: 'fractal', info: { object: validIntersect.object, type: 'rotate_axis', axis: validIntersect.object.userData.axis, distance: validIntersect.distance }, distance: validIntersect.distance };
                         }
                     }
-                    // Check Scale Cubes
-                    if (this.fractalScaleManipulators && this.fractalScaleManipulators.visible) {
-                        const intersects = raycaster.intersectObjects(this.fractalScaleManipulators.children, true);
-                        const validIntersect = intersects.find(i => i.object.userData.isFractalUIElement && (i.object.userData.type === 'scale_axis' || i.object.userData.type === 'scale_uniform'));
-                        if (validIntersect) {
-                             if (!closestHit || validIntersect.distance < closestHit.distance) {
-                                closestHit = { type: 'fractal', info: { object: validIntersect.object, type: validIntersect.object.userData.type, axis: validIntersect.object.userData.axis, distance: validIntersect.distance }, distance: validIntersect.distance };
+                }
+                // Check Scale Cubes
+                if (this.fractalScaleManipulators && this.fractalScaleManipulators.visible) {
+                    const intersects = raycaster.intersectObjects(this.fractalScaleManipulators.children, true);
+                    const validIntersect = intersects.find(i => i.object.userData.isFractalUIElement && (i.object.userData.type === 'scale_axis' || i.object.userData.type === 'scale_uniform'));
+                    if (validIntersect) {
+                         if (!closestHit || validIntersect.distance < closestHit.distance) {
+                            closestHit = { type: 'fractal', info: { object: validIntersect.object, type: validIntersect.object.userData.type, axis: validIntersect.object.userData.axis, distance: validIntersect.distance }, distance: validIntersect.distance };
+                        }
+                    }
+                }
+
+                // 3. Check for old Gizmo
+                if (this.gizmo && this.gizmo.visible) {
+                    const gizmoIntersects = raycaster.intersectObjects(this.gizmo.handles.children, true);
+                    if (gizmoIntersects.length > 0) {
+                        const intersectedHandleMesh = gizmoIntersects[0].object;
+                        if (intersectedHandleMesh.userData?.isGizmoHandle) {
+                            if (!closestHit || gizmoIntersects[0].distance < closestHit.distance) {
+                                closestHit = {
+                                    type: 'gizmo',
+                                    info: {
+                                        axis: intersectedHandleMesh.userData.axis,
+                                        type: intersectedHandleMesh.userData.gizmoType,
+                                        part: intersectedHandleMesh.userData.part,
+                                        object: intersectedHandleMesh,
+                                        distance: gizmoIntersects[0].distance,
+                                    },
+                                    distance: gizmoIntersects[0].distance
+                                };
                             }
                         }
                     }
                 }
 
+                // Assign based on closest hit
+                if (closestHit) {
+                    if (closestHit.type === 'selectionScaleHandle') selectionScaleHandleInfo = closestHit.info;
+                    else if (closestHit.type === 'fractal') fractalElementInfo = closestHit.info;
+                    else if (closestHit.type === 'gizmo') gizmoHandleInfo = closestHit.info;
+                }
 
-                // 3. If no UI controls hit or closer fractal/selection hit, check for old Gizmo
-                if (!closestHit || (newGizmoHInfo && newGizmoHInfo.distance < closestHit.distance)) {
-                    if (this.gizmo && this.gizmo.visible) {
-                        const gizmoIntersects = raycaster.intersectObjects(this.gizmo.handles.children, true);
-                        if (gizmoIntersects.length > 0) {
+                // 4. If no UI controls hit, check for graph elements (nodes, edges, metaframes)
+                // This should only happen if none of the above specific UI elements were hit closer or at all.
+                if (!selectionScaleHandleInfo && !fractalElementInfo && !gizmoHandleInfo) {
+                    const generalIntersect = this.space.intersectedObjects(event.clientX, event.clientY);
+                    if (generalIntersect) {
+                        const { object, node: resolvedNode, edge: resolvedEdge } = generalIntersect;
+                        if (resolvedNode) graphNode = resolvedNode;
+                        if (resolvedEdge) intersectedEdge = resolvedEdge;
+                        if (object && object.name && graphNode && graphNode.metaframe?.isVisible) {
+                            if (object.name.startsWith('resizeHandle-')) {
+                                const handleTypeStr = object.name.substring('resizeHandle-'.length);
+                                metaframeHandleInfo = { type: handleTypeStr, object: object, node: graphNode };
+                            } else if (object.name === 'dragHandle') {
+                                metaframeHandleInfo = { type: 'dragHandle', object: object, node: graphNode };
+                            }
+                        }
+                    }
+                }
+            }
+        }
                             const intersectedHandleMesh = gizmoIntersects[0].object;
                             if (intersectedHandleMesh.userData?.isGizmoHandle) {
                                 if (!closestHit || gizmoIntersects[0].distance < closestHit.distance) {
