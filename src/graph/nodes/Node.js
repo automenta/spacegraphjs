@@ -39,10 +39,29 @@ export class Node {
         };
     }
 
+    setRotation(quaternion) {
+        if (this.mesh) {
+            this.mesh.quaternion.copy(quaternion);
+        }
+        // CSSObject rotation will be handled by subclass or by update method
+    }
+
     update(_space) {
-        if (this.mesh) this.mesh.position.copy(this.position);
-        if (this.cssObject) this.cssObject.position.copy(this.position);
-        if (this.labelObject) this.labelObject.position.copy(this.position);
+        if (this.mesh) {
+            this.mesh.position.copy(this.position);
+            // Ensure mesh quaternion is authoritative if it exists
+        }
+        if (this.cssObject) {
+            this.cssObject.position.copy(this.position);
+            if (this.mesh) { // If there's a mesh, sync cssObject's quaternion to it
+                this.cssObject.quaternion.copy(this.mesh.quaternion);
+            }
+        }
+        if (this.labelObject) {
+            this.labelObject.position.copy(this.position);
+            // Assuming labelObject doesn't need separate rotation from the node itself
+            // or it's handled by its own update mechanism if it's a CSS2DObject/CSS3DObject
+        }
     }
 
     dispose() {
