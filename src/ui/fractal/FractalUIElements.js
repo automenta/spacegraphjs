@@ -442,7 +442,7 @@ export function applySemanticZoomToAxis(manipulatorGroup, axisType, zoomLevel, m
 
         // Manage tick marks
         const showTicks = zoomLevel >= 1; // Show ticks from L1 upwards
-        tickMarks.forEach((tick, index) => {
+        tickMarks.forEach((tick, _index) => {
             tick.visible = showTicks;
             if (showTicks) {
                 let tickScaleFactor = 1.0;

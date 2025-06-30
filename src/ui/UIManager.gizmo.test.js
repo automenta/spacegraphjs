@@ -8,13 +8,12 @@ import { TranslationGizmo } from './gizmos/TranslationGizmo.js';
 import { InteractionState } from './InteractionState.js';
 
 // Mock dependencies
-// eslint-disable-next-line import/no-unresolved
+
 vi.mock('../../core/SpaceGraph.js');
 vi.mock('../InteractionState.js'); // Assuming this is a simple enum or constants object
 vi.mock('./gizmos/TranslationGizmo.js');
-// eslint-disable-next-line import/no-unresolved
-vi.mock('../../graph/nodes/Node.js');
 
+vi.mock('../../graph/nodes/Node.js');
 
 describe('UIManager - Gizmo Interactions', () => {
     let spaceGraph;
@@ -55,7 +54,7 @@ describe('UIManager - Gizmo Interactions', () => {
             on: vi.fn(),
             off: vi.fn(),
             emit: vi.fn(),
-            getPointerNDC: vi.fn().mockReturnValue(new THREE.Vector2(0,0)), // Default NDC
+            getPointerNDC: vi.fn().mockReturnValue(new THREE.Vector2(0, 0)), // Default NDC
             intersectedObjects: vi.fn(), // For general intersections
         }));
 
@@ -97,27 +96,25 @@ describe('UIManager - Gizmo Interactions', () => {
         uiManager.multiSelectionHelper = {
             position: new THREE.Vector3(),
             quaternion: new THREE.Quaternion(),
-            scale: new THREE.Vector3(1,1,1),
+            scale: new THREE.Vector3(1, 1, 1),
             updateMatrixWorld: vi.fn(),
-            worldToLocal: vi.fn(v => v.clone()), // Simple pass-through for testing
-            localToWorld: vi.fn(v => v.clone()), // Simple pass-through
+            worldToLocal: vi.fn((v) => v.clone()), // Simple pass-through for testing
+            localToWorld: vi.fn((v) => v.clone()), // Simple pass-through
         };
-
 
         // Mock a node for selection
         const mockNode = new Node('testNode');
         mockNode.position = new THREE.Vector3(10, 0, 0);
-        mockNode.mesh = { // Mock a basic mesh structure
-            getWorldPosition: vi.fn(() => new THREE.Vector3(10,0,0)),
+        mockNode.mesh = {
+            // Mock a basic mesh structure
+            getWorldPosition: vi.fn(() => new THREE.Vector3(10, 0, 0)),
             getWorldQuaternion: vi.fn(() => new THREE.Quaternion()),
-            getWorldScale: vi.fn(() => new THREE.Vector3(1,1,1)),
+            getWorldScale: vi.fn(() => new THREE.Vector3(1, 1, 1)),
             updateWorldMatrix: vi.fn(),
-            parent: mockWebGLScene // Mock parent for some three.js operations
+            parent: mockWebGLScene, // Mock parent for some three.js operations
         };
         mockNode.userData = {}; // Ensure userData exists
         mockSelectedNodesSet.add(mockNode);
-
-
     });
 
     it('should transition to GIZMO_DRAGGING state when a gizmo handle is clicked', () => {
@@ -139,20 +136,28 @@ describe('UIManager - Gizmo Interactions', () => {
         uiManager._getTargetInfo = vi.fn().mockReturnValue({ gizmoHandleInfo: mockGizmoHandleInfo });
 
         // Mock raycaster intersection for GIZMO_DRAGGING transition
-        const mockIntersectionPoint = new THREE.Vector3(1,2,3);
+        const mockIntersectionPoint = new THREE.Vector3(1, 2, 3);
         const mockRaycaster = {
-            intersectObject: vi.fn().mockReturnValue([{ point: mockIntersectionPoint, object: mockGizmoHandleInfo.object }]),
+            intersectObject: vi
+                .fn()
+                .mockReturnValue([{ point: mockIntersectionPoint, object: mockGizmoHandleInfo.object }]),
             setFromCamera: vi.fn(),
             ray: {
-                intersectPlane: vi.fn().mockReturnValue(mockIntersectionPoint) // For fallback in _onPointerDown
-            }
+                intersectPlane: vi.fn().mockReturnValue(mockIntersectionPoint), // For fallback in _onPointerDown
+            },
         };
         // THREE.Raycaster = vi.fn(() => mockRaycaster); // Incorrect way to mock
         vi.spyOn(THREE, 'Raycaster').mockImplementation(() => mockRaycaster);
 
-
         // Simulate pointer down event
-        const pointerDownEvent = { clientX: 0, clientY: 0, button: 0, pointerId: 1, preventDefault: vi.fn(), stopPropagation: vi.fn() };
+        const pointerDownEvent = {
+            clientX: 0,
+            clientY: 0,
+            button: 0,
+            pointerId: 1,
+            preventDefault: vi.fn(),
+            stopPropagation: vi.fn(),
+        };
         uiManager._onPointerDown(pointerDownEvent);
 
         expect(uiManager.currentState).toBe(InteractionState.GIZMO_DRAGGING);
@@ -172,16 +177,16 @@ describe('UIManager - Gizmo Interactions', () => {
             part: 'arrow',
             object: new THREE.Mesh(),
         };
-        uiManager.gizmoDragStartPointerWorldPos.set(1,0,0); // Initial click point on gizmo
+        uiManager.gizmoDragStartPointerWorldPos.set(1, 0, 0); // Initial click point on gizmo
 
         // Mock raycaster for _handleGizmoDrag
-        const mockCurrentPointerWorldPos = new THREE.Vector3(6,0,0); // Pointer moved 5 units in X
+        const mockCurrentPointerWorldPos = new THREE.Vector3(6, 0, 0); // Pointer moved 5 units in X
         const mockRaycaster = {
             setFromCamera: vi.fn(),
             ray: {
                 closestPointToLine: vi.fn((line, clamp, target) => target.copy(mockCurrentPointerWorldPos)),
-                intersectPlane: vi.fn((plane, target) => target.copy(mockCurrentPointerWorldPos)) // For plane drag
-            }
+                intersectPlane: vi.fn((plane, target) => target.copy(mockCurrentPointerWorldPos)), // For plane drag
+            },
         };
         // THREE.Raycaster = vi.fn(() => mockRaycaster); // Incorrect way to mock
         vi.spyOn(THREE, 'Raycaster').mockImplementation(() => mockRaycaster);
@@ -194,28 +199,30 @@ describe('UIManager - Gizmo Interactions', () => {
         const pointerMoveEvent = { clientX: 100, clientY: 0, pointerId: 1, preventDefault: vi.fn() };
         uiManager._handleGizmoDrag(pointerMoveEvent);
 
-        const expectedPosition = new THREE.Vector3(10,0,0).add(new THREE.Vector3(5,0,0)); // Initial + Delta
+        const expectedPosition = new THREE.Vector3(10, 0, 0).add(new THREE.Vector3(5, 0, 0)); // Initial + Delta
         expect(mockNode.setPosition).toHaveBeenCalledWith(expectedPosition.x, expectedPosition.y, expectedPosition.z);
     });
-
 
     it('should apply rotation when dragging a gizmo rotate handle', () => {
         uiManager.currentState = InteractionState.GIZMO_DRAGGING;
         const mockNode = uiManager._uiPluginCallbacks.getSelectedNodes().values().next().value;
 
         uiManager.selectedNodesInitialPositions.set(mockNode.id, mockNode.position.clone());
-        uiManager.selectedNodesInitialQuaternions.set(mockNode.id, mockNode.mesh.getWorldQuaternion(new THREE.Quaternion()));
-        mockNode.userData.initialOffsetFromPivot = new THREE.Vector3(0,0,0); // Assume rotation around node center for simplicity
+        uiManager.selectedNodesInitialQuaternions.set(
+            mockNode.id,
+            mockNode.mesh.getWorldQuaternion(new THREE.Quaternion())
+        );
+        mockNode.userData.initialOffsetFromPivot = new THREE.Vector3(0, 0, 0); // Assume rotation around node center for simplicity
 
         const gizmoCenter = mockNode.position.clone();
         uiManager.draggedGizmoHandleInfo = {
             axis: 'y', // Rotate around Y
             type: 'rotate',
             object: new THREE.Mesh(),
-            rotationPlane: new THREE.Plane(new THREE.Vector3(0,1,0), -gizmoCenter.y), // Plane perpendicular to Y, through gizmoCenter
+            rotationPlane: new THREE.Plane(new THREE.Vector3(0, 1, 0), -gizmoCenter.y), // Plane perpendicular to Y, through gizmoCenter
             initialAngle: 0,
             cumulativeDeltaQuaternion: new THREE.Quaternion(),
-            gizmoCenter: gizmoCenter
+            gizmoCenter: gizmoCenter,
         };
         uiManager.gizmo.position.copy(gizmoCenter);
         uiManager.gizmo.quaternion.identity(); // Gizmo world aligned for this test
@@ -224,13 +231,13 @@ describe('UIManager - Gizmo Interactions', () => {
         // Initial point on plane (e.g. along X axis from center)
         // const initialPointerOnPlane = gizmoCenter.clone().add(new THREE.Vector3(1,0,0)); // Unused variable
         // Current point on plane (e.g. rotated 90deg around Y, now along Z axis)
-        const currentPointerOnPlane = gizmoCenter.clone().add(new THREE.Vector3(0,0,1));
+        const currentPointerOnPlane = gizmoCenter.clone().add(new THREE.Vector3(0, 0, 1));
 
         const mockRaycaster = {
             setFromCamera: vi.fn(),
             ray: {
-                intersectPlane: vi.fn((plane, target) => target.copy(currentPointerOnPlane))
-            }
+                intersectPlane: vi.fn((plane, target) => target.copy(currentPointerOnPlane)),
+            },
         };
         // THREE.Raycaster = vi.fn(() => mockRaycaster); // Incorrect way to mock
         vi.spyOn(THREE, 'Raycaster').mockImplementation(() => mockRaycaster);
@@ -239,10 +246,14 @@ describe('UIManager - Gizmo Interactions', () => {
         uiManager._handleGizmoDrag(pointerMoveEvent);
 
         // Node itself doesn't move if rotated around its own center
-        expect(mockNode.setPosition).toHaveBeenCalledWith(mockNode.position.x, mockNode.position.y, mockNode.position.z);
+        expect(mockNode.setPosition).toHaveBeenCalledWith(
+            mockNode.position.x,
+            mockNode.position.y,
+            mockNode.position.z
+        );
 
         // Check node's mesh quaternion
-        const expectedQuaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0), Math.PI / 2); // 90 deg around Y
+        const expectedQuaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2); // 90 deg around Y
         expect(mockNode.mesh.quaternion.x).toBeCloseTo(expectedQuaternion.x);
         expect(mockNode.mesh.quaternion.y).toBeCloseTo(expectedQuaternion.y);
         expect(mockNode.mesh.quaternion.z).toBeCloseTo(expectedQuaternion.z);
@@ -262,5 +273,4 @@ describe('UIManager - Gizmo Interactions', () => {
         expect(uiManager.draggedGizmoHandleInfo).toBeNull();
         expect(uiManager.selectedNodesInitialPositions.size).toBe(0);
     });
-
 });
