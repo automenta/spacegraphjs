@@ -218,35 +218,64 @@ export class HtmlNode extends Node {
     update(space) {
         if (this.cssObject) {
             this.cssObject.position.copy(this.position);
+            // Sync quaternion from mesh (base Node.update will do this via super.update)
+
+            // Sync HTML element pixel size from mesh scale (world dimensions)
+            if (this.mesh) {
+                const newPixelWidth = Math.max(HtmlNode.MIN_SIZE.width, this.mesh.scale.x);
+                const newPixelHeight = Math.max(HtmlNode.MIN_SIZE.height, this.mesh.scale.y);
+
+                if (this.size.width !== newPixelWidth || this.size.height !== newPixelHeight) {
+                    this.size.width = newPixelWidth;
+                    this.size.height = newPixelHeight;
+                    if (this.htmlElement) {
+                        this.htmlElement.style.width = `${this.size.width}px`;
+                        this.htmlElement.style.height = `${this.size.height}px`;
+                    }
+                }
+            }
             applyLabelLOD(this.cssObject, this.data.labelLod, space, this.data.contentScale ?? 1.0);
+        }
+        if (this.mesh) { // Also ensure base Node update logic for mesh position/rotation runs
+            super.update(space);
         }
     }
 
-    // Overridden resize method to work with scale from Metaframe
-    resize(newWorldScale) {
-        // newWorldScale is the new world dimensions (width, height, depth) for the node's placeholder mesh
+    // Overridden resize method
+    resize(newWorldDimensions) {
+        // newWorldDimensions are the target world dimensions for the node.
+        // For HtmlNode, its 1x1 mesh's scale *becomes* these world dimensions.
         if (this.mesh) {
-            this.mesh.scale.copy(newWorldScale); // newWorldScale is the target world dimensions for the 1x1 plane
+            this.mesh.scale.set(
+                Math.max(1, newWorldDimensions.x), // Ensure non-zero scale for mesh
+                Math.max(1, newWorldDimensions.y),
+                Math.max(1, newWorldDimensions.z || 1) // Default Z to 1 if not provided
+            );
         }
 
-        // Update pixel dimensions based on this new world scale
-        this.size.width = Math.max(HtmlNode.MIN_SIZE.width, newWorldScale.x);
-        this.size.height = Math.max(HtmlNode.MIN_SIZE.height, newWorldScale.y);
+        // Update internal pixel size and HTML element style based on these new world dimensions.
+        // This will also be synced by update() if mesh.scale changes elsewhere, but good to do it here too.
+        const newPixelWidth = Math.max(HtmlNode.MIN_SIZE.width, newWorldDimensions.x);
+        const newPixelHeight = Math.max(HtmlNode.MIN_SIZE.height, newWorldDimensions.y);
+
+        this.size.width = newPixelWidth;
+        this.size.height = newPixelHeight;
 
         if (this.htmlElement) {
             this.htmlElement.style.width = `${this.size.width}px`;
             this.htmlElement.style.height = `${this.size.height}px`;
         }
 
-        this.metaframe?.update(); // Ensure metaframe is updated with the new size/scale
+        this.metaframe?.update();
+        // Emit data changes for external listeners
         this.space?.emit('graph:node:dataChanged', { node: this, property: 'size', value: { ...this.size } });
         this.space?.emit('graph:node:dataChanged', {
             node: this,
-            property: 'scale',
+            property: 'scale', // This 'scale' is relative to baseSize, used for saving/loading perhaps
             value: {
-                x: newWorldScale.x / this.baseSize.width,
-                y: newWorldScale.y / this.baseSize.height,
-                z: newWorldScale.z,
+                x: newWorldDimensions.x / this.baseSize.width,
+                y: newWorldDimensions.y / this.baseSize.height,
+                z: (newWorldDimensions.z || 1) / (this.baseSize.depth || 1), // Assuming baseSize might have depth
             },
         });
     }

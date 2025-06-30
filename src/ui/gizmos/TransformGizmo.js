@@ -12,18 +12,18 @@ const SCALE_HANDLE_OFFSET = AXIS_LENGTH + SCALE_HANDLE_SIZE / 2; // Position at 
 const UNIFORM_SCALE_HANDLE_SIZE = 20;
 
 /**
- * @class TranslationGizmo
+ * @class TransformGizmo
  * @extends THREE.Object3D
- * Represents a 3D translation gizmo with handles for X, Y, Z axes and XY, YZ, XZ planes.
+ * Represents a 3D transformation gizmo with handles for translation, rotation, and scale.
  * Manages its own visual appearance, including handle meshes and materials.
  */
-export class TranslationGizmo extends THREE.Object3D {
+export class TransformGizmo extends THREE.Object3D {
     /**
-     * Creates an instance of TranslationGizmo.
+     * Creates an instance of TransformGizmo.
      */
     constructor() {
         super();
-        this.name = 'TranslationGizmo';
+        this.name = 'TransformGizmo';
 
         /**
          * @property {THREE.Object3D} handles - Group containing all interactive mesh parts of the gizmo.
@@ -466,7 +466,7 @@ export class TranslationGizmo extends THREE.Object3D {
  * @param {string} axis - Axis identifier ('x', 'y', 'z').
  * @returns {THREE.Vector3} The normalized axis vector.
  */
-TranslationGizmo.getAxisVector = function (axis) {
+TransformGizmo.getAxisVector = function (axis) {
     switch (axis) {
         case 'x':
             return new THREE.Vector3(1, 0, 0);
@@ -485,7 +485,7 @@ TranslationGizmo.getAxisVector = function (axis) {
  * @param {string} planeAxis - Plane identifier ('xy', 'yz', 'xz').
  * @returns {THREE.Vector3} The normalized plane normal vector.
  */
-TranslationGizmo.getPlaneNormal = function (planeAxis) {
+TransformGizmo.getPlaneNormal = function (planeAxis) {
     switch (planeAxis) {
         case 'xy':
             return new THREE.Vector3(0, 0, 1); // Normal is Z
