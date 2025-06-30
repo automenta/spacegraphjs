@@ -254,29 +254,36 @@ export class UIManager {
     }
 
     _handleToolModeChangeRequest = ({ mode }) => {
-        if (mode === 'rotate') {
-            if (this.activeGizmoMode === 'rotate') {
-                this.activeGizmoMode = null; // Toggle off
+        // Valid gizmo modes that can be activated via toolbar/hotkey
+        const validGizmoModes = ['translate', 'rotate', 'scale'];
+
+        if (validGizmoModes.includes(mode)) {
+            if (this.activeGizmoMode === mode) {
+                this.activeGizmoMode = null; // Toggle off if clicking the same tool again
             } else {
-                this.activeGizmoMode = 'rotate'; // Toggle on
-                // When activating rotate tool, ensure AGH is not in a transform mode
+                this.activeGizmoMode = mode; // Activate the new tool mode
+                // When activating a gizmo tool, ensure AGH is not in a transform mode
+                // and hide direct selection handles implicitly via _onSelectionChanged's logic
                 this.aghCurrentModeCycle = 0;
                 if (this.fractalAxisManipulators) this.fractalAxisManipulators.visible = false;
                 if (this.fractalRotationManipulators) this.fractalRotationManipulators.visible = false;
                 if (this.fractalScaleManipulators) this.fractalScaleManipulators.visible = false;
-                this.hudManager.updateAGHModeIndicator(this.aghCurrentModeCycle); // Update HUD
+                // No need to explicitly hide selectionScaleHandlesGroup here,
+                // _onSelectionChanged will do it based on activeGizmoMode.
             }
         } else {
-            // Handle other tools if any, or set to null if an unknown tool is requested
+            // If an unknown mode or a mode that doesn't use the main gizmo is requested
             this.activeGizmoMode = null;
         }
-        // Force an update of selection-based UI elements
+
+        this.hudManager.updateAGHModeIndicator(this.aghCurrentModeCycle); // Update HUD for AGH state
+
+        // Force an update of selection-based UI elements like gizmo, selection handles, AGH
         this._onSelectionChanged({
             selected: this._uiPluginCallbacks.getSelectedNodes(),
-            type: 'node', // Assume node selection for context, or get actual type
+            type: 'node', // Assuming node selection for context
         });
         this.space.emit('ui:activeToolViewUpdated', { mode: this.activeGizmoMode });
-        this.hudManager.updateAGHModeIndicator(this.aghCurrentModeCycle); // Also update if tool mode changes affecting AGH
     };
 
     _createSelectionScaleHandles() {
@@ -629,12 +636,12 @@ export class UIManager {
         if (this.currentState === newState && newState !== InteractionState.GIZMO_DRAGGING) return;
 
         switch (this.currentState) {
-            // case InteractionState.DRAGGING_NODE:
-            //     this.draggedNode?.endDrag();
-            //     document.body.style.cursor = 'grab';
-            //     this.draggedNode = null;
-            //     this.space.isDragging = false;
-            //     break;
+            case InteractionState.DRAGGING_NODE:
+                this.draggedNode?.endDrag();
+                document.body.style.cursor = 'grab';
+                this.draggedNode = null;
+                this.space.isDragging = false;
+                break;
             // case InteractionState.RESIZING_NODE:
             //     this.resizedNode?.endResize();
             //     document.body.style.cursor = 'grab';
@@ -684,79 +691,79 @@ export class UIManager {
             //     this.selectedNodesInitialScales.clear();
             //     this.space.isDragging = false;
             //     break;
-            // case InteractionState.SCALING_SELECTION: // End previous scaling state
-            //     if (this.draggedSelectionScaleHandleInfo?.handle) {
-            //         this.draggedSelectionScaleHandleInfo.handle.material.color.copy(
-            //             this.draggedSelectionScaleHandleInfo.handle.userData.originalColor
-            //         );
-            //     }
-            //     this.draggedSelectionScaleHandleInfo = null;
-            //     this.selectedNodesInitialPositions.clear();
-            //     this.selectedNodesInitialScales.clear();
-            //     if (this.selectionScaleHandlesGroup?.userData) {
-            //         delete this.selectionScaleHandlesGroup.userData.originalBoundingBox;
-            //         delete this.selectionScaleHandlesGroup.userData.initialCentroid;
-            //     }
-            //     document.body.style.cursor = 'default';
-            //     this.space.isDragging = false;
-            //     break;
+            case InteractionState.SCALING_SELECTION: // End previous scaling state
+                if (this.draggedSelectionScaleHandleInfo?.handle) {
+                    this.draggedSelectionScaleHandleInfo.handle.material.color.copy(
+                        this.draggedSelectionScaleHandleInfo.handle.userData.originalColor
+                    );
+                }
+                this.draggedSelectionScaleHandleInfo = null;
+                this.selectedNodesInitialPositions.clear();
+                this.selectedNodesInitialScales.clear();
+                if (this.selectionScaleHandlesGroup?.userData) {
+                    delete this.selectionScaleHandlesGroup.userData.originalBoundingBox;
+                    delete this.selectionScaleHandlesGroup.userData.initialCentroid;
+                }
+                document.body.style.cursor = 'default';
+                this.space.isDragging = false;
+                break;
         }
 
         const oldState = this.currentState;
         this.currentState = newState;
 
         switch (newState) {
-            // case InteractionState.DRAGGING_NODE: {
-            //     this.draggedNode = data.node;
-            //     this.draggedNodeInitialWorldPos.copy(this.draggedNode.position);
-            //     if (this.draggedNode.mesh) this.draggedNodeInitialQuaternion.copy(this.draggedNode.mesh.quaternion);
-            //     this.draggedNode.startDrag();
-            //     const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
-            //     if (!camera) {
-            //         this._transitionToState(InteractionState.IDLE);
-            //         return;
-            //     }
+            case InteractionState.DRAGGING_NODE: {
+                this.draggedNode = data.node;
+                this.draggedNodeInitialWorldPos.copy(this.draggedNode.position);
+                if (this.draggedNode.mesh) this.draggedNodeInitialQuaternion.copy(this.draggedNode.mesh.quaternion);
+                this.draggedNode.startDrag();
+                const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
+                if (!camera) {
+                    this._transitionToState(InteractionState.IDLE);
+                    return;
+                }
 
-            //     // Define interaction plane parallel to world XY, at the node's initial Z depth.
-            //     this.dragInteractionPlane.setFromNormalAndCoplanarPoint(
-            //         new THREE.Vector3(0, 0, 1), // Normal is world Z-axis
-            //         this.draggedNodeInitialWorldPos // Point on the plane
-            //     );
+                // Define interaction plane parallel to world XY, at the node's initial Z depth.
+                this.dragInteractionPlane.setFromNormalAndCoplanarPoint(
+                    new THREE.Vector3(0, 0, 1), // Normal is world Z-axis
+                    this.draggedNodeInitialWorldPos // Point on the plane
+                );
 
-            //     const raycaster = new THREE.Raycaster();
-            //     const pointerNDC = this.space.getPointerNDC(this.pointerState.clientX, this.pointerState.clientY);
-            //     raycaster.setFromCamera(pointerNDC, camera);
-            //     const initialIntersectionPoint = new THREE.Vector3();
+                const raycaster = new THREE.Raycaster();
+                const pointerNDC = this.space.getPointerNDC(this.pointerState.clientX, this.pointerState.clientY);
+                raycaster.setFromCamera(pointerNDC, camera);
+                const initialIntersectionPoint = new THREE.Vector3();
 
-            //     if (raycaster.ray.intersectPlane(this.dragInteractionPlane, initialIntersectionPoint)) {
-            //         this.dragOffset.subVectors(initialIntersectionPoint, this.draggedNodeInitialWorldPos);
-            //     } else {
-            //         // Fallback if ray doesn't intersect the defined XY plane (e.g., camera looking straight up/down)
-            //         // Project to a plane facing the camera at the node's depth as a secondary measure.
-            //         const cameraForward = new THREE.Vector3();
-            //         camera.getWorldDirection(cameraForward);
-            //         const fallbackPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(
-            //             cameraForward,
-            //             this.draggedNodeInitialWorldPos
-            //         );
-            //         if (raycaster.ray.intersectPlane(fallbackPlane, initialIntersectionPoint)) {
-            //             this.dragOffset.subVectors(initialIntersectionPoint, this.draggedNodeInitialWorldPos);
-            //         } else {
-            //             // Further fallback: use screenToWorld at node's Z, this is less ideal as it doesn't use initial world pos.
-            //             const fallbackWorldPos = this.space.screenToWorld(
-            //                 this.pointerState.clientX,
-            //                 this.pointerState.clientY,
-            //                 this.draggedNodeInitialWorldPos.z
-            //             );
-            //             this.dragOffset = fallbackWorldPos
-            //                 ? fallbackWorldPos.sub(this.draggedNode.position) // Offset from current, not initial - might be jumpy
-            //                 : new THREE.Vector3();
-            //         }
-            //     }
-            //     document.body.style.cursor = 'grabbing';
-            //     this.space.isDragging = true;
-            //     break;
-            // }
+                if (raycaster.ray.intersectPlane(this.dragInteractionPlane, initialIntersectionPoint)) {
+                    this.dragOffset.subVectors(initialIntersectionPoint, this.draggedNodeInitialWorldPos);
+                } else {
+                    // Fallback if ray doesn't intersect the defined XY plane (e.g., camera looking straight up/down)
+                    // Project to a plane facing the camera at the node's depth as a secondary measure.
+                    const cameraForward = new THREE.Vector3();
+                    camera.getWorldDirection(cameraForward);
+                    const fallbackPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(
+                        cameraForward,
+                        this.draggedNodeInitialWorldPos
+                    );
+                    if (raycaster.ray.intersectPlane(fallbackPlane, initialIntersectionPoint)) {
+                        this.dragOffset.subVectors(initialIntersectionPoint, this.draggedNodeInitialWorldPos);
+                    } else {
+                        // Further fallback: use screenToWorld at node's Z, this is less ideal as it doesn't use initial world pos.
+                        const fallbackWorldPos = this.space.screenToWorld(
+                            this.pointerState.clientX,
+                            this.pointerState.clientY,
+                            this.draggedNodeInitialWorldPos.z
+                        );
+                        this.dragOffset = fallbackWorldPos
+                            ? fallbackWorldPos.sub(this.draggedNode.position) // Offset from current, not initial - might be jumpy
+                            : new THREE.Vector3();
+                    }
+                }
+                document.body.style.cursor = 'grabbing';
+                this.space.isDragging = true;
+                break;
+            }
             // case InteractionState.RESIZING_NODE: {
             //     this.resizedNode = data.node;
             //     this.resizedNode.startResize();
@@ -818,6 +825,60 @@ export class UIManager {
             //     document.body.style.cursor = this._getCursorForHandle(this.activeResizeHandleType) || 'nwse-resize';
             //     break;
             // }
+            case InteractionState.SCALING_SELECTION: {
+                this.draggedSelectionScaleHandleInfo = data.handleInfo;
+                const selectedNodes = data.selectedNodes;
+
+                if (
+                    !this.selectionScaleHandlesGroup ||
+                    !this.selectionScaleHandlesGroup.userData.currentBoundingBox ||
+                    selectedNodes.size === 0
+                ) {
+                    // console.warn("SCALING_SELECTION: Missing data for scaling operation.");
+                    this._transitionToState(InteractionState.IDLE);
+                    return;
+                }
+
+                this.selectionScaleHandlesGroup.userData.originalBoundingBox =
+                    this.selectionScaleHandlesGroup.userData.currentBoundingBox.clone();
+                this.selectionScaleHandlesGroup.userData.initialCentroid =
+                    this.selectionScaleHandlesGroup.position.clone();
+
+                this.selectedNodesInitialPositions.clear();
+                this.selectedNodesInitialScales.clear(); // Will store world dimensions
+
+                selectedNodes.forEach((node) => {
+                    this.selectedNodesInitialPositions.set(node.id, node.position.clone());
+                    let size;
+                    if (node.getActualSize) {
+                        // For HtmlNode or similar
+                        size = node.getActualSize();
+                    } else if (node.mesh) {
+                        // For ShapeNode or basic mesh nodes
+                        // Attempt to get world scale, assuming mesh origin is node origin
+                        size = node.mesh.getWorldScale(new THREE.Vector3());
+                        // If local scale is more representative of "size" (e.g. if parented), this might need adjustment.
+                        // For unparented nodes, world scale = local scale.
+                    } else {
+                        size = new THREE.Vector3(1, 1, 1); // Fallback size
+                    }
+                    this.selectedNodesInitialScales.set(node.id, size.clone());
+
+                    // Store initial offset from the scaling pivot (centroid of selection)
+                    const initialOffset = node.position
+                        .clone()
+                        .sub(this.selectionScaleHandlesGroup.userData.initialCentroid);
+                    node.userData.initialOffsetFromSelectionCentroid = initialOffset;
+                });
+
+                if (this.draggedSelectionScaleHandleInfo.handle) {
+                    this.draggedSelectionScaleHandleInfo.handle.material.color.setHex(SELECTION_HANDLE_HOVER_COLOR); // Highlight active handle
+                }
+                // Determine cursor based on handle name/type if needed
+                document.body.style.cursor = 'nwse-resize'; // Generic resize cursor
+                this.space.isDragging = true;
+                break;
+            }
             case InteractionState.GIZMO_DRAGGING: {
                 this.draggedGizmoHandleInfo = data.gizmoHandleInfo;
                 this.gizmoDragStartPointerWorldPos.copy(data.initialPointerWorldPos);
@@ -1087,118 +1148,118 @@ export class UIManager {
         )
             return;
 
-        // Fractal UI Interaction takes highest precedence
+        // New order of precedence:
+        // 1. Gizmo Interaction (main transform gizmo)
+        if (this.pointerState.button === 0 && targetInfo.gizmoHandleInfo) {
+            e.preventDefault();
+            e.stopPropagation();
+            const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
+            if (selectedNodes && selectedNodes.size > 0 && this.gizmo) {
+                const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
+                const raycaster = new THREE.Raycaster();
+                const pointerNDC = this.space.getPointerNDC(this.pointerState.clientX, this.pointerState.clientY);
+                raycaster.setFromCamera(pointerNDC, camera);
+
+                let initialPointerWorldPosOnGizmo = new THREE.Vector3();
+                const intersects = raycaster.intersectObject(targetInfo.gizmoHandleInfo.object, false);
+                if (intersects.length > 0) {
+                    initialPointerWorldPosOnGizmo.copy(intersects[0].point);
+                } else {
+                    const gizmoPlaneNormal = new THREE.Vector3();
+                    camera.getWorldDirection(gizmoPlaneNormal);
+                    const interactionPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(
+                        gizmoPlaneNormal.negate(),
+                        this.gizmo.position
+                    );
+                    if (!raycaster.ray.intersectPlane(interactionPlane, initialPointerWorldPosOnGizmo)) {
+                        initialPointerWorldPosOnGizmo.copy(this.gizmo.position);
+                    }
+                }
+
+                this._transitionToState(InteractionState.GIZMO_DRAGGING, {
+                    gizmoHandleInfo: targetInfo.gizmoHandleInfo,
+                    initialPointerWorldPos: initialPointerWorldPosOnGizmo,
+                    selectedNodes: selectedNodes,
+                });
+            }
+            this.contextMenu.hide();
+            return;
+        }
+
+        // 2. Fractal UI Interaction
         if (this.pointerState.button === 0 && targetInfo.fractalElementInfo) {
             e.preventDefault();
             e.stopPropagation();
             const { object: fractalObject, type: fractalType, axis: fractalAxis } = targetInfo.fractalElementInfo;
             const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
 
-            // AGH click behavior now applies if any nodes are selected (single or multiple)
             if (fractalType === 'agh' && selectedNodes.size > 0 && this.adaptiveGeometricHub) {
                 if (this.activeGizmoMode === 'rotate') {
-                    // If toolbar's rotate tool is active, AGH click does nothing for transforms
                     this.contextMenu.hide();
                     return;
                 }
-                // Clicked on the Adaptive Geometric Hub: Cycle through manipulator modes
-                this.aghCurrentModeCycle = (this.aghCurrentModeCycle + 1) % 4; // 0:None, 1:Translate, 2:Rotate, 3:Scale
-
-                // Determine the pivot/center for the manipulators.
-                // This will be the AGH's current position, which is the centroid for multi-select
-                // or the single node's position for single-select.
+                this.aghCurrentModeCycle = (this.aghCurrentModeCycle + 1) % 4;
                 const manipulatorPosition = this.adaptiveGeometricHub.position.clone();
                 const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
-
-                // Hide all first, then show the current mode's manipulators
                 this.fractalAxisManipulators.visible = false;
                 this.fractalRotationManipulators.visible = false;
                 this.fractalScaleManipulators.visible = false;
-
-                // Reset zoom levels when hiding manipulators explicitly or switching
                 const resetZoomAndUnhighlight = (group) => {
                     if (!group) return;
                     group.children.forEach((child) => {
                         if (child.userData.isFractalUIElement) {
                             child.userData.zoomLevel = 0;
-                            // If this child was the hovered one, unhighlight it
                             if (this.hoveredFractalElement === child) {
                                 const originalColor = child.userData.originalColor || new THREE.Color(0xffffff);
                                 setFractalElementActive(child, false, originalColor, false);
                                 this.hoveredFractalElement = null;
                             }
-                            // Apply base semantic zoom to reset visuals
                             if (child.userData.axis && typeof applySemanticZoomToAxis === 'function') {
-                                const elementType = child.userData.type; // e.g. 'translate_axis', 'rotate_axis', 'scale_axis', 'scale_uniform'
-                                let manipulatorType = 'translate'; // default
+                                const elementType = child.userData.type;
+                                let manipulatorType = 'translate';
                                 if (elementType === 'rotate_axis') manipulatorType = 'rotate';
                                 else if (elementType === 'scale_axis' || elementType === 'scale_uniform')
                                     manipulatorType = elementType;
-
                                 applySemanticZoomToAxis(group, child.userData.axis, 0, manipulatorType);
                             }
                         }
                     });
                 };
-
                 resetZoomAndUnhighlight(this.fractalAxisManipulators);
                 resetZoomAndUnhighlight(this.fractalRotationManipulators);
                 resetZoomAndUnhighlight(this.fractalScaleManipulators);
-
                 let activeManipulatorGroup = null;
                 switch (this.aghCurrentModeCycle) {
-                    case 1: // Translate
-                        activeManipulatorGroup = this.fractalAxisManipulators;
-                        break;
-                    case 2: // Rotate
-                        activeManipulatorGroup = this.fractalRotationManipulators;
-                        break;
-                    case 3: // Scale
-                        activeManipulatorGroup = this.fractalScaleManipulators;
-                        break;
-                    case 0: // None
-                    default:
-                        // All are already hidden
-                        break;
+                    case 1: activeManipulatorGroup = this.fractalAxisManipulators; break;
+                    case 2: activeManipulatorGroup = this.fractalRotationManipulators; break;
+                    case 3: activeManipulatorGroup = this.fractalScaleManipulators; break;
                 }
-
                 if (activeManipulatorGroup) {
-                    // Position the active manipulator group at the AGH's position
                     activeManipulatorGroup.position.copy(manipulatorPosition);
-                    activeManipulatorGroup.quaternion.identity(); // World aligned
-                    // Reset zoom levels for all children of the now active group before making visible
+                    activeManipulatorGroup.quaternion.identity();
                     activeManipulatorGroup.children.forEach((child) => {
                         if (child.userData.isFractalUIElement && child.userData.axis) {
                             child.userData.zoomLevel = 0;
                             const elementType = child.userData.type;
-                            let manipulatorType = 'translate'; // default
+                            let manipulatorType = 'translate';
                             if (elementType === 'rotate_axis') manipulatorType = 'rotate';
                             else if (elementType === 'scale_axis' || elementType === 'scale_uniform')
                                 manipulatorType = elementType;
                             applySemanticZoomToAxis(activeManipulatorGroup, child.userData.axis, 0, manipulatorType);
                         }
                     });
-                    // Update scale based on AGH's position (centroid or single node)
                     if (camera)
-                        updateFractalUIScale(
-                            activeManipulatorGroup,
-                            camera,
-                            REFERENCE_DISTANCE_FRACTAL_UI,
-                            manipulatorPosition
-                        );
+                        updateFractalUIScale(activeManipulatorGroup,camera,REFERENCE_DISTANCE_FRACTAL_UI,manipulatorPosition);
                     activeManipulatorGroup.visible = true;
                 }
-
                 this._transitionToState(InteractionState.FRACTAL_HUB_ACTIVE);
-                this.hudManager.updateAGHModeIndicator(this.aghCurrentModeCycle); // Update HUD
+                this.hudManager.updateAGHModeIndicator(this.aghCurrentModeCycle);
             } else if (fractalType === 'translate_axis' && selectedNodes.size > 0) {
                 const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
                 if (!camera) return;
-
                 const raycaster = new THREE.Raycaster();
                 const pointerNDC = this.space.getPointerNDC(this.pointerState.clientX, this.pointerState.clientY);
                 raycaster.setFromCamera(pointerNDC, camera);
-
                 const intersects = raycaster.intersectObject(fractalObject, false);
                 let initialPointerWorldPos = new THREE.Vector3();
                 if (intersects.length > 0) {
@@ -1206,152 +1267,68 @@ export class UIManager {
                 } else {
                     const planeNormal = new THREE.Vector3();
                     camera.getWorldDirection(planeNormal).negate();
-                    const interactionPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(
-                        planeNormal,
-                        fractalObject.getWorldPosition(new THREE.Vector3())
-                    );
+                    const interactionPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(planeNormal, fractalObject.getWorldPosition(new THREE.Vector3()));
                     if (!raycaster.ray.intersectPlane(interactionPlane, initialPointerWorldPos)) {
                         initialPointerWorldPos.copy(fractalObject.getWorldPosition(new THREE.Vector3()));
                     }
                 }
-
-                this.draggedFractalElementInfo = {
-                    element: fractalObject,
-                    type: fractalType,
-                    axis: fractalAxis,
-                    initialPointerWorldPos: initialPointerWorldPos.clone(),
-                };
-
+                this.draggedFractalElementInfo = { element: fractalObject, type: fractalType, axis: fractalAxis, initialPointerWorldPos: initialPointerWorldPos.clone() };
                 const manipulatorWorldPosition = this.fractalAxisManipulators.getWorldPosition(new THREE.Vector3());
                 const axisD = new THREE.Vector3();
-                if (fractalAxis === 'x') axisD.set(1, 0, 0);
-                else if (fractalAxis === 'y') axisD.set(0, 1, 0);
-                else if (fractalAxis === 'z') axisD.set(0, 0, 1);
-
-                const vecFromManipulatorOriginToClick = new THREE.Vector3().subVectors(
-                    initialPointerWorldPos,
-                    manipulatorWorldPosition
-                );
+                if (fractalAxis === 'x') axisD.set(1, 0, 0); else if (fractalAxis === 'y') axisD.set(0, 1, 0); else if (fractalAxis === 'z') axisD.set(0, 0, 1);
+                const vecFromManipulatorOriginToClick = new THREE.Vector3().subVectors(initialPointerWorldPos, manipulatorWorldPosition);
                 const t = vecFromManipulatorOriginToClick.dot(axisD);
                 const initialProjectedPntOnAxis = manipulatorWorldPosition.clone().addScaledVector(axisD, t);
-
                 this.draggedFractalElementInfo.initialProjectedPointOnAxis = initialProjectedPntOnAxis;
                 this.draggedFractalElementInfo.axisDirection = axisD.clone();
-
                 this.selectedNodesInitialPositions.clear();
-                selectedNodes.forEach((node) => {
-                    this.selectedNodesInitialPositions.set(node.id, node.position.clone());
-                });
-
-                const originalColorForGrab =
-                    fractalObject.userData.originalColor ||
-                    (fractalObject.material.color ? fractalObject.material.color.clone() : new THREE.Color(0xffffff));
+                selectedNodes.forEach((node) => { this.selectedNodesInitialPositions.set(node.id, node.position.clone()); });
+                const originalColorForGrab = fractalObject.userData.originalColor || (fractalObject.material.color ? fractalObject.material.color.clone() : new THREE.Color(0xffffff));
                 setFractalElementActive(fractalObject, true, originalColorForGrab, true);
-
-                this._transitionToState(InteractionState.FRACTAL_DRAGGING, {
-                    draggedFractalInfo: this.draggedFractalElementInfo,
-                    selectedNodes: selectedNodes,
-                });
+                this._transitionToState(InteractionState.FRACTAL_DRAGGING, { draggedFractalInfo: this.draggedFractalElementInfo, selectedNodes: selectedNodes });
             } else if (fractalType === 'rotate_axis' && selectedNodes.size > 0) {
                 const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
                 if (!camera) return;
-
                 this.selectedNodesInitialQuaternions.clear();
                 this.selectedNodesInitialPositions.clear();
                 selectedNodes.forEach((node) => {
-                    const worldQuaternion = node.mesh
-                        ? node.mesh.getWorldQuaternion(new THREE.Quaternion())
-                        : new THREE.Quaternion();
+                    const worldQuaternion = node.mesh ? node.mesh.getWorldQuaternion(new THREE.Quaternion()) : new THREE.Quaternion();
                     this.selectedNodesInitialQuaternions.set(node.id, worldQuaternion);
                     this.selectedNodesInitialPositions.set(node.id, node.position.clone());
                 });
-
                 const manipulatorGroup = this.fractalRotationManipulators;
                 const manipulatorWorldPosition = manipulatorGroup.getWorldPosition(new THREE.Vector3());
                 const rotationPlaneNormal = new THREE.Vector3();
-                if (fractalAxis === 'x') rotationPlaneNormal.set(1, 0, 0);
-                else if (fractalAxis === 'y') rotationPlaneNormal.set(0, 1, 0);
-                else if (fractalAxis === 'z') rotationPlaneNormal.set(0, 0, 1);
-                // Assuming manipulators are world-aligned for now.
-                // If they could rotate with the node, apply manipulatorGroup.quaternion to rotationPlaneNormal.
-
-                const rotationPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(
-                    rotationPlaneNormal,
-                    manipulatorWorldPosition
-                );
-
+                if (fractalAxis === 'x') rotationPlaneNormal.set(1, 0, 0); else if (fractalAxis === 'y') rotationPlaneNormal.set(0, 1, 0); else if (fractalAxis === 'z') rotationPlaneNormal.set(0, 0, 1);
+                const rotationPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(rotationPlaneNormal, manipulatorWorldPosition);
                 const raycaster = new THREE.Raycaster();
                 const pointerNDC = this.space.getPointerNDC(this.pointerState.clientX, this.pointerState.clientY);
                 raycaster.setFromCamera(pointerNDC, camera);
                 const initialPointerOnPlane = new THREE.Vector3();
                 if (!raycaster.ray.intersectPlane(rotationPlane, initialPointerOnPlane)) {
-                    // Fallback: if ray is parallel to plane, use a point on the handle itself if possible,
-                    // or a point on plane closest to pointer ray. For simplicity, using manipulator center as fallback.
                     const intersects = raycaster.intersectObject(fractalObject, false);
-                    if (intersects.length > 0) {
-                        initialPointerOnPlane.copy(intersects[0].point);
-                    } else {
-                        initialPointerOnPlane.copy(manipulatorWorldPosition);
-                    }
+                    if (intersects.length > 0) initialPointerOnPlane.copy(intersects[0].point); else initialPointerOnPlane.copy(manipulatorWorldPosition);
                 }
-
-                const initialVectorOnPlane = new THREE.Vector3().subVectors(
-                    initialPointerOnPlane,
-                    manipulatorWorldPosition
-                );
+                const initialVectorOnPlane = new THREE.Vector3().subVectors(initialPointerOnPlane, manipulatorWorldPosition);
                 let initialAngle = 0;
-                // Calculate angle based on the plane of rotation (defined by fractalAxis)
-                if (fractalAxis === 'y') {
-                    // Rotation around Y, plane is XZ
-                    initialAngle = Math.atan2(initialVectorOnPlane.z, initialVectorOnPlane.x);
-                } else if (fractalAxis === 'x') {
-                    // Rotation around X, plane is YZ
-                    initialAngle = Math.atan2(initialVectorOnPlane.z, initialVectorOnPlane.y);
-                } else {
-                    // Rotation around Z, plane is XY
-                    initialAngle = Math.atan2(initialVectorOnPlane.y, initialVectorOnPlane.x);
-                }
-
-                this.draggedFractalElementInfo = {
-                    element: fractalObject,
-                    type: fractalType,
-                    axis: fractalAxis,
-                    initialPointerWorldPos: initialPointerOnPlane.clone(), // This is the point on the plane
-                    rotationPlane: rotationPlane.clone(),
-                    manipulatorCenter: manipulatorWorldPosition.clone(),
-                    initialAngle: initialAngle,
-                    cumulativeDeltaQuaternion: new THREE.Quaternion(), // Initialize cumulative rotation
-                };
-
-                // Store initial offset from pivot for each selected node
-                selectedNodes.forEach((node) => {
-                    node.userData.initialOffsetFromPivot = node.position.clone().sub(manipulatorWorldPosition);
-                });
-
-                const originalColorForGrab =
-                    fractalObject.userData.originalColor ||
-                    (fractalObject.material.color ? fractalObject.material.color.clone() : new THREE.Color(0xffffff));
+                if (fractalAxis === 'y') initialAngle = Math.atan2(initialVectorOnPlane.z, initialVectorOnPlane.x);
+                else if (fractalAxis === 'x') initialAngle = Math.atan2(initialVectorOnPlane.z, initialVectorOnPlane.y);
+                else initialAngle = Math.atan2(initialVectorOnPlane.y, initialVectorOnPlane.x);
+                this.draggedFractalElementInfo = { element: fractalObject, type: fractalType, axis: fractalAxis, initialPointerWorldPos: initialPointerOnPlane.clone(), rotationPlane: rotationPlane.clone(), manipulatorCenter: manipulatorWorldPosition.clone(), initialAngle: initialAngle, cumulativeDeltaQuaternion: new THREE.Quaternion() };
+                selectedNodes.forEach((node) => { node.userData.initialOffsetFromPivot = node.position.clone().sub(manipulatorWorldPosition); });
+                const originalColorForGrab = fractalObject.userData.originalColor || (fractalObject.material.color ? fractalObject.material.color.clone() : new THREE.Color(0xffffff));
                 setFractalElementActive(fractalObject, true, originalColorForGrab, true);
-
-                this._transitionToState(InteractionState.FRACTAL_ROTATING, {
-                    draggedFractalInfo: this.draggedFractalElementInfo,
-                    selectedNodes: selectedNodes,
-                });
+                this._transitionToState(InteractionState.FRACTAL_ROTATING, { draggedFractalInfo: this.draggedFractalElementInfo, selectedNodes: selectedNodes });
             } else if ((fractalType === 'scale_axis' || fractalType === 'scale_uniform') && selectedNodes.size > 0) {
                 const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
                 if (!camera) return;
-
-                // Store initial scales and positions for selected nodes
                 this.selectedNodesInitialScales.clear();
-                this.selectedNodesInitialPositions.clear(); // Also store positions for pivot logic if needed
+                this.selectedNodesInitialPositions.clear();
                 selectedNodes.forEach((node) => {
-                    const worldScale = node.mesh
-                        ? node.mesh.getWorldScale(new THREE.Vector3())
-                        : node.getActualSize() || new THREE.Vector3(1, 1, 1);
+                    const worldScale = node.mesh ? node.mesh.getWorldScale(new THREE.Vector3()) : node.getActualSize() || new THREE.Vector3(1, 1, 1);
                     this.selectedNodesInitialScales.set(node.id, worldScale.clone());
                     this.selectedNodesInitialPositions.set(node.id, node.position.clone());
                 });
-
                 const raycaster = new THREE.Raycaster();
                 const pointerNDC = this.space.getPointerNDC(this.pointerState.clientX, this.pointerState.clientY);
                 raycaster.setFromCamera(pointerNDC, camera);
@@ -1360,57 +1337,31 @@ export class UIManager {
                 if (intersects.length > 0) {
                     initialPointerWorldPos.copy(intersects[0].point);
                 } else {
-                    // Fallback similar to translation
                     const planeNormal = new THREE.Vector3();
                     camera.getWorldDirection(planeNormal).negate();
-                    const interactionPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(
-                        planeNormal,
-                        fractalObject.getWorldPosition(new THREE.Vector3())
-                    );
+                    const interactionPlane = new THREE.Plane().setFromNormalAndCoplanarPoint( planeNormal, fractalObject.getWorldPosition(new THREE.Vector3()));
                     if (!raycaster.ray.intersectPlane(interactionPlane, initialPointerWorldPos)) {
                         initialPointerWorldPos.copy(fractalObject.getWorldPosition(new THREE.Vector3()));
                     }
                 }
-
-                this.draggedFractalElementInfo = {
-                    element: fractalObject,
-                    type: fractalType,
-                    axis: fractalAxis,
-                    initialPointerWorldPos: initialPointerWorldPos.clone(),
-                    startPointerScreenPos: new THREE.Vector2(this.pointerState.clientX, this.pointerState.clientY),
-                    manipulatorCenter: this.fractalScaleManipulators.getWorldPosition(new THREE.Vector3()),
-                };
-
-                // Store initial world dimensions and initial offset from pivot for each node
+                this.draggedFractalElementInfo = { element: fractalObject, type: fractalType, axis: fractalAxis, initialPointerWorldPos: initialPointerWorldPos.clone(), startPointerScreenPos: new THREE.Vector2(this.pointerState.clientX, this.pointerState.clientY), manipulatorCenter: this.fractalScaleManipulators.getWorldPosition(new THREE.Vector3()) };
                 selectedNodes.forEach((node) => {
-                    const initialWorldScale = node.getActualSize
-                        ? node.getActualSize()
-                        : node.mesh
-                          ? node.mesh.scale.clone()
-                          : new THREE.Vector3(100, 100, 100);
-                    this.selectedNodesInitialScales.set(node.id, initialWorldScale); // Store as world dimensions
-
+                    const initialWorldScale = node.getActualSize ? node.getActualSize() : node.mesh ? node.mesh.scale.clone() : new THREE.Vector3(100,100,100);
+                    this.selectedNodesInitialScales.set(node.id, initialWorldScale);
                     const initialPosition = node.position.clone();
                     this.selectedNodesInitialPositions.set(node.id, initialPosition);
-                    node.userData.initialOffsetFromPivot = initialPosition
-                        .clone()
-                        .sub(this.draggedFractalElementInfo.manipulatorCenter);
+                    node.userData.initialOffsetFromPivot = initialPosition.clone().sub(this.draggedFractalElementInfo.manipulatorCenter);
                 });
-
                 const originalColorForGrab = fractalObject.userData.originalColor || new THREE.Color(0xffffff);
-                setFractalElementActive(fractalObject, true, originalColorForGrab, true); // isGrabbed = true
-
-                this._transitionToState(InteractionState.FRACTAL_SCALING, {
-                    draggedFractalInfo: this.draggedFractalElementInfo,
-                    selectedNodes: selectedNodes,
-                });
+                setFractalElementActive(fractalObject, true, originalColorForGrab, true);
+                this._transitionToState(InteractionState.FRACTAL_SCALING, { draggedFractalInfo: this.draggedFractalElementInfo, selectedNodes: selectedNodes });
             }
             this.contextMenu.hide();
-            this.hudManager.hideFractalTooltip(); // Hide tooltip on click/drag start
+            this.hudManager.hideFractalTooltip();
             return;
         }
 
-        // Selection Scale Handle Interaction
+        // 3. Selection Scale Handle Interaction
         if (this.pointerState.button === 0 && targetInfo.selectionScaleHandleInfo) {
             e.preventDefault();
             e.stopPropagation();
@@ -1425,50 +1376,7 @@ export class UIManager {
             return;
         }
 
-        // Gizmo Interaction (original)
-        if (this.pointerState.button === 0 && targetInfo.gizmoHandleInfo) {
-            e.preventDefault();
-            e.stopPropagation();
-            const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
-            if (selectedNodes && selectedNodes.size > 0 && this.gizmo) {
-                // Ensure gizmo exists
-                // Store initial transforms for all selected nodes
-                // This is now handled inside _transitionToState GIZMO_DRAGGING block
-
-                const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
-                const raycaster = new THREE.Raycaster();
-                const pointerNDC = this.space.getPointerNDC(this.pointerState.clientX, this.pointerState.clientY);
-                raycaster.setFromCamera(pointerNDC, camera);
-
-                let initialPointerWorldPosOnGizmo = new THREE.Vector3();
-                // Intersect with the specific handle mesh
-                const intersects = raycaster.intersectObject(targetInfo.gizmoHandleInfo.object, false);
-                if (intersects.length > 0) {
-                    initialPointerWorldPosOnGizmo.copy(intersects[0].point);
-                } else {
-                    // Fallback: project onto a plane facing the camera, centered at the gizmo
-                    // This is crucial for rotation handles where the click might not be exactly on the mesh
-                    const gizmoPlaneNormal = new THREE.Vector3();
-                    camera.getWorldDirection(gizmoPlaneNormal); // Normal faces away from camera
-                    const interactionPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(
-                        gizmoPlaneNormal.negate(),
-                        this.gizmo.position
-                    );
-                    if (!raycaster.ray.intersectPlane(interactionPlane, initialPointerWorldPosOnGizmo)) {
-                        // Further fallback if plane intersection fails (should be rare)
-                        initialPointerWorldPosOnGizmo.copy(this.gizmo.position);
-                    }
-                }
-
-                this._transitionToState(InteractionState.GIZMO_DRAGGING, {
-                    gizmoHandleInfo: targetInfo.gizmoHandleInfo,
-                    initialPointerWorldPos: initialPointerWorldPosOnGizmo,
-                    selectedNodes: selectedNodes, // Pass the set of selected nodes
-                });
-            }
-            this.contextMenu.hide();
-            return;
-        }
+        // Button 1 (typically middle mouse) for auto-zoom
 
         if (this.pointerState.button === 1) {
             e.preventDefault();
@@ -1497,10 +1405,18 @@ export class UIManager {
             if (targetInfo.node) {
                 e.preventDefault();
                 // If a node is clicked, select it. Gizmo will appear due to selection change.
-                // Actual dragging will be handled by gizmo interaction.
                 this._uiPluginCallbacks.setSelectedNode(targetInfo.node, e.shiftKey);
                 this.contextMenu.hide();
-                // Removed: this._transitionToState(InteractionState.DRAGGING_NODE, { node: targetInfo.node });
+                // Transition to DRAGGING_NODE if it's a direct node click (not gizmo/resize handle)
+                // The check for pointerState.isDraggingThresholdMet will happen in _onPointerMove
+                // before actual dragging logic is executed.
+                // For now, we initiate the state, and _onPointerMove will confirm if it's a drag.
+                // We also need to ensure that this doesn't happen if a gizmo or scale handle is active/visible
+                // for this selection, as those should take precedence.
+                // The new _getTargetInfo prioritization should help here.
+                // If targetInfo.gizmoHandleInfo or targetInfo.selectionScaleHandleInfo is set,
+                // those blocks are hit before this 'targetInfo.node' block.
+                this._transitionToState(InteractionState.DRAGGING_NODE, { node: targetInfo.node });
                 return;
             }
             if (targetInfo.intersectedEdge) {
@@ -1528,140 +1444,140 @@ export class UIManager {
                 this._handleHover(e);
                 break;
 
-            // case InteractionState.SCALING_SELECTION: {
-            //     e.preventDefault();
-            //     if (!this.draggedSelectionScaleHandleInfo || !this.space.isDragging) break;
+            case InteractionState.SCALING_SELECTION: {
+                e.preventDefault();
+                if (!this.draggedSelectionScaleHandleInfo || !this.space.isDragging) break;
 
-            //     const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
-            //     if (!camera || !this.selectionScaleHandlesGroup?.userData?.originalBoundingBox) break;
+                const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
+                if (!camera || !this.selectionScaleHandlesGroup?.userData?.originalBoundingBox) break;
 
-            //     const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
-            //     if (!selectedNodes || selectedNodes.size === 0) break;
+                const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
+                if (!selectedNodes || selectedNodes.size === 0) break;
 
-            //     const initialBBox = this.selectionScaleHandlesGroup.userData.originalBoundingBox;
-            //     const initialCentroid = this.selectionScaleHandlesGroup.userData.initialCentroid.clone();
-            //     const _handleName = this.draggedSelectionScaleHandleInfo.handle.name;
+                const initialBBox = this.selectionScaleHandlesGroup.userData.originalBoundingBox;
+                const initialCentroid = this.selectionScaleHandlesGroup.userData.initialCentroid.clone();
+                const _handleName = this.draggedSelectionScaleHandleInfo.handle.name;
 
-            //     // Project pointer onto a plane for consistent interaction
-            //     // Plane is typically aligned with camera view, passing through the initial handle position
-            //     const handleInitialWorldPos = this.draggedSelectionScaleHandleInfo.handle.getWorldPosition(
-            //         new THREE.Vector3()
-            //     );
-            //     const planeNormal = camera.getWorldDirection(new THREE.Vector3()).negate();
-            //     const interactionPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(
-            //         planeNormal,
-            //         handleInitialWorldPos
-            //     );
+                // Project pointer onto a plane for consistent interaction
+                // Plane is typically aligned with camera view, passing through the initial handle position
+                const handleInitialWorldPos = this.draggedSelectionScaleHandleInfo.handle.getWorldPosition(
+                    new THREE.Vector3()
+                );
+                const planeNormal = camera.getWorldDirection(new THREE.Vector3()).negate();
+                const interactionPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(
+                    planeNormal,
+                    handleInitialWorldPos
+                );
 
-            //     const raycaster = new THREE.Raycaster();
-            //     const pointerNDC = this.space.getPointerNDC(this.pointerState.clientX, this.pointerState.clientY);
-            //     raycaster.setFromCamera(pointerNDC, camera);
+                const raycaster = new THREE.Raycaster();
+                const pointerNDC = this.space.getPointerNDC(this.pointerState.clientX, this.pointerState.clientY);
+                raycaster.setFromCamera(pointerNDC, camera);
 
-            //     const currentPointerOnPlane = new THREE.Vector3();
-            //     if (!raycaster.ray.intersectPlane(interactionPlane, currentPointerOnPlane)) break;
+                const currentPointerOnPlane = new THREE.Vector3();
+                if (!raycaster.ray.intersectPlane(interactionPlane, currentPointerOnPlane)) break;
 
-            //     // Calculate displacement from initial handle position
-            //     const dragDisplacement = currentPointerOnPlane.clone().sub(handleInitialWorldPos);
+                // Calculate displacement from initial handle position
+                const dragDisplacement = currentPointerOnPlane.clone().sub(handleInitialWorldPos);
 
-            //     // Determine scale factor - this is simplified for uniform corner scaling
-            //     // More complex logic needed for axial/planar or different handle types
-            //     const initialSize = initialBBox.getSize(new THREE.Vector3());
-            //     const initialHandleRelPos =
-            //         this.draggedSelectionScaleHandleInfo.handle.userData.relativePosition.clone();
+                // Determine scale factor - this is simplified for uniform corner scaling
+                // More complex logic needed for axial/planar or different handle types
+                const initialSize = initialBBox.getSize(new THREE.Vector3());
+                const initialHandleRelPos =
+                    this.draggedSelectionScaleHandleInfo.handle.userData.relativePosition.clone();
 
-            //     // Project displacement onto the vector from centroid to handle corner
-            //     // This vector indicates the direction of scaling for this handle
-            //     const centroidToHandleInitial = new THREE.Vector3(
-            //         initialHandleRelPos.x * initialSize.x,
-            //         initialHandleRelPos.y * initialSize.y,
-            //         initialHandleRelPos.z * initialSize.z
-            //     );
-            //     if (centroidToHandleInitial.lengthSq() === 0) break; // Avoid division by zero
+                // Project displacement onto the vector from centroid to handle corner
+                // This vector indicates the direction of scaling for this handle
+                const centroidToHandleInitial = new THREE.Vector3(
+                    initialHandleRelPos.x * initialSize.x,
+                    initialHandleRelPos.y * initialSize.y,
+                    initialHandleRelPos.z * initialSize.z
+                );
+                if (centroidToHandleInitial.lengthSq() === 0) break; // Avoid division by zero
 
-            //     const displacementAlongHandleAxis = dragDisplacement.dot(centroidToHandleInitial.clone().normalize());
+                const displacementAlongHandleAxis = dragDisplacement.dot(centroidToHandleInitial.clone().normalize());
 
-            //     // Calculate scale factor
-            //     // (Initial distance from centroid to handle + displacement) / Initial distance
-            //     const initialDistToHandle = centroidToHandleInitial.length();
-            //     let scaleFactor = (initialDistToHandle + displacementAlongHandleAxis) / initialDistToHandle;
-            //     scaleFactor = Math.max(0.01, scaleFactor); // Prevent zero or negative scale
+                // Calculate scale factor
+                // (Initial distance from centroid to handle + displacement) / Initial distance
+                const initialDistToHandle = centroidToHandleInitial.length();
+                let scaleFactor = (initialDistToHandle + displacementAlongHandleAxis) / initialDistToHandle;
+                scaleFactor = Math.max(0.01, scaleFactor); // Prevent zero or negative scale
 
-            //     // Apply scale
-            //     const newBoxSize = initialSize.clone().multiplyScalar(scaleFactor);
+                // Apply scale
+                const newBoxSize = initialSize.clone().multiplyScalar(scaleFactor);
 
-            //     selectedNodes.forEach((node) => {
-            //         const initialNodeSize = this.selectedNodesInitialScales.get(node.id);
-            //         const initialOffset = node.userData.initialOffsetFromSelectionCentroid;
+                selectedNodes.forEach((node) => {
+                    const initialNodeSize = this.selectedNodesInitialScales.get(node.id);
+                    const initialOffset = node.userData.initialOffsetFromSelectionCentroid;
 
-            //         if (initialNodeSize && initialOffset) {
-            //             const newNodeSize = initialNodeSize.clone().multiplyScalar(scaleFactor);
-            //             newNodeSize.x = Math.max(1, newNodeSize.x); // Min dimension
-            //             newNodeSize.y = Math.max(1, newNodeSize.y);
-            //             newNodeSize.z = Math.max(1, newNodeSize.z);
+                    if (initialNodeSize && initialOffset) {
+                        const newNodeSize = initialNodeSize.clone().multiplyScalar(scaleFactor);
+                        newNodeSize.x = Math.max(1, newNodeSize.x); // Min dimension
+                        newNodeSize.y = Math.max(1, newNodeSize.y);
+                        newNodeSize.z = Math.max(1, newNodeSize.z);
 
-            //             if (typeof node.resize === 'function') {
-            //                 node.resize(newNodeSize);
-            //             } else if (node.mesh) {
-            //                 // Fallback for simple mesh scaling
-            //                 // This assumes the mesh's local scale directly corresponds to its world size
-            //                 // relative to its initial world size.
-            //                 const _baseSize = this.selectedNodesInitialScales.get(node.id); // This was world scale or actual size
-            //                 if (node.baseSize) {
-            //                     // HtmlNode like
-            //                     node.mesh.scale.set(
-            //                         newNodeSize.x / node.baseSize.width,
-            //                         newNodeSize.y / node.baseSize.height,
-            //                         newNodeSize.z / (node.baseSize.depth || 1)
-            //                     );
-            //                 } else {
-            //                     // ShapeNode like - assuming initial mesh scale was 1,1,1 for its 'size'
-            //                     node.mesh.scale.copy(newNodeSize); // This might not be generally correct if initial scale wasn't 1
-            //                 }
-            //             }
+                        if (typeof node.resize === 'function') {
+                            node.resize(newNodeSize);
+                        } else if (node.mesh) {
+                            // Fallback for simple mesh scaling
+                            // This assumes the mesh's local scale directly corresponds to its world size
+                            // relative to its initial world size.
+                            const _baseSize = this.selectedNodesInitialScales.get(node.id); // This was world scale or actual size
+                            if (node.baseSize) {
+                                // HtmlNode like
+                                node.mesh.scale.set(
+                                    newNodeSize.x / node.baseSize.width,
+                                    newNodeSize.y / node.baseSize.height,
+                                    newNodeSize.z / (node.baseSize.depth || 1)
+                                );
+                            } else {
+                                // ShapeNode like - assuming initial mesh scale was 1,1,1 for its 'size'
+                                node.mesh.scale.copy(newNodeSize); // This might not be generally correct if initial scale wasn't 1
+                            }
+                        }
 
-            //             const newOffset = initialOffset.clone().multiplyScalar(scaleFactor);
-            //             const newPos = initialCentroid.clone().add(newOffset);
-            //             node.setPosition(newPos.x, newPos.y, newPos.z);
-            //         }
-            //     });
+                        const newOffset = initialOffset.clone().multiplyScalar(scaleFactor);
+                        const newPos = initialCentroid.clone().add(newOffset);
+                        node.setPosition(newPos.x, newPos.y, newPos.z);
+                    }
+                });
 
-            //     // Update positions of the scale handles themselves based on the new overall bounding box
-            //     const newSelectionBBox = new THREE.Box3();
-            //     selectedNodes.forEach((node) => {
-            //         if (node.mesh) {
-            //             node.mesh.updateWorldMatrix(true, false);
-            //             newSelectionBBox.union(new THREE.Box3().setFromObject(node.mesh, true));
-            //         } else {
-            //             newSelectionBBox.expandByPoint(node.position);
-            //         }
-            //     });
-            //     if (newSelectionBBox.isEmpty() || newSelectionBBox.min.equals(newSelectionBBox.max)) {
-            //         newSelectionBBox.setFromCenterAndSize(initialCentroid, newBoxSize); // Use calculated new size
-            //     }
+                // Update positions of the scale handles themselves based on the new overall bounding box
+                const newSelectionBBox = new THREE.Box3();
+                selectedNodes.forEach((node) => {
+                    if (node.mesh) {
+                        node.mesh.updateWorldMatrix(true, false);
+                        newSelectionBBox.union(new THREE.Box3().setFromObject(node.mesh, true));
+                    } else {
+                        newSelectionBBox.expandByPoint(node.position);
+                    }
+                });
+                if (newSelectionBBox.isEmpty() || newSelectionBBox.min.equals(newSelectionBBox.max)) {
+                    newSelectionBBox.setFromCenterAndSize(initialCentroid, newBoxSize); // Use calculated new size
+                }
 
-            //     this.selectionScaleHandlesGroup.position.copy(newSelectionBBox.getCenter(new THREE.Vector3()));
-            //     const currentGroupSize = newSelectionBBox.getSize(new THREE.Vector3());
-            //     const minDim = 0.1; // Define minDim here
-            //     currentGroupSize.x = Math.max(minDim, currentGroupSize.x);
-            //     currentGroupSize.y = Math.max(minDim, currentGroupSize.y);
-            //     currentGroupSize.z = Math.max(minDim, currentGroupSize.z);
+                this.selectionScaleHandlesGroup.position.copy(newSelectionBBox.getCenter(new THREE.Vector3()));
+                const currentGroupSize = newSelectionBBox.getSize(new THREE.Vector3());
+                const minDim = 0.1; // Define minDim here
+                currentGroupSize.x = Math.max(minDim, currentGroupSize.x);
+                currentGroupSize.y = Math.max(minDim, currentGroupSize.y);
+                currentGroupSize.z = Math.max(minDim, currentGroupSize.z);
 
-            //     this.selectionScaleHandles.forEach((h) => {
-            //         const relPos = h.userData.relativePosition;
-            //         h.position.set(
-            //             relPos.x * currentGroupSize.x,
-            //             relPos.y * currentGroupSize.y,
-            //             relPos.z * currentGroupSize.z
-            //         );
-            //     });
-            //     this.selectionScaleHandlesGroup.userData.currentBoundingBox = newSelectionBBox.clone();
+                this.selectionScaleHandles.forEach((h) => {
+                    const relPos = h.userData.relativePosition;
+                    h.position.set(
+                        relPos.x * currentGroupSize.x,
+                        relPos.y * currentGroupSize.y,
+                        relPos.z * currentGroupSize.z
+                    );
+                });
+                this.selectionScaleHandlesGroup.userData.currentBoundingBox = newSelectionBBox.clone();
 
-            //     this.space.emit('graph:nodes:transformed', {
-            //         nodes: Array.from(selectedNodes),
-            //         transformationType: 'scale',
-            //     });
-            //     break;
-            // }
+                this.space.emit('graph:nodes:transformed', {
+                    nodes: Array.from(selectedNodes),
+                    transformationType: 'scale',
+                });
+                break;
+            }
 
             // case InteractionState.FRACTAL_DRAGGING: {
             //     e.preventDefault();
@@ -2001,89 +1917,89 @@ export class UIManager {
                 e.preventDefault();
                 this._handleGizmoDrag(e);
                 break;
-            // case InteractionState.DRAGGING_NODE:
-            //     e.preventDefault();
-            //     if (this.draggedNode) {
-            //         const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
-            //         if (!camera) break;
+            case InteractionState.DRAGGING_NODE:
+                e.preventDefault();
+                if (this.draggedNode) {
+                    const camera = this.space.plugins.getPlugin('CameraPlugin')?.getCameraInstance();
+                    if (!camera) break;
 
-            //         const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
-            //         const nodesToMove =
-            //             selectedNodes?.size > 0 && selectedNodes.has(this.draggedNode)
-            //                 ? selectedNodes
-            //                 : new Set([this.draggedNode]);
+                    const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
+                    const nodesToMove =
+                        selectedNodes?.size > 0 && selectedNodes.has(this.draggedNode)
+                            ? selectedNodes
+                            : new Set([this.draggedNode]);
 
-            //         if (e.altKey) {
-            //             // World Z-axis movement
-            //             // dy (vertical screen movement) controls Z depth
-            //             const zDelta = -dy * ALT_Z_DRAG_SENSITIVITY; // Invert dy for natural feel (drag up = move further)
-            //             nodesToMove.forEach((node) => {
-            //                 const _initialPos =
-            //                     this.selectedNodesInitialPositions.get(node.id) || this.draggedNodeInitialWorldPos;
-            //                 // It's better to apply delta to the position at the start of the alt-drag or overall drag.
-            //                 // For simplicity, we'll adjust current position based on delta from last frame.
-            //                 // This requires storing the *absolute* initial position for each node if ALT is held.
-            //                 // For now, let's apply delta to current position.
-            //                 const newPos = node.position.clone();
-            //                 newPos.z += zDelta;
-            //                 node.drag(newPos); // Assuming node.drag updates position and potentially other properties
-            //                 // draggedNodeInitialWorldPos needs to be updated if we want continuous alt-drag from that point
-            //             });
-            //             // Update initial world pos for next frame if alt is held, to make delta continuous
-            //             this.draggedNodeInitialWorldPos.z += zDelta;
-            //         } else if (e.shiftKey) {
-            //             // World Y-axis movement
-            //             const yDelta = -dy * SHIFT_Y_DRAG_SENSITIVITY; // Invert dy for natural feel (drag up = move up)
-            //             nodesToMove.forEach((node) => {
-            //                 const newPos = node.position.clone();
-            //                 newPos.y += yDelta;
-            //                 node.drag(newPos);
-            //             });
-            //             this.draggedNodeInitialWorldPos.y += yDelta;
-            //         } else {
-            //             // Default XY plane movement
-            //             const raycaster = new THREE.Raycaster();
-            //             const pointerNDC = this.space.getPointerNDC(
-            //                 this.pointerState.clientX,
-            //                 this.pointerState.clientY
-            //             );
-            //             raycaster.setFromCamera(pointerNDC, camera);
+                    if (e.altKey) {
+                        // World Z-axis movement
+                        // dy (vertical screen movement) controls Z depth
+                        const zDelta = -dy * ALT_Z_DRAG_SENSITIVITY; // Invert dy for natural feel (drag up = move further)
+                        nodesToMove.forEach((node) => {
+                            const _initialPos =
+                                this.selectedNodesInitialPositions.get(node.id) || this.draggedNodeInitialWorldPos;
+                            // It's better to apply delta to the position at the start of the alt-drag or overall drag.
+                            // For simplicity, we'll adjust current position based on delta from last frame.
+                            // This requires storing the *absolute* initial position for each node if ALT is held.
+                            // For now, let's apply delta to current position.
+                            const newPos = node.position.clone();
+                            newPos.z += zDelta;
+                            node.drag(newPos); // Assuming node.drag updates position and potentially other properties
+                            // draggedNodeInitialWorldPos needs to be updated if we want continuous alt-drag from that point
+                        });
+                        // Update initial world pos for next frame if alt is held, to make delta continuous
+                        this.draggedNodeInitialWorldPos.z += zDelta;
+                    } else if (e.shiftKey) {
+                        // World Y-axis movement
+                        const yDelta = -dy * SHIFT_Y_DRAG_SENSITIVITY; // Invert dy for natural feel (drag up = move up)
+                        nodesToMove.forEach((node) => {
+                            const newPos = node.position.clone();
+                            newPos.y += yDelta;
+                            node.drag(newPos);
+                        });
+                        this.draggedNodeInitialWorldPos.y += yDelta;
+                    } else {
+                        // Default XY plane movement
+                        const raycaster = new THREE.Raycaster();
+                        const pointerNDC = this.space.getPointerNDC(
+                            this.pointerState.clientX,
+                            this.pointerState.clientY
+                        );
+                        raycaster.setFromCamera(pointerNDC, camera);
 
-            //             // dragInteractionPlane is world XY at initial Z of draggedNodeInitialWorldPos
-            //             // Re-set the plane's constant based on the possibly updated Z from Alt-drag
-            //             this.dragInteractionPlane.setFromNormalAndCoplanarPoint(
-            //                 new THREE.Vector3(0, 0, 1),
-            //                 this.draggedNodeInitialWorldPos // Use the potentially Z-shifted initial position
-            //             );
+                        // dragInteractionPlane is world XY at initial Z of draggedNodeInitialWorldPos
+                        // Re-set the plane's constant based on the possibly updated Z from Alt-drag
+                        this.dragInteractionPlane.setFromNormalAndCoplanarPoint(
+                            new THREE.Vector3(0, 0, 1),
+                            this.draggedNodeInitialWorldPos // Use the potentially Z-shifted initial position
+                        );
 
-            //             const intersectionPoint = new THREE.Vector3();
-            //             if (raycaster.ray.intersectPlane(this.dragInteractionPlane, intersectionPoint)) {
-            //                 // The dragOffset was calculated relative to the original Z.
-            //                 // We need to calculate the new position based on the intersection point
-            //                 // and the original offset from the *initial* XY position.
-            //                 const newPrimaryNodePos = intersectionPoint.clone().sub(this.dragOffset);
+                        const intersectionPoint = new THREE.Vector3();
+                        if (raycaster.ray.intersectPlane(this.dragInteractionPlane, intersectionPoint)) {
+                            // The dragOffset was calculated relative to the original Z.
+                            // We need to calculate the new position based on the intersection point
+                            // and the original offset from the *initial* XY position.
+                            const newPrimaryNodePos = intersectionPoint.clone().sub(this.dragOffset);
 
-            //                 // Calculate the delta from the primary dragged node's original position (at the start of this XY drag segment)
-            //                 // to its new calculated position.
-            //                 const currentPrimaryNodePos = this.draggedNode.position.clone();
-            //                 const xyDragDelta = newPrimaryNodePos.clone().sub(currentPrimaryNodePos);
-            //                 xyDragDelta.z = 0; // Ensure no Z change from this operation
+                            // Calculate the delta from the primary dragged node's original position (at the start of this XY drag segment)
+                            // to its new calculated position.
+                            const currentPrimaryNodePos = this.draggedNode.position.clone();
+                            const xyDragDelta = newPrimaryNodePos.clone().sub(currentPrimaryNodePos);
+                            xyDragDelta.z = 0; // Ensure no Z change from this operation
 
-            //                 nodesToMove.forEach((sNode) => {
-            //                     const newPos = sNode.position.clone().add(xyDragDelta);
-            //                     sNode.drag(newPos);
-            //                     if (sNode.mesh) sNode.mesh.quaternion.copy(this.draggedNodeInitialQuaternion);
-            //                 });
-            //             }
-            //         }
+                            nodesToMove.forEach((sNode) => {
+                                const newPos = sNode.position.clone().add(xyDragDelta);
+                                sNode.drag(newPos);
+                                if (sNode.mesh) sNode.mesh.quaternion.copy(this.draggedNodeInitialQuaternion);
+                            });
+                        }
+                    }
 
-            //         // Common emit event after any movement type
-            //         this.space.emit('graph:node:dragged', {
-            //             node: this.draggedNode, // Could be changed to emit all moved nodes
-            //             position: this.draggedNode.position.clone(), // Position of the primary dragged node
-            //         });
-            //     }
-            //     break;
+                    // Common emit event after any movement type
+                    this.space.emit('graph:node:dragged', {
+                        node: this.draggedNode, // Could be changed to emit all moved nodes
+                        position: this.draggedNode.position.clone(), // Position of the primary dragged node
+                    });
+                }
+                break;
             // case InteractionState.RESIZING_NODE:
             //     e.preventDefault();
             //     if (this.resizedNode && this.resizedNode.mesh) {
@@ -2601,26 +2517,31 @@ export class UIManager {
 
                 let closestHit = null;
 
-                // 1. Check Selection Scale Handles
-                if (this.selectionScaleHandlesGroup && this.selectionScaleHandlesGroup.visible) {
-                    const handleIntersects = raycaster.intersectObjects(this.selectionScaleHandles, false); // false for non-recursive
-                    if (handleIntersects.length > 0) {
-                        const firstHit = handleIntersects[0];
-                        if (firstHit.object.userData.isSelectionScaleHandle) {
-                            closestHit = {
-                                type: 'selectionScaleHandle',
-                                info: {
-                                    handle: firstHit.object,
-                                    type: firstHit.object.userData.handleType, // e.g., 'corner'
-                                    name: firstHit.object.name,
-                                },
-                                distance: firstHit.distance,
-                            };
+                // 1. Check for main Gizmo (this.gizmo)
+                if (this.gizmo && this.gizmo.visible) {
+                    const gizmoIntersects = raycaster.intersectObjects(this.gizmo.handles.children, true);
+                    if (gizmoIntersects.length > 0) {
+                        const intersectedHandleMesh = gizmoIntersects[0].object;
+                        if (intersectedHandleMesh.userData?.isGizmoHandle) {
+                            // Ensure not to overwrite if a closer hit of another type was already found (though unlikely with this new order)
+                            if (!closestHit || gizmoIntersects[0].distance < closestHit.distance) {
+                                closestHit = {
+                                    type: 'gizmo',
+                                    info: {
+                                        axis: intersectedHandleMesh.userData.axis,
+                                        type: intersectedHandleMesh.userData.gizmoType,
+                                        part: intersectedHandleMesh.userData.part,
+                                        object: intersectedHandleMesh,
+                                        distance: gizmoIntersects[0].distance,
+                                    },
+                                    distance: gizmoIntersects[0].distance,
+                                };
+                            }
                         }
                     }
                 }
 
-                // 2. Check for Fractal UI intersection
+                // 2. Check for Fractal UI intersection (only if main gizmo not hit or further away)
                 // Check AGH
                 if (this.adaptiveGeometricHub && this.adaptiveGeometricHub.visible) {
                     const aghIntersect = raycaster.intersectObject(this.adaptiveGeometricHub, false);
@@ -2704,23 +2625,21 @@ export class UIManager {
                     }
                 }
 
-                // 3. Check for old Gizmo
-                if (this.gizmo && this.gizmo.visible) {
-                    const gizmoIntersects = raycaster.intersectObjects(this.gizmo.handles.children, true);
-                    if (gizmoIntersects.length > 0) {
-                        const intersectedHandleMesh = gizmoIntersects[0].object;
-                        if (intersectedHandleMesh.userData?.isGizmoHandle) {
-                            if (!closestHit || gizmoIntersects[0].distance < closestHit.distance) {
+                // 3. Check Selection Scale Handles (selectionScaleHandlesGroup)
+                if (this.selectionScaleHandlesGroup && this.selectionScaleHandlesGroup.visible) {
+                    const handleIntersects = raycaster.intersectObjects(this.selectionScaleHandles, false); // false for non-recursive
+                    if (handleIntersects.length > 0) {
+                        const firstHit = handleIntersects[0];
+                        if (firstHit.object.userData.isSelectionScaleHandle) {
+                            if (!closestHit || firstHit.distance < closestHit.distance) {
                                 closestHit = {
-                                    type: 'gizmo',
+                                    type: 'selectionScaleHandle',
                                     info: {
-                                        axis: intersectedHandleMesh.userData.axis,
-                                        type: intersectedHandleMesh.userData.gizmoType,
-                                        part: intersectedHandleMesh.userData.part,
-                                        object: intersectedHandleMesh,
-                                        distance: gizmoIntersects[0].distance,
+                                        handle: firstHit.object,
+                                        type: firstHit.object.userData.handleType, // e.g., 'corner'
+                                        name: firstHit.object.name,
                                     },
-                                    distance: gizmoIntersects[0].distance,
+                                    distance: firstHit.distance,
                                 };
                             }
                         }
@@ -2729,9 +2648,9 @@ export class UIManager {
 
                 // Assign based on closest hit
                 if (closestHit) {
-                    if (closestHit.type === 'selectionScaleHandle') selectionScaleHandleInfo = closestHit.info;
+                    if (closestHit.type === 'gizmo') gizmoHandleInfo = closestHit.info;
                     else if (closestHit.type === 'fractal') fractalElementInfo = closestHit.info;
-                    else if (closestHit.type === 'gizmo') gizmoHandleInfo = closestHit.info;
+                    else if (closestHit.type === 'selectionScaleHandle') selectionScaleHandleInfo = closestHit.info;
                 }
 
                 // 4. If no UI controls hit, check for graph elements (nodes, edges, metaframes)
