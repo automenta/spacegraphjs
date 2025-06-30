@@ -4,7 +4,6 @@ import * as THREE from 'three';
 import { UIManager } from '../UIManager.js';
 // eslint-disable-next-line import/no-unresolved
 import { SpaceGraph } from '../../core/SpaceGraph.js';
-// eslint-disable-next-line import/no-unresolved
 import { Node } from '../../graph/nodes/Node.js';
 import { TranslationGizmo } from './gizmos/TranslationGizmo.js';
 import { InteractionState } from './InteractionState.js';
