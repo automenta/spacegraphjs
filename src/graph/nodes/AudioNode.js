@@ -54,8 +54,8 @@ export class AudioNode extends Node {
                     this.play();
                 }
             })
-            .catch((_e) => {
-                /* console.error('Error loading audio:', _e) */
+            .catch((error) => {
+                this.space?.emit('node:audio:error', { node: this, error: error, url: url });
             });
     }
 

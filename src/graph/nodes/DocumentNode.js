@@ -69,7 +69,6 @@ export class DocumentNode extends Node {
     viewDocument() {
         if (this.data.documentUrl) {
             this.space?.emit('node:document:view', { node: this, url: this.data.documentUrl });
-            // console.log(`DocumentNode: Request to view document at ${this.data.documentUrl}`);
         } else {
             // console.warn(`DocumentNode: No documentUrl specified for node ${this.id}`);
         }

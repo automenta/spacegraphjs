@@ -17,6 +17,6 @@
             "src/*": ["src/*"]
         }
     },
-    "include": ["src/**/*.js"],
-    "exclude": ["node_modules", "dist", "**/*.test.js"]
+    "include": ["src/**/*.js", "src/**/*.test.js"],
+    "exclude": ["node_modules", "dist"]
 }

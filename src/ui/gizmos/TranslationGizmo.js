@@ -290,6 +290,28 @@ export class TranslationGizmo extends THREE.Object3D {
      */
     hide() {
         this.visible = false;
+        this.handles.children.forEach((handle) => {
+            if (handle.userData.isGizmoHandle) {
+                handle.visible = false;
+            }
+        });
+    }
+
+    /**
+     * Shows only specific parts of the gizmo based on mode.
+     * @param {'translate' | 'rotate' | 'scale' | null} mode - The mode to show. If null, hides all.
+     */
+    showOnly(mode) {
+        this.visible = true;
+        this.handles.children.forEach((handle) => {
+            if (handle.userData.isGizmoHandle) {
+                if (mode === null) {
+                    handle.visible = false;
+                } else {
+                    handle.visible = handle.userData.gizmoType === mode;
+                }
+            }
+        });
     }
 
     /**
@@ -329,7 +351,10 @@ export class TranslationGizmo extends THREE.Object3D {
         if (isActive) {
             let hoverColor;
             if (originalMaterial && originalMaterial.color) {
-                hoverColor = originalMaterial.color.clone().multiplyScalar(1.3).clampScalar(0, 1); // brighten but don't oversaturate pure colors
+                hoverColor = originalMaterial.color.clone().multiplyScalar(1.3);
+                hoverColor.r = Math.max(0, Math.min(1, hoverColor.r));
+                hoverColor.g = Math.max(0, Math.min(1, hoverColor.g));
+                hoverColor.b = Math.max(0, Math.min(1, hoverColor.b));
             } else {
                 hoverColor = new THREE.Color(0xffffff);
             }

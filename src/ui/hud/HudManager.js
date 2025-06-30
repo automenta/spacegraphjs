@@ -9,7 +9,9 @@ export class HudManager {
         this._uiPluginCallbacks = uiPluginCallbacks;
 
         this.hudLayer = null;
-        this.hudModeIndicator = null;
+        this.hudModeIndicator = null; // Camera mode
+        this.hudAGHModeIndicator = null; // AGH mode
+        this.hudFractalTooltip = null; // Tooltip for fractal elements
         this.hudSelectionInfo = null;
         this.hudKeyboardShortcutsButton = null;
         this.hudLayoutSettingsButton = null;
@@ -21,6 +23,7 @@ export class HudManager {
         this._bindEvents();
         this.updateHudSelectionInfo(); // Initial update
         this.updateHudCameraMode(); // Initial update
+        this.updateAGHModeIndicator(0); // Initial update for AGH mode
     }
 
     _createHudElements() {
@@ -54,6 +57,25 @@ export class HudManager {
                 this.hudModeIndicator.appendChild(option);
             }
             this.hudLayer.appendChild(this.hudModeIndicator);
+        }
+
+        // AGH Mode Indicator
+        this.hudAGHModeIndicator = $('#hud-agh-mode-indicator');
+        if (!this.hudAGHModeIndicator) {
+            this.hudAGHModeIndicator = document.createElement('div');
+            this.hudAGHModeIndicator.id = 'hud-agh-mode-indicator';
+            this.hudAGHModeIndicator.style.display = 'none'; // Initially hidden or shows "None"
+            this.hudLayer.appendChild(this.hudAGHModeIndicator);
+        }
+
+        // Fractal Tooltip
+        this.hudFractalTooltip = $('#hud-fractal-tooltip');
+        if (!this.hudFractalTooltip) {
+            this.hudFractalTooltip = document.createElement('div');
+            this.hudFractalTooltip.id = 'hud-fractal-tooltip';
+            this.hudFractalTooltip.className = 'hud-tooltip'; // Add a class for styling
+            this.hudFractalTooltip.style.display = 'none'; // Initially hidden
+            this.hudLayer.appendChild(this.hudFractalTooltip);
         }
 
         this.hudSelectionInfo = $('#hud-selection-info');
@@ -110,6 +132,38 @@ export class HudManager {
         }
     }
 
+    updateAGHModeIndicator(modeCycle) {
+        if (!this.hudAGHModeIndicator) return;
+        let modeText = 'AGH: -';
+        switch (modeCycle) {
+            case 1:
+                modeText = 'AGH: Translate';
+                break;
+            case 2:
+                modeText = 'AGH: Rotate';
+                break;
+            case 3:
+                modeText = 'AGH: Scale';
+                break;
+        }
+        this.hudAGHModeIndicator.textContent = modeText;
+        // Show if a specific mode is active, hide or show "None" otherwise
+        this.hudAGHModeIndicator.style.display = modeCycle !== 0 ? 'block' : 'none';
+    }
+
+    showFractalTooltip(text, x, y) {
+        if (!this.hudFractalTooltip) return;
+        this.hudFractalTooltip.textContent = text;
+        this.hudFractalTooltip.style.left = `${x + 15}px`; // Offset from cursor
+        this.hudFractalTooltip.style.top = `${y + 15}px`;
+        this.hudFractalTooltip.style.display = 'block';
+    }
+
+    hideFractalTooltip() {
+        if (!this.hudFractalTooltip) return;
+        this.hudFractalTooltip.style.display = 'none';
+    }
+
     updateHudSelectionInfo() {
         if (!this.hudSelectionInfo) return;
 
@@ -149,9 +203,11 @@ export class HudManager {
         this.hudKeyboardShortcutsButton?.removeEventListener('click', this._onKeyboardShortcutsButtonClick);
         this.hudLayoutSettingsButton?.removeEventListener('click', this._onLayoutSettingsButtonClick);
 
-        this.hudLayer?.remove();
+        this.hudLayer?.remove(); // This is the correct place for potential removal if hudLayer itself is dynamically added/removed elsewhere
         this.hudLayer = null;
         this.hudModeIndicator = null;
+        this.hudAGHModeIndicator = null;
+        this.hudFractalTooltip = null; // Clean up fractal tooltip
         this.hudSelectionInfo = null;
         this.hudKeyboardShortcutsButton = null;
         this.hudLayoutSettingsButton = null;
