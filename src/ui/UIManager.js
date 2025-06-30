@@ -2326,31 +2326,33 @@ export class UIManager {
                 break;
             }
             case 'Escape': {
-                // Added braces for no-case-declarations
+                // Braces for no-case-declarations
+
+                if (this._uiPluginCallbacks.getIsLinking()) {
+                    this._uiPluginCallbacks.cancelLinking();
+                    handled = true;
+                } else if (this.hudManager.isLayoutSettingsDialogVisible()) {
+                    this.hudManager.layoutSettingsDialog.hide();
+                    handled = true;
+                } else if (this.hudManager.isKeyboardShortcutsDialogVisible()) {
+                    this.hudManager.keyboardShortcutsDialog.hide();
+                    handled = true;
+                } else if (this.contextMenu.contextMenuElement.style.display === 'block') {
+                    this.contextMenu.hide();
+                    handled = true;
+                } else if (this.confirmDialog.confirmDialogElement.style.display === 'block') {
+                    this.confirmDialog.hide();
+                    handled = true;
+                } else if (this.edgeMenu.edgeMenuObject) {
+                    this._uiPluginCallbacks.setSelectedEdge(null, false);
+                    handled = true;
+                } else if (selectedNodes.size > 0 || selectedEdges.size > 0) {
+                    this._uiPluginCallbacks.setSelectedNode(null, false);
+                    handled = true;
+                }
+
+                // Explicit block for camPlugin logic to satisfy no-case-declarations
                 {
-                    // Extra inner braces
-                    if (this._uiPluginCallbacks.getIsLinking()) {
-                        this._uiPluginCallbacks.cancelLinking();
-                        handled = true;
-                    } else if (this.hudManager.isLayoutSettingsDialogVisible()) {
-                        this.hudManager.layoutSettingsDialog.hide();
-                        handled = true;
-                    } else if (this.hudManager.isKeyboardShortcutsDialogVisible()) {
-                        this.hudManager.keyboardShortcutsDialog.hide();
-                        handled = true;
-                    } else if (this.contextMenu.contextMenuElement.style.display === 'block') {
-                        this.contextMenu.hide();
-                        handled = true;
-                    } else if (this.confirmDialog.confirmDialogElement.style.display === 'block') {
-                        this.confirmDialog.hide();
-                        handled = true;
-                    } else if (this.edgeMenu.edgeMenuObject) {
-                        this._uiPluginCallbacks.setSelectedEdge(null, false);
-                        handled = true;
-                    } else if (selectedNodes.size > 0 || selectedEdges.size > 0) {
-                        this._uiPluginCallbacks.setSelectedNode(null, false);
-                        handled = true;
-                    }
                     const camPlugin = this.space.plugins.getPlugin('CameraPlugin');
                     if (camPlugin?.getCameraMode() === 'free' && camPlugin.getControls()?.isPointerLocked) {
                         camPlugin.exitPointerLock();
