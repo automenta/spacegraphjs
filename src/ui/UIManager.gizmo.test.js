@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as THREE from 'three';
 // eslint-disable-next-line import/no-unresolved
 import { UIManager } from '../UIManager.js';
+// eslint-disable-next-line import/no-unresolved
 import { SpaceGraph } from '../../core/SpaceGraph.js';
 import { Node } from '../../graph/nodes/Node.js';
 import { TranslationGizmo } from './gizmos/TranslationGizmo.js';
