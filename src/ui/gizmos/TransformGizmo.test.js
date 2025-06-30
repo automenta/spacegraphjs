@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
 import * as THREE from 'three';
-import { TranslationGizmo } from './TranslationGizmo.js';
+import { TransformGizmo } from './TransformGizmo.js';
 
 // Mock THREE.Material and its methods if they cause issues in pure JS environment
 // For simple tests, direct instantiation might be fine.
@@ -17,16 +17,16 @@ import { TranslationGizmo } from './TranslationGizmo.js';
 //     };
 // });
 
-describe('TranslationGizmo', () => {
+describe('TransformGizmo', () => {
     let gizmo;
 
     beforeEach(() => {
-        gizmo = new TranslationGizmo();
+        gizmo = new TransformGizmo();
     });
 
     test('constructor: should initialize correctly', () => {
         expect(gizmo).toBeInstanceOf(THREE.Object3D);
-        expect(gizmo.name).toBe('TranslationGizmo');
+        expect(gizmo.name).toBe('TransformGizmo');
         expect(gizmo.handles).toBeInstanceOf(THREE.Object3D);
         expect(gizmo.visible).toBe(false);
         expect(gizmo.renderOrder).toBe(1000);
@@ -151,16 +151,16 @@ describe('TranslationGizmo', () => {
     });
 
     test('getAxisVector(): should return correct world axis vectors', () => {
-        expect(TranslationGizmo.getAxisVector('x')).toEqual(new THREE.Vector3(1, 0, 0));
-        expect(TranslationGizmo.getAxisVector('y')).toEqual(new THREE.Vector3(0, 1, 0));
-        expect(TranslationGizmo.getAxisVector('z')).toEqual(new THREE.Vector3(0, 0, 1));
-        expect(TranslationGizmo.getAxisVector('unknown')).toEqual(new THREE.Vector3(0, 0, 0));
+        expect(TransformGizmo.getAxisVector('x')).toEqual(new THREE.Vector3(1, 0, 0));
+        expect(TransformGizmo.getAxisVector('y')).toEqual(new THREE.Vector3(0, 1, 0));
+        expect(TransformGizmo.getAxisVector('z')).toEqual(new THREE.Vector3(0, 0, 1));
+        expect(TransformGizmo.getAxisVector('unknown')).toEqual(new THREE.Vector3(0, 0, 0));
     });
 
     test('getPlaneNormal(): should return correct world plane normal vectors', () => {
-        expect(TranslationGizmo.getPlaneNormal('xy')).toEqual(new THREE.Vector3(0, 0, 1)); // Normal is Z
-        expect(TranslationGizmo.getPlaneNormal('yz')).toEqual(new THREE.Vector3(1, 0, 0)); // Normal is X
-        expect(TranslationGizmo.getPlaneNormal('xz')).toEqual(new THREE.Vector3(0, 1, 0)); // Normal is Y
-        expect(TranslationGizmo.getPlaneNormal('unknown')).toEqual(new THREE.Vector3(0, 0, 0));
+        expect(TransformGizmo.getPlaneNormal('xy')).toEqual(new THREE.Vector3(0, 0, 1)); // Normal is Z
+        expect(TransformGizmo.getPlaneNormal('yz')).toEqual(new THREE.Vector3(1, 0, 0)); // Normal is X
+        expect(TransformGizmo.getPlaneNormal('xz')).toEqual(new THREE.Vector3(0, 1, 0)); // Normal is Y
+        expect(TransformGizmo.getPlaneNormal('unknown')).toEqual(new THREE.Vector3(0, 0, 0));
     });
 });

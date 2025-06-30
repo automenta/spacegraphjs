@@ -236,7 +236,8 @@ export class HtmlNode extends Node {
             }
             applyLabelLOD(this.cssObject, this.data.labelLod, space, this.data.contentScale ?? 1.0);
         }
-        if (this.mesh) { // Also ensure base Node update logic for mesh position/rotation runs
+        if (this.mesh) {
+            // Also ensure base Node update logic for mesh position/rotation runs
             super.update(space);
         }
     }

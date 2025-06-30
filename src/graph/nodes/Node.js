@@ -53,7 +53,8 @@ export class Node {
         }
         if (this.cssObject) {
             this.cssObject.position.copy(this.position);
-            if (this.mesh) { // If there's a mesh, sync cssObject's quaternion to it
+            if (this.mesh) {
+                // If there's a mesh, sync cssObject's quaternion to it
                 this.cssObject.quaternion.copy(this.mesh.quaternion);
             }
         }

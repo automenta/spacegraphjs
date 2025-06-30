@@ -3,14 +3,14 @@ import * as THREE from 'three';
 import { UIManager } from './UIManager.js';
 import { SpaceGraph } from '../core/SpaceGraph.js';
 import { Node } from '../graph/nodes/Node.js';
-import { TranslationGizmo } from './gizmos/TranslationGizmo.js';
+import { TransformGizmo } from './gizmos/TransformGizmo.js';
 import { InteractionState } from './InteractionState.js';
 
 // Mock dependencies
 
 vi.mock('../core/SpaceGraph.js');
 vi.mock('./InteractionState.js'); // Adjusted path
-vi.mock('./gizmos/TranslationGizmo.js');
+vi.mock('./gizmos/TransformGizmo.js');
 
 vi.mock('../graph/nodes/Node.js');
 
@@ -76,10 +76,10 @@ describe('UIManager - Gizmo Interactions', () => {
 
         uiManager = new UIManager(spaceGraph, mockContextMenuEl, mockConfirmDialogEl, mockUiPluginCallbacks);
 
-        // Ensure TranslationGizmo is mocked and its instance is accessible
-        // The constructor of UIManager creates a TranslationGizmo instance
-        expect(TranslationGizmo).toHaveBeenCalledTimes(1);
-        uiManager.gizmo = TranslationGizmo.mock.instances[0]; // Get the mocked instance
+        // Ensure TransformGizmo is mocked and its instance is accessible
+        // The constructor of UIManager creates a TransformGizmo instance
+        expect(TransformGizmo).toHaveBeenCalledTimes(1);
+        uiManager.gizmo = TransformGizmo.mock.instances[0]; // Get the mocked instance
 
         // Mock default behavior for gizmo methods that might be called internally
         uiManager.gizmo.hide = vi.fn();
