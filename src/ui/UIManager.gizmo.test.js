@@ -1,20 +1,18 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as THREE from 'three';
-// eslint-disable-next-line import/no-unresolved
-import { UIManager } from '../UIManager.js';
-// eslint-disable-next-line import/no-unresolved
-import { SpaceGraph } from '../../core/SpaceGraph.js';
-import { Node } from '../../graph/nodes/Node.js';
+import { UIManager } from './UIManager.js';
+import { SpaceGraph } from '../core/SpaceGraph.js';
+import { Node } from '../graph/nodes/Node.js';
 import { TranslationGizmo } from './gizmos/TranslationGizmo.js';
 import { InteractionState } from './InteractionState.js';
 
 // Mock dependencies
 
-vi.mock('../../core/SpaceGraph.js');
-vi.mock('../InteractionState.js'); // Assuming this is a simple enum or constants object
+vi.mock('../core/SpaceGraph.js');
+vi.mock('./InteractionState.js'); // Adjusted path
 vi.mock('./gizmos/TranslationGizmo.js');
 
-vi.mock('../../graph/nodes/Node.js');
+vi.mock('../graph/nodes/Node.js');
 
 describe('UIManager - Gizmo Interactions', () => {
     let spaceGraph;
