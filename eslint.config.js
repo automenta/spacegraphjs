@@ -21,6 +21,7 @@ export default [
                     map: [
                         // We don't need to map 'three/addons/' to a local path
                         // because it's external (CDN). Instead, we'll ignore it.
+                        ['src', './src'],
                     ],
                     extensions: ['.js', '.jsx', '.mjs'],
                 },
@@ -50,6 +51,7 @@ export default [
             ],
             // other import plugin rules can be added here
         },
+        files: ['**/*.js', '**/*.mjs'], // Explicitly apply this config object to JS/MJS files
     },
     {
         languageOptions: {
