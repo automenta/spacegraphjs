@@ -2,19 +2,29 @@
     "name": "spacegraph-zui",
     "version": "0.1.0",
     "description": "A general-purpose, extensible JavaScript library for creating Zooming User Interfaces (ZUI) with 2D and 3D visualizations.",
-    "main": "dist/spacegraph.umd.js",
+    "main": "dist/spacegraph.cjs.js",
     "module": "dist/spacegraph.es.js",
-    "types": "dist/spacegraph.d.ts",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/spacegraph.es.js",
+            "require": "./dist/spacegraph.cjs.js"
+        }
+    },
     "files": [
         "dist",
         "src",
         "README.md",
-        ".github"
+        "LICENSE"
     ],
     "scripts": {
-        "build": "vite build --config vite.lib.config.js",
+        "prepare": "husky",
+        "build": "tsc --emitDeclarationOnly --outDir dist --project tsconfig.json && vite build --config vite.lib.config.js",
         "build:demo": "vite build --outDir dist-demo",
-        "test": "vitest --run",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "coverage": "vitest run --coverage",
         "docs:build": "jsdoc -c jsdoc.conf.json",
         "docs:view": "serve ./docs/api -l 8080",
         "lint": "eslint .",
@@ -42,6 +52,7 @@
         "webgl",
         "threejs",
         "gsap",
+        "postprocessing",
         "javascript",
         "library"
     ],
@@ -49,7 +60,8 @@
         "url": "https://github.com/TTime/spacegraphjs/issues"
     },
     "homepage": "https://github.com/TTime/spacegraphjs#readme",
-    "dependencies": {
+    "dependencies": {},
+    "peerDependencies": {
         "gsap": "^3.13.0",
         "postprocessing": "^6.37.4",
         "three": "^0.177.0"
@@ -64,12 +76,27 @@
         "eslint-config-prettier": "^9.1.0",
         "eslint-plugin-prettier": "^5.5.0",
         "globals": "^16.2.0",
+        "docdash": "^2.0.2",
         "jsdoc": "^4.0.4",
         "jsdom": "^24.0.0",
         "prettier": "^3.3.3",
         "serve": "^14.2.4",
         "typescript": "^5.8.3",
         "vite": "^6.3.5",
-        "vitest": "^1.6.1"
+        "vitest": "^1.6.1",
+        "gsap": "^3.13.0",
+        "postprocessing": "^6.37.4",
+        "three": "^0.177.0",
+        "husky": "^9.0.11",
+        "lint-staged": "^15.2.7",
+        "@types/node": "^20.14.9"
+    },
+    "lint-staged": {
+        "*.{js,jsx,ts,tsx,json,css,scss,md}": [
+            "prettier --write"
+        ],
+        "*.{js,jsx,ts,tsx}": [
+            "eslint --fix"
+        ]
     }
 }
