@@ -60,7 +60,6 @@
         "url": "https://github.com/TTime/spacegraphjs/issues"
     },
     "homepage": "https://github.com/TTime/spacegraphjs#readme",
-    "dependencies": {},
     "peerDependencies": {
         "gsap": "^3.13.0",
         "postprocessing": "^6.37.4",
@@ -71,25 +70,26 @@
         "@babel/preset-env": "^7.27.2",
         "@eslint/js": "^9.29.0",
         "@rollup/plugin-terser": "^0.4.4",
+        "@types/node": "^20.14.9",
+        "@vitest/coverage-v8": "^1.6.1",
         "chart.js": "^4.5.0",
+        "docdash": "^2.0.2",
         "eslint": "^8.57.0",
         "eslint-config-prettier": "^9.1.0",
         "eslint-plugin-prettier": "^5.5.0",
         "globals": "^16.2.0",
-        "docdash": "^2.0.2",
+        "gsap": "^3.13.0",
+        "husky": "^9.0.11",
         "jsdoc": "^4.0.4",
         "jsdom": "^24.0.0",
+        "lint-staged": "^15.2.7",
+        "postprocessing": "^6.37.4",
         "prettier": "^3.3.3",
         "serve": "^14.2.4",
+        "three": "^0.177.0",
         "typescript": "^5.8.3",
         "vite": "^6.3.5",
-        "vitest": "^1.6.1",
-        "gsap": "^3.13.0",
-        "postprocessing": "^6.37.4",
-        "three": "^0.177.0",
-        "husky": "^9.0.11",
-        "lint-staged": "^15.2.7",
-        "@types/node": "^20.14.9"
+        "vitest": "^1.6.1"
     },
     "lint-staged": {
         "*.{js,jsx,ts,tsx,json,css,scss,md}": [

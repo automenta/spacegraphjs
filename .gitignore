@@ -2,6 +2,7 @@ node_modules/
 dist/
 dist-demo/
 docs/
+coverage/
 .idea
 .aider*
 npm_start.log
