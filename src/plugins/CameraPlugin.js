@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {Plugin} from '../core/Plugin.js';
-import {Camera as CameraControls} from '../camera/Camera.js';
+import {Camera as CameraControls, CAMERA_MODES} from '../camera/Camera.js'; // Import CAMERA_MODES
 import {Utils} from '../utils.js';
 
 export class CameraPlugin extends Plugin {
@@ -159,6 +159,15 @@ export class CameraPlugin extends Plugin {
 
     getCameraMode() {
         return this.cameraControls?.cameraMode; // Corrected: Access property directly
+    }
+
+    getAvailableCameraModes() {
+        return {
+            [CAMERA_MODES.ORBIT]: 'Orbit Control',
+            [CAMERA_MODES.FREE]: 'Free Look',
+            [CAMERA_MODES.TOP_DOWN]: 'Top Down',
+            [CAMERA_MODES.FIRST_PERSON]: 'First Person'
+        };
     }
 
     startFollowing(target, options = {}) {
