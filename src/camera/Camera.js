@@ -3,7 +3,7 @@ import {gsap} from 'gsap';
 import {Utils} from '../utils.js';
 import {PointerLockControls} from 'three/addons/controls/PointerLockControls.js';
 
-const CAMERA_MODES = {
+export const CAMERA_MODES = { // Added export here
     ORBIT: 'orbit',
     FREE: 'free',
     TOP_DOWN: 'top_down',
