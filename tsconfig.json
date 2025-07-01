@@ -1,0 +1,36 @@
+{
+    "compilerOptions": {
+        "target": "ES2020", // Or a version that matches your supported environments
+        "module": "ESNext", // Using ESNext for modern module features
+        "moduleResolution": "node", // Or "bundler" for Vite/Rollup style resolution
+        "esModuleInterop": true, // Enables compatibility with CommonJS modules
+        "allowJs": true, // Allow JavaScript files to be compiled
+        "checkJs": false, // Type check JavaScript files (optional, can be true for more safety)
+        "declaration": true, // Generate .d.ts files
+        "emitDeclarationOnly": true, // Only emit .d.ts files, no .js
+        "outDir": "dist", // Output directory for .d.ts files
+        "rootDir": "src", // Specify root directory of source files
+        "strict": false, // Enable all strict type-checking options (can be true for better safety)
+        "skipLibCheck": true, // Skip type checking of all declaration files (*.d.ts)
+        "forceConsistentCasingInFileNames": true,
+        "resolveJsonModule": true,
+        "isolatedModules": true, // Ensures every file can be transpiled independently
+        // "declarationMap": true, // Optional: creates sourcemaps for .d.ts files
+        "baseUrl": ".", // Base directory for non-relative module imports
+        "paths": {
+            // Optional: if you have path aliases
+            "@/*": ["src/*"]
+        },
+        "types": ["node", "vite/client"] // Include types for Node.js and Vite client environment
+    },
+    "include": [
+        "src/**/*.js", // Include all .js files in src
+        "src/**/*.ts" // Include .ts files if you add any later
+    ],
+    "exclude": [
+        "node_modules",
+        "dist",
+        "**/*.test.js", // Exclude test files from .d.ts generation
+        "src/examples/**/*" // Exclude examples
+    ]
+}
