@@ -151,20 +151,49 @@ export class ForceLayout {
     }
 
     addNode(node) {
+        // Defensive checks
+        if (typeof node !== 'object' || node === null) {
+            console.warn('ForceLayout.addNode: Received non-object node:', node);
+            return;
+        }
+        if (typeof node.id === 'undefined') { // Ensure node has an id for map keying
+            console.warn('ForceLayout.addNode: Node has no id. Skipping.', node);
+            return;
+        }
+
+        // Check if node already processed
         if (this.nodesMap.has(node.id)) return;
+
+        // Ensure position is valid or provide a default
+        let { x = 0, y = 0, z = 0 } = node.position || {};
+        if (typeof node.position !== 'object' || node.position === null) {
+            console.warn(`ForceLayout.addNode: Node ${node.id} is missing a valid position object. Defaulting to {x:0, y:0, z:0}. Node:`, node);
+            // node.position will be used below, so ensure it's an object if we didn't default x,y,z from it
+        }
+
         this.nodesMap.set(node.id, node);
+
+        // Ensure default values for potentially missing properties before sending to worker
+        const mass = node.mass || 1.0;
+        const isPinned = node.isPinned || false;
+        // Check if getBoundingSphereRadius is a function, otherwise use a default.
+        const radius = typeof node.getBoundingSphereRadius === 'function' ? node.getBoundingSphereRadius() : 50;
+        const clusterId = node.data?.clusterId; // data itself could be undefined
+
         this.worker.postMessage({
             type: 'addNode',
             payload: {
                 node: {
                     id: node.id,
-                    x: node.position.x, y: node.position.y, z: node.position.z,
+                    x: x,
+                    y: y,
+                    z: z,
                     vx: 0, vy: 0, vz: 0,
-                    mass: node.mass || 1.0,
-                    isFixed: node.isPinned,
-                    isPinned: node.isPinned,
-                    radius: node.getBoundingSphereRadius(),
-                    clusterId: node.data?.clusterId,
+                    mass: mass,
+                    isFixed: isPinned, // In ForceLayout worker, isFixed is the primary property for pinning behavior
+                    isPinned: isPinned, // Keep isPinned for consistency if worker uses it or for future reference
+                    radius: radius,
+                    clusterId: clusterId,
                 },
             },
         });

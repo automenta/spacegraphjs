@@ -77,8 +77,8 @@ export class LayoutPlugin extends Plugin {
             this.kick();
         });
 
-        this.space.on('node:added', (node) => {
-            this.addNodeToLayout(node);
+        this.space.on('node:added', (nodeId, nodeInstance) => { // Correctly capture both arguments
+            this.addNodeToLayout(nodeInstance); // Use the nodeInstance
             this.kick();
         });
         this.space.on('node:removed', (nodeId, node) => {
