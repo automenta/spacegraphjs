@@ -386,5 +386,3 @@ function updateCustomWidgetValues(customWidget, time) {
     const systemLoad = 30 + Math.sin(time * 0.3) * 20;
     // Would update the system load progress widget
 }
-
-export { demoMetadata };
