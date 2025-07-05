@@ -1,0 +1,43 @@
+export class ConstraintLayout {
+    constructor(config?: {});
+    space: any;
+    pluginManager: any;
+    settings: {
+        iterations: number;
+        convergenceThreshold: number;
+        dampingFactor: number;
+        maxForce: number;
+        enableCollisionAvoidance: boolean;
+        collisionPadding: number;
+        animate: boolean;
+        animationDuration: number;
+    };
+    nodeMap: Map<any, any>;
+    constraints: any[];
+    isRunning: boolean;
+    setContext(space: any, pluginManager: any): void;
+    init(nodes: any, edges: any, config?: {}): Promise<void>;
+    _createDefaultConstraints(nodes: any, edges: any): void;
+    _detectGroups(nodes: any): any[];
+    addDistanceConstraint(nodeId1: any, nodeId2: any, options?: {}): void;
+    addPositionConstraint(nodeId: any, targetPosition: any, options?: {}): void;
+    addAngleConstraint(nodeId1: any, nodeId2: any, nodeId3: any, options?: {}): void;
+    addClusterConstraint(nodeIds: any, options?: {}): void;
+    addBoundaryConstraint(nodeIds: any, boundary: any, options?: {}): void;
+    _solveDistanceConstraint(constraint: any): void;
+    _solvePositionConstraint(constraint: any): void;
+    _solveAngleConstraint(constraint: any): void;
+    _solveClusterConstraint(constraint: any): void;
+    _solveBoundaryConstraint(constraint: any): void;
+    _solveConstraints(): Promise<void>;
+    _resolveCollisions(): void;
+    addNode(node: any): void;
+    removeNode(node: any): void;
+    addEdge(edge: any): void;
+    removeEdge(edge: any): void;
+    updateConfig(newConfig: any): void;
+    run(): void;
+    stop(): void;
+    kick(): void;
+    dispose(): void;
+}

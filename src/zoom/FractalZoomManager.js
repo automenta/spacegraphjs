@@ -175,6 +175,7 @@ export class FractalZoomManager {
         
         if (Math.abs(targetLevel - this.currentZoomLevel) < 0.01) return;
         
+        const oldLevelForEvent = this.currentZoomLevel; // Capture old level before tween starts
         this.targetZoomLevel = targetLevel;
         this.isTransitioning = true;
         
@@ -195,7 +196,7 @@ export class FractalZoomManager {
             onComplete: () => {
                 this.isTransitioning = false;
                 this.space.emit('fractal-zoom:levelChanged', {
-                    oldLevel: this.currentZoomLevel,
+                    oldLevel: oldLevelForEvent, // Use the captured old level
                     newLevel: targetLevel,
                     lodConfig: this.getCurrentLODConfig()
                 });

@@ -1,0 +1,31 @@
+export class SpringEdge extends Edge {
+    springForce: any;
+    restLength: number;
+    stiffness: number;
+    damping: number;
+    tension: number;
+    isCompressed: boolean;
+    maxCompression: number;
+    springCoils: number;
+    springMesh: any;
+    _createSpringMesh(): void;
+    _createSpringGeometry(): any;
+    _updateSpringGeometry(): void;
+    _updateTensionColor(lengthRatio: any): void;
+    _calculateSpringForce(): void;
+    getSpringForce(): any;
+    getTension(): number;
+    setRestLength(length: any): void;
+    setStiffness(stiffness: any): void;
+    setDamping(damping: any): void;
+    setSpringCoils(coils: any): void;
+    setSpringRadius(radius: any): void;
+    setTensionColors(minColor: any, maxColor: any): void;
+    setPhysicsEnabled(enabled: any): void;
+    applyForceToNodes(): void;
+    animateOscillation(amplitude?: number, frequency?: number): void;
+    _disposeSpringMesh(): void;
+    addToScene(scene: any): void;
+    removeFromScene(scene: any): void;
+}
+import { Edge } from './Edge.js';

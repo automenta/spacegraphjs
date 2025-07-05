@@ -1,0 +1,30 @@
+export class BezierEdge extends Edge {
+    controlPoints: any[];
+    curve: any;
+    controlPointMeshes: any[];
+    controlPointVisible: boolean;
+    autoControlPoints: boolean;
+    segments: number;
+    _initializeControlPoints(): void;
+    _generateAutoControlPoints(): void;
+    _updateCurve(): void;
+    _updateLineGeometry(): void;
+    _createControlPointMeshes(): void;
+    _disposeControlPointMeshes(): void;
+    setControlPoint(index: any, position: any): void;
+    addControlPoint(position: any, index?: any): void;
+    removeControlPoint(index: any): void;
+    setControlPointsVisible(visible: any): void;
+    setCurveTension(tension: any): void;
+    setCurveType(type: any): void;
+    setSegments(segments: any): void;
+    setAutoControlPoints(auto: any): void;
+    getPointOnCurve(t: any): any;
+    getTangentOnCurve(t: any): any;
+    getCurveLength(): any;
+    getControlPoints(): any[];
+    animateControlPoints(amplitude?: number, frequency?: number): void;
+    addToScene(scene: any): void;
+    removeFromScene(scene: any): void;
+}
+import { Edge } from './Edge.js';
