@@ -199,22 +199,24 @@ describe('FractalZoomManager', () => {
     // it('should handle cache size limits', () => { ... });
 
 
-    it('should emit zoom events via space.emit when zoomToLevel completes', (done) => {
-        // For testing async completion and emit
-        const targetZoomLevel = 3.0;
-        const oldZoomLevel = zoomManager.getZoomLevel();
+    it('should emit zoom events via space.emit when zoomToLevel completes', () => {
+        return new Promise((resolve) => {
+            // For testing async completion and emit
+            const targetZoomLevel = 3.0;
+            const oldZoomLevel = zoomManager.getZoomLevel();
 
-        // Override the emit mock for this specific test to use the done callback
-        mockSpace.emit = vi.fn((eventName, eventData) => {
-            if (eventName === 'fractal-zoom:levelChanged') {
-                expect(eventData.newLevel).toBe(targetZoomLevel);
-                expect(eventData.oldLevel).toBe(oldZoomLevel); // GSAP updates currentZoomLevel during transition
-                expect(eventData.lodConfig).toBeDefined();
-                done();
-            }
+            // Override the emit mock for this specific test to use the resolve callback
+            mockSpace.emit = vi.fn((eventName, eventData) => {
+                if (eventName === 'fractal-zoom:levelChanged') {
+                    expect(eventData.newLevel).toBe(targetZoomLevel);
+                    expect(eventData.oldLevel).toBe(oldZoomLevel); // GSAP updates currentZoomLevel during transition
+                    expect(eventData.lodConfig).toBeDefined();
+                    resolve();
+                }
+            });
+
+            zoomManager.zoomToLevel(targetZoomLevel, 0.01); // Short duration for test
         });
-
-        zoomManager.zoomToLevel(targetZoomLevel, 0.01); // Short duration for test
     });
 
 
