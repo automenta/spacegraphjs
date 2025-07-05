@@ -231,15 +231,21 @@ export class FractalZoomManager {
     _updateLOD() {
         const lodConfig = this.getCurrentLODConfig();
         
-        // Update nodes
-        this.space.getNodes().forEach(node => {
-            this._updateNodeLOD(node, lodConfig);
-        });
+        const nodePlugin = this.space.plugins.getPlugin('NodePlugin');
+        const nodes = nodePlugin?.getNodes();
+        if (nodes) {
+            nodes.forEach(node => {
+                this._updateNodeLOD(node, lodConfig);
+            });
+        }
         
-        // Update edges
-        this.space.getEdges().forEach(edge => {
-            this._updateEdgeLOD(edge, lodConfig);
-        });
+        const edgePlugin = this.space.plugins.getPlugin('EdgePlugin');
+        const edges = edgePlugin?.getEdges();
+        if (edges) {
+            edges.forEach(edge => {
+                this._updateEdgeLOD(edge, lodConfig);
+            });
+        }
         
         this.space.emit('fractal-zoom:lodUpdated', { lodConfig, zoomLevel: this.currentZoomLevel });
     }
