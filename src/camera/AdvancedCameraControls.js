@@ -71,7 +71,7 @@ export class AdvancedCameraControls {
     constructor(space, cameraControls) {
         this.space = space;
         this.cameraControls = cameraControls;
-        this.camera = space.camera; // Changed from space._cam
+        this.camera = space._cam; // Reverted to _cam
         
         this._initializeEventListeners();
         this._startUpdateLoop();
@@ -316,6 +316,10 @@ export class AdvancedCameraControls {
 
     _enterPeekMode() {
         this.isPeeking = true;
+        if (!this.camera) {
+            console.warn('AdvancedCameraControls: Camera not available for peek mode.');
+            return;
+        }
         this.peekStartPosition.copy(this.camera.position);
         this.peekStartTarget.copy(this.cameraControls.targetLookAt);
         
@@ -349,6 +353,11 @@ export class AdvancedCameraControls {
 
     _updatePeekDirection() {
         if (!this.isPeeking) return;
+
+        if (!this.camera) {
+            console.warn('AdvancedCameraControls: Camera not available for peek direction update.');
+            return;
+        }
 
         // Calculate peek direction based on mouse position
         const peekVector = new THREE.Vector3(
