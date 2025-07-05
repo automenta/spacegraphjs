@@ -338,7 +338,7 @@ class InstanceManager {
     }
 
     registerObject(object) {
-        if (!this.enabled || !object.object3d) return;
+        if (!this.enabled || !object || !object.object3d) return;
         
         const geometryKey = this._getGeometryKey(object);
         if (!geometryKey) return;

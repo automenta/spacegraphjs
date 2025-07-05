@@ -91,7 +91,7 @@ export class NodePlugin extends Plugin {
         if (nodeInstance.labelObject && cssScene) cssScene.add(nodeInstance.labelObject);
         if (!successfullyInstanced && nodeInstance.mesh && webglScene) webglScene.add(nodeInstance.mesh);
 
-        this.space.emit('node:added', nodeInstance);
+        this.space.emit('node:added', nodeInstance.id, nodeInstance);
         return nodeInstance;
     }
 
