@@ -387,4 +387,4 @@ function updateCustomWidgetValues(customWidget, time) {
     // Would update the system load progress widget
 }
 
-export { createGraph, demoMetadata };
+export { demoMetadata };

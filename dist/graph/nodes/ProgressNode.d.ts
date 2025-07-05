@@ -27,7 +27,7 @@ export class ProgressNode extends HtmlNode {
     _generateValueText(): string;
     _getPercent(): number;
     _lightenColor(color: any, percent: any): string;
-    _updateProgress(): void;
+    _updateProgress(contextElement: any): void;
     setValue(value: any): void;
     setMax(max: any): void;
     setMin(min: any): void;

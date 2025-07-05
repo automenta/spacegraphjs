@@ -3759,10 +3759,10 @@ class xn {
     g(this, "cinematicPath", []);
     g(this, "cinematicProgress", 0);
     g(this, "cinematicDirection", 1);
-    this.space = t, this.cameraControls = e, this.camera = t._cam, this._initializeEventListeners(), this._startUpdateLoop();
+    this.space = t, this.cameraControls = e, this.camera = t.camera, this._initializeEventListeners(), this._startUpdateLoop();
   }
   _initializeEventListeners() {
-    this.space.container.addEventListener("mousemove", this._handleMouseMove.bind(this)), this.space.container.addEventListener("mouseenter", this._handleMouseEnter.bind(this)), this.space.container.addEventListener("mouseleave", this._handleMouseLeave.bind(this)), document.addEventListener("keydown", this._handleKeyDown.bind(this)), document.addEventListener("keyup", this._handleKeyUp.bind(this)), this.space.on("node:added", this._onGraphChange.bind(this)), this.space.on("node:removed", this._onGraphChange.bind(this)), this.space.on("layout:started", this._onLayoutChange.bind(this));
+    this.space.container && (this.space.container.addEventListener("mousemove", this._handleMouseMove.bind(this)), this.space.container.addEventListener("mouseenter", this._handleMouseEnter.bind(this)), this.space.container.addEventListener("mouseleave", this._handleMouseLeave.bind(this))), document.addEventListener("keydown", this._handleKeyDown.bind(this)), document.addEventListener("keyup", this._handleKeyUp.bind(this)), this.space.on("node:added", this._onGraphChange.bind(this)), this.space.on("node:removed", this._onGraphChange.bind(this)), this.space.on("layout:started", this._onLayoutChange.bind(this));
   }
   _handleMouseMove(t) {
     const e = this.space.container.getBoundingClientRect();
@@ -5379,6 +5379,8 @@ class yt extends L {
     });
   }
   setValue(e, s) {
+    if (!this.controls.has(e))
+      return;
     this.values.set(e, s);
     const i = this.controls.get(e);
     if (!i) return;
@@ -5450,11 +5452,9 @@ class bt extends L {
   }
   _createElement() {
     const t = document.createElement("div");
-    t.className = "node-progress node-common", t.id = `node-progress-${this.id}`, t.dataset.nodeId = this.id, t.style.width = `${this.size.width}px`, t.style.height = `${this.size.height}px`, t.draggable = !1;
-    const e = this._generateProgressContent();
-    return t.innerHTML = `
+    return t.className = "node-progress node-common", t.id = `node-progress-${this.id}`, t.dataset.nodeId = this.id, t.style.width = `${this.size.width}px`, t.style.height = `${this.size.height}px`, t.draggable = !1, t.innerHTML = `
             <div class="progress-container">
-                ${e}
+                <!-- Content will be populated by _updateProgress -->
             </div>
             <style>
                 .node-progress {
@@ -5625,7 +5625,7 @@ class bt extends L {
                     background: ${this.data.color};
                 }
             </style>
-        `, this._updateProgress(), t;
+        `, this._updateProgress(t), t;
   }
   _generateProgressContent() {
     const t = this._getPercent();
@@ -5714,9 +5714,11 @@ class bt extends L {
     const s = parseInt(t.replace("#", ""), 16), i = Math.round(2.55 * e), n = (s >> 16) + i, o = (s >> 8 & 255) + i, a = (s & 255) + i;
     return "#" + (16777216 + (n < 255 ? n < 1 ? 0 : n : 255) * 65536 + (o < 255 ? o < 1 ? 0 : o : 255) * 256 + (a < 255 ? a < 1 ? 0 : a : 255)).toString(16).slice(1);
   }
-  _updateProgress() {
-    const t = M(".progress-container", this.htmlElement);
-    t && (t.innerHTML = this._generateProgressContent());
+  _updateProgress(t) {
+    const e = t || this.htmlElement;
+    if (!e) return;
+    const s = M(".progress-container", e);
+    s && (s.innerHTML = this._generateProgressContent());
   }
   setValue(t) {
     var e;
@@ -12960,7 +12962,9 @@ class Co {
    * Zoom to a specific level with smooth transition
    */
   zoomToLevel(t, e = this.transitionDuration) {
-    t = Math.max(this.maxZoomOut, Math.min(this.maxZoomIn, t)), !(Math.abs(t - this.currentZoomLevel) < 0.01) && (this.targetZoomLevel = t, this.isTransitioning = !0, this.zoomTransitionTween && this.zoomTransitionTween.kill(), this.zoomTransitionTween = z.to(this, {
+    if (t = Math.max(this.maxZoomOut, Math.min(this.maxZoomIn, t)), Math.abs(t - this.currentZoomLevel) < 0.01) return;
+    const s = this.currentZoomLevel;
+    this.targetZoomLevel = t, this.isTransitioning = !0, this.zoomTransitionTween && this.zoomTransitionTween.kill(), this.zoomTransitionTween = z.to(this, {
       currentZoomLevel: t,
       duration: e,
       ease: "power2.inOut",
@@ -12969,12 +12973,13 @@ class Co {
       },
       onComplete: () => {
         this.isTransitioning = !1, this.space.emit("fractal-zoom:levelChanged", {
-          oldLevel: this.currentZoomLevel,
+          oldLevel: s,
+          // Use the captured old level
           newLevel: t,
           lodConfig: this.getCurrentLODConfig()
         });
       }
-    }));
+    });
   }
   /**
    * Update camera position based on current zoom level
