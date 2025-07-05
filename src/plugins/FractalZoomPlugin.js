@@ -89,11 +89,12 @@ export class FractalZoomPlugin extends Plugin {
     /**
      * Handle node addition
      */
-    _onNodeAdded(nodeId, node) {
-        if (!this.fractalZoomManager) return;
+    _onNodeAdded(nodeInstance) {
+        if (!this.fractalZoomManager || !nodeInstance) return; // Added check for nodeInstance
         
         // Auto-create content adapter based on node type and content
-        this._createDefaultContentAdapter(nodeId, node);
+        // Pass nodeInstance.id as the first argument and nodeInstance as the second
+        this._createDefaultContentAdapter(nodeInstance.id, nodeInstance);
     }
 
     /**
