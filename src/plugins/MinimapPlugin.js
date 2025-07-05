@@ -68,8 +68,10 @@ export class MinimapPlugin extends Plugin {
         if (this.nodeProxies.has(node.id)) return;
 
         const proxyGeometry = new THREE.PlaneGeometry(1, 1);
+        // Robustly access node color, falling back to default if not defined
+        const nodeColor = (node.data && node.data.color) ? node.data.color : NODE_PROXY_COLOR;
         const proxyMaterial = new THREE.MeshBasicMaterial({
-            color: node.data.color || NODE_PROXY_COLOR,
+            color: nodeColor,
             side: THREE.DoubleSide,
         });
         const proxyMesh = new THREE.Mesh(proxyGeometry, proxyMaterial);
@@ -99,8 +101,10 @@ export class MinimapPlugin extends Plugin {
                 proxy.position.copy(node.position);
                 const proxySize = Math.max(20, node.getBoundingSphereRadius() * 0.5);
                 proxy.scale.set(proxySize, proxySize, 1);
-                if (proxy.material.color.getHex() !== (node.data.color || NODE_PROXY_COLOR)) {
-                    proxy.material.color.set(node.data.color || NODE_PROXY_COLOR);
+                // Robustly access node color, falling back to default if not defined
+                const nodeColor = (node.data && node.data.color) ? node.data.color : NODE_PROXY_COLOR;
+                if (proxy.material.color.getHex() !== nodeColor) {
+                    proxy.material.color.set(nodeColor);
                 }
             }
         });
