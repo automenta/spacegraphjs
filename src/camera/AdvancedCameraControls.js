@@ -71,7 +71,7 @@ export class AdvancedCameraControls {
     constructor(space, cameraControls) {
         this.space = space;
         this.cameraControls = cameraControls;
-        this.camera = space._cam;
+        this.camera = space.camera; // Changed from space._cam
         
         this._initializeEventListeners();
         this._startUpdateLoop();
@@ -79,9 +79,11 @@ export class AdvancedCameraControls {
 
     _initializeEventListeners() {
         // Mouse move for peek mode
-        this.space.container.addEventListener('mousemove', this._handleMouseMove.bind(this));
-        this.space.container.addEventListener('mouseenter', this._handleMouseEnter.bind(this));
-        this.space.container.addEventListener('mouseleave', this._handleMouseLeave.bind(this));
+        if (this.space.container) { // Guard against undefined container
+            this.space.container.addEventListener('mousemove', this._handleMouseMove.bind(this));
+            this.space.container.addEventListener('mouseenter', this._handleMouseEnter.bind(this));
+            this.space.container.addEventListener('mouseleave', this._handleMouseLeave.bind(this));
+        }
 
         // Key bindings for advanced controls
         document.addEventListener('keydown', this._handleKeyDown.bind(this));
