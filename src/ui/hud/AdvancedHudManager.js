@@ -1,0 +1,911 @@
+import { $ } from '../../utils.js';
+import { HudManager } from './HudManager.js';
+
+export class AdvancedHudManager extends HudManager {
+    constructor(space, container, uiPluginCallbacks) {
+        super(space, container, uiPluginCallbacks);
+        
+        this.settings = {
+            showPerformanceMetrics: true,
+            showMinimap: false,
+            showStatusBar: true,
+            showNotifications: true,
+            showProgressIndicators: true,
+            autoHideDelay: 3000,
+            hudOpacity: 0.9
+        };
+
+        this.performanceMetrics = {
+            fps: 0,
+            frameTime: 0,
+            nodeCount: 0,
+            edgeCount: 0,
+            lastUpdateTime: 0
+        };
+
+        this.notifications = [];
+        this.progressIndicators = new Map();
+        this.statusItems = new Map();
+        
+        this._createAdvancedHudElements();
+        this._startPerformanceMonitoring();
+        this._subscribeToAdvancedEvents();
+    }
+
+    _createAdvancedHudElements() {
+        // Performance Monitor
+        this.performancePanel = this._createPerformancePanel();
+        
+        // Minimap
+        this.minimapPanel = this._createMinimapPanel();
+        
+        // Status Bar
+        this.statusBar = this._createStatusBar();
+        
+        // Notification System
+        this.notificationContainer = this._createNotificationContainer();
+        
+        // Progress Indicators
+        this.progressContainer = this._createProgressContainer();
+        
+        // Camera Status Indicator
+        this.cameraStatusIndicator = this._createCameraStatusIndicator();
+        
+        // Layout Status Indicator
+        this.layoutStatusIndicator = this._createLayoutStatusIndicator();
+        
+        // Navigation Controls
+        this.navigationControls = this._createNavigationControls();
+        
+        // View Mode Toggles
+        this.viewModeControls = this._createViewModeControls();
+        
+        // Quick Actions Panel
+        this.quickActionsPanel = this._createQuickActionsPanel();
+    }
+
+    _createPerformancePanel() {
+        const panel = document.createElement('div');
+        panel.id = 'hud-performance-panel';
+        panel.className = 'hud-panel hud-top-left';
+        panel.innerHTML = `
+            <div class="hud-panel-header">
+                <span class="hud-panel-title">Performance</span>
+                <button class="hud-panel-toggle" title="Toggle Performance Monitor">📊</button>
+            </div>
+            <div class="hud-panel-content">
+                <div class="performance-metric">
+                    <span class="metric-label">FPS:</span>
+                    <span class="metric-value" id="fps-value">60</span>
+                </div>
+                <div class="performance-metric">
+                    <span class="metric-label">Frame Time:</span>
+                    <span class="metric-value" id="frametime-value">16ms</span>
+                </div>
+                <div class="performance-metric">
+                    <span class="metric-label">Nodes:</span>
+                    <span class="metric-value" id="nodes-count">0</span>
+                </div>
+                <div class="performance-metric">
+                    <span class="metric-label">Edges:</span>
+                    <span class="metric-value" id="edges-count">0</span>
+                </div>
+                <div class="performance-metric">
+                    <span class="metric-label">Memory:</span>
+                    <span class="metric-value" id="memory-usage">0MB</span>
+                </div>
+            </div>
+        `;
+        
+        this.hudLayer.appendChild(panel);
+        this._bindPanelToggle(panel);
+        return panel;
+    }
+
+    _createMinimapPanel() {
+        const panel = document.createElement('div');
+        panel.id = 'hud-minimap-panel';
+        panel.className = 'hud-panel hud-top-right';
+        panel.innerHTML = `
+            <div class="hud-panel-header">
+                <span class="hud-panel-title">Minimap</span>
+                <button class="hud-panel-toggle" title="Toggle Minimap">🗺️</button>
+            </div>
+            <div class="hud-panel-content">
+                <canvas id="minimap-canvas" width="150" height="150"></canvas>
+                <div class="minimap-controls">
+                    <button id="minimap-zoom-in" title="Zoom In">+</button>
+                    <button id="minimap-zoom-out" title="Zoom Out">-</button>
+                    <button id="minimap-center" title="Center View">⌖</button>
+                </div>
+            </div>
+        `;
+        
+        this.hudLayer.appendChild(panel);
+        this._bindPanelToggle(panel);
+        this._initMinimap(panel.querySelector('#minimap-canvas'));
+        return panel;
+    }
+
+    _createStatusBar() {
+        const statusBar = document.createElement('div');
+        statusBar.id = 'hud-status-bar';
+        statusBar.className = 'hud-status-bar hud-bottom-full';
+        statusBar.innerHTML = `
+            <div class="status-section status-left">
+                <span class="status-item" id="layout-status">Layout: Force</span>
+                <span class="status-item" id="camera-mode-status">Camera: Orbit</span>
+                <span class="status-item" id="selection-count-status">Selected: 0</span>
+            </div>
+            <div class="status-section status-center">
+                <span class="status-item" id="current-action-status">Ready</span>
+            </div>
+            <div class="status-section status-right">
+                <span class="status-item" id="zoom-level-status">Zoom: 100%</span>
+                <span class="status-item" id="coordinates-status">0, 0, 0</span>
+                <span class="status-item" id="time-status"></span>
+            </div>
+        `;
+        
+        this.hudLayer.appendChild(statusBar);
+        this._startTimeUpdater(statusBar.querySelector('#time-status'));
+        return statusBar;
+    }
+
+    _createNotificationContainer() {
+        const container = document.createElement('div');
+        container.id = 'hud-notifications';
+        container.className = 'hud-notifications hud-top-center';
+        this.hudLayer.appendChild(container);
+        return container;
+    }
+
+    _createProgressContainer() {
+        const container = document.createElement('div');
+        container.id = 'hud-progress-indicators';
+        container.className = 'hud-progress-container hud-bottom-center';
+        this.hudLayer.appendChild(container);
+        return container;
+    }
+
+    _createCameraStatusIndicator() {
+        const indicator = document.createElement('div');
+        indicator.id = 'hud-camera-status';
+        indicator.className = 'hud-indicator hud-right-center';
+        indicator.innerHTML = `
+            <div class="indicator-icon" id="camera-mode-icon">📹</div>
+            <div class="indicator-details">
+                <div class="indicator-line" id="camera-position">Pos: 0, 0, 0</div>
+                <div class="indicator-line" id="camera-target">Target: 0, 0, 0</div>
+                <div class="indicator-line" id="camera-distance">Distance: 0</div>
+            </div>
+        `;
+        
+        this.hudLayer.appendChild(indicator);
+        return indicator;
+    }
+
+    _createLayoutStatusIndicator() {
+        const indicator = document.createElement('div');
+        indicator.id = 'hud-layout-status';
+        indicator.className = 'hud-indicator hud-left-center';
+        indicator.innerHTML = `
+            <div class="indicator-icon" id="layout-mode-icon">🔗</div>
+            <div class="indicator-details">
+                <div class="indicator-line" id="layout-type">Type: Force</div>
+                <div class="indicator-line" id="layout-running">Status: Running</div>
+                <div class="indicator-line" id="layout-energy">Energy: 0</div>
+            </div>
+        `;
+        
+        this.hudLayer.appendChild(indicator);
+        return indicator;
+    }
+
+    _createNavigationControls() {
+        const controls = document.createElement('div');
+        controls.id = 'hud-navigation-controls';
+        controls.className = 'hud-controls hud-bottom-right';
+        controls.innerHTML = `
+            <div class="control-group">
+                <button class="nav-button" id="nav-zoom-in" title="Zoom In">🔍+</button>
+                <button class="nav-button" id="nav-zoom-out" title="Zoom Out">🔍-</button>
+            </div>
+            <div class="control-group">
+                <button class="nav-button" id="nav-center" title="Center View">⌖</button>
+                <button class="nav-button" id="nav-reset" title="Reset View">🏠</button>
+            </div>
+            <div class="control-group">
+                <button class="nav-button" id="nav-fullscreen" title="Toggle Fullscreen">⛶</button>
+                <button class="nav-button" id="nav-screenshot" title="Take Screenshot">📸</button>
+            </div>
+        `;
+        
+        this.hudLayer.appendChild(controls);
+        this._bindNavigationControls(controls);
+        return controls;
+    }
+
+    _createViewModeControls() {
+        const controls = document.createElement('div');
+        controls.id = 'hud-view-mode-controls';
+        controls.className = 'hud-controls hud-top-center-right';
+        controls.innerHTML = `
+            <div class="view-mode-toggle">
+                <button class="mode-button active" id="mode-3d" title="3D View">3D</button>
+                <button class="mode-button" id="mode-2d" title="2D View">2D</button>
+            </div>
+            <div class="view-options">
+                <button class="option-button" id="toggle-grid" title="Toggle Grid">⊞</button>
+                <button class="option-button" id="toggle-axes" title="Toggle Axes">⊥</button>
+                <button class="option-button" id="toggle-labels" title="Toggle Labels">🏷️</button>
+                <button class="option-button" id="toggle-shadows" title="Toggle Shadows">☀️</button>
+            </div>
+        `;
+        
+        this.hudLayer.appendChild(controls);
+        this._bindViewModeControls(controls);
+        return controls;
+    }
+
+    _createQuickActionsPanel() {
+        const panel = document.createElement('div');
+        panel.id = 'hud-quick-actions';
+        panel.className = 'hud-panel hud-bottom-left';
+        panel.innerHTML = `
+            <div class="hud-panel-header">
+                <span class="hud-panel-title">Quick Actions</span>
+                <button class="hud-panel-toggle" title="Toggle Quick Actions">⚡</button>
+            </div>
+            <div class="hud-panel-content">
+                <div class="action-group">
+                    <button class="action-button" id="action-add-node" title="Add Node">➕ Node</button>
+                    <button class="action-button" id="action-add-edge" title="Add Edge">🔗 Edge</button>
+                </div>
+                <div class="action-group">
+                    <button class="action-button" id="action-select-all" title="Select All">◉ All</button>
+                    <button class="action-button" id="action-clear-selection" title="Clear Selection">◯ Clear</button>
+                </div>
+                <div class="action-group">
+                    <button class="action-button" id="action-auto-layout" title="Auto Layout">🎯 Auto</button>
+                    <button class="action-button" id="action-export" title="Export Graph">💾 Export</button>
+                </div>
+            </div>
+        `;
+        
+        this.hudLayer.appendChild(panel);
+        this._bindPanelToggle(panel);
+        this._bindQuickActions(panel);
+        return panel;
+    }
+
+    _bindPanelToggle(panel) {
+        const toggle = panel.querySelector('.hud-panel-toggle');
+        const content = panel.querySelector('.hud-panel-content');
+        
+        if (toggle && content) {
+            toggle.addEventListener('click', () => {
+                const isVisible = !content.classList.contains('collapsed');
+                content.classList.toggle('collapsed', isVisible);
+                toggle.classList.toggle('collapsed', isVisible);
+            });
+        }
+    }
+
+    _bindNavigationControls(controls) {
+        const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
+        
+        controls.querySelector('#nav-zoom-in').addEventListener('click', () => {
+            cameraPlugin?.zoom(-5);
+        });
+        
+        controls.querySelector('#nav-zoom-out').addEventListener('click', () => {
+            cameraPlugin?.zoom(5);
+        });
+        
+        controls.querySelector('#nav-center').addEventListener('click', () => {
+            cameraPlugin?.centerView();
+        });
+        
+        controls.querySelector('#nav-reset').addEventListener('click', () => {
+            cameraPlugin?.resetView();
+        });
+        
+        controls.querySelector('#nav-fullscreen').addEventListener('click', () => {
+            this._toggleFullscreen();
+        });
+        
+        controls.querySelector('#nav-screenshot').addEventListener('click', () => {
+            this._takeScreenshot();
+        });
+    }
+
+    _bindViewModeControls(controls) {
+        // 3D/2D mode toggle
+        const mode3d = controls.querySelector('#mode-3d');
+        const mode2d = controls.querySelector('#mode-2d');
+        
+        mode3d.addEventListener('click', () => {
+            mode3d.classList.add('active');
+            mode2d.classList.remove('active');
+            this._setViewMode('3d');
+        });
+        
+        mode2d.addEventListener('click', () => {
+            mode2d.classList.add('active');
+            mode3d.classList.remove('active');
+            this._setViewMode('2d');
+        });
+        
+        // View options
+        controls.querySelector('#toggle-grid').addEventListener('click', () => {
+            this._toggleGrid();
+        });
+        
+        controls.querySelector('#toggle-axes').addEventListener('click', () => {
+            this._toggleAxes();
+        });
+        
+        controls.querySelector('#toggle-labels').addEventListener('click', () => {
+            this._toggleLabels();
+        });
+        
+        controls.querySelector('#toggle-shadows').addEventListener('click', () => {
+            this._toggleShadows();
+        });
+    }
+
+    _bindQuickActions(panel) {
+        panel.querySelector('#action-add-node').addEventListener('click', () => {
+            this._addRandomNode();
+        });
+        
+        panel.querySelector('#action-add-edge').addEventListener('click', () => {
+            this.space.emit('ui:request:startLinking');
+        });
+        
+        panel.querySelector('#action-select-all').addEventListener('click', () => {
+            this._selectAllNodes();
+        });
+        
+        panel.querySelector('#action-clear-selection').addEventListener('click', () => {
+            this._clearSelection();
+        });
+        
+        panel.querySelector('#action-auto-layout').addEventListener('click', () => {
+            this._applyAutoLayout();
+        });
+        
+        panel.querySelector('#action-export').addEventListener('click', () => {
+            this._exportGraph();
+        });
+    }
+
+    _initMinimap(canvas) {
+        if (!canvas) return;
+        
+        this.minimapCanvas = canvas;
+        this.minimapCtx = canvas.getContext('2d');
+        
+        // Bind minimap controls
+        const zoomIn = canvas.parentElement.querySelector('#minimap-zoom-in');
+        const zoomOut = canvas.parentElement.querySelector('#minimap-zoom-out');
+        const center = canvas.parentElement.querySelector('#minimap-center');
+        
+        zoomIn?.addEventListener('click', () => this._minimapZoom(1.2));
+        zoomOut?.addEventListener('click', () => this._minimapZoom(0.8));
+        center?.addEventListener('click', () => this._minimapCenter());
+        
+        canvas.addEventListener('click', (e) => this._minimapClick(e));
+        
+        this._updateMinimap();
+    }
+
+    _startPerformanceMonitoring() {
+        let frameCount = 0;
+        let lastTime = performance.now();
+        
+        const updatePerformance = () => {
+            frameCount++;
+            const currentTime = performance.now();
+            
+            if (currentTime - lastTime >= 1000) {
+                this.performanceMetrics.fps = frameCount;
+                this.performanceMetrics.frameTime = (currentTime - lastTime) / frameCount;
+                
+                const nodePlugin = this.space.plugins.getPlugin('NodePlugin');
+                const edgePlugin = this.space.plugins.getPlugin('EdgePlugin');
+                
+                this.performanceMetrics.nodeCount = nodePlugin?.getNodes()?.size || 0;
+                this.performanceMetrics.edgeCount = edgePlugin?.getEdges()?.size || 0;
+                
+                this._updatePerformanceDisplay();
+                
+                frameCount = 0;
+                lastTime = currentTime;
+            }
+            
+            requestAnimationFrame(updatePerformance);
+        };
+        
+        updatePerformance();
+    }
+
+    _startTimeUpdater(timeElement) {
+        if (!timeElement) return;
+        
+        const updateTime = () => {
+            const now = new Date();
+            timeElement.textContent = now.toLocaleTimeString();
+        };
+        
+        updateTime();
+        setInterval(updateTime, 1000);
+    }
+
+    _subscribeToAdvancedEvents() {
+        // Camera events
+        this.space.on('camera:moved', () => this._updateCameraStatus());
+        this.space.on('camera:modeChanged', () => this._updateCameraStatus());
+        this.space.on('camera:autoZoomToggled', () => this._updateCameraStatus());
+        this.space.on('camera:autoRotationToggled', () => this._updateCameraStatus());
+        
+        // Layout events
+        this.space.on('layout:started', (event) => this._updateLayoutStatus(event));
+        this.space.on('layout:stopped', (event) => this._updateLayoutStatus(event));
+        this.space.on('layout:adapted', (event) => this._updateLayoutStatus(event));
+        
+        // Selection events
+        this.space.on('selection:changed', () => this._updateSelectionStatus());
+        
+        // Graph events
+        this.space.on('node:added', () => this._updateGraphStatus());
+        this.space.on('node:removed', () => this._updateGraphStatus());
+        this.space.on('edge:added', () => this._updateGraphStatus());
+        this.space.on('edge:removed', () => this._updateGraphStatus());
+    }
+
+    _updatePerformanceDisplay() {
+        const fpsEl = $('#fps-value');
+        const frameTimeEl = $('#frametime-value');
+        const nodesEl = $('#nodes-count');
+        const edgesEl = $('#edges-count');
+        const memoryEl = $('#memory-usage');
+        
+        if (fpsEl) fpsEl.textContent = Math.round(this.performanceMetrics.fps);
+        if (frameTimeEl) frameTimeEl.textContent = `${this.performanceMetrics.frameTime.toFixed(1)}ms`;
+        if (nodesEl) nodesEl.textContent = this.performanceMetrics.nodeCount;
+        if (edgesEl) edgesEl.textContent = this.performanceMetrics.edgeCount;
+        
+        if (memoryEl && performance.memory) {
+            const memoryMB = performance.memory.usedJSHeapSize / (1024 * 1024);
+            memoryEl.textContent = `${memoryMB.toFixed(1)}MB`;
+        }
+    }
+
+    _updateCameraStatus() {
+        const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
+        if (!cameraPlugin) return;
+        
+        const camera = cameraPlugin.getCameraInstance();
+        const mode = cameraPlugin.getCameraMode();
+        const status = cameraPlugin.getAdvancedControlsStatus?.() || {};
+        
+        // Update camera indicator
+        const posEl = $('#camera-position');
+        const targetEl = $('#camera-target');
+        const distanceEl = $('#camera-distance');
+        
+        if (posEl && camera) {
+            const pos = camera.position;
+            posEl.textContent = `Pos: ${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)}`;
+        }
+        
+        // Update status bar
+        const modeStatusEl = $('#camera-mode-status');
+        if (modeStatusEl) {
+            let statusText = `Camera: ${mode}`;
+            if (status.autoZoom) statusText += ' [AutoZoom]';
+            if (status.autoRotation) statusText += ' [AutoRotate]';
+            if (status.peekMode) statusText += ' [Peek]';
+            if (status.cinematicMode) statusText += ' [Cinematic]';
+            modeStatusEl.textContent = statusText;
+        }
+    }
+
+    _updateLayoutStatus(event) {
+        const layoutEl = $('#layout-type');
+        const statusEl = $('#layout-running');
+        const energyEl = $('#layout-energy');
+        const statusBarEl = $('#layout-status');
+        
+        if (layoutEl && event) {
+            layoutEl.textContent = `Type: ${event.name || 'Unknown'}`;
+        }
+        
+        if (statusEl) {
+            statusEl.textContent = event?.type === 'started' ? 'Status: Running' : 'Status: Stopped';
+        }
+        
+        if (statusBarEl && event) {
+            statusBarEl.textContent = `Layout: ${event.name || 'Unknown'}`;
+        }
+    }
+
+    _updateSelectionStatus() {
+        const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
+        const selectedEdges = this._uiPluginCallbacks.getSelectedEdges();
+        const totalSelected = selectedNodes.size + selectedEdges.size;
+        
+        const statusEl = $('#selection-count-status');
+        if (statusEl) {
+            statusEl.textContent = `Selected: ${totalSelected}`;
+        }
+    }
+
+    _updateGraphStatus() {
+        this._updateMinimap();
+    }
+
+    _updateMinimap() {
+        if (!this.minimapCanvas || !this.minimapCtx) return;
+        
+        const ctx = this.minimapCtx;
+        const canvas = this.minimapCanvas;
+        
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw background
+        ctx.fillStyle = 'rgba(20, 20, 30, 0.8)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Get nodes and edges
+        const nodePlugin = this.space.plugins.getPlugin('NodePlugin');
+        const edgePlugin = this.space.plugins.getPlugin('EdgePlugin');
+        
+        const nodes = Array.from(nodePlugin?.getNodes()?.values() || []);
+        const edges = Array.from(edgePlugin?.getEdges()?.values() || []);
+        
+        if (nodes.length === 0) return;
+        
+        // Calculate bounds
+        const bounds = this._calculateMinimapBounds(nodes);
+        const scale = Math.min(canvas.width / bounds.width, canvas.height / bounds.height) * 0.8;
+        const offsetX = (canvas.width - bounds.width * scale) / 2;
+        const offsetY = (canvas.height - bounds.height * scale) / 2;
+        
+        // Draw edges
+        ctx.strokeStyle = 'rgba(100, 150, 255, 0.5)';
+        ctx.lineWidth = 1;
+        edges.forEach(edge => {
+            const sourcePos = this._worldToMinimap(edge.source.position, bounds, scale, offsetX, offsetY);
+            const targetPos = this._worldToMinimap(edge.target.position, bounds, scale, offsetX, offsetY);
+            
+            ctx.beginPath();
+            ctx.moveTo(sourcePos.x, sourcePos.y);
+            ctx.lineTo(targetPos.x, targetPos.y);
+            ctx.stroke();
+        });
+        
+        // Draw nodes
+        nodes.forEach(node => {
+            const pos = this._worldToMinimap(node.position, bounds, scale, offsetX, offsetY);
+            const selected = this._uiPluginCallbacks.getSelectedNodes().has(node);
+            
+            ctx.fillStyle = selected ? '#ffff00' : '#64B5F6';
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, selected ? 3 : 2, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        
+        // Draw camera view indicator
+        this._drawCameraIndicator(ctx, bounds, scale, offsetX, offsetY);
+    }
+
+    _calculateMinimapBounds(nodes) {
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        
+        nodes.forEach(node => {
+            minX = Math.min(minX, node.position.x);
+            minY = Math.min(minY, node.position.y);
+            maxX = Math.max(maxX, node.position.x);
+            maxY = Math.max(maxY, node.position.y);
+        });
+        
+        const padding = 50;
+        return {
+            minX: minX - padding,
+            minY: minY - padding,
+            maxX: maxX + padding,
+            maxY: maxY + padding,
+            width: (maxX - minX) + 2 * padding,
+            height: (maxY - minY) + 2 * padding
+        };
+    }
+
+    _worldToMinimap(position, bounds, scale, offsetX, offsetY) {
+        return {
+            x: (position.x - bounds.minX) * scale + offsetX,
+            y: (position.y - bounds.minY) * scale + offsetY
+        };
+    }
+
+    _drawCameraIndicator(ctx, bounds, scale, offsetX, offsetY) {
+        const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
+        if (!cameraPlugin) return;
+        
+        const camera = cameraPlugin.getCameraInstance();
+        if (!camera) return;
+        
+        const cameraPos = this._worldToMinimap(camera.position, bounds, scale, offsetX, offsetY);
+        
+        ctx.strokeStyle = '#ff6b6b';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cameraPos.x, cameraPos.y, 8, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Draw view direction
+        ctx.beginPath();
+        ctx.moveTo(cameraPos.x, cameraPos.y);
+        ctx.lineTo(cameraPos.x, cameraPos.y - 12);
+        ctx.stroke();
+    }
+
+    // Notification System
+    showNotification(message, type = 'info', duration = 3000) {
+        const notification = document.createElement('div');
+        notification.className = `hud-notification hud-notification-${type}`;
+        notification.innerHTML = `
+            <div class="notification-icon">${this._getNotificationIcon(type)}</div>
+            <div class="notification-content">${message}</div>
+            <button class="notification-close" title="Close">×</button>
+        `;
+        
+        const closeBtn = notification.querySelector('.notification-close');
+        closeBtn.addEventListener('click', () => this._removeNotification(notification));
+        
+        this.notificationContainer.appendChild(notification);
+        this.notifications.push(notification);
+        
+        // Auto-hide after duration
+        if (duration > 0) {
+            setTimeout(() => this._removeNotification(notification), duration);
+        }
+        
+        // Animate in
+        requestAnimationFrame(() => {
+            notification.classList.add('notification-visible');
+        });
+        
+        return notification;
+    }
+
+    _getNotificationIcon(type) {
+        const icons = {
+            info: 'ℹ️',
+            success: '✅',
+            warning: '⚠️',
+            error: '❌'
+        };
+        return icons[type] || icons.info;
+    }
+
+    _removeNotification(notification) {
+        notification.classList.remove('notification-visible');
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+            this.notifications = this.notifications.filter(n => n !== notification);
+        }, 300);
+    }
+
+    // Progress Indicators
+    showProgress(id, label, progress = 0) {
+        let indicator = this.progressIndicators.get(id);
+        
+        if (!indicator) {
+            indicator = document.createElement('div');
+            indicator.className = 'hud-progress-indicator';
+            indicator.innerHTML = `
+                <div class="progress-label">${label}</div>
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
+                <div class="progress-percent">0%</div>
+            `;
+            
+            this.progressContainer.appendChild(indicator);
+            this.progressIndicators.set(id, indicator);
+        }
+        
+        const fill = indicator.querySelector('.progress-fill');
+        const percent = indicator.querySelector('.progress-percent');
+        
+        fill.style.width = `${Math.max(0, Math.min(100, progress))}%`;
+        percent.textContent = `${Math.round(progress)}%`;
+        
+        if (progress >= 100) {
+            setTimeout(() => this.hideProgress(id), 1000);
+        }
+    }
+
+    hideProgress(id) {
+        const indicator = this.progressIndicators.get(id);
+        if (indicator && indicator.parentNode) {
+            indicator.parentNode.removeChild(indicator);
+            this.progressIndicators.delete(id);
+        }
+    }
+
+    // Utility methods for quick actions
+    _addRandomNode() {
+        const position = {
+            x: (Math.random() - 0.5) * 400,
+            y: (Math.random() - 0.5) * 400,
+            z: (Math.random() - 0.5) * 200
+        };
+        
+        const nodeTypes = ['ControlPanelNode', 'ProgressNode', 'TextMeshNode', 'ShapeNode'];
+        const randomType = nodeTypes[Math.floor(Math.random() * nodeTypes.length)];
+        
+        const node = this.space.addNode({
+            id: `quick_node_${Date.now()}`,
+            type: randomType,
+            position,
+            data: { content: 'Quick Node' }
+        });
+        
+        this.showNotification(`Added ${randomType}`, 'success', 2000);
+        return node;
+    }
+
+    _selectAllNodes() {
+        const nodePlugin = this.space.plugins.getPlugin('NodePlugin');
+        const nodes = Array.from(nodePlugin?.getNodes()?.values() || []);
+        
+        nodes.forEach(node => {
+            this._uiPluginCallbacks.setSelectedNode(node, true);
+        });
+        
+        this.showNotification(`Selected ${nodes.length} nodes`, 'info', 2000);
+    }
+
+    _clearSelection() {
+        this._uiPluginCallbacks.setSelectedNode(null, false);
+        this._uiPluginCallbacks.setSelectedEdge(null, false);
+        this.showNotification('Selection cleared', 'info', 2000);
+    }
+
+    _applyAutoLayout() {
+        const layoutPlugin = this.space.plugins.getPlugin('LayoutPlugin');
+        if (layoutPlugin?.layoutManager?.toggleAutoZoom) {
+            const enabled = layoutPlugin.layoutManager.toggleAutoZoom();
+            this.showNotification(`Auto-zoom ${enabled ? 'enabled' : 'disabled'}`, 'info', 2000);
+        }
+    }
+
+    _exportGraph() {
+        const data = this.space.exportGraphToJSON();
+        if (data) {
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `spacegraph_${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            this.showNotification('Graph exported successfully', 'success', 2000);
+        }
+    }
+
+    _toggleFullscreen() {
+        if (!document.fullscreenElement) {
+            this.container.requestFullscreen?.();
+        } else {
+            document.exitFullscreen?.();
+        }
+    }
+
+    _takeScreenshot() {
+        const renderingPlugin = this.space.plugins.getPlugin('RenderingPlugin');
+        if (renderingPlugin) {
+            // This would need to be implemented in the rendering plugin
+            this.showNotification('Screenshot feature not yet implemented', 'warning', 2000);
+        }
+    }
+
+    _setViewMode(mode) {
+        this.space.emit('ui:request:setViewMode', mode);
+        this.showNotification(`Switched to ${mode.toUpperCase()} view`, 'info', 2000);
+    }
+
+    _toggleGrid() {
+        this.space.emit('ui:request:toggleGrid');
+        this.showNotification('Grid toggled', 'info', 1500);
+    }
+
+    _toggleAxes() {
+        this.space.emit('ui:request:toggleAxes');
+        this.showNotification('Axes toggled', 'info', 1500);
+    }
+
+    _toggleLabels() {
+        this.space.emit('ui:request:toggleLabels');
+        this.showNotification('Labels toggled', 'info', 1500);
+    }
+
+    _toggleShadows() {
+        this.space.emit('ui:request:toggleShadows');
+        this.showNotification('Shadows toggled', 'info', 1500);
+    }
+
+    // Minimap interaction
+    _minimapZoom(factor) {
+        const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
+        cameraPlugin?.zoom(factor > 1 ? -5 : 5);
+    }
+
+    _minimapCenter() {
+        const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
+        cameraPlugin?.centerView();
+    }
+
+    _minimapClick(event) {
+        // Navigate camera to clicked position on minimap
+        const rect = this.minimapCanvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        
+        // Convert minimap coordinates to world coordinates and move camera
+        // This would need the reverse transformation
+        this.showNotification('Minimap navigation coming soon', 'info', 1500);
+    }
+
+    // Override parent methods to include advanced features
+    updateHudSelectionInfo() {
+        super.updateHudSelectionInfo();
+        this._updateSelectionStatus();
+    }
+
+    updateHudCameraMode(mode) {
+        super.updateHudCameraMode(mode);
+        this._updateCameraStatus();
+    }
+
+    // Configuration
+    updateHudSettings(newSettings) {
+        this.settings = { ...this.settings, ...newSettings };
+        
+        // Apply settings
+        if (this.hudLayer) {
+            this.hudLayer.style.opacity = this.settings.hudOpacity;
+        }
+        
+        // Show/hide panels based on settings
+        if (this.performancePanel) {
+            this.performancePanel.style.display = this.settings.showPerformanceMetrics ? 'block' : 'none';
+        }
+        if (this.minimapPanel) {
+            this.minimapPanel.style.display = this.settings.showMinimap ? 'block' : 'none';
+        }
+        if (this.statusBar) {
+            this.statusBar.style.display = this.settings.showStatusBar ? 'block' : 'none';
+        }
+    }
+
+    getHudSettings() {
+        return { ...this.settings };
+    }
+
+    dispose() {
+        // Clear notifications and progress indicators
+        this.notifications.forEach(notification => this._removeNotification(notification));
+        this.progressIndicators.forEach((indicator, id) => this.hideProgress(id));
+        
+        super.dispose();
+    }
+}

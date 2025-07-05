@@ -9,6 +9,8 @@ import {LayoutPlugin} from '../plugins/LayoutPlugin.js';
 import {UIPlugin} from '../plugins/UIPlugin.js';
 import {MinimapPlugin} from '../plugins/MinimapPlugin.js';
 import {DataPlugin} from '../plugins/DataPlugin.js';
+import {FractalZoomPlugin} from '../plugins/FractalZoomPlugin.js';
+import {PerformancePlugin} from '../plugins/PerformancePlugin.js';
 
 export class SpaceGraph {
     _cam = null;
@@ -34,6 +36,8 @@ export class SpaceGraph {
         this.plugins.add(new UIPlugin(this, this.plugins, contextMenuElement, confirmDialogElement));
         this.plugins.add(new MinimapPlugin(this, this.plugins));
         this.plugins.add(new DataPlugin(this, this.plugins));
+        this.plugins.add(new FractalZoomPlugin(this, this.plugins));
+        this.plugins.add(new PerformancePlugin(this, this.plugins));
     }
 
     async init() {
@@ -315,6 +319,10 @@ export class SpaceGraph {
             requestAnimationFrame(frame);
         };
         frame();
+    }
+
+    get layoutManager() {
+        return this.plugins.getPlugin('LayoutPlugin')?.layoutManager;
     }
 
     dispose() {

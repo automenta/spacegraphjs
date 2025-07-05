@@ -10,6 +10,12 @@ import {NoteNode} from './nodes/NoteNode.js';
 import {AudioNode} from './nodes/AudioNode.js';
 import {DocumentNode} from './nodes/DocumentNode.js';
 import {ChartNode} from './nodes/ChartNode.js';
+import {ControlPanelNode} from './nodes/ControlPanelNode.js';
+import {ProgressNode} from './nodes/ProgressNode.js';
+import {CanvasNode} from './nodes/CanvasNode.js';
+import {ProceduralShapeNode} from './nodes/ProceduralShapeNode.js';
+import {TextMeshNode} from './nodes/TextMeshNode.js';
+import {MetaWidgetNode} from './nodes/MetaWidgetNode.js';
 
 export class NodeFactory extends BaseFactory { // Extend BaseFactory
     constructor(space) {
@@ -30,6 +36,18 @@ export class NodeFactory extends BaseFactory { // Extend BaseFactory
         this.registerType(AudioNode.typeName, AudioNode);
         this.registerType(DocumentNode.typeName, DocumentNode);
         this.registerType(ChartNode.typeName, ChartNode);
+        
+        // Advanced widget nodes
+        this.registerType(ControlPanelNode.typeName, ControlPanelNode);
+        this.registerType(ProgressNode.typeName, ProgressNode);
+        this.registerType(CanvasNode.typeName, CanvasNode);
+        
+        // Advanced shape nodes
+        this.registerType(ProceduralShapeNode.typeName, ProceduralShapeNode);
+        this.registerType(TextMeshNode.typeName, TextMeshNode);
+        
+        // MetaWidget system
+        this.registerType(MetaWidgetNode.typeName, MetaWidgetNode);
 
         this.registerType('default', ShapeNode);
     }

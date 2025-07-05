@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
+        <title>SpaceGraphJS - Enhanced Demo System</title>
+        <link
+            href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>"
+            rel="icon"
+        />
+        <link href="src/index.css" rel="stylesheet" />
+        <style>
+            /* Enhanced demo system specific styles */
+            body {
+                margin: 0;
+                padding: 0;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: #f8f9fa;
+            }
+            
+            /* Loading screen */
+            #loading-screen {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                z-index: 9999;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            }
+            
+            .loading-logo {
+                font-size: 64px;
+                margin-bottom: 20px;
+                animation: pulse 2s infinite;
+            }
+            
+            .loading-title {
+                font-size: 24px;
+                font-weight: 300;
+                margin-bottom: 10px;
+            }
+            
+            .loading-subtitle {
+                font-size: 14px;
+                opacity: 0.8;
+                margin-bottom: 30px;
+            }
+            
+            .loading-progress {
+                width: 300px;
+                height: 4px;
+                background: rgba(255, 255, 255, 0.2);
+                border-radius: 2px;
+                overflow: hidden;
+            }
+            
+            .loading-bar {
+                height: 100%;
+                background: rgba(255, 255, 255, 0.8);
+                border-radius: 2px;
+                animation: loading 3s ease-in-out infinite;
+            }
+            
+            @keyframes pulse {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(1.1); }
+            }
+            
+            @keyframes loading {
+                0% { width: 0%; }
+                50% { width: 70%; }
+                100% { width: 100%; }
+            }
+            
+            /* Hide original demo elements */
+            #page-selector,
+            #hud,
+            #toolbar {
+                display: none;
+            }
+            
+            /* Ensure mindmap container fills the space */
+            #mindmap-container {
+                position: fixed;
+                inset: 0;
+                z-index: 1;
+            }
+            
+            /* Error styles */
+            .error-container {
+                max-width: 600px;
+                margin: 50px auto;
+                padding: 20px;
+                background: white;
+                border-radius: 8px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            }
+            
+            .error-title {
+                color: #dc3545;
+                font-size: 24px;
+                margin-bottom: 15px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            
+            .error-description {
+                color: #6c757d;
+                line-height: 1.6;
+                margin-bottom: 20px;
+            }
+            
+            .error-actions {
+                display: flex;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+            
+            .error-btn {
+                padding: 10px 20px;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-weight: 500;
+                text-decoration: none;
+                display: inline-block;
+                transition: transform 0.2s, box-shadow 0.2s;
+            }
+            
+            .error-btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            }
+            
+            .error-btn.primary {
+                background: #007bff;
+                color: white;
+            }
+            
+            .error-btn.secondary {
+                background: #6c757d;
+                color: white;
+            }
+            
+            /* Feature detection warnings */
+            .feature-warning {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                max-width: 300px;
+                padding: 15px;
+                background: #fff3cd;
+                border: 1px solid #ffeaa7;
+                border-radius: 4px;
+                color: #856404;
+                font-size: 13px;
+                z-index: 10000;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            }
+            
+            .feature-warning .warning-title {
+                font-weight: bold;
+                margin-bottom: 5px;
+            }
+            
+            .feature-warning .close-warning {
+                position: absolute;
+                top: 5px;
+                right: 8px;
+                background: none;
+                border: none;
+                font-size: 16px;
+                cursor: pointer;
+                color: #856404;
+                padding: 0;
+                width: 20px;
+                height: 20px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- Loading Screen -->
+        <div id="loading-screen">
+            <div class="loading-logo">🧠</div>
+            <div class="loading-title">SpaceGraphJS</div>
+            <div class="loading-subtitle">Enhanced Demo System</div>
+            <div class="loading-progress">
+                <div class="loading-bar"></div>
+            </div>
+        </div>
+
+        <!-- Feature Detection Warning -->
+        <div id="feature-warning" class="feature-warning" style="display: none;">
+            <button class="close-warning" onclick="this.parentElement.style.display='none'">×</button>
+            <div class="warning-title">⚠️ Feature Support</div>
+            <div id="warning-content">Some features may not be available in your browser.</div>
+        </div>
+
+        <!-- Original SpaceGraphJS Elements (Hidden by CSS) -->
+        <div id="toolbar"></div>
+        <div id="page-selector"></div>
+        <div id="hud"></div>
+
+        <!-- Main Graph Container -->
+        <div id="mindmap-container">
+            <canvas id="webgl-canvas"></canvas>
+            <div id="css3d-container"></div>
+        </div>
+
+        <!-- Context Menu -->
+        <div class="context-menu" id="context-menu"></div>
+
+        <!-- Confirm Dialog -->
+        <div class="dialog" id="confirm-dialog">
+            <p id="confirm-message">Are you sure?</p>
+            <button id="confirm-yes">Yes</button>
+            <button id="confirm-no">No</button>
+        </div>
+
+        <!-- Import Map -->
+        <script type="importmap">
+            {
+                "imports": {
+                    "three": "https://cdn.jsdelivr.net/npm/three@0.177.0/build/three.module.js",
+                    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.177.0/examples/jsm/",
+                    "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
+                }
+            }
+        </script>
+
+        <!-- Feature Detection and Initialization Script -->
+        <script>
+            // Feature detection
+            function detectFeatures() {
+                const features = {
+                    webgl: !!window.WebGLRenderingContext,
+                    webgl2: !!window.WebGL2RenderingContext,
+                    workers: !!window.Worker,
+                    canvas: !!document.createElement('canvas').getContext,
+                    es6: (function() {
+                        try {
+                            eval('class Test{}; const x = () => {};');
+                            return true;
+                        } catch (e) {
+                            return false;
+                        }
+                    })(),
+                    fetch: !!window.fetch,
+                    promise: !!window.Promise,
+                    modules: 'noModule' in HTMLScriptElement.prototype
+                };
+
+                const warnings = [];
+                const critical = [];
+
+                if (!features.webgl) critical.push('WebGL support');
+                if (!features.canvas) critical.push('Canvas support');
+                if (!features.es6) critical.push('ES6 support');
+                if (!features.modules) critical.push('ES6 modules');
+                if (!features.fetch) warnings.push('Fetch API (some features may not work)');
+                if (!features.workers) warnings.push('Web Workers (performance features disabled)');
+                if (!features.webgl2) warnings.push('WebGL 2.0 (some advanced features may be limited)');
+
+                return { features, warnings, critical };
+            }
+
+            function showFeatureWarnings(detection) {
+                const warningEl = document.getElementById('feature-warning');
+                const contentEl = document.getElementById('warning-content');
+
+                if (detection.critical.length > 0) {
+                    // Critical issues - show error
+                    document.getElementById('loading-screen').innerHTML = `
+                        <div class="error-container">
+                            <div class="error-title">
+                                ❌ Compatibility Issues
+                            </div>
+                            <div class="error-description">
+                                Your browser is missing critical features required for SpaceGraphJS:
+                                <ul style="margin: 10px 0; padding-left: 20px;">
+                                    ${detection.critical.map(feature => `<li>${feature}</li>`).join('')}
+                                </ul>
+                                Please try using a modern browser like Chrome, Firefox, or Safari.
+                            </div>
+                            <div class="error-actions">
+                                <button class="error-btn primary" onclick="location.reload()">
+                                    🔄 Try Again
+                                </button>
+                                <a href="https://browsehappy.com/" class="error-btn secondary" target="_blank">
+                                    🌐 Update Browser
+                                </a>
+                            </div>
+                        </div>
+                    `;
+                    return false;
+                } else if (detection.warnings.length > 0) {
+                    // Show warnings but continue
+                    contentEl.innerHTML = `Some features may be limited:<br>• ${detection.warnings.join('<br>• ')}`;
+                    warningEl.style.display = 'block';
+                    
+                    // Auto-hide after 10 seconds
+                    setTimeout(() => {
+                        warningEl.style.display = 'none';
+                    }, 10000);
+                }
+
+                return true;
+            }
+
+            // Performance detection
+            function detectPerformance() {
+                const canvas = document.createElement('canvas');
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                
+                if (!gl) return { tier: 'low', message: 'Limited graphics support' };
+
+                const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                const renderer = debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : '';
+                const vendor = debugInfo ? gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) : '';
+
+                // Simple heuristics for performance tier
+                const isHighEnd = /nvidia|amd|intel.*iris|intel.*uhd.*6|apple/i.test(renderer);
+                const isIntegrated = /intel.*hd|intel.*uhd.*[1-5]|adreno.*[1-5]/i.test(renderer);
+
+                if (isHighEnd) return { tier: 'high', message: 'Excellent graphics performance expected' };
+                if (isIntegrated) return { tier: 'medium', message: 'Good graphics performance expected' };
+                return { tier: 'low', message: 'Basic graphics performance expected' };
+            }
+
+            // Initialize the demo system
+            async function initializeDemo() {
+                try {
+                    // Feature detection
+                    const detection = detectFeatures();
+                    console.log('Feature detection:', detection);
+
+                    if (!showFeatureWarnings(detection)) {
+                        return; // Critical errors, stop initialization
+                    }
+
+                    // Performance detection
+                    const performance = detectPerformance();
+                    console.log('Performance tier:', performance);
+
+                    // Update loading message
+                    document.querySelector('.loading-subtitle').textContent = `Loading enhanced demo system... (${performance.message})`;
+
+                    // Import and initialize the enhanced demo system
+                    const module = await import('./src/examples/enhanced-demo-main.js');
+                    
+                    // Hide loading screen after a short delay to show the interface
+                    setTimeout(() => {
+                        document.getElementById('loading-screen').style.display = 'none';
+                    }, 1000);
+
+                } catch (error) {
+                    console.error('Failed to initialize demo system:', error);
+                    
+                    document.getElementById('loading-screen').innerHTML = `
+                        <div class="error-container">
+                            <div class="error-title">
+                                ❌ Initialization Failed
+                            </div>
+                            <div class="error-description">
+                                There was an error loading the SpaceGraphJS demo system:
+                                <br><br>
+                                <strong>Error:</strong> ${error.message}
+                                <br><br>
+                                This might be due to network issues or browser compatibility problems.
+                            </div>
+                            <div class="error-actions">
+                                <button class="error-btn primary" onclick="location.reload()">
+                                    🔄 Reload Page
+                                </button>
+                                <button class="error-btn secondary" onclick="window.open('./index.html', '_blank')">
+                                    📄 Basic Demo
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            // Start initialization when DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initializeDemo);
+            } else {
+                initializeDemo();
+            }
+
+            // Global error handler
+            window.addEventListener('error', function(e) {
+                console.error('Global error:', e.error);
+                
+                // Only show error overlay if loading screen is still visible
+                if (document.getElementById('loading-screen').style.display !== 'none') {
+                    document.getElementById('loading-screen').innerHTML = `
+                        <div class="error-container">
+                            <div class="error-title">
+                                ❌ Unexpected Error
+                            </div>
+                            <div class="error-description">
+                                An unexpected error occurred while loading the demo system.
+                                <br><br>
+                                <strong>Error:</strong> ${e.error?.message || e.message || 'Unknown error'}
+                            </div>
+                            <div class="error-actions">
+                                <button class="error-btn primary" onclick="location.reload()">
+                                    🔄 Reload Page
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            // Unhandled promise rejection handler
+            window.addEventListener('unhandledrejection', function(e) {
+                console.error('Unhandled promise rejection:', e.reason);
+            });
+        </script>
+
+        <!-- Analytics and feedback (optional) -->
+        <script>
+            // Simple usage analytics (privacy-friendly)
+            if (navigator.sendBeacon && window.location.hostname !== 'localhost') {
+                window.addEventListener('load', () => {
+                    const data = {
+                        timestamp: Date.now(),
+                        userAgent: navigator.userAgent,
+                        viewport: `${window.innerWidth}x${window.innerHeight}`,
+                        features: Object.keys(detectFeatures().features).filter(f => detectFeatures().features[f])
+                    };
+                    
+                    // This would send to your analytics endpoint
+                    // navigator.sendBeacon('/analytics/demo-load', JSON.stringify(data));
+                });
+            }
+        </script>
+    </body>
+</html>

@@ -8,7 +8,7 @@ import { InteractionState } from './InteractionState.js';
 import { ConfirmDialog } from './dialogs/ConfirmDialog.js';
 import { ContextMenu } from './menus/ContextMenu.js';
 import { EdgeMenu } from './menus/EdgeMenu.js';
-import { HudManager } from './hud/HudManager.js';
+import { AdvancedHudManager } from './hud/AdvancedHudManager.js';
 import { Toolbar } from './Toolbar.js';
 
 export class UIManager {
@@ -74,7 +74,7 @@ export class UIManager {
         this.confirmDialog = new ConfirmDialog(this.space, confirmDialogEl);
         this.contextMenu = new ContextMenu(this.space, contextMenuEl, this._uiPluginCallbacks);
         this.edgeMenu = new EdgeMenu(this.space, this._uiPluginCallbacks);
-        this.hudManager = new HudManager(this.space, this.container, this._uiPluginCallbacks);
+        this.hudManager = new AdvancedHudManager(this.space, this.container, this._uiPluginCallbacks);
         this.toolbar = new Toolbar(this.space, $('#toolbar'));
 
         this._applySavedTheme();

@@ -6,14 +6,14 @@ import {SphericalLayout} from '../layout/SphericalLayout.js';
 import {HierarchicalLayout} from '../layout/HierarchicalLayout.js';
 import {TreeMapLayout} from '../layout/TreeMapLayout.js'; // Added TreeMapLayout
 import {RadialLayout} from '../layout/RadialLayout.js'; // Added RadialLayout
-import {LayoutManager} from '../layout/LayoutManager.js';
+import {AdvancedLayoutManager} from '../layout/AdvancedLayoutManager.js';
 
 export class LayoutPlugin extends Plugin {
     layoutManager = null;
 
     constructor(spaceGraph, pluginManager) {
         super(spaceGraph, pluginManager);
-        this.layoutManager = new LayoutManager(spaceGraph, pluginManager);
+        this.layoutManager = new AdvancedLayoutManager(spaceGraph, pluginManager);
     }
 
     getName() {
@@ -38,6 +38,15 @@ export class LayoutPlugin extends Plugin {
         this.layoutManager.registerLayout('hierarchical', new HierarchicalLayout());
         this.layoutManager.registerLayout(TreeMapLayout.layoutName, new TreeMapLayout());
         this.layoutManager.registerLayout(RadialLayout.layoutName, new RadialLayout());
+
+        // Enable advanced layout features by default
+        this.layoutManager.enableAdvancedFeatures({
+            connections: true,
+            constraints: false,
+            nesting: false,
+            adaptive: false,
+            autoMode: false
+        });
 
         await this.layoutManager.applyLayout('force');
         this._setupEventListeners();

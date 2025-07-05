@@ -1,39 +1,55 @@
-# SpaceGraphJS
+# SpaceGraph ZUI Library
 
-SpaceGraphJS is a JavaScript library for creating interactive 3D force-directed graphs in the browser. It leverages Three.js for WebGL rendering of 3D elements and CSS3DRenderer for embedding rich HTML content within graph nodes. The library is designed to be modular, performant, and extensible.
+[![npm version](https://badge.fury.io/js/spacegraph-zui.svg)](https://badge.fury.io/js/spacegraph-zui)
+[![Build Status](https://github.com/TTime/spacegraphjs/actions/workflows/gh-pages.yml/badge.svg)](https://github.com/TTime/spacegraphjs/actions/workflows/gh-pages.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+**SpaceGraph ZUI** (Zoomable User Interface) is a general-purpose, extensible JavaScript library for creating interactive 2D and 3D graph visualizations. It leverages Three.js for WebGL rendering and offers rich HTML content embedding within graph nodes. The library is designed to be modular, performant, and highly customizable through a plugin architecture.
 
 ## Features
 
-- **3D Graph Visualization**: Renders nodes and edges in a 3D space.
-- **HTML Nodes**: Allows complex HTML content to be used as node visuals, enabling rich UIs within the graph.
-- **Shape Nodes**: Supports basic 3D shapes (spheres, boxes) for simpler node representations, with 3D text labels.
-- **Force-Directed Layout**: Implements a force simulation to automatically arrange nodes and edges.
-    - Customizable forces (repulsion, spring-like edges with configurable stiffness and length).
-    - Support for different edge constraint types (elastic, rigid, weld).
-- **Interactive UI**:
+- **2D/3D Graph Visualization**: Renders nodes and edges in a 2D or 3D space.
+- **Versatile Node Types**:
+    - **HTML Nodes**: Embed complex HTML content as node visuals, enabling rich UIs within the graph.
+    - **Shape Nodes**: Supports basic 3D shapes (e.g., spheres, boxes) with 3D text labels.
+    - **Image, Video, IFrame Nodes**, and more. Easily extensible for custom node types.
+- **Dynamic Layouts**:
+    - Built-in force-directed layout.
+    - Support for various layout algorithms (Circular, Grid, Hierarchical, Radial, Spherical, TreeMap) via plugins.
+    - Pin nodes to fix their positions.
+- **Interactive UI & Camera**:
     - Drag & drop nodes.
-    - Resize HTML nodes.
-    - Context menus for creating nodes, linking, deleting, etc.
-    - Interactive edge menu for adjusting properties like color and thickness.
-    - Smooth camera controls (pan, zoom, focus on node) with GSAP animations.
-    - History for camera movements (back/forward).
-- **Modular Design**: Core components like `SpaceGraph`, `UIManager`, `ForceLayout`, `Camera`, and Node types are organized into classes.
-- **ES Module Support**: Can be easily integrated into modern JavaScript projects.
+    - Smooth camera controls (pan, zoom, focus on node) powered by GSAP.
+    - Camera movement history (back/forward).
+    - Context menus for nodes and edges.
+- **Extensible Plugin System**: Customize or extend nearly any aspect of the library by creating or modifying plugins for rendering, camera behavior, UI interactions, data handling, and more.
+- **Multiple Module Formats**: Supports ES Modules (ESM), CommonJS (CJS), and UMD, compatible with Node.js and modern browsers.
+- **TypeScript Definitions**: Includes type definitions for a better development experience with TypeScript.
 
 ## Live Demo
 
-A live demo is available on GitHub Pages: [https://TTime.github.io/spacegraphjs/](https://TTime.github.io/spacegraphjs/)
+A live demo showcasing various features is available on GitHub Pages: [https://TTime.github.io/spacegraphjs/](https://TTime.github.io/spacegraphjs/)
 
-## Getting Started
+## Installation
 
-### Prerequisites
+```bash
+npm install spacegraph-zui
+# or
+yarn add spacegraph-zui
+```
 
-SpaceGraphJS relies on ES modules and modern browser features. You'll need to import `three.js` and `gsap`. The demo uses CDN links via an import map.
+You will also need to install its peer dependencies if you haven't already:
 
-### Basic Usage
+```bash
+npm install three gsap postprocessing
+# or
+yarn add three gsap postprocessing
+```
+
+## Quick Start
 
 1.  **HTML Setup**:
-    Create an HTML file with a container for the graph and the necessary UI elements for context menus and dialogs.
+    You need a container element in your HTML for the graph.
 
     ```html
     <!DOCTYPE html>
@@ -41,7 +57,6 @@ SpaceGraphJS relies on ES modules and modern browser features. You'll need to im
         <head>
             <meta charset="UTF-8" />
             <title>My SpaceGraph App</title>
-            <link rel="stylesheet" href="path/to/your/spacegraph.css" />
             <style>
                 body {
                     margin: 0;
@@ -52,115 +67,103 @@ SpaceGraphJS relies on ES modules and modern browser features. You'll need to im
                     height: 100vh;
                     position: relative;
                 }
-                .context-menu {
-                    display: none;
-                }
-                .dialog {
-                    display: none;
-                }
             </style>
         </head>
         <body>
-            <div id="graph-container">
-                <canvas id="webgl-canvas"></canvas>
-                <div class="context-menu" id="context-menu"></div>
-                <div class="dialog" id="confirm-dialog">
-                    <p id="confirm-message">Are you sure?</p>
-                    <button id="confirm-yes">Yes</button>
-                    <button id="confirm-no">No</button>
-                </div>
-            </div>
-
-            <script type="importmap">
-                {
-                    "imports": {
-                        "three": "https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js",
-                        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/",
-                        "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
-                    }
-                }
-            </script>
+            <div id="graph-container"></div>
             <script type="module" src="my-app.js"></script>
         </body>
     </html>
     ```
 
+    _Note: For HTML nodes and default UI elements like context menus, you might need additional CSS. Refer to the library's CSS or provide your own._
+
 2.  **JavaScript (`my-app.js`)**:
-    Import the necessary classes from `spacegraph.js` and initialize your graph.
 
     ```javascript
-    import {
-        SpaceGraph,
-        NoteNode,
-        ShapeNode,
-        $,
-    } from './path/to/src/index.js';
+    import { SpaceGraph } from 'spacegraph-zui';
+    // For CommonJS: const { SpaceGraph } = require('spacegraph-zui');
 
     document.addEventListener('DOMContentLoaded', async () => {
-        const graphContainer = $('#graph-container');
-        const contextMenuEl = $('#context-menu');
-        const confirmDialogEl = $('#confirm-dialog');
+        const container = document.getElementById('graph-container');
 
-        if (!graphContainer || !contextMenuEl || !confirmDialogEl) {
-            console.error('Missing required DOM elements for SpaceGraphJS UI.');
+        if (!container) {
+            console.error('Graph container not found!');
             return;
         }
 
-        const space = new SpaceGraph(graphContainer, {
-            ui: {
-                contextMenuElement: contextMenuEl,
-                confirmDialogElement: confirmDialogEl,
+        // Basic options (see documentation for more)
+        const options = {
+            // Example: configure default layout
+            layout: {
+                type: 'ForceLayout', // Default, can be omitted
+                settings: {
+                    // Force layout specific settings
+                },
             },
-        });
+            // Example: UI plugin options (if using default UI elements)
+            // ui: {
+            //   contextMenuElement: document.getElementById('my-custom-context-menu'),
+            //   confirmDialogElement: document.getElementById('my-custom-confirm-dialog')
+            // }
+        };
 
-        await space.init();
+        const sg = new SpaceGraph(container, options);
 
-        const node1 = space.createNode({
-            id: 'node1',
-            type: 'note',
-            position: { x: 0, y: 0, z: 0 },
-            data: {
-                content: 'Hello World!',
-                width: 150,
-                height: 50,
+        try {
+            await sg.init(); // Initialize plugins and renderer
+
+            // Add some nodes
+            const node1 = sg.createNode({
+                id: 'node-1',
+                type: 'ShapeNode', // Default node type, can be 'HtmlNode', 'ImageNode' etc.
+                data: { label: 'Hello' },
+                position: { x: -50, y: 0, z: 0 }, // Optional initial position
+            });
+
+            const node2 = sg.createNode({
+                id: 'node-2',
+                type: 'ShapeNode',
+                data: { label: 'World' },
+                position: { x: 50, y: 0, z: 0 },
+            });
+
+            // Add an edge between them
+            if (node1 && node2) {
+                sg.addEdge(node1, node2, { label: 'connects to' });
             }
-        });
 
-        const node2 = space.createNode({
-            id: 'node2',
-            type: 'shape',
-            position: { x: 100, y: 50, z: 10 },
-            data: {
-                label: '3D Sphere',
-                shape: 'sphere',
-                size: 40,
-                color: 0xff00ff,
-            }
-        });
+            // If your layout requires manual starting or if you want to ensure rendering loop
+            sg.animate(); // Starts the rendering loop if not auto-started by plugins
 
-        if (node1 && node2) {
-            space.addEdge(node1, node2);
+            // Center view on content or specific node
+            sg.centerView();
+        } catch (error) {
+            console.error('Failed to initialize SpaceGraph:', error);
         }
 
-        space.centerView();
-        space.animate();
-
-        window.mySpaceGraph = space;
+        // Make it accessible for debugging
+        window.mySpaceGraph = sg;
     });
     ```
 
-### CSS
+## API Documentation
 
-You'll need CSS to style the HTML nodes, context menus, dialogs, and other UI elements. You can use `src/spacegraph.css` as a starting point or write your own.
+For detailed API documentation, including all classes, methods, options, and plugin development, please visit [our documentation site](PLACEHOLDER_API_DOCS_LINK). (Link to be updated once JSDoc/TypeDoc is hosted).
 
 ## Development
 
-To run the demo locally, simply open `index.html` in a modern web browser that supports ES modules.
+To set up the development environment:
+
+1. Clone the repository.
+2. Install dependencies: `npm install`.
+3. Run the development server (for the demo page `index.html`): `npm start`.
+4. To build the library: `npm run build`.
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit issues or pull requests.
+Contributions are welcome! Please read our `CONTRIBUTING.md` (to be created) for guidelines on how to contribute, report issues, and submit pull requests.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

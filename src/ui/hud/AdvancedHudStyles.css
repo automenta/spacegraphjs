@@ -1,0 +1,561 @@
+/* Advanced HUD System Styles */
+
+/* Base HUD layer and positioning */
+#hud-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1000;
+    font-family: 'Monaco', 'Consolas', 'Menlo', monospace;
+    font-size: 12px;
+    color: #ffffff;
+    user-select: none;
+}
+
+/* Position classes for HUD elements */
+.hud-top-left { top: 10px; left: 10px; }
+.hud-top-right { top: 10px; right: 10px; }
+.hud-top-center { top: 10px; left: 50%; transform: translateX(-50%); }
+.hud-top-center-right { top: 10px; right: 50%; transform: translateX(50%); }
+.hud-bottom-left { bottom: 10px; left: 10px; }
+.hud-bottom-right { bottom: 10px; right: 10px; }
+.hud-bottom-center { bottom: 10px; left: 50%; transform: translateX(-50%); }
+.hud-bottom-full { bottom: 0; left: 0; right: 0; }
+.hud-left-center { left: 10px; top: 50%; transform: translateY(-50%); }
+.hud-right-center { right: 10px; top: 50%; transform: translateY(-50%); }
+
+/* HUD panels */
+.hud-panel {
+    position: absolute;
+    background: rgba(20, 20, 30, 0.95);
+    border: 1px solid rgba(100, 150, 255, 0.3);
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+    pointer-events: auto;
+    min-width: 200px;
+    max-width: 300px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+}
+
+.hud-panel:hover {
+    border-color: rgba(100, 150, 255, 0.5);
+    box-shadow: 0 6px 30px rgba(0, 0, 0, 0.4);
+}
+
+.hud-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 7px 7px 0 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.hud-panel-title {
+    font-weight: bold;
+    color: #64B5F6;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.hud-panel-toggle {
+    background: none;
+    border: none;
+    color: #ffffff;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px;
+    border-radius: 3px;
+    transition: background 0.2s ease;
+}
+
+.hud-panel-toggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.hud-panel-toggle.collapsed {
+    opacity: 0.6;
+}
+
+.hud-panel-content {
+    padding: 12px;
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.hud-panel-content.collapsed {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    opacity: 0;
+}
+
+/* Performance Panel */
+.performance-metric {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 4px 0;
+}
+
+.performance-metric:last-child {
+    margin-bottom: 0;
+}
+
+.metric-label {
+    color: #B3E5FC;
+    font-size: 11px;
+}
+
+.metric-value {
+    color: #81C784;
+    font-weight: bold;
+    font-size: 11px;
+    min-width: 50px;
+    text-align: right;
+}
+
+/* Minimap Panel */
+#minimap-canvas {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    display: block;
+    margin-bottom: 8px;
+    cursor: crosshair;
+}
+
+.minimap-controls {
+    display: flex;
+    justify-content: space-between;
+    gap: 4px;
+}
+
+.minimap-controls button {
+    flex: 1;
+    background: rgba(100, 150, 255, 0.2);
+    border: 1px solid rgba(100, 150, 255, 0.3);
+    color: #ffffff;
+    padding: 4px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 10px;
+    transition: all 0.2s ease;
+}
+
+.minimap-controls button:hover {
+    background: rgba(100, 150, 255, 0.4);
+    border-color: rgba(100, 150, 255, 0.6);
+}
+
+/* Status Bar */
+.hud-status-bar {
+    position: absolute;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(20, 20, 30, 0.95);
+    border-top: 1px solid rgba(100, 150, 255, 0.3);
+    backdrop-filter: blur(10px);
+    padding: 8px 16px;
+    pointer-events: auto;
+    font-size: 11px;
+    min-height: 32px;
+}
+
+.status-section {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.status-item {
+    color: #B3E5FC;
+    white-space: nowrap;
+    padding: 2px 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Notifications */
+.hud-notifications {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+    max-width: 400px;
+    z-index: 1100;
+}
+
+.hud-notification {
+    display: flex;
+    align-items: center;
+    background: rgba(20, 20, 30, 0.95);
+    border-radius: 6px;
+    padding: 12px;
+    pointer-events: auto;
+    border-left: 4px solid;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    transform: translateY(-20px);
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.hud-notification.notification-visible {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.hud-notification-info { border-left-color: #2196F3; }
+.hud-notification-success { border-left-color: #4CAF50; }
+.hud-notification-warning { border-left-color: #FF9800; }
+.hud-notification-error { border-left-color: #F44336; }
+
+.notification-icon {
+    margin-right: 12px;
+    font-size: 16px;
+}
+
+.notification-content {
+    flex: 1;
+    color: #ffffff;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.notification-close {
+    background: none;
+    border: none;
+    color: #ffffff;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0;
+    margin-left: 12px;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+.notification-close:hover {
+    opacity: 1;
+}
+
+/* Progress Indicators */
+.hud-progress-container {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+    max-width: 300px;
+}
+
+.hud-progress-indicator {
+    background: rgba(20, 20, 30, 0.95);
+    border: 1px solid rgba(100, 150, 255, 0.3);
+    border-radius: 6px;
+    padding: 12px;
+    backdrop-filter: blur(10px);
+    pointer-events: auto;
+}
+
+.progress-label {
+    color: #B3E5FC;
+    font-size: 11px;
+    margin-bottom: 6px;
+}
+
+.progress-bar {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    height: 6px;
+    overflow: hidden;
+    margin-bottom: 6px;
+}
+
+.progress-fill {
+    background: linear-gradient(90deg, #4CAF50, #81C784);
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+.progress-percent {
+    color: #81C784;
+    font-size: 10px;
+    text-align: center;
+}
+
+/* Indicators */
+.hud-indicator {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    background: rgba(20, 20, 30, 0.9);
+    border: 1px solid rgba(100, 150, 255, 0.3);
+    border-radius: 6px;
+    padding: 8px 12px;
+    backdrop-filter: blur(10px);
+    pointer-events: auto;
+    transition: all 0.3s ease;
+}
+
+.hud-indicator:hover {
+    background: rgba(20, 20, 30, 0.95);
+    border-color: rgba(100, 150, 255, 0.5);
+}
+
+.indicator-icon {
+    font-size: 16px;
+    margin-right: 8px;
+}
+
+.indicator-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.indicator-line {
+    color: #B3E5FC;
+    font-size: 10px;
+    white-space: nowrap;
+}
+
+/* Controls */
+.hud-controls {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: auto;
+}
+
+.control-group {
+    display: flex;
+    gap: 4px;
+}
+
+.nav-button, .action-button {
+    background: rgba(100, 150, 255, 0.2);
+    border: 1px solid rgba(100, 150, 255, 0.3);
+    color: #ffffff;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.nav-button:hover, .action-button:hover {
+    background: rgba(100, 150, 255, 0.4);
+    border-color: rgba(100, 150, 255, 0.6);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.nav-button:active, .action-button:active {
+    transform: translateY(0);
+}
+
+/* View Mode Controls */
+.view-mode-toggle {
+    display: flex;
+    background: rgba(20, 20, 30, 0.9);
+    border: 1px solid rgba(100, 150, 255, 0.3);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.mode-button {
+    background: none;
+    border: none;
+    color: #B3E5FC;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.2s ease;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mode-button:last-child {
+    border-right: none;
+}
+
+.mode-button:hover {
+    background: rgba(100, 150, 255, 0.2);
+}
+
+.mode-button.active {
+    background: rgba(100, 150, 255, 0.4);
+    color: #ffffff;
+}
+
+.view-options {
+    display: flex;
+    gap: 4px;
+}
+
+.option-button {
+    background: rgba(100, 150, 255, 0.2);
+    border: 1px solid rgba(100, 150, 255, 0.3);
+    color: #ffffff;
+    padding: 6px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s ease;
+}
+
+.option-button:hover {
+    background: rgba(100, 150, 255, 0.4);
+    border-color: rgba(100, 150, 255, 0.6);
+}
+
+.option-button.active {
+    background: rgba(100, 150, 255, 0.6);
+    border-color: rgba(100, 150, 255, 0.8);
+}
+
+/* Quick Actions */
+.action-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.action-group:last-child {
+    margin-bottom: 0;
+}
+
+.action-button {
+    justify-content: flex-start;
+    text-align: left;
+    min-width: 120px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .hud-panel {
+        min-width: 150px;
+        max-width: 200px;
+    }
+    
+    .hud-status-bar {
+        font-size: 10px;
+        padding: 6px 12px;
+    }
+    
+    .status-section {
+        gap: 8px;
+    }
+    
+    .status-item {
+        padding: 1px 6px;
+    }
+    
+    .hud-notifications {
+        max-width: 250px;
+    }
+    
+    .nav-button, .action-button {
+        padding: 6px 8px;
+        font-size: 10px;
+    }
+}
+
+/* Animation keyframes */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideInLeft {
+    from { transform: translateX(-100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideInUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideInDown {
+    from { transform: translateY(-100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Theme variations */
+.theme-light .hud-panel {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: rgba(0, 0, 0, 0.2);
+    color: #333333;
+}
+
+.theme-light .hud-status-bar {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: rgba(0, 0, 0, 0.2);
+    color: #333333;
+}
+
+.theme-light .status-item {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.1);
+    color: #333333;
+}
+
+.theme-light .hud-notification {
+    background: rgba(255, 255, 255, 0.95);
+    color: #333333;
+}
+
+.theme-light .hud-indicator {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: rgba(0, 0, 0, 0.2);
+    color: #333333;
+}
+
+/* High contrast mode */
+.high-contrast .hud-panel {
+    border-width: 2px;
+    border-color: #ffffff;
+}
+
+.high-contrast .nav-button,
+.high-contrast .action-button,
+.high-contrast .option-button {
+    border-width: 2px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .hud-panel,
+    .hud-notification,
+    .nav-button,
+    .action-button,
+    .option-button,
+    .progress-fill {
+        transition: none;
+    }
+    
+    .hud-notification {
+        transform: none;
+    }
+}

@@ -1,0 +1,435 @@
+import {HtmlNode} from './HtmlNode.js';
+import {$} from '../../utils.js';
+
+export class ProgressNode extends HtmlNode {
+    static typeName = 'progress';
+    
+    constructor(id, position, data = {}, mass = 1.0) {
+        const progressData = {
+            width: data.width ?? 200,
+            height: data.height ?? 80,
+            type: data.progressType ?? 'bar',
+            value: data.value ?? 0,
+            max: data.max ?? 100,
+            min: data.min ?? 0,
+            label: data.label ?? '',
+            showValue: data.showValue ?? true,
+            showPercent: data.showPercent ?? true,
+            animated: data.animated ?? true,
+            color: data.color ?? '#4a9eff',
+            backgroundColor: data.backgroundColor ?? 'rgba(30, 35, 50, 0.95)',
+            ...data,
+        };
+
+        super(id, position, progressData, mass);
+        this._animationFrame = null;
+    }
+
+    getDefaultData() {
+        return {
+            ...super.getDefaultData(),
+            type: 'progress',
+            progressType: 'bar',
+            value: 0,
+            max: 100,
+            min: 0,
+            label: '',
+            showValue: true,
+            showPercent: true,
+            animated: true,
+            color: '#4a9eff',
+            backgroundColor: 'rgba(30, 35, 50, 0.95)',
+        };
+    }
+
+    _createElement() {
+        const el = document.createElement('div');
+        el.className = 'node-progress node-common';
+        el.id = `node-progress-${this.id}`;
+        el.dataset.nodeId = this.id;
+        el.style.width = `${this.size.width}px`;
+        el.style.height = `${this.size.height}px`;
+        el.draggable = false;
+
+        const content = this._generateProgressContent();
+
+        el.innerHTML = `
+            <div class="progress-container">
+                ${content}
+            </div>
+            <style>
+                .node-progress {
+                    background: ${this.data.backgroundColor};
+                    border: 1px solid rgba(255,255,255,0.2);
+                    border-radius: 8px;
+                    padding: 12px;
+                    font-family: 'Segoe UI', sans-serif;
+                    color: white;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    backdrop-filter: blur(10px);
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+                }
+                .progress-container {
+                    width: 100%;
+                    height: 100%;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 8px;
+                }
+                .progress-label {
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: rgba(255,255,255,0.9);
+                    margin-bottom: 4px;
+                }
+                .progress-bar-wrapper {
+                    width: 100%;
+                    height: 20px;
+                    background: rgba(255,255,255,0.1);
+                    border-radius: 10px;
+                    overflow: hidden;
+                    position: relative;
+                }
+                .progress-bar-fill {
+                    height: 100%;
+                    background: linear-gradient(90deg, ${this.data.color}, ${this._lightenColor(this.data.color, 20)});
+                    border-radius: 10px;
+                    transition: width 0.3s ease;
+                    position: relative;
+                    overflow: hidden;
+                }
+                .progress-bar-fill.animated::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: -100%;
+                    width: 100%;
+                    height: 100%;
+                    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+                    animation: shimmer 1.5s infinite;
+                }
+                @keyframes shimmer {
+                    0% { left: -100%; }
+                    100% { left: 100%; }
+                }
+                .progress-value {
+                    font-size: 12px;
+                    color: rgba(255,255,255,0.8);
+                    margin-top: 4px;
+                }
+                .progress-circular {
+                    position: relative;
+                    width: 80px;
+                    height: 80px;
+                }
+                .progress-circular svg {
+                    width: 100%;
+                    height: 100%;
+                    transform: rotate(-90deg);
+                }
+                .progress-circular-bg {
+                    fill: none;
+                    stroke: rgba(255,255,255,0.1);
+                    stroke-width: 6;
+                }
+                .progress-circular-fill {
+                    fill: none;
+                    stroke: ${this.data.color};
+                    stroke-width: 6;
+                    stroke-linecap: round;
+                    transition: stroke-dashoffset 0.3s ease;
+                }
+                .progress-circular-text {
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: white;
+                }
+                .progress-gauge {
+                    position: relative;
+                    width: 100px;
+                    height: 60px;
+                }
+                .progress-gauge svg {
+                    width: 100%;
+                    height: 100%;
+                }
+                .progress-gauge-bg {
+                    fill: none;
+                    stroke: rgba(255,255,255,0.1);
+                    stroke-width: 8;
+                }
+                .progress-gauge-fill {
+                    fill: none;
+                    stroke: ${this.data.color};
+                    stroke-width: 8;
+                    stroke-linecap: round;
+                    transition: stroke-dashoffset 0.3s ease;
+                }
+                .progress-gauge-needle {
+                    stroke: white;
+                    stroke-width: 2;
+                    transition: transform 0.3s ease;
+                    transform-origin: 50px 50px;
+                }
+                .progress-gauge-text {
+                    position: absolute;
+                    bottom: 5px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    font-size: 12px;
+                    color: white;
+                }
+                .progress-steps {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    width: 100%;
+                }
+                .progress-step {
+                    width: 20px;
+                    height: 20px;
+                    border-radius: 50%;
+                    background: rgba(255,255,255,0.1);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 10px;
+                    font-weight: 600;
+                    transition: all 0.3s ease;
+                }
+                .progress-step.completed {
+                    background: ${this.data.color};
+                    color: white;
+                }
+                .progress-step.current {
+                    background: ${this.data.color};
+                    color: white;
+                    transform: scale(1.2);
+                    box-shadow: 0 0 10px ${this.data.color}50;
+                }
+                .progress-step-line {
+                    height: 2px;
+                    background: rgba(255,255,255,0.1);
+                    flex: 1;
+                    position: relative;
+                    overflow: hidden;
+                }
+                .progress-step-line.completed {
+                    background: ${this.data.color};
+                }
+            </style>
+        `;
+
+        this._updateProgress();
+        return el;
+    }
+
+    _generateProgressContent() {
+        const percent = this._getPercent();
+        
+        switch (this.data.progressType) {
+            case 'circular':
+                return this._generateCircularProgress(percent);
+            case 'gauge':
+                return this._generateGaugeProgress(percent);
+            case 'steps':
+                return this._generateStepsProgress();
+            case 'bar':
+            default:
+                return this._generateBarProgress(percent);
+        }
+    }
+
+    _generateBarProgress(percent) {
+        return `
+            ${this.data.label ? `<div class="progress-label">${this.data.label}</div>` : ''}
+            <div class="progress-bar-wrapper">
+                <div class="progress-bar-fill ${this.data.animated ? 'animated' : ''}" style="width: ${percent}%"></div>
+            </div>
+            ${this._generateValueText()}
+        `;
+    }
+
+    _generateCircularProgress(percent) {
+        const radius = 32;
+        const circumference = 2 * Math.PI * radius;
+        const offset = circumference - (percent / 100) * circumference;
+
+        return `
+            ${this.data.label ? `<div class="progress-label">${this.data.label}</div>` : ''}
+            <div class="progress-circular">
+                <svg>
+                    <circle class="progress-circular-bg" cx="40" cy="40" r="${radius}"></circle>
+                    <circle class="progress-circular-fill" cx="40" cy="40" r="${radius}" 
+                            style="stroke-dasharray: ${circumference}; stroke-dashoffset: ${offset};"></circle>
+                </svg>
+                <div class="progress-circular-text">${Math.round(percent)}%</div>
+            </div>
+            ${this.data.showValue ? `<div class="progress-value">${this.data.value} / ${this.data.max}</div>` : ''}
+        `;
+    }
+
+    _generateGaugeProgress(percent) {
+        const startAngle = -135;
+        const endAngle = 135;
+        const totalAngle = endAngle - startAngle;
+        const currentAngle = startAngle + (percent / 100) * totalAngle;
+        
+        const radius = 35;
+        const centerX = 50;
+        const centerY = 45;
+        
+        const startX = centerX + radius * Math.cos((startAngle * Math.PI) / 180);
+        const startY = centerY + radius * Math.sin((startAngle * Math.PI) / 180);
+        const endX = centerX + radius * Math.cos((endAngle * Math.PI) / 180);
+        const endY = centerY + radius * Math.sin((endAngle * Math.PI) / 180);
+        
+        const needleX = centerX + 30 * Math.cos((currentAngle * Math.PI) / 180);
+        const needleY = centerY + 30 * Math.sin((currentAngle * Math.PI) / 180);
+
+        return `
+            ${this.data.label ? `<div class="progress-label">${this.data.label}</div>` : ''}
+            <div class="progress-gauge">
+                <svg viewBox="0 0 100 60">
+                    <path class="progress-gauge-bg" 
+                          d="M ${startX} ${startY} A ${radius} ${radius} 0 1 1 ${endX} ${endY}"></path>
+                    <path class="progress-gauge-fill" 
+                          d="M ${startX} ${startY} A ${radius} ${radius} 0 ${percent > 50 ? 1 : 0} 1 ${needleX} ${needleY}"
+                          style="stroke-dasharray: ${(percent / 100) * Math.PI * radius * 1.5}; stroke-dashoffset: 0;"></path>
+                    <line class="progress-gauge-needle" x1="${centerX}" y1="${centerY}" x2="${needleX}" y2="${needleY}"></line>
+                    <circle cx="${centerX}" cy="${centerY}" r="3" fill="white"></circle>
+                </svg>
+                <div class="progress-gauge-text">${Math.round(percent)}%</div>
+            </div>
+        `;
+    }
+
+    _generateStepsProgress() {
+        const steps = this.data.steps ?? 5;
+        const currentStep = Math.floor((this.data.value / this.data.max) * steps);
+        
+        let stepsHtml = '';
+        for (let i = 0; i < steps; i++) {
+            const stepClass = i < currentStep ? 'completed' : (i === currentStep ? 'current' : '');
+            stepsHtml += `<div class="progress-step ${stepClass}">${i + 1}</div>`;
+            if (i < steps - 1) {
+                const lineClass = i < currentStep ? 'completed' : '';
+                stepsHtml += `<div class="progress-step-line ${lineClass}"></div>`;
+            }
+        }
+
+        return `
+            ${this.data.label ? `<div class="progress-label">${this.data.label}</div>` : ''}
+            <div class="progress-steps">
+                ${stepsHtml}
+            </div>
+            ${this._generateValueText()}
+        `;
+    }
+
+    _generateValueText() {
+        if (!this.data.showValue && !this.data.showPercent) return '';
+        
+        let text = '';
+        if (this.data.showValue) text += `${this.data.value} / ${this.data.max}`;
+        if (this.data.showValue && this.data.showPercent) text += ' • ';
+        if (this.data.showPercent) text += `${Math.round(this._getPercent())}%`;
+        
+        return `<div class="progress-value">${text}</div>`;
+    }
+
+    _getPercent() {
+        const range = this.data.max - this.data.min;
+        const value = Math.max(this.data.min, Math.min(this.data.max, this.data.value));
+        return range > 0 ? ((value - this.data.min) / range) * 100 : 0;
+    }
+
+    _lightenColor(color, percent) {
+        const num = parseInt(color.replace("#", ""), 16);
+        const amt = Math.round(2.55 * percent);
+        const R = (num >> 16) + amt;
+        const G = (num >> 8 & 0x00FF) + amt;
+        const B = (num & 0x0000FF) + amt;
+        return "#" + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+            (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+            (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
+    }
+
+    _updateProgress() {
+        const container = $('.progress-container', this.htmlElement);
+        if (!container) return;
+
+        container.innerHTML = this._generateProgressContent();
+    }
+
+    setValue(value) {
+        this.data.value = Math.max(this.data.min, Math.min(this.data.max, value));
+        this._updateProgress();
+        this.space?.emit('graph:node:dataChanged', { 
+            node: this, 
+            property: 'value', 
+            value: this.data.value 
+        });
+    }
+
+    setMax(max) {
+        this.data.max = max;
+        this._updateProgress();
+    }
+
+    setMin(min) {
+        this.data.min = min;
+        this._updateProgress();
+    }
+
+    increment(amount = 1) {
+        this.setValue(this.data.value + amount);
+    }
+
+    decrement(amount = 1) {
+        this.setValue(this.data.value - amount);
+    }
+
+    animateToValue(targetValue, duration = 1000) {
+        const startValue = this.data.value;
+        const startTime = performance.now();
+        
+        const animate = (currentTime) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            const easeOutCubic = 1 - Math.pow(1 - progress, 3);
+            const currentValue = startValue + (targetValue - startValue) * easeOutCubic;
+            
+            this.setValue(currentValue);
+            
+            if (progress < 1) {
+                this._animationFrame = requestAnimationFrame(animate);
+            } else {
+                this._animationFrame = null;
+            }
+        };
+        
+        if (this._animationFrame) {
+            cancelAnimationFrame(this._animationFrame);
+        }
+        
+        this._animationFrame = requestAnimationFrame(animate);
+    }
+
+    dispose() {
+        if (this._animationFrame) {
+            cancelAnimationFrame(this._animationFrame);
+            this._animationFrame = null;
+        }
+        super.dispose();
+    }
+}

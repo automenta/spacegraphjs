@@ -4,6 +4,9 @@ import {CurvedEdge} from './edges/CurvedEdge.js';
 import {LabeledEdge} from './edges/LabeledEdge.js';
 import {DottedEdge} from './edges/DottedEdge.js';
 import {DynamicThicknessEdge} from './edges/DynamicThicknessEdge.js';
+import {FlowEdge} from './edges/FlowEdge.js';
+import {SpringEdge} from './edges/SpringEdge.js';
+import {BezierEdge} from './edges/BezierEdge.js';
 
 export class EdgeFactory extends BaseFactory { // Extend BaseFactory
     constructor(space) {
@@ -17,6 +20,11 @@ export class EdgeFactory extends BaseFactory { // Extend BaseFactory
         this.registerType(LabeledEdge.typeName, LabeledEdge);
         this.registerType(DottedEdge.typeName, DottedEdge);
         this.registerType(DynamicThicknessEdge.typeName, DynamicThicknessEdge);
+        
+        // Advanced edge types
+        this.registerType(FlowEdge.typeName, FlowEdge);
+        this.registerType(SpringEdge.typeName, SpringEdge);
+        this.registerType(BezierEdge.typeName, BezierEdge);
 
         this.registerType('default', Edge);
     }

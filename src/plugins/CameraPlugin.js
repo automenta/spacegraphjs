@@ -1,11 +1,13 @@
 import * as THREE from 'three';
 import {Plugin} from '../core/Plugin.js';
-import {Camera as CameraControls} from '../camera/Camera.js';
+import {Camera as CameraControls, CAMERA_MODES} from '../camera/Camera.js'; // Import CAMERA_MODES
+import {AdvancedCameraControls} from '../camera/AdvancedCameraControls.js';
 import {Utils} from '../utils.js';
 
 export class CameraPlugin extends Plugin {
     perspectiveCamera = null;
     cameraControls = null;
+    advancedControls = null;
 
     constructor(spaceGraph, pluginManager) {
         super(spaceGraph, pluginManager);
@@ -27,12 +29,28 @@ export class CameraPlugin extends Plugin {
         // The CameraControls class (imported as Camera) handles different camera modes (orbit, free, top_down, etc.)
         // and their specific interaction logic. This plugin primarily acts as a wrapper and interface.
         this.cameraControls = new CameraControls(this.space);
+        this.advancedControls = new AdvancedCameraControls(this.space, this.cameraControls);
         this._subscribeToEvents();
     }
 
     _subscribeToEvents() {
         this.space.on('ui:request:setCameraMode', (mode) => {
             this.setCameraMode(mode);
+        });
+        this.space.on('ui:request:toggleAutoZoom', () => {
+            this.toggleAutoZoom();
+        });
+        this.space.on('ui:request:toggleAutoRotation', () => {
+            this.toggleAutoRotation();
+        });
+        this.space.on('ui:request:togglePeekMode', () => {
+            this.togglePeekMode();
+        });
+        this.space.on('ui:request:toggleCinematicMode', () => {
+            this.toggleCinematicMode();
+        });
+        this.space.on('ui:request:smartFocus', (node, options) => {
+            this.smartFocusOnNode(node, options);
         });
     }
 
@@ -161,6 +179,15 @@ export class CameraPlugin extends Plugin {
         return this.cameraControls?.cameraMode; // Corrected: Access property directly
     }
 
+    getAvailableCameraModes() {
+        return {
+            [CAMERA_MODES.ORBIT]: 'Orbit Control',
+            [CAMERA_MODES.FREE]: 'Free Look',
+            [CAMERA_MODES.TOP_DOWN]: 'Top Down',
+            [CAMERA_MODES.FIRST_PERSON]: 'First Person'
+        };
+    }
+
     startFollowing(target, options = {}) {
         this.cameraControls?.startFollowing(target, options);
     }
@@ -181,13 +208,61 @@ export class CameraPlugin extends Plugin {
         this.cameraControls?.pointerLockControls?.unlock();
     }
 
+    // Advanced camera control methods
+    toggleAutoZoom(enabled = null) {
+        return this.advancedControls?.toggleAutoZoom(enabled);
+    }
+
+    toggleAutoRotation(enabled = null) {
+        return this.advancedControls?.toggleAutoRotation(enabled);
+    }
+
+    setRotationSpeed(speed) {
+        this.advancedControls?.setRotationSpeed(speed);
+    }
+
+    togglePeekMode(enabled = null) {
+        return this.advancedControls?.togglePeekMode(enabled);
+    }
+
+    toggleCinematicMode(enabled = null) {
+        return this.advancedControls?.toggleCinematicMode(enabled);
+    }
+
+    smartFocusOnNode(node, options = {}) {
+        this.advancedControls?.smartFocusOnNode(node, options);
+    }
+
+    createViewSequence(nodes, options = {}) {
+        return this.advancedControls?.createViewSequence(nodes, options);
+    }
+
+    updateAdvancedSettings(settings) {
+        this.advancedControls?.updateSettings(settings);
+    }
+
+    getAdvancedSettings() {
+        return this.advancedControls?.getSettings();
+    }
+
+    getAdvancedControlsStatus() {
+        return {
+            autoZoom: this.advancedControls?.isAutoZoomEnabled() || false,
+            autoRotation: this.advancedControls?.isAutoRotating() || false,
+            peekMode: this.advancedControls?.isPeekModeEnabled() || false,
+            cinematicMode: this.advancedControls?.isCinematicModeActive() || false
+        };
+    }
+
     dispose() {
         super.dispose();
+        this.advancedControls?.dispose();
         this.cameraControls?.dispose();
         if (this.space && this.space._cam === this.perspectiveCamera) {
             this.space._cam = null;
         }
         this.perspectiveCamera = null;
+        this.advancedControls = null;
         this.cameraControls = null;
     }
 }

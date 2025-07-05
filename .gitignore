@@ -1,7 +1,1 @@
-node_modules/
-dist/
-dist-demo/
-docs/
-.idea
-.aider*
-npm_start.log
+node_modules
