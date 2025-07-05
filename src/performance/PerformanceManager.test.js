@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { PerformanceManager } from './PerformanceManager.js';
+import * as THREE_MOCKED from 'three'; // Import the mocked module
 
 // Vitest module mock for 'three'
 vi.mock('three', async (importOriginal) => {
@@ -78,22 +79,20 @@ describe('PerformanceManager', () => {
     let mockSpace;
     let mockNodes;
     let mockEdges;
+    let initialTime;
     
     beforeEach(() => {
-        let currentTime = Date.now();
-        global.performance.now = vi.fn(() => {
-            currentTime += 16.666;
-            return currentTime;
-        });
+        initialTime = Date.now(); // Store a fixed initial time
+        global.performance.now = vi.fn(() => initialTime); // Mock to return the fixed time initially
 
-        mockNodes = [ { id: 'node1', position: new THREE.Vector3(0,0,0), object3d: {visible: true, children:[], matrixWorld: new THREE.Matrix4(), geometry: { boundingSphere: {center: new THREE.Vector3(), radius: 1, applyMatrix4: vi.fn()}}} } ];
-        mockEdges = [ { id: 'edge1', position: new THREE.Vector3(0,0,0), object3d: {visible: true, children:[]} } ];
+        mockNodes = [ { id: 'node1', position: new THREE_MOCKED.Vector3(0,0,0), object3d: {visible: true, children:[], matrixWorld: new THREE_MOCKED.Matrix4(), geometry: { boundingSphere: {center: new THREE_MOCKED.Vector3(), radius: 1, applyMatrix4: vi.fn()}}} } ];
+        mockEdges = [ { id: 'edge1', position: new THREE_MOCKED.Vector3(0,0,0), object3d: {visible: true, children:[]} } ];
 
         const mockCameraInstance = {
-            position: new THREE.Vector3(0, 0, 200),
-            projectionMatrix: new THREE.Matrix4(),
-            matrixWorldInverse: new THREE.Matrix4(),
-            getWorldDirection: vi.fn(() => new THREE.Vector3(0, 0, -1))
+            position: new THREE_MOCKED.Vector3(0, 0, 200),
+            projectionMatrix: new THREE_MOCKED.Matrix4(),
+            matrixWorldInverse: new THREE_MOCKED.Matrix4(),
+            getWorldDirection: vi.fn(() => new THREE_MOCKED.Vector3(0, 0, -1))
         };
         
         mockSpace = {
@@ -143,21 +142,25 @@ describe('PerformanceManager', () => {
     // They will be refactored one by one.
 
     it('should track FPS correctly after updates', () => {
-        // Simulate multiple frames
-        perfManager.update(); // Frame 1
-        
-        // Advance time for the next frame. Initial performance.now() is Date.now().
-        // Let's say Date.now() was 100000. First update sets lastFrameTime = 100000 + 16.666 = 100016.666
-        // Next call to performance.now() for second update:
-        let firstCallTime = global.performance.now(); // This will be current mocked time
-        global.performance.now = vi.fn(() => firstCallTime + 33.332); // Simulate ~30 FPS for the next frame duration
+        // Initial state: perfManager.lastFrameTime is `initialTime` (due to constructor call)
 
+        // Frame 1: Simulate a frame that took 16.666 ms
+        global.performance.now = vi.fn(() => initialTime + 16.666);
+        perfManager.update(); // Frame 1
+        // After this, perfManager.lastFrameTime is `initialTime + 16.666`
+        // stats.frameTime inside this update was 16.666
+
+        // Frame 2: Simulate a frame that took 33.332 ms
+        global.performance.now = vi.fn(() => initialTime + 16.666 + 33.332);
         perfManager.update(); // Frame 2
+        // After this, perfManager.lastFrameTime is `initialTime + 16.666 + 33.332`
+        // stats.frameTime inside this update was 33.332
         
         const stats = perfManager.getStats();
-        expect(stats.frameTime).toBeCloseTo(33.332); // Approximately
+        expect(stats.frameTime).toBeCloseTo(33.332, 3); // Allow small precision diff
         expect(stats.avgFrameTime).toBeDefined();
-        // stats.fps is not directly available, avgFrameTime is the primary metric.
+        // Check avgFrameTime: (16.666 + 33.332) / 2 = 24.999
+        expect(stats.avgFrameTime).toBeCloseTo( (16.666 + 33.332) / 2, 3 );
     });
 
     // it('should monitor memory usage', () => {

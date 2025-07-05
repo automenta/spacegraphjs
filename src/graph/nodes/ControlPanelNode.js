@@ -441,9 +441,12 @@ export class ControlPanelNode extends HtmlNode {
     }
 
     setValue(controlId, value) {
+        if (!this.controls.has(controlId)) { // Only set if control is known
+            return;
+        }
         this.values.set(controlId, value);
         const controlEl = this.controls.get(controlId);
-        if (!controlEl) return;
+        if (!controlEl) return; // Should not happen if this.controls.has(controlId) is true
 
         const input = controlEl.querySelector('input, select, button');
         if (input) {
