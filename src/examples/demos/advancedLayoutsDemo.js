@@ -13,6 +13,7 @@ const demoMetadata = {
                     <li>Layout connectors for visualizing relationships between layout regions</li>
                     <li>Morphing transitions between different layout types</li>
                     <li>Hybrid layout modes combining multiple layout systems</li>
+                    <li>Basic <b>TreeMapLayout</b> and <b>RadialLayout</b> (experimental stubs)</li>
                   </ul>`
 };
 
@@ -55,6 +56,9 @@ function createGraph(space) {
                         <option value="hierarchical">Hierarchical</option>
                         <option value="circular">Circular</option>
                         <option value="grid">Grid</option>
+                        <option value="spherical">Spherical</option> {/* Added from original list of layouts, good to have */}
+                        <option value="radial">Radial (Experimental)</option>
+                        <option value="treemap">TreeMap (Experimental)</option>
                         <option value="constraint">Constraint-Based</option>
                         <option value="nested">Nested Containers</option>
                         <option value="adaptive">Adaptive</option>
@@ -421,9 +425,11 @@ function createGraph(space) {
         },
 
         async demonstrateMorphing() {
-            const layouts = ['circular', 'grid', 'force', 'hierarchical'];
+            const layouts = ['circular', 'grid', 'force', 'hierarchical', 'spherical', 'radial', 'treemap'];
             
             for (const layout of layouts) {
+                // Add a check for experimental layouts if they might not be fully functional for morphing
+                // For now, assume they can be called.
                 await new Promise(resolve => {
                     this.applySelectedLayout(layout, 'standard');
                     setTimeout(resolve, 2000);

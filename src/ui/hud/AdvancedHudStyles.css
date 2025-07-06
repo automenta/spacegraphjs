@@ -13,32 +13,127 @@
     font-size: 12px;
     color: #ffffff;
     user-select: none;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Prevent full page scroll if content overflows regions */
 }
 
-/* Position classes for HUD elements */
-.hud-top-left { top: 10px; left: 10px; }
-.hud-top-right { top: 10px; right: 10px; }
-.hud-top-center { top: 10px; left: 50%; transform: translateX(-50%); }
-.hud-top-center-right { top: 10px; right: 50%; transform: translateX(50%); }
-.hud-bottom-left { bottom: 10px; left: 10px; }
-.hud-bottom-right { bottom: 10px; right: 10px; }
-.hud-bottom-center { bottom: 10px; left: 50%; transform: translateX(-50%); }
-.hud-bottom-full { bottom: 0; left: 0; right: 0; }
-.hud-left-center { left: 10px; top: 50%; transform: translateY(-50%); }
-.hud-right-center { right: 10px; top: 50%; transform: translateY(-50%); }
+/* HUD Regions */
+.hud-region {
+    pointer-events: none; /* Regions themselves are not interactive */
+    display: flex;
+    padding: 5px;
+    box-sizing: border-box;
+}
+
+.hud-region-top {
+    width: 100%;
+    justify-content: space-between; /* Items like menu, notifications, view controls */
+    align-items: flex-start;
+    flex-shrink: 0;
+}
+
+.hud-region-middle {
+    flex-grow: 1; /* Takes up remaining space */
+    display: flex;
+    justify-content: space-between; /* For left/right sidebars */
+    overflow: hidden; /* Important for sidebars with scrollable content */
+}
+
+.hud-region-left, .hud-region-right {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: 100%; /* Fill the middle region height */
+    overflow-y: auto; /* Allow scrolling if many panels stack */
+    padding: 5px;
+    max-width: 320px; /* Max width for sidebars */
+    pointer-events: auto; /* Sidebars can be interacted with */
+}
+.hud-region-left { align-items: flex-start; }
+.hud-region-right { align-items: flex-end; }
+
+
+.hud-region-bottom {
+    width: 100%;
+    justify-content: center; /* For status bar, progress */
+    align-items: flex-end;
+    flex-shrink: 0;
+}
+
+.hud-top-group {
+    display: flex;
+    gap: 10px; /* Spacing between items in a group */
+    align-items: flex-start;
+}
+.hud-top-left-group {
+    /* Takes space on the left */
+    margin-right: auto; /* Pushes other groups away */
+}
+.hud-top-center-group {
+    /* Centers itself if hud-region-top uses justify-content: space-between effectively */
+    /* Or, if hud-region-top is just display:flex, this would need margin: 0 auto; */
+    /* Given hud-region-top has space-between, this group will be in the middle slot */
+}
+.hud-top-right-group {
+    /* Takes space on the right */
+    margin-left: auto; /* Pushes other groups away */
+}
+
+
+/* Individual items within regions (direct children or panels) */
+.hud-region > *, .hud-region-left > *, .hud-region-right > *, .hud-top-group > * {
+    pointer-events: auto; /* Ensure panels/elements are interactive */
+}
+
+
+/* Position classes for HUD elements (will be used to assign elements to regions) */
+/* These might be simplified or integrated into panel-specific styles later */
+.hud-top-left { /* Example: for main menu */
+    position: relative; /* No longer absolute */
+    margin: 5px;
+}
+.hud-top-right { /* Example: for view controls */
+    position: relative;
+    margin: 5px;
+}
+.hud-top-center { /* Example: for notifications */
+    position: relative;
+    margin: 5px auto; /* Center horizontally */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.hud-bottom-left { position: relative; margin: 5px; }
+.hud-bottom-right { position: relative; margin: 5px; }
+.hud-bottom-center { position: relative; margin: 5px auto; display: flex; flex-direction: column; align-items: center; }
+.hud-bottom-full { position: relative; width: 100%; } /* For status bar */
+
+.hud-left-center { /* For panels in the left sidebar */
+    position: relative; margin: 5px; width: 100%;
+}
+.hud-right-center { /* For panels in the right sidebar */
+    position: relative; margin: 5px; width: 100%;
+}
+
 
 /* HUD panels */
 .hud-panel {
-    position: absolute;
-    background: rgba(20, 20, 30, 0.95);
-    border: 1px solid rgba(100, 150, 255, 0.3);
-    border-radius: 8px;
-    backdrop-filter: blur(10px);
+    /* position: absolute; REMOVED - positioning handled by regions/flex */
+    background: rgba(20, 20, 30, 0.85); /* Slightly less opaque */
+    border: 1px solid rgba(100, 150, 255, 0.25); /* Softer border */
+    border-radius: 6px; /* Softer radius */
+    backdrop-filter: blur(8px); /* Slightly less blur */
     pointer-events: auto;
-    min-width: 200px;
-    max-width: 300px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    min-width: 180px; /* Adjusted min-width */
+    max-width: 300px; /* Retained max-width, can be overridden */
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25); /* Softer shadow */
     transition: all 0.3s ease;
+    margin-bottom: 10px; /* Spacing between stacked panels in a sidebar */
+    display: flex;
+    flex-direction: column;
+    max-height: 40vh; /* Max height before panel content scrolls */
 }
 
 .hud-panel:hover {
@@ -86,7 +181,8 @@
 .hud-panel-content {
     padding: 12px;
     transition: all 0.3s ease;
-    overflow: hidden;
+    overflow-y: auto; /* Enable vertical scrolling for panel content */
+    flex-grow: 1; /* Allow content to take available space in flex panel */
 }
 
 .hud-panel-content.collapsed {
@@ -122,41 +218,10 @@
     text-align: right;
 }
 
-/* Minimap Panel */
-#minimap-canvas {
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 4px;
-    display: block;
-    margin-bottom: 8px;
-    cursor: crosshair;
-}
-
-.minimap-controls {
-    display: flex;
-    justify-content: space-between;
-    gap: 4px;
-}
-
-.minimap-controls button {
-    flex: 1;
-    background: rgba(100, 150, 255, 0.2);
-    border: 1px solid rgba(100, 150, 255, 0.3);
-    color: #ffffff;
-    padding: 4px;
-    border-radius: 3px;
-    cursor: pointer;
-    font-size: 10px;
-    transition: all 0.2s ease;
-}
-
-.minimap-controls button:hover {
-    background: rgba(100, 150, 255, 0.4);
-    border-color: rgba(100, 150, 255, 0.6);
-}
-
 /* Status Bar */
 .hud-status-bar {
-    position: absolute;
+    /* position: absolute; REMOVED */
+    width: 100%; /* Span full width of its container (.hud-region-bottom) */
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -167,6 +232,7 @@
     pointer-events: auto;
     font-size: 11px;
     min-height: 32px;
+    box-sizing: border-box;
 }
 
 .status-section {
@@ -186,13 +252,14 @@
 
 /* Notifications */
 .hud-notifications {
-    position: absolute;
+    /* position: absolute; REMOVED - position handled by hud-top-center in flex region */
     display: flex;
     flex-direction: column;
+    align-items: center; /* Center notifications if hud-top-center has width */
     gap: 8px;
-    pointer-events: none;
+    pointer-events: none; /* Container itself is not interactive */
     max-width: 400px;
-    z-index: 1100;
+    z-index: 1100; /* Keep notifications on top */
 }
 
 .hud-notification {
@@ -250,11 +317,12 @@
 
 /* Progress Indicators */
 .hud-progress-container {
-    position: absolute;
+    /* position: absolute; REMOVED - position handled by hud-bottom-center in flex region */
     display: flex;
     flex-direction: column;
+    align-items: center; /* Center progress bars if hud-bottom-center has width */
     gap: 8px;
-    pointer-events: none;
+    pointer-events: none; /* Container itself is not interactive */
     max-width: 300px;
 }
 
@@ -297,7 +365,9 @@
 
 /* Indicators */
 .hud-indicator {
-    position: absolute;
+    /* position: absolute; REMOVED - now part of sidebar flex flow */
+    width: 100%; /* Take full width of sidebar region */
+    box-sizing: border-box;
     display: flex;
     align-items: center;
     background: rgba(20, 20, 30, 0.9);
@@ -307,6 +377,7 @@
     backdrop-filter: blur(10px);
     pointer-events: auto;
     transition: all 0.3s ease;
+    margin-bottom: 10px; /* Spacing if multiple indicators/panels in a sidebar */
 }
 
 .hud-indicator:hover {
@@ -333,12 +404,24 @@
 
 /* Controls */
 .hud-controls {
-    position: absolute;
+    /* position: absolute; REMOVED - now part of sidebar/topbar flex flow */
     display: flex;
-    flex-direction: column;
+    flex-direction: column; /* Default for sidebars */
     gap: 8px;
     pointer-events: auto;
+    width: 100%; /* Default for sidebars */
+    box-sizing: border-box;
+    margin-bottom: 10px; /* Spacing if multiple control blocks/panels in a sidebar */
 }
+
+/* For controls in the top bar, they might need to be row-oriented */
+.hud-region-top > .hud-controls {
+    flex-direction: row; /* ViewModeControls in top bar */
+    width: auto; /* Don't take full width in top bar */
+    align-items: center;
+    margin-bottom: 0;
+}
+
 
 .control-group {
     display: flex;
