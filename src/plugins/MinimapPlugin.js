@@ -66,7 +66,7 @@ export class MinimapPlugin extends Plugin {
         nodes.forEach(node => {
             // Consider a small area around each node for the bounding box
             const nodeSphere = new THREE.Sphere(node.position, node.getBoundingSphereRadius() * 1.5 || 10);
-            const nodeBox = new THREE.Box3().setFromSphere(nodeSphere);
+            const nodeBox = nodeSphere.getBoundingBox(new THREE.Box3());
             boundingBox.union(nodeBox);
         });
 

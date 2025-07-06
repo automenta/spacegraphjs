@@ -475,6 +475,10 @@ export class AdvancedCameraControls {
         } = options;
 
         if (!node) return;
+        if (!node.position) {
+            console.warn('AdvancedCameraControls.smartFocusOnNode: node.position is undefined for the primary node.');
+            return;
+        }
 
         let focusArea = new THREE.Box3();
         focusArea.setFromCenterAndSize(node.position, new THREE.Vector3(100, 100, 100));
@@ -496,6 +500,10 @@ export class AdvancedCameraControls {
 
             // Expand focus area to include connected nodes
             connectedNodes.forEach(connectedNode => {
+                if (!connectedNode.position) {
+                    console.warn('AdvancedCameraControls.smartFocusOnNode: connectedNode.position is undefined for a connected node.');
+                    return; // Changed from continue to return to match typical forEach behavior expectation, though 'continue' is more accurate for loop context
+                }
                 const nodeBox = new THREE.Box3();
                 const radius = connectedNode.getBoundingSphereRadius?.() || 50;
                 nodeBox.setFromCenterAndSize(connectedNode.position, new THREE.Vector3(radius * 2, radius * 2, radius * 2));
