@@ -67,18 +67,15 @@ describe('PluginManager', () => {
         consoleWarnSpy.mockRestore();
     });
 
-    it('should warn when registering an invalid plugin object', () => {
+    it('should throw an error when registering an invalid plugin object', () => {
         const pm = new PluginManager(mockSpaceGraph);
         const invalidPlugin = { name: 'InvalidPlugin' };
-        const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {}); // Expect warn, not error
 
-        pm.add(invalidPlugin);
-
-        expect(pm.plugins.size).toBe(0);
-        expect(consoleWarnSpy).toHaveBeenCalledWith(
-            'PluginManager: Attempted to add a non-Plugin object.' // Corrected message
+        // Expect the add method to throw an error
+        expect(() => pm.add(invalidPlugin)).toThrow(
+            'PluginManager: Attempted to add an object that is not an instance of Plugin.'
         );
-        consoleWarnSpy.mockRestore();
+        expect(pm.plugins.size).toBe(0); // Ensure no plugin was added
     });
 
     it('should initialize all registered plugins', async () => {

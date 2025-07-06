@@ -10,8 +10,7 @@ export class BaseFactory {
      */
     registerType(typeName, typeClass) {
         if (!typeName) {
-            console.warn(`${this.constructor.name}: Attempted to register a class without a typeName.`, typeClass);
-            return;
+            throw new Error(`${this.constructor.name}: Attempted to register a class without a typeName.`);
         }
         if (this.types.has(typeName)) {
             // console.warn(`${this.constructor.name}: Type "${typeName}" already registered. Overwriting.`);

@@ -14,8 +14,8 @@ export class PluginManager {
      */
     add(plugin) {
         if (!(plugin instanceof Plugin)) {
-            console.warn('PluginManager: Attempted to add a non-Plugin object.');
-            return;
+            // Throw an error instead of just warning and returning.
+            throw new Error('PluginManager: Attempted to add an object that is not an instance of Plugin.');
         }
         if (this.plugins.has(plugin.getName())) {
             console.warn(`PluginManager: Plugin "${plugin.getName()}" already registered. Overwriting.`);
