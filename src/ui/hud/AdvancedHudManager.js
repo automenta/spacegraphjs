@@ -364,8 +364,8 @@ export class AdvancedHudManager extends HudManager {
 
         // Layout Status
         const layoutManager = layoutPlugin?.layoutManager;
-        const currentLayout = layoutManager?.getCurrentLayout();
-        this.menuStatusLayout.innerHTML = `<span class="hud-menu-icon"></span><span class="hud-menu-label">Layout: ${currentLayout?.name || 'N/A'}</span>`;
+        const layoutName = layoutManager?.getActiveLayoutName(); // Use getActiveLayoutName()
+        this.menuStatusLayout.innerHTML = `<span class="hud-menu-icon"></span><span class="hud-menu-label">Layout: ${layoutName || 'N/A'}</span>`;
 
         // Camera Status
         if (cameraPlugin) {
