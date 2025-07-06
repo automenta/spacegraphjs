@@ -94,6 +94,21 @@ export class Menu {
         return this.items.find(item => item instanceof MenuSection && item.id === sectionId);
     }
 
+    findItemRecursive(itemId) {
+        for (const item of this.items) {
+            if (item.id === itemId) {
+                return item;
+            }
+            if (item instanceof MenuSection) {
+                const foundInSection = item.getItem(itemId); // MenuSection.getItem searches its own items
+                if (foundInSection) {
+                    return foundInSection;
+                }
+            }
+        }
+        return null; // Not found
+    }
+
     update() {
         this.items.forEach(item => {
             if (item.update) item.update();
