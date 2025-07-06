@@ -1,5 +1,7 @@
 import * as S from '../index.js'; // Adjusted path
 import { pages } from './pages.js';
+// Import setupDemoMenu specifically for the allFeaturesDemo
+import { setupDemoMenu as allFeaturesSetupDemoMenu } from './demos/allFeaturesDemo.js';
 
 let space; // Make space globally accessible within this script
 const pageSelectorEl = S.$('#page-selector');
@@ -52,6 +54,10 @@ async function loadPage(pageId) {
     // Create the new graph
     if (typeof page.createGraph === 'function') {
         page.createGraph(space);
+        // If the loaded page is the allFeaturesDemo, set up its specific menu
+        if (page.id === 'all-features') {
+            allFeaturesSetupDemoMenu(space); // Call the imported function
+        }
     } else {
         console.error(`createGraph function missing for page "${pageId}"`);
     }

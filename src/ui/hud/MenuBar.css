@@ -1,0 +1,223 @@
+/* src/ui/hud/MenuBar.css */
+
+/* MenuBar Container */
+#spacegraph-menu-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 30px; /* Standard menu bar height */
+    background-color: var(--graph-background-color-secondary, #333);
+    color: var(--graph-text-color-primary, #fff);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 10px;
+    box-sizing: border-box;
+    z-index: 1000; /* Ensure it's above other HUD elements but below modals */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.menu-bar-left,
+.menu-bar-right {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+/* Individual Menu (e.g., File, Edit) */
+.menu {
+    position: relative;
+    height: 100%;
+}
+
+.menu-button {
+    background-color: transparent;
+    color: var(--graph-text-color-primary, #fff);
+    border: none;
+    padding: 0 10px;
+    height: 100%;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.menu-button:hover,
+.menu-button.active { /* Add .active class when menu is open */
+    background-color: var(--graph-accent-color-muted, #555);
+}
+
+/* Menu Popup */
+.menu-popup {
+    position: absolute;
+    top: 100%; /* Position below the menu button */
+    left: 0;
+    background-color: var(--graph-background-color-tertiary, #444);
+    border: 1px solid var(--graph-border-color, #555);
+    border-top: none;
+    min-width: 200px;
+    z-index: 1001; /* Above menu bar */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    padding: 5px 0;
+}
+
+/* Menu Item */
+.menu-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 15px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--graph-text-color-secondary, #ddd);
+    white-space: nowrap;
+}
+
+.menu-item:hover {
+    background-color: var(--graph-accent-color, #007bff);
+    color: var(--graph-text-color-primary, #fff);
+}
+
+.menu-item.disabled {
+    color: var(--graph-text-color-disabled, #888);
+    cursor: not-allowed;
+}
+
+.menu-item.disabled:hover {
+    background-color: transparent; /* No hover effect for disabled items */
+}
+
+.menu-item-label {
+    flex-grow: 1;
+}
+
+.menu-item-hotkey {
+    margin-left: 20px;
+    font-size: 0.9em;
+    color: var(--graph-text-color-muted, #aaa);
+}
+
+.menu-item-checkbox {
+    margin-right: 8px;
+}
+
+.menu-item.has-submenu::after {
+    content: '▶'; /* Or use an SVG/icon font */
+    margin-left: auto;
+    padding-left: 10px;
+    font-size: 0.8em;
+}
+
+/* Menu Separator */
+.menu-separator {
+    height: 1px;
+    background-color: var(--graph-border-color, #555);
+    border: none;
+    margin: 5px 0;
+}
+
+/* Menu Section */
+.menu-section {
+    /* No specific styles needed if it's just a container, styling comes from header/content */
+}
+
+.menu-section-header {
+    padding: 8px 15px;
+    font-weight: bold;
+    color: var(--graph-text-color-primary, #fff);
+    background-color: var(--graph-background-color-hover, #3e3e3e); /* Slightly different bg for section header */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--graph-border-color, #555);
+}
+
+.menu-section-title {
+    flex-grow: 1;
+}
+
+.menu-section-pin-button {
+    background: none;
+    border: none;
+    color: var(--graph-text-color-secondary, #ddd);
+    cursor: pointer;
+    font-size: 16px; /* Adjust for emoji or icon */
+    padding: 0 5px;
+}
+
+.menu-section-pin-button:hover {
+    color: var(--graph-accent-color, #007bff);
+}
+
+.menu-section-content {
+    padding: 5px 0; /* Padding for items within the section */
+}
+
+/* Pinned Window */
+.pinned-window {
+    /* Styles are applied inline in PinnedWindow.js for now,
+       but could be moved here for better organization.
+       Example:
+       position: absolute;
+       background-color: var(--graph-background-color-secondary, #282c34);
+       border: 1px solid var(--graph-accent-color, #61dafb);
+       border-radius: 5px;
+       box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+       z-index: 1001;
+       display: flex;
+       flex-direction: column;
+       resize: both;
+       overflow: auto;
+    */
+}
+
+.pinned-window-header {
+    /* Example:
+    padding: 5px 10px;
+    background-color: var(--graph-accent-color-muted, #4a5260);
+    cursor: move;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--graph-text-color-primary, #ffffff);
+    */
+}
+
+.pinned-window-title {
+    /* flex-grow: 1; */
+}
+
+.pinned-window-close-button {
+   /* Example:
+    background: none;
+    border: none;
+    color: var(--graph-text-color-primary, #ffffff);
+    font-size: 16px;
+    cursor: pointer;
+   */
+}
+
+.pinned-window-content {
+   /* padding: 10px;
+    flex-grow: 1;
+   */
+}
+
+/* Text in a menu section that's not a clickable item */
+.menu-item-like-text {
+    padding: 8px 15px;
+    font-size: 14px;
+    color: var(--graph-text-color-secondary, #ddd);
+    white-space: nowrap;
+}
+
+/* Status elements in the menu bar */
+.menu-bar-status-item {
+    padding: 0 10px;
+    font-size: 13px;
+    color: var(--graph-text-color-muted, #aaa);
+}
+
+/* General HUD Styles that might interact with MenuBar */
+.hud-layer { /* Ensure hudLayer allows absolute positioning of menu bar */
+    position: relative;
+}
