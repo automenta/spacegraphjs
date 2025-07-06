@@ -48,6 +48,7 @@ export class SpaceGraph {
         cameraPlugin?.setInitialState();
 
         this._setupEventListeners();
+        this._setupCameraMouseControls(); // Add this line
     }
 
     on(eventName, callback) {
@@ -336,5 +337,91 @@ export class SpaceGraph {
 
     async importGraphFromJSON(jsonData, options) {
         return (await this.plugins.getPlugin('DataPlugin')?.importGraphFromJSON(jsonData, options)) || false;
+    }
+
+    _setupCameraMouseControls() {
+        const cameraPlugin = this.plugins.getPlugin('CameraPlugin');
+        if (!cameraPlugin || !this.container) return;
+
+        const cameraControls = cameraPlugin.getControls(); // This is the instance of Camera.js
+
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+        let isDragging = false; // General dragging state for any button
+
+        // Prevent default context menu
+        this.container.addEventListener('contextmenu', (event) => {
+            if (cameraControls.cameraMode === 'drag_orbit' && cameraControls.isOrbitDragging) {
+                event.preventDefault();
+            }
+            // Allow context menu in other modes or if not orbit dragging
+        });
+
+        this.container.addEventListener('mousedown', (event) => {
+            if (!cameraControls) return;
+            isDragging = true;
+            lastMouseX = event.clientX;
+            lastMouseY = event.clientY;
+
+            if (cameraControls.cameraMode === 'drag_orbit') {
+                if (event.button === 0) { // Left mouse button
+                    cameraControls.startPan(event.clientX, event.clientY);
+                } else if (event.button === 1 || event.button === 2) { // Middle or Right mouse button
+                    event.preventDefault(); // Prevent default middle-click (scroll) or right-click (context menu)
+                    cameraControls.startOrbitDrag(event.clientX, event.clientY);
+                }
+            } else if (cameraControls.cameraMode === 'orbit' || cameraControls.cameraMode === 'top_down') {
+                 if (event.button === 0) { // Left mouse button for orbit/top_down pan
+                    cameraControls.startPan(event.clientX, event.clientY);
+                }
+            }
+            // Other modes might have their own specific handling (e.g., Free, First Person via PointerLock)
+        });
+
+        this.container.addEventListener('mousemove', (event) => {
+            if (!isDragging || !cameraControls) return;
+
+            const deltaX = event.clientX - lastMouseX;
+            const deltaY = event.clientY - lastMouseY;
+            lastMouseX = event.clientX;
+            lastMouseY = event.clientY;
+
+            if (cameraControls.isPanning) {
+                cameraControls.pan(deltaX, deltaY);
+            } else if (cameraControls.isOrbitDragging) {
+                cameraControls.orbitDrag(deltaX, deltaY);
+            }
+        });
+
+        const handleMouseUp = () => {
+            if (!isDragging || !cameraControls) return;
+
+            if (cameraControls.isPanning) {
+                cameraControls.endPan();
+            }
+            if (cameraControls.isOrbitDragging) {
+                cameraControls.endOrbitDrag();
+            }
+            isDragging = false;
+        };
+
+        this.container.addEventListener('mouseup', handleMouseUp);
+        this.container.addEventListener('mouseleave', () => { // Handle case where mouse leaves container while dragging
+            if (isDragging) {
+                handleMouseUp();
+            }
+        });
+
+        // Wheel events for zoom (already handled by UIPlugin via 'ui:request:zoomCamera', but good to be aware)
+        // Consider if wheel events should also be centralized here if not for the existing event.
+        this.container.addEventListener('wheel', (event) => {
+            if (!cameraControls) return;
+            // Let Camera.js handle zoom logic, including min/max zoom distance
+            // Positive deltaY means scrolling down (zoom out), negative means scrolling up (zoom in)
+            // The existing zoom implementation in Camera.js seems to handle the direction correctly.
+            // cameraControls.zoom(event.deltaY); // This would bypass the UIPlugin event
+            this.emit('ui:request:zoomCamera', event.deltaY); // Continue using the existing event
+            event.preventDefault(); // Prevent page scroll
+        }, { passive: false }); // Allow preventDefault
     }
 }

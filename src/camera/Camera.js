@@ -8,6 +8,7 @@ export const CAMERA_MODES = { // Added export here
     FREE: 'free',
     TOP_DOWN: 'top_down',
     FIRST_PERSON: 'first_person',
+    DRAG_ORBIT: 'drag_orbit',
 };
 
 export class Camera {
@@ -23,6 +24,9 @@ export class Camera {
 
     isPanning = false;
     panStart = new THREE.Vector2();
+    isOrbitDragging = false;
+    orbitDragStart = new THREE.Vector2();
+    prevPointerLockControlsEnabled = false; // Used to restore state after orbit drag
 
     viewHistory = [];
     maxHistory = 20;
@@ -115,7 +119,10 @@ export class Camera {
     }
 
     startPan(startX, startY) {
-        if (this.cameraMode !== CAMERA_MODES.ORBIT && this.cameraMode !== CAMERA_MODES.TOP_DOWN || this.isPanning) return;
+        if (
+            (this.cameraMode !== CAMERA_MODES.ORBIT && this.cameraMode !== CAMERA_MODES.TOP_DOWN && this.cameraMode !== CAMERA_MODES.DRAG_ORBIT) ||
+            this.isPanning || this.isOrbitDragging
+        ) return;
         this._isManuallyControlled = true;
         this.isPanning = true;
         this.panStart.set(startX, startY);
@@ -127,7 +134,10 @@ export class Camera {
     }
 
     pan(deltaX, deltaY) {
-        if (this.cameraMode !== CAMERA_MODES.ORBIT && this.cameraMode !== CAMERA_MODES.TOP_DOWN || !this.isPanning) return;
+        if (
+            (this.cameraMode !== CAMERA_MODES.ORBIT && this.cameraMode !== CAMERA_MODES.TOP_DOWN && this.cameraMode !== CAMERA_MODES.DRAG_ORBIT) ||
+            !this.isPanning
+        ) return;
 
         const cameraDist = this.currentPosition.distanceTo(this.currentLookAt);
         const vFOV = this._cam.fov * Utils.DEG2RAD;
@@ -454,8 +464,85 @@ export class Camera {
                 const lookDirectionFPS = new THREE.Vector3(0, 0, -1).applyQuaternion(this._cam.quaternion);
                 this.targetLookAt.copy(this.currentPosition).add(lookDirectionFPS);
                 break;
+            case CAMERA_MODES.DRAG_ORBIT:
+                this.domElement.style.cursor = 'grab';
+                // Ensure camera orientation is maintained, similar to ORBIT mode initialization if needed
+                // For DRAG_ORBIT, the initial state is typically derived from the current view or a reset.
+                // If switching from a mode like TOP_DOWN, we might want to adjust the camera angle.
+                // For now, we'll assume it keeps its current orientation or is set by moveTo.
+                break;
         }
         this.space.emit('camera:modeChanged', { newMode: this.cameraMode, oldMode });
         setTimeout(() => this._isManuallyControlled = false, 50);
+    }
+
+    startOrbitDrag(startX, startY) {
+        if (this.cameraMode !== CAMERA_MODES.DRAG_ORBIT || this.isOrbitDragging || this.isPanning) return;
+        this._isManuallyControlled = true;
+        this.isOrbitDragging = true;
+        this.orbitDragStart.set(startX, startY);
+        this.domElement.style.cursor = 'grabbing'; // Or 'move' or a custom orbit cursor
+        gsap.killTweensOf(this.targetPosition);
+        gsap.killTweensOf(this.targetLookAt);
+        if (this.isFollowing && this.followOptions.autoEndOnManualControl) this.stopFollowing();
+        this.currentTargetNodeId = null;
+
+        // If pointer lock was active (e.g. from FREE mode), temporarily disable it
+        if (this.pointerLockControls && this.pointerLockControls.isLocked) {
+            this.prevPointerLockControlsEnabled = true;
+            this.pointerLockControls.unlock(); // Unlock to allow mouse orbit
+        } else {
+            this.prevPointerLockControlsEnabled = false;
+        }
+    }
+
+    orbitDrag(deltaX, deltaY) {
+        if (this.cameraMode !== CAMERA_MODES.DRAG_ORBIT || !this.isOrbitDragging) return;
+
+        const orbitSpeed = 0.005; // Adjust as needed
+        const rotateSpeed = 0.5; // Adjust as needed
+
+        const lookAtToCam = new THREE.Vector3().subVectors(this.currentPosition, this.currentLookAt);
+        const radius = lookAtToCam.length();
+
+        // Horizontal rotation (around world Y axis)
+        const thetaDelta = -deltaX * rotateSpeed * orbitSpeed * Math.PI * 2;
+        lookAtToCam.applyAxisAngle(new THREE.Vector3(0, 1, 0), thetaDelta);
+
+        // Vertical rotation (around camera's local X axis)
+        const phiDelta = -deltaY * rotateSpeed * orbitSpeed * Math.PI;
+        const cameraX = new THREE.Vector3().setFromMatrixColumn(this._cam.matrixWorld, 0);
+        lookAtToCam.applyAxisAngle(cameraX, phiDelta);
+
+        // Ensure the camera doesn't flip over
+        const newPosition = new THREE.Vector3().copy(this.currentLookAt).add(lookAtToCam);
+
+        // Check polar angle constraints (simplified)
+        const up = new THREE.Vector3(0, 1, 0);
+        const angleToUp = lookAtToCam.angleTo(up);
+        const minPolar = 0.01; // Avoid gimbal lock at poles
+        const maxPolar = Math.PI - 0.01;
+
+        if (angleToUp > minPolar && angleToUp < maxPolar) {
+             this.targetPosition.copy(this.currentLookAt).add(lookAtToCam.setLength(radius));
+        } else {
+            // If constraint is violated, revert the vertical rotation part
+            lookAtToCam.applyAxisAngle(cameraX, -phiDelta); // Revert vertical
+            this.targetPosition.copy(this.currentLookAt).add(lookAtToCam.setLength(radius));
+        }
+    }
+
+    endOrbitDrag() {
+        if (this.cameraMode !== CAMERA_MODES.DRAG_ORBIT || !this.isOrbitDragging) return;
+        this.isOrbitDragging = false;
+        this._isManuallyControlled = false;
+        this.domElement.style.cursor = this.cameraMode === CAMERA_MODES.DRAG_ORBIT ? 'grab' : 'default';
+
+        // Re-enable pointer lock if it was active before orbit drag
+        if (this.prevPointerLockControlsEnabled && this.pointerLockControls &&
+            (this.cameraMode === CAMERA_MODES.FREE || this.cameraMode === CAMERA_MODES.FIRST_PERSON)) {
+            // this.pointerLockControls.lock(); // Re-locking might be disruptive, depends on UX preference
+        }
+        this.prevPointerLockControlsEnabled = false;
     }
 }
