@@ -76,13 +76,13 @@ export class SpaceGraph {
             this.plugins.getPlugin('NodePlugin')?.createAndAddNode(nodeConfig);
         });
 
-        this.on('node:added', (addedNode) => {
-            if (addedNode) {
+        this.on('node:added', (addedNodeId, addedNodeInstance) => {
+            if (addedNodeInstance) {
                 setTimeout(() => {
-                    this.focusOnNode(addedNode, 0.6, true);
-                    this.plugins.getPlugin('UIPlugin')?.setSelectedNode(addedNode);
-                    if (addedNode instanceof HtmlNode && addedNode.data.editable) {
-                        addedNode.htmlElement?.querySelector('.node-content')?.focus();
+                    this.focusOnNode(addedNodeInstance, 0.6, true);
+                    this.plugins.getPlugin('UIPlugin')?.setSelectedNode(addedNodeInstance);
+                    if (addedNodeInstance instanceof HtmlNode && addedNodeInstance.data.editable) {
+                        addedNodeInstance.htmlElement?.querySelector('.node-content')?.focus();
                     }
                 }, 100);
             }
