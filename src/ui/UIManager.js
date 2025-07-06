@@ -9,7 +9,7 @@ import { ConfirmDialog } from './dialogs/ConfirmDialog.js';
 import { ContextMenu } from './menus/ContextMenu.js';
 import { EdgeMenu } from './menus/EdgeMenu.js';
 import { AdvancedHudManager } from './hud/AdvancedHudManager.js';
-import { Toolbar } from './Toolbar.js';
+// import { Toolbar } from './Toolbar.js'; // Toolbar will be removed
 
 export class UIManager {
     space = null;
@@ -20,7 +20,7 @@ export class UIManager {
     contextMenu = null;
     edgeMenu = null;
     hudManager = null;
-    toolbar = null;
+    // toolbar = null; // Toolbar will be removed
 
     currentState = InteractionState.IDLE;
     activePointerId = null;
@@ -75,7 +75,7 @@ export class UIManager {
         this.contextMenu = new ContextMenu(this.space, contextMenuEl, this._uiPluginCallbacks);
         this.edgeMenu = new EdgeMenu(this.space, this._uiPluginCallbacks);
         this.hudManager = new AdvancedHudManager(this.space, this.container, this._uiPluginCallbacks);
-        this.toolbar = new Toolbar(this.space, $('#toolbar'));
+        // this.toolbar = new Toolbar(this.space, $('#toolbar')); // Toolbar will be removed
 
         this._applySavedTheme();
         this._bindEvents();
@@ -792,7 +792,7 @@ export class UIManager {
         this.contextMenu.dispose();
         this.edgeMenu.dispose();
         this.hudManager.dispose();
-        this.toolbar.dispose();
+        // this.toolbar.dispose(); // Toolbar will be removed
 
         this.space = null;
         this.container = null;
