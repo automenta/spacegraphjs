@@ -8,6 +8,8 @@ describe('FractalZoomManager', () => {
     let mockNodes;
     let mockCameraPlugin;
     let mockCameraInstance;
+    let mockPluginManager;
+    let mockNodePlugin;
     
     beforeEach(() => {
         mockCameraInstance = {
@@ -21,10 +23,27 @@ describe('FractalZoomManager', () => {
             getCameraInstance: vi.fn(() => mockCameraInstance)
         };
 
-        mockSpace = {
-            // camera property is not directly used by FractalZoomManager, it uses cameraPlugin
+        mockNodePlugin = {
             getNodes: vi.fn(() => mockNodes),
-            getEdges: vi.fn(() => []), // Add mock for getEdges as _updateLOD uses it
+            // Add any other methods of NodePlugin that FractalZoomManager might call
+        };
+
+        mockPluginManager = {
+            getPlugin: vi.fn((pluginName) => {
+                if (pluginName === 'NodePlugin') {
+                    return mockNodePlugin;
+                }
+                if (pluginName === 'CameraPlugin') {
+                    return mockCameraPlugin;
+                }
+                return null;
+            })
+        };
+
+        mockSpace = {
+            plugins: mockPluginManager, // Assign the mock PluginManager
+            // getNodes is no longer directly on space, but via NodePlugin
+            getEdges: vi.fn(() => []),
             emit: vi.fn(),
             on: vi.fn()
         };

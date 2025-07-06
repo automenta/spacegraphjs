@@ -43,9 +43,16 @@ export class SpaceGraph {
     async init() {
         await this.plugins.initPlugins();
 
-        const cameraPlugin = this.plugins.getPlugin('CameraPlugin');
-        cameraPlugin?.centerView(null, 0);
-        cameraPlugin?.setInitialState();
+        // Cache frequently used plugins
+        this._cameraPlugin = this.plugins.getPlugin('CameraPlugin');
+        this._nodePlugin = this.plugins.getPlugin('NodePlugin');
+        this._edgePlugin = this.plugins.getPlugin('EdgePlugin');
+        this._layoutPlugin = this.plugins.getPlugin('LayoutPlugin');
+        this._uiPlugin = this.plugins.getPlugin('UIPlugin');
+        this._renderingPlugin = this.plugins.getPlugin('RenderingPlugin');
+
+        this._cameraPlugin?.centerView(null, 0);
+        this._cameraPlugin?.setInitialState();
 
         this._setupEventListeners();
         this._setupCameraMouseControls(); // Add this line
@@ -69,19 +76,27 @@ export class SpaceGraph {
     }
 
     _setupEventListeners() {
+        this._setupNodeEventListeners();
+        this._setupEdgeEventListeners();
+        this._setupUIEventListeners();
+        this._setupCameraEventListeners();
+        this._setupOtherEventListeners();
+    }
+
+    _setupNodeEventListeners() {
         this.on('ui:request:addNode', (nodeInstance) => {
-            this.plugins.getPlugin('NodePlugin')?.addNode(nodeInstance);
+            this._nodePlugin?.addNode(nodeInstance);
         });
 
         this.on('ui:request:createNode', (nodeConfig) => {
-            this.plugins.getPlugin('NodePlugin')?.createAndAddNode(nodeConfig);
+            this._nodePlugin?.createAndAddNode(nodeConfig);
         });
 
         this.on('node:added', (addedNodeId, addedNodeInstance) => {
             if (addedNodeInstance) {
                 setTimeout(() => {
                     this.focusOnNode(addedNodeInstance, 0.6, true);
-                    this.plugins.getPlugin('UIPlugin')?.setSelectedNode(addedNodeInstance);
+                    this._uiPlugin?.setSelectedNode(addedNodeInstance);
                     if (addedNodeInstance instanceof HtmlNode && addedNodeInstance.data.editable) {
                         addedNodeInstance.htmlElement?.querySelector('.node-content')?.focus();
                     }
@@ -90,56 +105,45 @@ export class SpaceGraph {
         });
 
         this.on('ui:request:removeNode', (nodeId) => {
-            this.plugins.getPlugin('NodePlugin')?.removeNode(nodeId);
+            this._nodePlugin?.removeNode(nodeId);
         });
+
+        this.on('ui:request:adjustContentScale', (node, factor) => {
+            if (node instanceof HtmlNode) node.adjustContentScale(factor);
+        });
+
+        this.on('ui:request:adjustNodeSize', (node, factor) => {
+            if (node instanceof HtmlNode) node.adjustNodeSize(factor);
+        });
+    }
+
+    _setupEdgeEventListeners() {
         this.on('ui:request:addEdge', (sourceNode, targetNode, data) => {
-            this.plugins.getPlugin('EdgePlugin')?.addEdge(sourceNode, targetNode, data);
+            this._edgePlugin?.addEdge(sourceNode, targetNode, data);
         });
 
         this.on('edge:added', () => {});
 
         this.on('ui:request:removeEdge', (edgeId) => {
-            this.plugins.getPlugin('EdgePlugin')?.removeEdge(edgeId);
-        });
-
-        this.on('ui:request:autoZoomNode', (node) => this.autoZoom(node));
-        this.on('ui:request:centerView', () => this.centerView());
-        this.on('ui:request:resetView', () => {
-            this.plugins.getPlugin('CameraPlugin')?.resetView();
-        });
-        this.on('ui:request:toggleBackground', (color, alpha) => {
-            this.plugins.getPlugin('RenderingPlugin')?.setBackground(color, alpha);
+            this._edgePlugin?.removeEdge(edgeId);
         });
 
         this.on('ui:request:reverseEdge', (edgeId) => {
-            const edgePlugin = this.plugins.getPlugin('EdgePlugin');
-            const edge = edgePlugin?.getEdgeById(edgeId);
+            const edge = this._edgePlugin?.getEdgeById(edgeId);
             if (edge) {
                 [edge.source, edge.target] = [edge.target, edge.source];
                 edge.update();
-                this.plugins.getPlugin('LayoutPlugin')?.kick();
+                this._layoutPlugin?.kick();
             }
         });
-        this.on('ui:request:adjustContentScale', (node, factor) => {
-            if (node instanceof HtmlNode) node.adjustContentScale(factor);
-        });
-        this.on('ui:request:adjustNodeSize', (node, factor) => {
-            if (node instanceof HtmlNode) node.adjustNodeSize(factor);
-        });
-        this.on('ui:request:zoomCamera', (deltaY) => {
-            this.plugins.getPlugin('CameraPlugin')?.zoom(deltaY);
-        });
-        this.on('ui:request:focusOnNode', (node, duration, pushHistory) =>
-            this.focusOnNode(node, duration, pushHistory)
-        );
+
         this.on('ui:request:updateEdge', (edgeId, property, value) => {
-            const edgePlugin = this.plugins.getPlugin('EdgePlugin');
-            const edge = edgePlugin?.getEdgeById(edgeId);
+            const edge = this._edgePlugin?.getEdgeById(edgeId);
             if (!edge) return;
             switch (property) {
                 case 'color':
                     edge.data.color = value;
-                    edge.setHighlight(this.plugins.getPlugin('UIPlugin')?.getSelectedEdges().has(edge));
+                    edge.setHighlight(this._uiPlugin?.getSelectedEdges().has(edge));
                     break;
                 case 'thickness':
                     edge.data.thickness = value;
@@ -160,61 +164,79 @@ export class SpaceGraph {
                     } else if (value === 'elastic' && !edge.data.constraintParams?.stiffness) {
                         edge.data.constraintParams = { stiffness: 0.001, idealLength: 200 };
                     }
-                    this.plugins.getPlugin('LayoutPlugin')?.kick();
+                    this._layoutPlugin?.kick();
                     break;
             }
         });
     }
 
+    _setupUIEventListeners() {
+        this.on('ui:request:toggleBackground', (color, alpha) => {
+            this._renderingPlugin?.setBackground(color, alpha);
+        });
+    }
+
+    _setupCameraEventListeners() {
+        this.on('ui:request:autoZoomNode', (node) => this.autoZoom(node));
+        this.on('ui:request:centerView', () => this.centerView());
+        this.on('ui:request:resetView', () => {
+            this._cameraPlugin?.resetView();
+        });
+        this.on('ui:request:zoomCamera', (deltaY) => {
+            this._cameraPlugin?.zoom(deltaY);
+        });
+        this.on('ui:request:focusOnNode', (node, duration, pushHistory) =>
+            this.focusOnNode(node, duration, pushHistory)
+        );
+    }
+
+    _setupOtherEventListeners() {
+        // Placeholder for any other event listeners that don't fit specific categories
+    }
+
     addNode(nodeInstance) {
-        const nodePlugin = this.plugins.getPlugin('NodePlugin');
-        const layoutPlugin = this.plugins.getPlugin('LayoutPlugin');
-        const addedNode = nodePlugin?.addNode(nodeInstance);
-        if (addedNode && layoutPlugin) layoutPlugin.kick();
+        const addedNode = this._nodePlugin?.addNode(nodeInstance);
+        if (addedNode && this._layoutPlugin) this._layoutPlugin.kick();
         return addedNode;
     }
 
     addEdge(sourceNode, targetNode, data = {}) {
-        const edgePlugin = this.plugins.getPlugin('EdgePlugin');
-        const layoutPlugin = this.plugins.getPlugin('LayoutPlugin');
-        const addedEdge = edgePlugin?.addEdge(sourceNode, targetNode, data);
-        if (addedEdge && layoutPlugin) layoutPlugin.kick();
+        const addedEdge = this._edgePlugin?.addEdge(sourceNode, targetNode, data);
+        if (addedEdge && this._layoutPlugin) this._layoutPlugin.kick();
         return addedEdge;
     }
 
     createNode(nodeConfig) {
-        return this.plugins.getPlugin('NodePlugin')?.createAndAddNode(nodeConfig);
+        return this._nodePlugin?.createAndAddNode(nodeConfig);
     }
 
     togglePinNode(nodeId) {
-        this.plugins.getPlugin('LayoutPlugin')?.layoutManager?.togglePinNode(nodeId);
+        this._layoutPlugin?.layoutManager?.togglePinNode(nodeId);
     }
 
     centerView(targetPosition = null, duration = 0.7) {
-        this.plugins.getPlugin('CameraPlugin')?.centerView(targetPosition, duration);
+        this._cameraPlugin?.centerView(targetPosition, duration);
     }
 
     focusOnNode(node, duration = 0.6, pushHistory = false) {
-        this.plugins.getPlugin('CameraPlugin')?.focusOnNode(node, duration, pushHistory);
+        this._cameraPlugin?.focusOnNode(node, duration, pushHistory);
     }
 
     autoZoom(node) {
-        const cameraPlugin = this.plugins.getPlugin('CameraPlugin');
-        if (!node || !cameraPlugin) return;
+        if (!node || !this._cameraPlugin) return;
 
-        if (cameraPlugin.getCurrentTargetNodeId() === node.id) {
-            cameraPlugin.popState();
-            cameraPlugin.setCurrentTargetNodeId(null);
+        if (this._cameraPlugin.getCurrentTargetNodeId() === node.id) {
+            this._cameraPlugin.popState();
+            this._cameraPlugin.setCurrentTargetNodeId(null);
         } else {
-            cameraPlugin.pushState();
-            cameraPlugin.setCurrentTargetNodeId(node.id);
-            cameraPlugin.focusOnNode(node, 0.6, false);
+            this._cameraPlugin.pushState();
+            this._cameraPlugin.setCurrentTargetNodeId(node.id);
+            this._cameraPlugin.focusOnNode(node, 0.6, false);
         }
     }
 
     screenToWorld(screenX, screenY, targetZ = 0) {
-        const cameraPlugin = this.plugins.getPlugin('CameraPlugin');
-        const camInstance = cameraPlugin?.getCameraInstance();
+        const camInstance = this._cameraPlugin?.getCameraInstance();
         if (!camInstance) return null;
 
         camInstance.updateMatrixWorld();
@@ -226,9 +248,78 @@ export class SpaceGraph {
         return raycaster.ray.intersectPlane(targetPlane, intersectPoint) ?? null;
     }
 
+    _intersectInstancedNodes(raycaster) {
+        const instancedNodeManager = this._renderingPlugin?.getInstancedMeshManager();
+        if (!instancedNodeManager) return null;
+
+        const intersection = instancedNodeManager.raycast(raycaster);
+        if (intersection) {
+            const node = this._nodePlugin?.getNodeById(intersection.nodeId);
+            if (node) {
+                return { node, distance: intersection.distance, type: 'node' };
+            }
+        }
+        return null;
+    }
+
+    _intersectNonInstancedNodes(raycaster, currentClosest) {
+        const currentNodes = this._nodePlugin?.getNodes();
+        if (!currentNodes) return currentClosest;
+
+        const nonInstancedNodeMeshes = [...currentNodes.values()]
+            .filter((n) => !n.isInstanced && n.mesh && n.mesh.visible)
+            .map((n) => n.mesh);
+
+        if (nonInstancedNodeMeshes.length > 0) {
+            const intersects = raycaster.intersectObjects(nonInstancedNodeMeshes, false);
+            if (intersects.length > 0 && (!currentClosest || intersects[0].distance < currentClosest.distance)) {
+                const intersectedMesh = intersects[0].object;
+                const node = this._nodePlugin.getNodeById(intersectedMesh.userData?.nodeId);
+                if (node) {
+                    return { node, distance: intersects[0].distance, type: 'node' };
+                }
+            }
+        }
+        return currentClosest;
+    }
+
+    _intersectInstancedEdges(raycaster, currentClosest) {
+        const instancedEdgeManager = this._edgePlugin?.instancedEdgeManager;
+        if (!instancedEdgeManager) return currentClosest;
+
+        const intersection = instancedEdgeManager.raycast(raycaster);
+        if (intersection && (!currentClosest || intersection.distance < currentClosest.distance)) {
+            const edge = this._edgePlugin?.getEdgeById(intersection.edgeId);
+            if (edge) {
+                return { edge, distance: intersection.distance, type: 'edge' };
+            }
+        }
+        return currentClosest;
+    }
+
+    _intersectNonInstancedEdges(raycaster, currentClosest) {
+        const currentEdges = this._edgePlugin?.getEdges();
+        if (!currentEdges) return currentClosest;
+
+        const nonInstancedEdgeLines = [...currentEdges.values()]
+            .filter((e) => !e.isInstanced && e.line && e.line.visible)
+            .map((e) => e.line);
+
+        if (nonInstancedEdgeLines.length > 0) {
+            const intersects = raycaster.intersectObjects(nonInstancedEdgeLines, false);
+            if (intersects.length > 0 && (!currentClosest || intersects[0].distance < currentClosest.distance)) {
+                const intersectedLine = intersects[0].object;
+                const edge = this._edgePlugin.getEdgeById(intersectedLine.userData?.edgeId);
+                if (edge) {
+                    return { edge, distance: intersects[0].distance, type: 'edge' };
+                }
+            }
+        }
+        return currentClosest;
+    }
+
     intersectedObjects(screenX, screenY) {
-        const cameraPlugin = this.plugins.getPlugin('CameraPlugin');
-        const camInstance = cameraPlugin?.getCameraInstance();
+        const camInstance = this._cameraPlugin?.getCameraInstance();
         if (!camInstance) return null;
 
         camInstance.updateMatrixWorld();
@@ -237,75 +328,19 @@ export class SpaceGraph {
         raycaster.setFromCamera(vec, camInstance);
         raycaster.params.Line.threshold = 5;
 
-        const nodePlugin = this.plugins.getPlugin('NodePlugin');
-        const edgePlugin = this.plugins.getPlugin('EdgePlugin');
-        const renderingPlugin = this.plugins.getPlugin('RenderingPlugin');
-        const instancedNodeManager = renderingPlugin?.getInstancedMeshManager();
-        const instancedEdgeManager = edgePlugin?.instancedEdgeManager;
-
         let closestIntersect = null;
 
-        if (instancedNodeManager) {
-            const instancedNodeIntersection = instancedNodeManager.raycast(raycaster);
-            if (instancedNodeIntersection) {
-                const node = nodePlugin?.getNodeById(instancedNodeIntersection.nodeId);
-                if (node) {
-                    closestIntersect = { node, distance: instancedNodeIntersection.distance, type: 'node' };
-                }
-            }
-        }
+        // Check instanced nodes
+        closestIntersect = this._intersectInstancedNodes(raycaster);
 
-        const currentNodes = nodePlugin?.getNodes();
-        if (currentNodes) {
-            const nonInstancedNodeMeshes = [...currentNodes.values()]
-                .filter((n) => !n.isInstanced && n.mesh && n.mesh.visible)
-                .map((n) => n.mesh);
+        // Check non-instanced nodes
+        closestIntersect = this._intersectNonInstancedNodes(raycaster, closestIntersect);
 
-            if (nonInstancedNodeMeshes.length > 0) {
-                const nodeIntersects = raycaster.intersectObjects(nonInstancedNodeMeshes, false);
-                if (nodeIntersects.length > 0) {
-                    if (!closestIntersect || nodeIntersects[0].distance < closestIntersect.distance) {
-                        const intersectedMesh = nodeIntersects[0].object;
-                        const node = nodePlugin.getNodeById(intersectedMesh.userData?.nodeId);
-                        if (node) {
-                            closestIntersect = { node, distance: nodeIntersects[0].distance, type: 'node' };
-                        }
-                    }
-                }
-            }
-        }
+        // Check instanced edges
+        closestIntersect = this._intersectInstancedEdges(raycaster, closestIntersect);
 
-        if (instancedEdgeManager) {
-            const instancedEdgeIntersection = instancedEdgeManager.raycast(raycaster);
-            if (instancedEdgeIntersection) {
-                if (!closestIntersect || instancedEdgeIntersection.distance < closestIntersect.distance) {
-                    const edge = edgePlugin?.getEdgeById(instancedEdgeIntersection.edgeId);
-                    if (edge) {
-                        closestIntersect = { edge, distance: instancedEdgeIntersection.distance, type: 'edge' };
-                    }
-                }
-            }
-        }
-
-        const currentEdges = edgePlugin?.getEdges();
-        if (currentEdges) {
-            const nonInstancedEdgeLines = [...currentEdges.values()]
-                .filter((e) => !e.isInstanced && e.line && e.line.visible)
-                .map((e) => e.line);
-
-            if (nonInstancedEdgeLines.length > 0) {
-                const edgeIntersects = raycaster.intersectObjects(nonInstancedEdgeLines, false);
-                if (edgeIntersects.length > 0) {
-                    if (!closestIntersect || edgeIntersects[0].distance < closestIntersect.distance) {
-                        const intersectedLine = edgeIntersects[0].object;
-                        const edge = edgePlugin.getEdgeById(intersectedLine.userData?.edgeId);
-                        if (edge) {
-                            closestIntersect = { edge, distance: edgeIntersects[0].distance, type: 'edge' };
-                        }
-                    }
-                }
-            }
-        }
+        // Check non-instanced edges
+        closestIntersect = this._intersectNonInstancedEdges(raycaster, closestIntersect);
 
         return closestIntersect?.type === 'node'
             ? { node: closestIntersect.node, distance: closestIntersect.distance }
@@ -316,34 +351,33 @@ export class SpaceGraph {
 
     animate() {
         const frame = () => {
-            this.plugins.updatePlugins();
+            this.plugins.updatePlugins(); // No change needed here as it iterates over all plugins
             requestAnimationFrame(frame);
         };
         frame();
     }
 
     get layoutManager() {
-        return this.plugins.getPlugin('LayoutPlugin')?.layoutManager;
+        return this._layoutPlugin?.layoutManager;
     }
 
     dispose() {
-        this.plugins.disposePlugins();
+        this.plugins.disposePlugins(); // No change needed here
         this._listeners.clear();
     }
 
     exportGraphToJSON(options) {
-        return this.plugins.getPlugin('DataPlugin')?.exportGraphToJSON(options) || null;
+        return this.plugins.getPlugin('DataPlugin')?.exportGraphToJSON(options) || null; // DataPlugin not cached yet
     }
 
     async importGraphFromJSON(jsonData, options) {
-        return (await this.plugins.getPlugin('DataPlugin')?.importGraphFromJSON(jsonData, options)) || false;
+        return (await this.plugins.getPlugin('DataPlugin')?.importGraphFromJSON(jsonData, options)) || false; // DataPlugin not cached yet
     }
 
     _setupCameraMouseControls() {
-        const cameraPlugin = this.plugins.getPlugin('CameraPlugin');
-        if (!cameraPlugin || !this.container) return;
+        if (!this._cameraPlugin || !this.container) return;
 
-        const cameraControls = cameraPlugin.getControls(); // This is the instance of Camera.js
+        const cameraControls = this._cameraPlugin.getControls(); // This is the instance of Camera.js
 
         let lastMouseX = 0;
         let lastMouseY = 0;
