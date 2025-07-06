@@ -182,6 +182,7 @@ export class CameraPlugin extends Plugin {
     getAvailableCameraModes() {
         return {
             [CAMERA_MODES.ORBIT]: 'Orbit Control',
+            [CAMERA_MODES.DRAG_ORBIT]: 'Drag Orbit',
             [CAMERA_MODES.FREE]: 'Free Look',
             [CAMERA_MODES.TOP_DOWN]: 'Top Down',
             [CAMERA_MODES.FIRST_PERSON]: 'First Person'
