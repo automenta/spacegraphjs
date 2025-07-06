@@ -60,15 +60,51 @@ export class LayoutSettingsDialog {
         controlsHTML += `
                 </select>
             </div>
+            <div id="layout-description" style="margin-top: 10px; padding: 8px; background: #2c2c2c; border-radius: 4px; font-size: 0.9em; min-height: 40px;">
+                Select a layout to see its description.
+            </div>
             <div class="layout-options-container" style="margin-top: 15px; min-height: 50px;">
                 <p><em>Layout-specific options will be available here in a future update.</em></p>
             </div>
         `;
         $('.layout-controls', this.layoutSettingsDialogElement).innerHTML = controlsHTML;
 
-        // Re-select the current layout in case it changed externally
+        // Add event listener for layout selection change
         const selectElement = $('#layout-select', this.layoutSettingsDialogElement);
-        selectElement && (selectElement.value = currentLayoutName);
+        if (selectElement) {
+            selectElement.value = currentLayoutName;
+            selectElement.addEventListener('change', this._onLayoutSelectionChange);
+            this._updateLayoutDescription(currentLayoutName); // Initial description
+        }
+    }
+
+    _onLayoutSelectionChange = (event) => {
+        this._updateLayoutDescription(event.target.value);
+    }
+
+    _getLayoutDescription(layoutName) {
+        const descriptions = {
+            force: "Simulates physical forces to arrange nodes. Good for organic networks and discovering structure.",
+            circular: "Arranges nodes in a circle. Useful for highlighting a central node or showing cyclical relationships.",
+            grid: "Aligns nodes in a regular grid pattern. Good for structured, uniform data.",
+            hierarchical: "Organizes nodes in a tree-like structure. Ideal for parent-child relationships.",
+            radial: "Positions nodes in concentric circles radiating from a central point. (Basic implementation)",
+            treemap: "Displays hierarchical data as nested rectangles. (Basic implementation)",
+            spherical: "Arranges nodes on the surface of a sphere. Useful for 3D overviews.",
+            // For more complex/mode-based layouts, descriptions might be more general
+            // or they might not appear in this primary list if managed differently by AdvancedLayoutManager
+            constraint: "Positions nodes based on defined constraints (e.g., distance, alignment). Offers fine-grained control.",
+            adaptive: "Automatically selects and applies an appropriate layout based on graph characteristics.",
+            nested: "Handles layouts within container nodes. The specific layout used inside a container can vary."
+        };
+        return descriptions[layoutName.toLowerCase()] || "No description available for this layout.";
+    }
+
+    _updateLayoutDescription(layoutName) {
+        const descriptionElement = $('#layout-description', this.layoutSettingsDialogElement);
+        if (descriptionElement) {
+            descriptionElement.textContent = this._getLayoutDescription(layoutName);
+        }
     }
 
     show() {
@@ -89,6 +125,7 @@ export class LayoutSettingsDialog {
         if (this.layoutSettingsDialogElement) {
             $('#apply-layout-button', this.layoutSettingsDialogElement)?.removeEventListener('click', this._onApplyLayout);
             $('#close-layout-dialog', this.layoutSettingsDialogElement)?.removeEventListener('click', this.hide);
+            $('#layout-select', this.layoutSettingsDialogElement)?.removeEventListener('change', this._onLayoutSelectionChange);
             this.layoutSettingsDialogElement.remove();
             this.layoutSettingsDialogElement = null;
         }

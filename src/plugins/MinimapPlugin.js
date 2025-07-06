@@ -28,7 +28,7 @@ export class MinimapPlugin extends Plugin {
 
     init() {
         super.init();
-        this._setupMinimapCamera();
+        this._setupMinimapCamera(); // Initial setup
         this._setupFrustumHelper();
 
         this.space.on('node:added', this._addNodeProxy.bind(this));
@@ -38,29 +38,73 @@ export class MinimapPlugin extends Plugin {
     }
 
     _setupMinimapCamera() {
-        const aspect = 1;
-        const viewSize = 2000;
-        this.minimapCamera = new THREE.OrthographicCamera(
-            (-viewSize * aspect) / 2,
-            (viewSize * aspect) / 2,
-            viewSize / 2,
-            -viewSize / 2,
-            1,
-            10000
-        );
-        this.minimapCamera.position.set(0, 0, 1000);
+        // Initial setup, will be dynamically adjusted
+        this.minimapCamera = new THREE.OrthographicCamera(-100, 100, 100, -100, 1, 10000);
+        this.minimapCamera.position.set(0, 0, 1000); // Positioned above the scene, looking down
         this.minimapCamera.lookAt(0, 0, 0);
         this.minimapScene.add(this.minimapCamera);
+    }
+
+    _updateMinimapCameraView() {
+        const nodePlugin = this.pluginManager.getPlugin('NodePlugin');
+        if (!nodePlugin || !this.minimapCamera) return;
+
+        const nodes = Array.from(nodePlugin.getNodes().values());
+        if (nodes.length === 0) {
+            // Default view if no nodes
+            this.minimapCamera.left = -MINIMAP_SIZE / 2;
+            this.minimapCamera.right = MINIMAP_SIZE / 2;
+            this.minimapCamera.top = MINIMAP_SIZE / 2;
+            this.minimapCamera.bottom = -MINIMAP_SIZE / 2;
+            this.minimapCamera.position.set(0, 0, 1000);
+            this.minimapCamera.lookAt(0,0,0);
+            this.minimapCamera.updateProjectionMatrix();
+            return;
+        }
+
+        const boundingBox = new THREE.Box3();
+        nodes.forEach(node => {
+            // Consider a small area around each node for the bounding box
+            const nodeSphere = new THREE.Sphere(node.position, node.getBoundingSphereRadius() * 1.5 || 10);
+            const nodeBox = new THREE.Box3().setFromSphere(nodeSphere);
+            boundingBox.union(nodeBox);
+        });
+
+        if (boundingBox.isEmpty()) {
+             // Default view if bounding box is empty (e.g. nodes at same point with zero radius)
+            this.minimapCamera.left = -MINIMAP_SIZE / 2;
+            this.minimapCamera.right = MINIMAP_SIZE / 2;
+            this.minimapCamera.top = MINIMAP_SIZE / 2;
+            this.minimapCamera.bottom = -MINIMAP_SIZE / 2;
+        } else {
+            const center = boundingBox.getCenter(new THREE.Vector3());
+            const size = boundingBox.getSize(new THREE.Vector3());
+
+            const padding = Math.max(size.x, size.y) * 0.1 + 50; // 10% padding + base padding
+
+            const halfWidth = Math.max(size.x / 2 + padding, MINIMAP_SIZE / 4); // Ensure a minimum visible area
+            const halfHeight = Math.max(size.y / 2 + padding, MINIMAP_SIZE / 4);
+
+            this.minimapCamera.left = center.x - halfWidth;
+            this.minimapCamera.right = center.x + halfWidth;
+            this.minimapCamera.top = center.y + halfHeight;
+            this.minimapCamera.bottom = center.y - halfHeight;
+
+            this.minimapCamera.position.set(center.x, center.y, 1000); // Keep Z fixed or adjust based on Z bounds if needed
+            this.minimapCamera.lookAt(center.x, center.y, 0);
+        }
+
+        this.minimapCamera.updateProjectionMatrix();
     }
 
     _setupFrustumHelper() {
         const mainCamera = this.pluginManager.getPlugin('CameraPlugin')?.getCameraInstance();
         if (mainCamera) {
-            const frustumGeometry = new THREE.BufferGeometry();
-            const frustumMaterial = new THREE.LineBasicMaterial({ color: FRUSTUM_COLOR, linewidth: 2 });
-            this.frustumHelper = new THREE.LineSegments(frustumGeometry, frustumMaterial);
-            this.frustumHelper.frustumCulled = false;
+            this.frustumHelper = new THREE.CameraHelper(mainCamera);
+            this.frustumHelper.visible = true; // Make sure it's visible
             this.minimapScene.add(this.frustumHelper);
+        } else {
+            console.warn("MinimapPlugin: Main camera not found for FrustumHelper setup.");
         }
     }
 
@@ -111,57 +155,33 @@ export class MinimapPlugin extends Plugin {
     }
 
     _updateFrustumHelper() {
-        const mainCamera = this.pluginManager.getPlugin('CameraPlugin')?.getCameraInstance();
-        if (!this.frustumHelper || !mainCamera) return;
+        // The CameraHelper updates itself based on the camera it's helping.
+        // We might need to ensure the main camera's matrices are up-to-date before this render pass,
+        // but typically that's handled by the main render loop.
+        // If the helper is not updating, explicitly call:
+        if (this.frustumHelper) {
+             // this.frustumHelper.update(); // Often not needed if main camera updates its matrixWorld
+             // Ensure the helper itself is visible if it was ever turned off
+             this.frustumHelper.visible = true;
 
-        mainCamera.updateMatrixWorld();
-        mainCamera.updateProjectionMatrix();
-
-        const cameraPosition = new THREE.Vector3();
-        mainCamera.getWorldPosition(cameraPosition);
-
-        const viewTarget = new THREE.Vector3();
-        mainCamera.getWorldDirection(viewTarget);
-        viewTarget.multiplyScalar(-cameraPosition.z / viewTarget.z).add(cameraPosition);
-
-        const aspect = mainCamera.aspect;
-        const fov = mainCamera.fov * THREE.MathUtils.DEG2RAD;
-        const heightAtTarget = 2 * Math.tan(fov / 2) * Math.abs(cameraPosition.z - viewTarget.z);
-        const widthAtTarget = heightAtTarget * aspect;
-
-        const halfWidth = widthAtTarget / 2;
-        const halfHeight = heightAtTarget / 2;
-
-        const p = [
-            viewTarget.x - halfWidth,
-            viewTarget.y + halfHeight,
-            0,
-            viewTarget.x + halfWidth,
-            viewTarget.y + halfHeight,
-            0,
-            viewTarget.x + halfWidth,
-            viewTarget.y - halfHeight,
-            0,
-            viewTarget.x - halfWidth,
-            viewTarget.y - halfHeight,
-            0,
-        ];
-
-        const vertices = new Float32Array([
-            p[0], p[1], p[2], p[3], p[4], p[5],
-            p[3], p[4], p[5], p[6], p[7], p[8],
-            p[6], p[7], p[8], p[9], p[10], p[11],
-            p[9], p[10], p[11], p[0], p[1], p[2],
-        ]);
-
-        this.frustumHelper.geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-        this.frustumHelper.geometry.attributes.position.needsUpdate = true;
-        this.frustumHelper.geometry.computeBoundingSphere();
+             // CameraHelper's default colors might not match FRUSTUM_COLOR.
+             // To customize CameraHelper appearance, one might need to access its internal lines/materials
+             // or use a more manual approach if specific styling is critical.
+             // For now, default CameraHelper appearance is accepted.
+             if (this.frustumHelper.material) {
+                // Attempt to set color, though CameraHelper uses specific point/line materials
+                if (this.frustumHelper.material.color) {
+                    this.frustumHelper.material.color.setHex(FRUSTUM_COLOR);
+                }
+             }
+             // For more detailed styling, one might iterate over frustumHelper.children if it's a Group
+        }
     }
 
     render(renderer) {
         if (!this.minimapCamera) return;
 
+        this._updateMinimapCameraView(); // Adjust camera before rendering
         this._updateNodeProxies();
         this._updateFrustumHelper();
 

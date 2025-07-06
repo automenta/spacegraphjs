@@ -2,10 +2,10 @@ import * as S from '../../index.js';
 // import * as THREE from 'three'; // Available via S.THREE
 
 const demoMetadata = {
-    id: 'new-node-types',
-    title: 'New Node Types',
-    description: `<h3>New Node Types Showcase</h3>
-                  <p>This page demonstrates recently added specialized node types.</p>
+    id: 'experimental-node-types', // Changed ID
+    title: 'Experimental Node Types (Stubs)', // Changed Title
+    description: `<h3>Experimental Node Types (Stubs)</h3>
+                  <p>This page demonstrates recently added specialized node types that are currently visual/functional stubs.</p>
                   <ul>
                     <li><b>AudioNode:</b> Represents an audio source. (Visual stub)</li>
                     <li><b>DocumentNode:</b> Represents a document or file. (Visual stub)</li>

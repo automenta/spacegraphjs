@@ -2,10 +2,10 @@ import * as S from '../../index.js';
 // import * as THREE from 'three'; // Available via S.THREE
 
 const demoMetadata = {
-    id: 'node-types',
-    title: 'Node Types Showcase',
-    description: `<h3>Node Types Showcase</h3>
-                  <p>This page demonstrates the various types of nodes available in SpaceGraphJS.</p>
+    id: 'core-node-types', // Changed ID
+    title: 'Core Node Types Demo', // Changed Title
+    description: `<h3>Core Node Types Demo</h3>
+                  <p>This page demonstrates the fundamental and most commonly used node types in SpaceGraphJS.</p>
                   <ul>
                     <li><b>ShapeNode:</b> Displays 3D shapes like boxes, spheres, cylinders. (e.g., Box, Sphere, Capsule)</li>
                     <li><b>NoteNode/HtmlNode:</b> Renders HTML content, allowing for rich text, forms, and interactive elements.</li>

@@ -26,6 +26,11 @@ export class AdvancedHudManager extends HudManager {
         this.notifications = [];
         this.progressIndicators = new Map();
         this.statusItems = new Map();
+
+        // Hide the basic selection info from HudManager if it exists
+        if (this.hudSelectionInfo) {
+            this.hudSelectionInfo.style.display = 'none';
+        }
         
         this._createAdvancedHudElements();
         this._startPerformanceMonitoring();
@@ -33,41 +38,92 @@ export class AdvancedHudManager extends HudManager {
     }
 
     _createAdvancedHudElements() {
-        // Performance Monitor
+        // Create main HUD regions
+        this.hudRegionTop = document.createElement('div');
+        this.hudRegionTop.className = 'hud-region hud-region-top';
+        this.hudLayer.appendChild(this.hudRegionTop);
+
+        this.hudRegionMiddle = document.createElement('div');
+        this.hudRegionMiddle.className = 'hud-region hud-region-middle';
+        this.hudLayer.appendChild(this.hudRegionMiddle);
+
+        this.hudRegionLeft = document.createElement('div');
+        this.hudRegionLeft.className = 'hud-region-left';
+        this.hudRegionMiddle.appendChild(this.hudRegionLeft);
+
+        this.hudRegionRight = document.createElement('div');
+        this.hudRegionRight.className = 'hud-region-right';
+        this.hudRegionMiddle.appendChild(this.hudRegionRight);
+
+        this.hudRegionBottom = document.createElement('div');
+        this.hudRegionBottom.className = 'hud-region hud-region-bottom';
+        this.hudLayer.appendChild(this.hudRegionBottom);
+
+        // Create groups within hudRegionTop for better alignment
+        this.hudTopLeftGroup = document.createElement('div');
+        this.hudTopLeftGroup.className = 'hud-top-group hud-top-left-group';
+        this.hudRegionTop.appendChild(this.hudTopLeftGroup);
+
+        this.hudTopCenterGroup = document.createElement('div');
+        this.hudTopCenterGroup.className = 'hud-top-group hud-top-center-group';
+        this.hudRegionTop.appendChild(this.hudTopCenterGroup);
+
+        this.hudTopRightGroup = document.createElement('div');
+        this.hudTopRightGroup.className = 'hud-top-group hud-top-right-group';
+        this.hudRegionTop.appendChild(this.hudTopRightGroup);
+
+
+        // Ensure main menu from HudManager is in the top-left group
+        if (this.hudMainMenuButton && this.hudPopupMenu) {
+            this.hudTopLeftGroup.appendChild(this.hudMainMenuButton);
+            // this.hudTopLeftGroup.appendChild(this.hudPopupMenu); // Popup menu positioning might be better at hudLayer or body level
+            this.hudLayer.appendChild(this.hudPopupMenu); // Keep popup menu on main layer for z-indexing
+            this.hudMainMenuButton.style.position = 'relative';
+            this.hudMainMenuButton.style.left = 'unset';
+            this.hudMainMenuButton.style.top = 'unset';
+        }
+
+        // Performance Monitor (Top Left Group)
         this.performancePanel = this._createPerformancePanel();
+        this.hudTopLeftGroup.appendChild(this.performancePanel);
         
-        // Minimap
-        this.minimapPanel = this._createMinimapPanel();
-        
-        // Status Bar
+        // Status Bar (Bottom Region)
         this.statusBar = this._createStatusBar();
+        this.hudRegionBottom.appendChild(this.statusBar);
         
-        // Notification System
+        // Notification System (Top Center Group)
         this.notificationContainer = this._createNotificationContainer();
-        
-        // Progress Indicators
+        this.hudTopCenterGroup.appendChild(this.notificationContainer);
+
+        // Progress Indicators (Bottom Center area of Bottom Region or directly in Bottom Region)
         this.progressContainer = this._createProgressContainer();
+        this.hudRegionBottom.appendChild(this.progressContainer); // Example placement
         
-        // Camera Status Indicator
+        // Camera Status Indicator (Right Sidebar/Region)
         this.cameraStatusIndicator = this._createCameraStatusIndicator();
+        this.hudRegionRight.appendChild(this.cameraStatusIndicator);
         
-        // Layout Status Indicator
+        // Layout Status Indicator (Left Sidebar/Region)
         this.layoutStatusIndicator = this._createLayoutStatusIndicator();
+        this.hudRegionLeft.appendChild(this.layoutStatusIndicator);
         
-        // Navigation Controls
+        // Navigation Controls (Right Sidebar/Region)
         this.navigationControls = this._createNavigationControls();
+        this.hudRegionRight.appendChild(this.navigationControls);
         
-        // View Mode Toggles
+        // View Mode Toggles (Top Right Group)
         this.viewModeControls = this._createViewModeControls();
+        this.hudTopRightGroup.appendChild(this.viewModeControls);
         
-        // Quick Actions Panel
+        // Quick Actions Panel (Left Sidebar/Region)
         this.quickActionsPanel = this._createQuickActionsPanel();
+        this.hudRegionLeft.appendChild(this.quickActionsPanel);
     }
 
     _createPerformancePanel() {
         const panel = document.createElement('div');
         panel.id = 'hud-performance-panel';
-        panel.className = 'hud-panel hud-top-left';
+        panel.className = 'hud-panel'; // Removed hud-top-left
         panel.innerHTML = `
             <div class="hud-panel-header">
                 <span class="hud-panel-title">Performance</span>
@@ -102,40 +158,15 @@ export class AdvancedHudManager extends HudManager {
         return panel;
     }
 
-    _createMinimapPanel() {
-        const panel = document.createElement('div');
-        panel.id = 'hud-minimap-panel';
-        panel.className = 'hud-panel hud-top-right';
-        panel.innerHTML = `
-            <div class="hud-panel-header">
-                <span class="hud-panel-title">Minimap</span>
-                <button class="hud-panel-toggle" title="Toggle Minimap">🗺️</button>
-            </div>
-            <div class="hud-panel-content">
-                <canvas id="minimap-canvas" width="150" height="150"></canvas>
-                <div class="minimap-controls">
-                    <button id="minimap-zoom-in" title="Zoom In">+</button>
-                    <button id="minimap-zoom-out" title="Zoom Out">-</button>
-                    <button id="minimap-center" title="Center View">⌖</button>
-                </div>
-            </div>
-        `;
-        
-        this.hudLayer.appendChild(panel);
-        this._bindPanelToggle(panel);
-        this._initMinimap(panel.querySelector('#minimap-canvas'));
-        return panel;
-    }
-
     _createStatusBar() {
         const statusBar = document.createElement('div');
         statusBar.id = 'hud-status-bar';
-        statusBar.className = 'hud-status-bar hud-bottom-full';
+        statusBar.className = 'hud-status-bar'; // Removed hud-bottom-full, will ensure it takes width via CSS
         statusBar.innerHTML = `
             <div class="status-section status-left">
                 <span class="status-item" id="layout-status">Layout: Force</span>
                 <span class="status-item" id="camera-mode-status">Camera: Orbit</span>
-                <span class="status-item" id="selection-count-status">Selected: 0</span>
+                <span class="status-item" id="adv-selection-info">Selected: None</span>
             </div>
             <div class="status-section status-center">
                 <span class="status-item" id="current-action-status">Ready</span>
@@ -155,23 +186,23 @@ export class AdvancedHudManager extends HudManager {
     _createNotificationContainer() {
         const container = document.createElement('div');
         container.id = 'hud-notifications';
-        container.className = 'hud-notifications hud-top-center';
-        this.hudLayer.appendChild(container);
+        container.className = 'hud-notifications hud-top-center'; // hud-top-center will be restyled for flex
+        // Appending is now handled in _createAdvancedHudElements
         return container;
     }
 
     _createProgressContainer() {
         const container = document.createElement('div');
         container.id = 'hud-progress-indicators';
-        container.className = 'hud-progress-container hud-bottom-center';
-        this.hudLayer.appendChild(container);
+        container.className = 'hud-progress-container hud-bottom-center'; // hud-bottom-center will be restyled for flex
+         // Appending is now handled in _createAdvancedHudElements
         return container;
     }
 
     _createCameraStatusIndicator() {
         const indicator = document.createElement('div');
         indicator.id = 'hud-camera-status';
-        indicator.className = 'hud-indicator hud-right-center';
+        indicator.className = 'hud-indicator'; // Removed hud-right-center
         indicator.innerHTML = `
             <div class="indicator-icon" id="camera-mode-icon">📹</div>
             <div class="indicator-details">
@@ -188,7 +219,7 @@ export class AdvancedHudManager extends HudManager {
     _createLayoutStatusIndicator() {
         const indicator = document.createElement('div');
         indicator.id = 'hud-layout-status';
-        indicator.className = 'hud-indicator hud-left-center';
+        indicator.className = 'hud-indicator'; // Removed hud-left-center
         indicator.innerHTML = `
             <div class="indicator-icon" id="layout-mode-icon">🔗</div>
             <div class="indicator-details">
@@ -205,7 +236,7 @@ export class AdvancedHudManager extends HudManager {
     _createNavigationControls() {
         const controls = document.createElement('div');
         controls.id = 'hud-navigation-controls';
-        controls.className = 'hud-controls hud-bottom-right';
+        controls.className = 'hud-controls'; // Removed hud-bottom-right
         controls.innerHTML = `
             <div class="control-group">
                 <button class="nav-button" id="nav-zoom-in" title="Zoom In">🔍+</button>
@@ -229,7 +260,7 @@ export class AdvancedHudManager extends HudManager {
     _createViewModeControls() {
         const controls = document.createElement('div');
         controls.id = 'hud-view-mode-controls';
-        controls.className = 'hud-controls hud-top-center-right';
+        controls.className = 'hud-controls hud-top-right'; // Changed to hud-top-right for simpler CSS handling
         controls.innerHTML = `
             <div class="view-mode-toggle">
                 <button class="mode-button active" id="mode-3d" title="3D View">3D</button>
@@ -251,7 +282,7 @@ export class AdvancedHudManager extends HudManager {
     _createQuickActionsPanel() {
         const panel = document.createElement('div');
         panel.id = 'hud-quick-actions';
-        panel.className = 'hud-panel hud-bottom-left';
+        panel.className = 'hud-panel'; // Removed hud-bottom-left
         panel.innerHTML = `
             <div class="hud-panel-header">
                 <span class="hud-panel-title">Quick Actions</span>
@@ -379,26 +410,6 @@ export class AdvancedHudManager extends HudManager {
         panel.querySelector('#action-export').addEventListener('click', () => {
             this._exportGraph();
         });
-    }
-
-    _initMinimap(canvas) {
-        if (!canvas) return;
-        
-        this.minimapCanvas = canvas;
-        this.minimapCtx = canvas.getContext('2d');
-        
-        // Bind minimap controls
-        const zoomIn = canvas.parentElement.querySelector('#minimap-zoom-in');
-        const zoomOut = canvas.parentElement.querySelector('#minimap-zoom-out');
-        const center = canvas.parentElement.querySelector('#minimap-center');
-        
-        zoomIn?.addEventListener('click', () => this._minimapZoom(1.2));
-        zoomOut?.addEventListener('click', () => this._minimapZoom(0.8));
-        center?.addEventListener('click', () => this._minimapCenter());
-        
-        canvas.addEventListener('click', (e) => this._minimapClick(e));
-        
-        this._updateMinimap();
     }
 
     _startPerformanceMonitoring() {
@@ -532,125 +543,10 @@ export class AdvancedHudManager extends HudManager {
         }
     }
 
-    _updateSelectionStatus() {
-        const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
-        const selectedEdges = this._uiPluginCallbacks.getSelectedEdges();
-        const totalSelected = selectedNodes.size + selectedEdges.size;
-        
-        const statusEl = $('#selection-count-status');
-        if (statusEl) {
-            statusEl.textContent = `Selected: ${totalSelected}`;
-        }
-    }
-
     _updateGraphStatus() {
-        this._updateMinimap();
-    }
-
-    _updateMinimap() {
-        if (!this.minimapCanvas || !this.minimapCtx) return;
-        
-        const ctx = this.minimapCtx;
-        const canvas = this.minimapCanvas;
-        
-        // Clear canvas
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        // Draw background
-        ctx.fillStyle = 'rgba(20, 20, 30, 0.8)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Get nodes and edges
-        const nodePlugin = this.space.plugins.getPlugin('NodePlugin');
-        const edgePlugin = this.space.plugins.getPlugin('EdgePlugin');
-        
-        const nodes = Array.from(nodePlugin?.getNodes()?.values() || []);
-        const edges = Array.from(edgePlugin?.getEdges()?.values() || []);
-        
-        if (nodes.length === 0) return;
-        
-        // Calculate bounds
-        const bounds = this._calculateMinimapBounds(nodes);
-        const scale = Math.min(canvas.width / bounds.width, canvas.height / bounds.height) * 0.8;
-        const offsetX = (canvas.width - bounds.width * scale) / 2;
-        const offsetY = (canvas.height - bounds.height * scale) / 2;
-        
-        // Draw edges
-        ctx.strokeStyle = 'rgba(100, 150, 255, 0.5)';
-        ctx.lineWidth = 1;
-        edges.forEach(edge => {
-            const sourcePos = this._worldToMinimap(edge.source.position, bounds, scale, offsetX, offsetY);
-            const targetPos = this._worldToMinimap(edge.target.position, bounds, scale, offsetX, offsetY);
-            
-            ctx.beginPath();
-            ctx.moveTo(sourcePos.x, sourcePos.y);
-            ctx.lineTo(targetPos.x, targetPos.y);
-            ctx.stroke();
-        });
-        
-        // Draw nodes
-        nodes.forEach(node => {
-            const pos = this._worldToMinimap(node.position, bounds, scale, offsetX, offsetY);
-            const selected = this._uiPluginCallbacks.getSelectedNodes().has(node);
-            
-            ctx.fillStyle = selected ? '#ffff00' : '#64B5F6';
-            ctx.beginPath();
-            ctx.arc(pos.x, pos.y, selected ? 3 : 2, 0, Math.PI * 2);
-            ctx.fill();
-        });
-        
-        // Draw camera view indicator
-        this._drawCameraIndicator(ctx, bounds, scale, offsetX, offsetY);
-    }
-
-    _calculateMinimapBounds(nodes) {
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        
-        nodes.forEach(node => {
-            minX = Math.min(minX, node.position.x);
-            minY = Math.min(minY, node.position.y);
-            maxX = Math.max(maxX, node.position.x);
-            maxY = Math.max(maxY, node.position.y);
-        });
-        
-        const padding = 50;
-        return {
-            minX: minX - padding,
-            minY: minY - padding,
-            maxX: maxX + padding,
-            maxY: maxY + padding,
-            width: (maxX - minX) + 2 * padding,
-            height: (maxY - minY) + 2 * padding
-        };
-    }
-
-    _worldToMinimap(position, bounds, scale, offsetX, offsetY) {
-        return {
-            x: (position.x - bounds.minX) * scale + offsetX,
-            y: (position.y - bounds.minY) * scale + offsetY
-        };
-    }
-
-    _drawCameraIndicator(ctx, bounds, scale, offsetX, offsetY) {
-        const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
-        if (!cameraPlugin) return;
-        
-        const camera = cameraPlugin.getCameraInstance();
-        if (!camera) return;
-        
-        const cameraPos = this._worldToMinimap(camera.position, bounds, scale, offsetX, offsetY);
-        
-        ctx.strokeStyle = '#ff6b6b';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(cameraPos.x, cameraPos.y, 8, 0, Math.PI * 2);
-        ctx.stroke();
-        
-        // Draw view direction
-        ctx.beginPath();
-        ctx.moveTo(cameraPos.x, cameraPos.y);
-        ctx.lineTo(cameraPos.x, cameraPos.y - 12);
-        ctx.stroke();
+        // This method used to call _updateMinimap().
+        // If other graph-status related HUD updates are needed, they can go here.
+        // For now, it's empty as the minimap update is removed.
     }
 
     // Notification System
@@ -843,32 +739,28 @@ export class AdvancedHudManager extends HudManager {
         this.showNotification('Shadows toggled', 'info', 1500);
     }
 
-    // Minimap interaction
-    _minimapZoom(factor) {
-        const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
-        cameraPlugin?.zoom(factor > 1 ? -5 : 5);
-    }
-
-    _minimapCenter() {
-        const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
-        cameraPlugin?.centerView();
-    }
-
-    _minimapClick(event) {
-        // Navigate camera to clicked position on minimap
-        const rect = this.minimapCanvas.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
-        
-        // Convert minimap coordinates to world coordinates and move camera
-        // This would need the reverse transformation
-        this.showNotification('Minimap navigation coming soon', 'info', 1500);
-    }
-
     // Override parent methods to include advanced features
     updateHudSelectionInfo() {
-        super.updateHudSelectionInfo();
-        this._updateSelectionStatus();
+        // Directly update the advanced selection info in the status bar
+        const advSelectionInfoEl = $('#adv-selection-info');
+        if (!advSelectionInfoEl) return;
+
+        const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
+        const selectedEdges = this._uiPluginCallbacks.getSelectedEdges();
+
+        if (selectedNodes.size === 1) {
+            const node = selectedNodes.values().next().value;
+            advSelectionInfoEl.textContent = `Selected: Node ${node.data.label || node.id.substring(0, 8)}`;
+        } else if (selectedNodes.size > 1) {
+            advSelectionInfoEl.textContent = `Selected: ${selectedNodes.size} Nodes`;
+        } else if (selectedEdges.size === 1) {
+            const edge = selectedEdges.values().next().value;
+            advSelectionInfoEl.textContent = `Selected: Edge ${edge.id.substring(0, 8)}`;
+        } else if (selectedEdges.size > 1) {
+            advSelectionInfoEl.textContent = `Selected: ${selectedEdges.size} Edges`;
+        } else {
+            advSelectionInfoEl.textContent = 'Selected: None';
+        }
     }
 
     updateHudCameraMode(mode) {
@@ -878,6 +770,7 @@ export class AdvancedHudManager extends HudManager {
 
     // Configuration
     updateHudSettings(newSettings) {
+        const oldShowMinimap = this.settings.showMinimap;
         this.settings = { ...this.settings, ...newSettings };
         
         // Apply settings
@@ -889,11 +782,14 @@ export class AdvancedHudManager extends HudManager {
         if (this.performancePanel) {
             this.performancePanel.style.display = this.settings.showPerformanceMetrics ? 'block' : 'none';
         }
-        if (this.minimapPanel) {
-            this.minimapPanel.style.display = this.settings.showMinimap ? 'block' : 'none';
-        }
+
         if (this.statusBar) {
             this.statusBar.style.display = this.settings.showStatusBar ? 'block' : 'none';
+        }
+
+        // Emit event if showMinimap setting changed
+        if (this.settings.showMinimap !== oldShowMinimap && this.space) {
+            this.space.emit('ui:request:toggleMinimap', { show: this.settings.showMinimap });
         }
     }
 

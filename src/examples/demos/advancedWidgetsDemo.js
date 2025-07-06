@@ -1,10 +1,10 @@
 import * as S from '../../index.js';
 
 export const demoMetadata = {
-    id: 'advanced-widgets',
-    title: 'Advanced Widgets & Shapes',
-    description: `<h3>Advanced Widgets & Shapes Demo</h3>
-                  <p>Showcasing the enhanced widget system with interactive controls, progress indicators, canvas drawing, and advanced shape generation.</p>
+    id: 'interactive-procedural-nodes', // Changed ID
+    title: 'Interactive & Procedural Nodes', // Changed Title
+    description: `<h3>Interactive & Procedural Nodes Demo</h3>
+                  <p>Showcasing nodes with interactive UI elements, dynamic content, and procedurally generated visuals.</p>
                   <ul>
                     <li><strong>Control Panel Node:</strong> Interactive sliders, buttons, and controls</li>
                     <li><strong>Progress Node:</strong> Various progress indicators (bars, circles, gauges, steps)</li>

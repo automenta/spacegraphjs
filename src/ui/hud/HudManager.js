@@ -24,6 +24,7 @@ export class HudManager {
         this.hudMainMenuButton = null;
         this.hudPopupMenu = null;
         this.hudModeIndicator = null;
+        this.hudCameraModeDescription = null; // Clean up description element
         this.hudSelectionInfo = null;
         this.hudKeyboardShortcutsButton = null;
         this.hudLayoutSettingsButton = null;
@@ -36,7 +37,7 @@ export class HudManager {
         this._createHudElements();
         this._bindEvents();
         this.updateHudSelectionInfo(); // Initial update
-        this.updateHudCameraMode(); // Initial update
+        this.updateHudCameraMode(); // Initial update, this will also update description
     }
 
     /**
@@ -78,6 +79,12 @@ export class HudManager {
         }
         const cameraGroup = this._createMenuGroup('Camera Mode:', this.hudModeIndicator);
         this.hudPopupMenu.appendChild(cameraGroup);
+
+        // Camera Mode Description Area
+        this.hudCameraModeDescription = document.createElement('div');
+        this.hudCameraModeDescription.id = 'hud-camera-mode-description';
+        this.hudCameraModeDescription.className = 'hud-menu-item-description';
+        this.hudPopupMenu.appendChild(this.hudCameraModeDescription);
 
 
         // Keyboard Shortcuts Button
@@ -194,9 +201,30 @@ export class HudManager {
         this.hudLayoutSettingsButton.addEventListener('click', this._onLayoutSettingsButtonClick);
     }
 
+    _getCameraModeDescriptions() {
+        // These descriptions can be expanded or fetched from elsewhere if needed
+        return {
+            orbit: "Orbit: Rotate around a central point. Pan, zoom.",
+            free: "Free Look: Fly freely (WASD/Mouse). Requires pointer lock.",
+            topDown: "Top Down: 2D-like top-down view. Pan and zoom height.",
+            firstPerson: "First Person (Experimental): Simulates a first-person view. Uses Free Look controls.",
+            // Add descriptions for other modes if they appear in the dropdown
+        };
+    }
+
+    _updateCameraModeDescription(modeKey) {
+        if (!this.hudCameraModeDescription) return;
+        const descriptions = this._getCameraModeDescriptions();
+        this.hudCameraModeDescription.textContent = descriptions[modeKey] || "Select a mode to see its description.";
+        this.hudCameraModeDescription.style.padding = '5px 0'; // Basic styling
+        this.hudCameraModeDescription.style.fontSize = '0.9em';
+        this.hudCameraModeDescription.style.opacity = '0.8';
+    }
+
     _onModeIndicatorChange = (event) => {
         const newMode = event.target.value;
         this.space.emit('ui:request:setCameraMode', newMode);
+        this._updateCameraModeDescription(newMode);
         // Optionally close popup after selection
         // if (this.isPopupMenuVisible) this._togglePopupMenu();
     };
@@ -241,6 +269,10 @@ export class HudManager {
             }
             if (currentMode) {
                 this.hudModeIndicator.value = currentMode;
+                this._updateCameraModeDescription(currentMode); // Update description too
+            } else {
+                // If no current mode, maybe show a default or clear description
+                this._updateCameraModeDescription('');
             }
         }
     }
