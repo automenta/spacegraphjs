@@ -48,7 +48,7 @@ export class AdvancedHudManager extends HudManager {
         this._createAdvancedHudElements(); // This will adapt existing elements or create new ones
         
         this._startPerformanceMonitoring(); // Already in parent, ensure it's called appropriately
-        this._subscribeToAdvancedEvents();  // Already in parent
+        this._subscribeToAdvancedEvents();
 
         // Dialogs (if not managed by base or need specific handling)
         this.keyboardShortcutsDialog = new KeyboardShortcutsDialog(this.hudLayer);
@@ -126,7 +126,8 @@ export class AdvancedHudManager extends HudManager {
         // Populate status bar sections
         this.statusSelection = document.createElement('span'); this.statusBar.appendChild(this.statusSelection);
         this.statusCamera = document.createElement('span');    this.statusBar.appendChild(this.statusCamera);
-        this.statusNodeCount = document.createElement('span'); this.statusBar.appendChild(this.statusNodeCount); // Example new status item
+        this.statusNodeCount = document.createElement('span'); this.statusBar.appendChild(this.statusNodeCount);
+        this.statusLayout = document.createElement('span');    this.statusBar.appendChild(this.statusLayout); // Added for layout status
         
         this._updateAllStatusDisplays();
     }
@@ -135,6 +136,7 @@ export class AdvancedHudManager extends HudManager {
         this._updateSelectionStatus();
         this._updateCameraStatus();
         this._updateNodeCountStatus();
+        this._updateLayoutStatus(); // Initial call
     }
 
     _updateSelectionStatus() {
@@ -161,6 +163,75 @@ export class AdvancedHudManager extends HudManager {
         const nodePlugin = this.space.plugins.getPlugin('NodePlugin');
         const count = nodePlugin?.getNodeCount ? nodePlugin.getNodeCount() : 0;
         this.statusNodeCount.textContent = `Nodes: ${count}`;
+    }
+
+    _updateLayoutStatus(eventData) {
+        if (!this.settings.showStatusBar || !this.statusLayout) return;
+        if (eventData && eventData.type) { // Check if eventData and type exist
+            const layoutName = eventData.name || "Unnamed Layout";
+            if (eventData.type === "started") {
+                this.statusLayout.textContent = `Layout: ${layoutName} (Running)`;
+            } else if (eventData.type === "stopped") {
+                this.statusLayout.textContent = `Layout: ${layoutName} (Stopped)`;
+            } else if (eventData.type === "adapted") {
+                this.statusLayout.textContent = `Layout: ${layoutName} (Adapted)`;
+            } else {
+                this.statusLayout.textContent = `Layout: ${layoutName} (${eventData.type})`;
+            }
+        } else {
+            // Initial call or no event data, clear or set default
+            const layoutPlugin = this.space.plugins.getPlugin('LayoutPlugin');
+            const currentLayout = layoutPlugin?.getCurrentLayout ? layoutPlugin.getCurrentLayout() : null;
+            if (currentLayout && currentLayout.isRunning()) {
+                this.statusLayout.textContent = `Layout: ${currentLayout.name || 'Active'} (Running)`;
+            } else if (currentLayout) {
+                this.statusLayout.textContent = `Layout: ${currentLayout.name || 'Active'} (Stopped)`;
+            }
+            else {
+                this.statusLayout.textContent = "Layout: Idle";
+            }
+        }
+    }
+
+    _updateMinimap() {
+        if (!this.settings.showMinimap || !this.minimapPanel) return;
+        // console.log("AdvancedHudManager: _updateMinimap called. Minimap drawing logic would go here.");
+        // For now, just indicate it's active or needs update
+        const nodePlugin = this.space.plugins.getPlugin('NodePlugin');
+        const nodeCount = nodePlugin?.getNodeCount ? nodePlugin.getNodeCount() : 0;
+        this.minimapPanel.innerHTML = `<p>Minimap Active (${nodeCount} nodes)</p><p style='font-size:0.8em; opacity:0.7;'>(Actual drawing not implemented in this fix)</p>`;
+    }
+
+    _updateGraphStatus() {
+        this._updateNodeCountStatus(); // Update node count in status bar
+        if (this.minimapPanel && this.settings.showMinimap) {
+            this._updateMinimap();
+        }
+    }
+
+    _subscribeToAdvancedEvents() {
+        if (!this.space) return;
+
+        // Camera events
+        this.space.on('camera:moved', () => this._updateCameraStatus());
+        this.space.on('camera:modeChanged', (eventData) => this._updateCameraStatus()); // mode might be in eventData.newMode
+
+        // Layout events (example event names, verify with SpaceGraph actual events)
+        this.space.on('layout:started', (eventData) => this._updateLayoutStatus(eventData));
+        this.space.on('layout:stopped', (eventData) => this._updateLayoutStatus(eventData));
+        this.space.on('layout:adapted', (eventData) => this._updateLayoutStatus(eventData)); // If layout emits adaptation events
+
+        // Selection events
+        this.space.on('selection:changed', () => this._updateSelectionStatus());
+
+        // Graph structure events (for minimap, node counts, etc.)
+        this.space.on('node:added', () => this._updateGraphStatus());
+        this.space.on('node:removed', () => this._updateGraphStatus());
+        this.space.on('edge:added', () => this._updateGraphStatus());
+        this.space.on('edge:removed', () => this._updateGraphStatus());
+
+        // Other potential advanced events can be added here
+        // e.g., this.space.on('tool:activated', (eventData) => this._updateToolStatus(eventData));
     }
 
     _populateDefaultMenus() {
