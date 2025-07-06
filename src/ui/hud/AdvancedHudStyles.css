@@ -559,6 +559,158 @@
     }
 }
 
+/* Styles for HudOverlayPanel */
+.hud-overlay-panel {
+    display: flex; /* Changed from 'none' by JS to 'flex' to enable internal flex layout */
+    flex-direction: column;
+    background: rgba(30, 30, 45, 0.9); /* Darker, more distinct from main panels */
+    border: 1px solid rgba(120, 170, 255, 0.4);
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    color: #e0e0e0; /* Lighter text for better contrast on dark overlay */
+    min-width: 250px; /* Default min width */
+    max-height: 60vh; /* Prevent overlays from becoming too tall */
+    overflow: hidden; /* Header/content manage their own overflow */
+}
+
+.hud-overlay-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.1); /* Slightly lighter header */
+    border-bottom: 1px solid rgba(120, 170, 255, 0.3);
+    cursor: move; /* Draggable by header */
+    border-radius: 7px 7px 0 0; /* Match panel rounding */
+}
+
+.hud-overlay-panel-title {
+    font-weight: bold;
+    color: #90CAF9; /* Brighter title color */
+    font-size: 13px;
+}
+
+.hud-overlay-panel-close {
+    background: none;
+    border: none;
+    color: #e0e0e0;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: bold;
+    line-height: 1;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.hud-overlay-panel-close:hover {
+    background: rgba(255, 0, 0, 0.7);
+    color: #ffffff;
+}
+
+.hud-overlay-panel-content {
+    padding: 12px;
+    overflow-y: auto; /* Allow content to scroll */
+    flex-grow: 1; /* Allow content to fill available space */
+}
+
+/* Styles for new main menu items and submenus */
+#hud-popup-menu { /* Ensure the main popup can contain absolutely positioned submenus */
+    position: relative;
+}
+
+.hud-menu-item {
+    display: flex; /* Align icon and label */
+    align-items: center;
+    width: 100%;
+    background: none;
+    border: none;
+    color: #e0e0e0;
+    padding: 8px 12px;
+    text-align: left;
+    cursor: pointer;
+    font-size: 12px;
+    border-radius: 4px; /* Subtle rounding */
+    transition: background-color 0.2s ease;
+}
+
+.hud-menu-item:hover {
+    background-color: rgba(100, 150, 255, 0.2);
+}
+
+.hud-menu-icon {
+    margin-right: 8px;
+    font-size: 14px; /* Slightly larger icons */
+    width: 1.2em; /* Ensure space for icon */
+    text-align: center;
+}
+.hud-menu-label {
+    flex-grow: 1;
+}
+
+.hud-menu-static-item {
+    padding: 8px 12px;
+    font-size: 11px;
+    color: #a0a0a0; /* Dimmer color for static info */
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    margin-bottom: 4px;
+}
+
+
+.hud-submenu-trigger .hud-submenu-arrow {
+    margin-left: auto; /* Push arrow to the right */
+    font-size: 10px;
+    color: #a0a0a0;
+}
+
+.hud-submenu {
+    position: absolute; /* Position relative to #hud-popup-menu */
+    min-width: 180px;
+    background: rgba(40, 40, 55, 0.95); /* Slightly different background for submenu */
+    border: 1px solid rgba(120, 170, 255, 0.3);
+    border-radius: 6px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+    z-index: 100; /* Above its parent menu item, but relative to popup */
+    padding: 4px; /* Padding around submenu items */
+    backdrop-filter: blur(8px);
+}
+
+.hud-submenu.hidden {
+    display: none;
+}
+.hud-submenu.visible {
+    display: block;
+}
+
+
+.hud-menu-separator {
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    margin: 6px 0;
+}
+
+/* Adjustments for existing elements if needed */
+#hud-main-menu-button {
+    z-index: 1002; /* Ensure menu button is above overlays */
+}
+
+#hud-popup-menu {
+    z-index: 1001; /* Ensure popup menu is above overlays but below button if overlapping */
+     min-width: 220px; /* Give main popup a bit more space */
+}
+
+/* Ensure original panel content looks good inside overlay panel */
+.hud-overlay-panel-content .performance-metric {
+    font-size: 11px; /* Match panel font-size */
+}
+.hud-overlay-panel-content .action-group {
+    margin-bottom: 6px;
+}
+.hud-overlay-panel-content .action-button {
+    font-size: 11px;
+    padding: 6px 10px;
+}
+
 /* Animation keyframes */
 @keyframes pulse {
     0%, 100% { opacity: 1; }

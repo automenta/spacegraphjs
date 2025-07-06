@@ -87,7 +87,7 @@ export class PerformancePlugin extends Plugin {
         // Subscribe to events
         this._subscribeToEvents();
         
-        console.log('PerformancePlugin initialized');
+        // console.log('PerformancePlugin initialized');
     }
 
     /**
@@ -96,7 +96,7 @@ export class PerformancePlugin extends Plugin {
     async _initializeWorkers() {
         try {
             await this.layoutWorkerManager.init();
-            console.log('Performance workers initialized');
+            // console.log('Performance workers initialized');
         } catch (error) {
             console.error('Failed to initialize performance workers:', error);
         }
@@ -133,7 +133,7 @@ export class PerformancePlugin extends Plugin {
             this._checkPerformanceThresholds();
         }, this.config.optimizationInterval);
         
-        console.log('Performance monitoring started');
+        // console.log('Performance monitoring started');
     }
 
     /**
@@ -149,7 +149,7 @@ export class PerformancePlugin extends Plugin {
             this.optimizationTimer = null;
         }
         
-        console.log('Performance monitoring stopped');
+        // console.log('Performance monitoring stopped');
     }
 
     /**
@@ -483,6 +483,6 @@ export class PerformancePlugin extends Plugin {
             delete this.space.performance;
         }
         
-        console.log('PerformancePlugin disposed');
+        // console.log('PerformancePlugin disposed');
     }
 }

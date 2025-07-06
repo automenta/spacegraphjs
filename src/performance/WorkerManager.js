@@ -17,7 +17,7 @@ export class WorkerManager {
             enableWorkers: this._checkWorkerSupport()
         };
         
-        console.log(`WorkerManager initialized with ${this.config.maxWorkers} max workers`);
+        // console.log(`WorkerManager initialized with ${this.config.maxWorkers} max workers`);
     }
 
     /**
@@ -65,7 +65,7 @@ export class WorkerManager {
             
             this.workers.set(workerType, workerInfo);
             
-            console.log(`Created worker for ${workerType}`);
+            // console.log(`Created worker for ${workerType}`);
             return worker;
             
         } catch (error) {
@@ -98,7 +98,7 @@ export class WorkerManager {
         
         if (pool.length > 0) {
             this.workerPools.set(workerType, pool);
-            console.log(`Created worker pool for ${workerType} with ${pool.length} workers`);
+            // console.log(`Created worker pool for ${workerType} with ${pool.length} workers`);
             return true;
         }
         
@@ -185,7 +185,7 @@ export class WorkerManager {
             } else {
                 // Queue the job
                 this.taskQueue.push(job);
-                console.log(`Queued job ${jobId} for ${workerType} (queue length: ${this.taskQueue.length})`);
+                // console.log(`Queued job ${jobId} for ${workerType} (queue length: ${this.taskQueue.length})`);
             }
         });
     }
@@ -216,7 +216,7 @@ export class WorkerManager {
                 data: job.taskData
             });
             
-            console.log(`Executing job ${job.id} on worker ${activeJob.workerId}`);
+            // console.log(`Executing job ${job.id} on worker ${activeJob.workerId}`);
             
         } catch (error) {
             this._handleJobError(job.id, error);
@@ -231,7 +231,7 @@ export class WorkerManager {
         
         if (!jobId) {
             // Handle non-job messages (like worker ready signals)
-            console.log(`Worker ${workerType} message:`, type, data);
+            // console.log(`Worker ${workerType} message:`, type, data);
             return;
         }
         
@@ -286,7 +286,7 @@ export class WorkerManager {
         // Process next job in queue
         this._processQueue();
         
-        console.log(`Job ${jobId} completed successfully`);
+        // console.log(`Job ${jobId} completed successfully`);
     }
 
     /**
@@ -386,7 +386,7 @@ export class WorkerManager {
         if (workerInfo) {
             workerInfo.worker.terminate();
             this.workers.delete(workerType);
-            console.log(`Terminated worker ${workerType}`);
+            // console.log(`Terminated worker ${workerType}`);
         }
         
         // Also check worker pools
@@ -397,7 +397,7 @@ export class WorkerManager {
                 this.workers.delete(workerInfo.workerId);
             });
             this.workerPools.delete(workerType);
-            console.log(`Terminated worker pool ${workerType}`);
+            // console.log(`Terminated worker pool ${workerType}`);
         }
     }
 
@@ -441,7 +441,7 @@ export class WorkerManager {
         });
         
         if (workersToTerminate.length > 0) {
-            console.log(`Cleaned up ${workersToTerminate.length} idle workers`);
+            // console.log(`Cleaned up ${workersToTerminate.length} idle workers`);
         }
     }
 
@@ -475,7 +475,7 @@ export class WorkerManager {
      */
     dispose() {
         this.terminateAll();
-        console.log('WorkerManager disposed');
+        // console.log('WorkerManager disposed');
     }
 }
 
@@ -507,7 +507,7 @@ export class LayoutWorkerManager extends WorkerManager {
             const success = this.createWorkerPool('layout', workerUrl, Math.min(2, this.config.maxWorkers));
             
             this.initialized = success;
-            console.log(`Layout worker manager initialized: ${success}`);
+            // console.log(`Layout worker manager initialized: ${success}`);
             return success;
             
         } catch (error) {

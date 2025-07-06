@@ -74,7 +74,7 @@ export class PerformanceManager {
         this.lodManager.init(renderingPlugin);
         this.memoryManager.init();
         
-        console.log('PerformanceManager initialized');
+        // console.log('PerformanceManager initialized');
     }
 
     /**
@@ -267,7 +267,7 @@ export class PerformanceManager {
         
         if (avgFrameTime > targetFrameTime * 1.5) {
             // Performance is poor, enable more aggressive optimizations
-            console.log('Performance degraded, enabling aggressive optimizations');
+            // console.log('Performance degraded, enabling aggressive optimizations');
             
             this.updateConfig({
                 enableInstancing: true,
@@ -315,7 +315,7 @@ export class PerformanceManager {
         this.lodManager.dispose();
         this.memoryManager.dispose();
         
-        console.log('PerformanceManager disposed');
+        // console.log('PerformanceManager disposed');
     }
 }
 
@@ -429,7 +429,7 @@ class InstanceManager {
         }
         
         this.instancedCount += group.objects.length;
-        console.log(`Created instanced mesh for ${geometryKey} with ${group.objects.length} instances`);
+        // console.log(`Created instanced mesh for ${geometryKey} with ${group.objects.length} instances`);
     }
 
     _destroyInstancedMesh(geometryKey) {
@@ -546,10 +546,13 @@ class CullingManager {
         this.frustum.setFromProjectionMatrix(this.cameraMatrix);
         
         // Test all objects
-        const nodes = this.perfManager.space.getNodes();
-        const edges = this.perfManager.space.getEdges();
+        const nodePlugin = this.perfManager.space.plugins.getPlugin('NodePlugin');
+        const edgePlugin = this.perfManager.space.plugins.getPlugin('EdgePlugin');
+
+        const nodes = nodePlugin ? nodePlugin.getNodes() : new Map();
+        const edges = edgePlugin ? edgePlugin.getEdges() : new Map();
         
-        [...nodes, ...edges].forEach(object => {
+        [...nodes.values(), ...edges.values()].forEach(object => {
             this._testObjectCulling(object);
         });
     }
@@ -854,7 +857,7 @@ class MemoryManager {
     }
 
     forceCleanup() {
-        console.log('Performing force cleanup due to memory pressure');
+        // console.log('Performing force cleanup due to memory pressure');
         
         // More aggressive cleanup
         this.cachedObjects.clear();

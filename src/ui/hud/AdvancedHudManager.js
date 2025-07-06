@@ -1,5 +1,7 @@
 import { $ } from '../../utils.js';
+import * as THREE from 'three'; // Added for _handleToolbarAction
 import { HudManager } from './HudManager.js';
+import { HudOverlayPanel } from './HudOverlayPanel.js';
 
 export class AdvancedHudManager extends HudManager {
     constructor(space, container, uiPluginCallbacks) {
@@ -83,14 +85,26 @@ export class AdvancedHudManager extends HudManager {
             this.hudMainMenuButton.style.top = 'unset';
         }
 
-        // Performance Monitor (Top Left Group)
-        this.performancePanel = this._createPerformancePanel();
-        this.hudTopLeftGroup.appendChild(this.performancePanel);
+        // Performance Monitor
+        const perfPanelContent = this._createPerformancePanelContent();
+        this.performanceOverlay = new HudOverlayPanel('hud-performance-overlay', 'Performance', {
+            parentElement: this.hudLayer,
+            initialPosition: { x: 50, y: 80 }
+        });
+        this.performanceOverlay.setContent(perfPanelContent);
+        if (this.settings.showPerformanceMetrics) { // Show by default if setting is true
+            // this.performanceOverlay.show(); // Initially hidden, toggled by menu
+        }
         
-        // Status Bar (Bottom Region)
-        this.statusBar = this._createStatusBar();
-        this.hudRegionBottom.appendChild(this.statusBar);
-        
+        // Quick Actions Panel
+        const quickActionsContent = this._createQuickActionsPanelContent();
+        this.quickActionsOverlay = new HudOverlayPanel('hud-quick-actions-overlay', 'Quick Actions', {
+            parentElement: this.hudLayer,
+            initialPosition: { x: 50, y: 280 }
+        });
+        this.quickActionsOverlay.setContent(quickActionsContent);
+        this._bindQuickActions(this.quickActionsOverlay.contentElement); // Bind actions to content within overlay
+
         // Notification System (Top Center Group)
         this.notificationContainer = this._createNotificationContainer();
         this.hudTopCenterGroup.appendChild(this.notificationContainer);
@@ -99,40 +113,363 @@ export class AdvancedHudManager extends HudManager {
         this.progressContainer = this._createProgressContainer();
         this.hudRegionBottom.appendChild(this.progressContainer); // Example placement
         
-        // Camera Status Indicator (Right Sidebar/Region)
+        // Camera Status Indicator (Right Sidebar/Region) - Keep for now, or make overlay
         this.cameraStatusIndicator = this._createCameraStatusIndicator();
-        this.hudRegionRight.appendChild(this.cameraStatusIndicator);
+        // this.hudRegionRight.appendChild(this.cameraStatusIndicator); // Decide if this becomes an overlay too
         
-        // Layout Status Indicator (Left Sidebar/Region)
+        // Layout Status Indicator (Left Sidebar/Region) - Keep for now, or make overlay
         this.layoutStatusIndicator = this._createLayoutStatusIndicator();
-        this.hudRegionLeft.appendChild(this.layoutStatusIndicator);
-        
-        // Navigation Controls (Right Sidebar/Region)
-        this.navigationControls = this._createNavigationControls();
-        this.hudRegionRight.appendChild(this.navigationControls);
-        
-        // View Mode Toggles (Top Right Group)
-        this.viewModeControls = this._createViewModeControls();
-        this.hudTopRightGroup.appendChild(this.viewModeControls);
-        
-        // Quick Actions Panel (Left Sidebar/Region)
-        this.quickActionsPanel = this._createQuickActionsPanel();
-        this.hudRegionLeft.appendChild(this.quickActionsPanel);
+        // this.hudRegionLeft.appendChild(this.layoutStatusIndicator);
+
+        // Populate the main menu
+        this._populateMainMenu();
+
+        // Remove original panel containers if they were added directly to hudLayer or groups
+        // This is handled by not adding them in the first place if they are overlay content
+        document.getElementById('hud-performance-panel')?.remove();
+        document.getElementById('hud-quick-actions')?.remove();
     }
 
-    _createPerformancePanel() {
-        const panel = document.createElement('div');
-        panel.id = 'hud-performance-panel';
-        panel.className = 'hud-panel'; // Removed hud-top-left
-        panel.innerHTML = `
-            <div class="hud-panel-header">
-                <span class="hud-panel-title">Performance</span>
-                <button class="hud-panel-toggle" title="Toggle Performance Monitor">📊</button>
-            </div>
-            <div class="hud-panel-content">
-                <div class="performance-metric">
-                    <span class="metric-label">FPS:</span>
-                    <span class="metric-value" id="fps-value">60</span>
+    // Helper to create a standard menu item (button)
+    _createMenuItem(label, actionCallback, parentMenu, icon = null, id = null) {
+        const menuItem = document.createElement('button');
+        menuItem.className = 'hud-menu-item';
+        if (id) menuItem.id = `hud-menu-${id}`;
+
+        let content = '';
+        if (icon) {
+            content += `<span class="hud-menu-icon">${icon}</span> `;
+        }
+        content += `<span class="hud-menu-label">${label}</span>`;
+        menuItem.innerHTML = content;
+        menuItem.title = label;
+
+        if (actionCallback) {
+            menuItem.addEventListener('click', (event) => {
+                actionCallback(event);
+                // Close the main popup after action, unless it's a submenu trigger
+                if (this.isPopupMenuVisible && !menuItem.classList.contains('hud-submenu-trigger')) {
+                    this._togglePopupMenu();
+                }
+            });
+        }
+        parentMenu.appendChild(menuItem);
+        return menuItem;
+    }
+
+    // Helper to create a submenu
+    _createSubmenu(label, parentMenuItem, icon = null) {
+        parentMenuItem.classList.add('hud-submenu-trigger');
+        const arrow = document.createElement('span');
+        arrow.className = 'hud-submenu-arrow';
+        arrow.innerHTML = ' ▶';
+        parentMenuItem.appendChild(arrow);
+
+        const submenu = document.createElement('div');
+        submenu.className = 'hud-submenu hidden';
+        
+        // Append submenu relative to the popup menu for easier positioning
+        this.hudPopupMenu.appendChild(submenu);
+
+        let timeoutId = null;
+
+        const show = () => {
+            clearTimeout(timeoutId);
+            // Hide other submenus at the same level
+            Array.from(this.hudPopupMenu.querySelectorAll('.hud-submenu-trigger.active')).forEach(el => {
+                if (el !== parentMenuItem) {
+                    el.classList.remove('active');
+                    const otherSub = this.hudPopupMenu.querySelector(`.hud-submenu[aria-labelledby="${el.id}"]`);
+                    otherSub?.classList.add('hidden');
+                    otherSub?.classList.remove('visible');
+                }
+            });
+
+            parentMenuItem.classList.add('active');
+            submenu.classList.remove('hidden');
+            submenu.classList.add('visible');
+            submenu.setAttribute('aria-labelledby', parentMenuItem.id);
+
+
+            // Position submenu
+            const parentRect = parentMenuItem.getBoundingClientRect();
+            const popupRect = this.hudPopupMenu.getBoundingClientRect();
+
+            submenu.style.position = 'absolute'; // Ensure it's absolutely positioned
+            submenu.style.left = `${parentMenuItem.offsetWidth}px`;
+            submenu.style.top = `${parentMenuItem.offsetTop}px`; // Relative to hudPopupMenu
+
+            // Adjust if submenu goes off-screen (basic example)
+            const screenPadding = 10;
+            if (popupRect.left + parentMenuItem.offsetWidth + submenu.offsetWidth > window.innerWidth - screenPadding) {
+                submenu.style.left = `-${submenu.offsetWidth}px`;
+            }
+            if (popupRect.top + parentMenuItem.offsetTop + submenu.offsetHeight > window.innerHeight - screenPadding) {
+                submenu.style.top = `${parentMenuItem.offsetTop + parentMenuItem.offsetHeight - submenu.offsetHeight}px`;
+            }
+
+        };
+
+        const hide = () => {
+            parentMenuItem.classList.remove('active');
+            submenu.classList.add('hidden');
+            submenu.classList.remove('visible');
+        };
+
+        parentMenuItem.addEventListener('mouseenter', show);
+        parentMenuItem.addEventListener('mouseover', show); // Ensure it shows on mouseover too
+
+        parentMenuItem.addEventListener('mouseleave', () => { timeoutId = setTimeout(hide, 200); });
+        submenu.addEventListener('mouseenter', () => clearTimeout(timeoutId));
+        submenu.addEventListener('mouseleave', () => { timeoutId = setTimeout(hide, 200); });
+        
+        // Close submenu if main popup is closed
+        this.space.on('hud:popupMenuToggled', (isVisible) => {
+            if(!isVisible) hide();
+        });
+
+        return submenu;
+    }
+
+    _populateMainMenu() {
+        if (!this.hudPopupMenu) return;
+
+        // Clear existing items except essential ones if any (e.g. camera mode which is already there)
+        // For now, let's find a good place to insert new items.
+        // The camera mode is in a 'hud-menu-group'. We can insert before/after such groups or specific items.
+        const firstGroup = this.hudPopupMenu.querySelector('.hud-menu-group');
+
+        // 0. Selection Info (non-interactive, at the top)
+        this.menuSelectionInfo = document.createElement('div');
+        this.menuSelectionInfo.id = 'hud-menu-selection-info';
+        this.menuSelectionInfo.className = 'hud-menu-item hud-menu-static-item'; // Static item
+        this.hudPopupMenu.insertBefore(this.menuSelectionInfo, firstGroup); // Insert at the top
+        this.updateHudSelectionInfo(); // Initial update
+
+        // 1. Toolbar Items (as direct menu items)
+        this._createMenuItem('➕ Add Node', () => this._handleToolbarAction('addNode'), this.hudPopupMenu, '➕', 'add-node');
+        this._createMenuItem('🎨 Toggle Theme', () => this._handleToolbarAction('toggleTheme'), this.hudPopupMenu, '🎨', 'toggle-theme');
+
+
+        // 2. Navigation Submenu
+        const navMenuItem = this._createMenuItem('🧭 Navigation', null, this.hudPopupMenu, '🧭', 'nav-menu');
+        const navSubmenu = this._createSubmenu('Navigation', navMenuItem);
+        this._createMenuItem('🔍+ Zoom In', () => this.space.plugins.getPlugin('CameraPlugin')?.zoom(-5), navSubmenu, '🔍+');
+        this._createMenuItem('🔍- Zoom Out', () => this.space.plugins.getPlugin('CameraPlugin')?.zoom(5), navSubmenu, '🔍-');
+        this._createMenuItem('🎯 Center View', () => this._handleToolbarAction('centerView'), navSubmenu, '🎯'); // Re-use toolbar action
+        this._createMenuItem('🔄 Reset View', () => this._handleToolbarAction('resetView'), navSubmenu, '🔄'); // Re-use toolbar action
+        this._createMenuItem('⛶ Fullscreen', () => this._toggleFullscreen(), navSubmenu, '⛶');
+        this._createMenuItem('📸 Screenshot', () => this._takeScreenshot(), navSubmenu, '📸');
+
+        // 3. View Submenu
+        const viewMenuItem = this._createMenuItem('👁️ View', null, this.hudPopupMenu, '👁️', 'view-menu');
+        const viewSubmenu = this._createSubmenu('View', viewMenuItem);
+        this._createMenuItem('3D/2D Mode', () => this._toggleViewMode(), viewSubmenu); // Placeholder for actual 3D/2D toggle logic
+        this._createMenuItem('⊞ Grid', () => this._toggleGrid(), viewSubmenu, '⊞');
+        this._createMenuItem('⊥ Axes', () => this._toggleAxes(), viewSubmenu, '⊥');
+        this._createMenuItem('🏷️ Labels', () => this._toggleLabels(), viewSubmenu, '🏷️');
+        this._createMenuItem('☀️ Shadows', () => this._toggleShadows(), viewSubmenu, '☀️');
+
+        // 4. Status Submenu (for items from old status bar)
+        const statusMenuItem = this._createMenuItem('ℹ️ Status', null, this.hudPopupMenu, 'ℹ️', 'status-menu');
+        const statusSubmenu = this._createSubmenu('Status', statusMenuItem);
+        // These will be dynamic, so we create placeholders and update them
+        this.menuStatusLayout = this._createMenuItem('Layout: ...', null, statusSubmenu, '⚙️');
+        this.menuStatusCamera = this._createMenuItem('Camera: ...', null, statusSubmenu, '📷');
+        this.menuStatusZoom = this._createMenuItem('Zoom: ...', null, statusSubmenu, '🔎');
+        this.menuStatusCoords = this._createMenuItem('Coords: ...', null, statusSubmenu, '📍');
+        this.menuStatusTime = this._createMenuItem('Time: ...', null, statusSubmenu, '🕒');
+        this._updateMenuStatusItems(); // Initial update
+
+        // Panel Toggles
+        this._createMenuItem('📊 Performance', () => this.performanceOverlay.toggle(), this.hudPopupMenu, '📊', 'toggle-performance');
+        this._createMenuItem('⚡ Quick Actions', () => this.quickActionsOverlay.toggle(), this.hudPopupMenu, '⚡', 'toggle-quick-actions');
+
+
+        // Add a separator before existing items like Camera Mode, Shortcuts, Layout Settings
+        const separator = document.createElement('hr');
+        separator.className = 'hud-menu-separator';
+        this.hudPopupMenu.insertBefore(separator, firstGroup);
+
+        // Remove original verbose status bar if it exists (it was created by _createAdvancedHudElements before this function runs)
+        document.getElementById('hud-status-bar')?.remove();
+        this.statusBar = null;
+
+        // Remove original navigation and view controls if they exist
+        document.getElementById('hud-navigation-controls')?.remove();
+        this.navigationControls = null;
+        document.getElementById('hud-view-mode-controls')?.remove();
+        this.viewModeControls = null;
+    }
+
+    // Actions from Toolbar.js, adapted for AdvancedHudManager
+    _handleToolbarAction(action) {
+        switch (action) {
+            case 'addNode': {
+                const camPlugin = this.space.plugins.getPlugin('CameraPlugin');
+                const cam = camPlugin?.getCameraInstance();
+                let nodePos = { x: Math.random() * 200 - 100, y: Math.random() * 200 - 100, z: 0 };
+                if (cam) {
+                    // THREE is now imported at the top of the file
+                    const camPos = new THREE.Vector3();
+                    const camDir = new THREE.Vector3();
+                    cam.getWorldPosition(camPos);
+                    cam.getWorldDirection(camDir);
+                    const distanceInFront = 300;
+                    const targetPos = camPos.add(camDir.multiplyScalar(distanceInFront));
+                    nodePos = { x: targetPos.x, y: targetPos.y, z: 0 };
+                }
+                this.space.emit('ui:request:createNode', {
+                    type: 'html', // Or a default type from config
+                    position: nodePos,
+                    data: { label: 'New Node', content: 'Edit me!' },
+                });
+                this.showNotification('Node added', 'success');
+                break;
+            }
+            case 'centerView':
+                this.space.emit('ui:request:centerView');
+                this.showNotification('View centered', 'info');
+                break;
+            case 'resetView':
+                this.space.emit('ui:request:resetView');
+                this.showNotification('View reset', 'info');
+                break;
+            case 'toggleTheme': {
+                document.body.classList.toggle('theme-light');
+                const currentTheme = document.body.classList.contains('theme-light') ? 'light' : 'dark';
+                localStorage.setItem('spacegraph-theme', currentTheme);
+                this.space.emit('theme:changed', { theme: currentTheme });
+                this.showNotification(`Theme changed to ${currentTheme}`, 'info');
+                break;
+            }
+            default:
+                console.warn('AdvancedHudManager: Unknown toolbar action:', action);
+        }
+    }
+
+    _toggleViewMode() {
+        // Placeholder - actual logic to toggle between 2D/3D would go here
+        // For now, just a notification. This might involve camera changes or rendering modes.
+        const currentMode3D = !this.space.is2DMode; // Assuming a property like is2DMode exists or can be added
+        this.space.emit('ui:request:setViewMode', currentMode3D ? '2d' : '3d');
+        // The _setViewMode method already shows a notification.
+    }
+
+    _updateMenuStatusItems() {
+        if (!this.menuStatusLayout) return; // Check if menu items are created
+
+        const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
+        const layoutPlugin = this.space.plugins.getPlugin('LayoutPlugin');
+
+        // Layout Status
+        const layoutManager = layoutPlugin?.layoutManager;
+        const currentLayout = layoutManager?.getCurrentLayout();
+        this.menuStatusLayout.innerHTML = `<span class="hud-menu-icon"></span><span class="hud-menu-label">Layout: ${currentLayout?.name || 'N/A'}</span>`;
+
+        // Camera Status
+        if (cameraPlugin) {
+            const mode = cameraPlugin.getCameraMode();
+            this.menuStatusCamera.innerHTML = `<span class="hud-menu-icon"></span><span class="hud-menu-label">Camera: ${mode}</span>`;
+
+            const cam = cameraPlugin.getCameraInstance();
+            if (cam) {
+                const zoom = cam.zoom?.toFixed(1) || (cam.position.length() / 1000).toFixed(1); // Approximation
+                this.menuStatusZoom.innerHTML = `<span class="hud-menu-icon"></span><span class="hud-menu-label">Zoom: ${zoom}</span>`;
+
+                const target = cameraPlugin.controls?.target || cam.position; // Simplified
+                this.menuStatusCoords.innerHTML = `<span class="hud-menu-icon"></span><span class="hud-menu-label">Coords: ${target.x.toFixed(0)}, ${target.y.toFixed(0)}, ${target.z.toFixed(0)}</span>`;
+            }
+        }
+        
+        // Time
+        this.menuStatusTime.innerHTML = `<span class="hud-menu-icon"></span><span class="hud-menu-label">Time: ${new Date().toLocaleTimeString()}</span>`;
+    }
+
+    _startPerformanceMonitoring() {
+        let frameCount = 0;
+        let lastTime = performance.now();
+
+        const updatePerformance = () => {
+            frameCount++;
+            const currentTime = performance.now();
+
+            if (currentTime - lastTime >= 1000) {
+                this.performanceMetrics.fps = frameCount;
+                this.performanceMetrics.frameTime = (currentTime - lastTime) / frameCount;
+
+                const nodePlugin = this.space.plugins.getPlugin('NodePlugin');
+                const edgePlugin = this.space.plugins.getPlugin('EdgePlugin');
+
+                this.performanceMetrics.nodeCount = nodePlugin?.getNodes()?.size || 0;
+                this.performanceMetrics.edgeCount = edgePlugin?.getEdges()?.size || 0;
+
+                this._updatePerformanceDisplay();
+                this._updateMenuStatusItems(); // Update status submenu periodically
+
+                frameCount = 0;
+                lastTime = currentTime;
+            }
+
+            requestAnimationFrame(updatePerformance);
+        };
+
+        updatePerformance();
+    }
+
+    _subscribeToAdvancedEvents() {
+        super._subscribeToAdvancedEvents?.(); // Call base class if it has this method
+
+        // Camera events (covered by _updateMenuStatusItems called in _startPerformanceMonitoring)
+        // Layout events (covered by _updateMenuStatusItems)
+        // Selection events
+        this.space.on('selection:changed', () => this.updateHudSelectionInfo()); // This updates the new menu selection info
+
+        // Graph events (covered by performance monitoring updates for node/edge counts)
+    }
+     _togglePopupMenu = (event) => {
+        super._togglePopupMenu(event); // Call base class method
+        this.space.emit('hud:popupMenuToggled', this.isPopupMenuVisible);
+    };
+
+
+    // Override parent methods to include advanced features
+    updateHudSelectionInfo() {
+        // Update the new menu selection info element
+        if (!this.menuSelectionInfo) return;
+
+        const selectedNodes = this._uiPluginCallbacks.getSelectedNodes();
+        const selectedEdges = this._uiPluginCallbacks.getSelectedEdges();
+
+        let text = 'Selected: None';
+        if (selectedNodes.size === 1) {
+            const node = selectedNodes.values().next().value;
+            text = `Selected: Node ${node.data.label || node.id.substring(0, 8)}`;
+        } else if (selectedNodes.size > 1) {
+            text = `Selected: ${selectedNodes.size} Nodes`;
+        } else if (selectedEdges.size === 1) {
+            const edge = selectedEdges.values().next().value;
+            text = `Selected: Edge ${edge.id.substring(0, 8)}`;
+        } else if (selectedEdges.size > 1) {
+            text = `Selected: ${selectedEdges.size} Edges`;
+        }
+        this.menuSelectionInfo.textContent = text;
+
+        // Also call the original status bar update if it's still relevant or for other parts of it
+        // However, the plan is to remove the old status bar's selection info part.
+        // So, this primarily updates the new menu item.
+        // If the old #adv-selection-info element from the status bar still exists and is used,
+        // it would be updated by the original super.updateHudSelectionInfo() if called.
+        // For now, we assume the new menu item is the primary display.
+    }
+
+    _createPerformancePanelContent() {
+        const content = document.createElement('div');
+        // No id or hud-panel class here, it's managed by HudOverlayPanel
+        content.innerHTML = `
+            <div class="performance-metric">
+                <span class="metric-label">FPS:</span>
+                <span class="metric-value" id="fps-value">60</span>
                 </div>
                 <div class="performance-metric">
                     <span class="metric-label">Frame Time:</span>
@@ -150,12 +487,9 @@ export class AdvancedHudManager extends HudManager {
                     <span class="metric-label">Memory:</span>
                     <span class="metric-value" id="memory-usage">0MB</span>
                 </div>
-            </div>
         `;
-        
-        this.hudLayer.appendChild(panel);
-        this._bindPanelToggle(panel);
-        return panel;
+        // Binding toggle is now part of HudOverlayPanel (close button)
+        return content;
     }
 
     _createStatusBar() {
@@ -279,19 +613,13 @@ export class AdvancedHudManager extends HudManager {
         return controls;
     }
 
-    _createQuickActionsPanel() {
-        const panel = document.createElement('div');
-        panel.id = 'hud-quick-actions';
-        panel.className = 'hud-panel'; // Removed hud-bottom-left
-        panel.innerHTML = `
-            <div class="hud-panel-header">
-                <span class="hud-panel-title">Quick Actions</span>
-                <button class="hud-panel-toggle" title="Toggle Quick Actions">⚡</button>
-            </div>
-            <div class="hud-panel-content">
-                <div class="action-group">
-                    <button class="action-button" id="action-add-node" title="Add Node">➕ Node</button>
-                    <button class="action-button" id="action-add-edge" title="Add Edge">🔗 Edge</button>
+    _createQuickActionsPanelContent() {
+        const content = document.createElement('div');
+        // No id or hud-panel class here
+        content.innerHTML = `
+            <div class="action-group">
+                <button class="action-button" id="action-add-node" title="Add Node">➕ Node</button>
+                <button class="action-button" id="action-add-edge" title="Add Edge">🔗 Edge</button>
                 </div>
                 <div class="action-group">
                     <button class="action-button" id="action-select-all" title="Select All">◉ All</button>
@@ -301,27 +629,24 @@ export class AdvancedHudManager extends HudManager {
                     <button class="action-button" id="action-auto-layout" title="Auto Layout">🎯 Auto</button>
                     <button class="action-button" id="action-export" title="Export Graph">💾 Export</button>
                 </div>
-            </div>
         `;
-        
-        this.hudLayer.appendChild(panel);
-        this._bindPanelToggle(panel);
-        this._bindQuickActions(panel);
-        return panel;
+        // _bindQuickActions is called on this content after it's added to an overlay
+        // _bindPanelToggle is handled by HudOverlayPanel
+        return content;
     }
 
-    _bindPanelToggle(panel) {
-        const toggle = panel.querySelector('.hud-panel-toggle');
-        const content = panel.querySelector('.hud-panel-content');
-        
-        if (toggle && content) {
-            toggle.addEventListener('click', () => {
-                const isVisible = !content.classList.contains('collapsed');
-                content.classList.toggle('collapsed', isVisible);
-                toggle.classList.toggle('collapsed', isVisible);
-            });
-        }
-    }
+    // _bindPanelToggle(panel) { // This logic is now within HudOverlayPanel
+    //     const toggle = panel.querySelector('.hud-panel-toggle');
+    //     const content = panel.querySelector('.hud-panel-content');
+
+    //     if (toggle && content) {
+    //         toggle.addEventListener('click', () => {
+    //             const isVisible = !content.classList.contains('collapsed');
+    //             content.classList.toggle('collapsed', isVisible);
+    //             toggle.classList.toggle('collapsed', isVisible);
+    //         });
+    //     }
+    // }
 
     _bindNavigationControls(controls) {
         const cameraPlugin = this.space.plugins.getPlugin('CameraPlugin');
