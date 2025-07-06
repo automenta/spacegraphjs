@@ -410,11 +410,20 @@ export class AdvancedHudManager extends HudManager {
 
     applyHudSettings(settings) {
         const oldSettings = { ...this.settings };
-        super.applyHudSettings(settings); // Apply base settings and then specific ones
+        // super.applyHudSettings(settings); // Apply base settings and then specific ones - THIS LINE IS REMOVED
+
+        // Merge incoming settings with current settings
+        this.settings = { ...this.settings, ...settings };
 
         if (this.menuBar) {
              this.menuBar.container.style.display = this.settings.showMenuBar ? 'flex' : 'none';
+        } else if (this.settings.showMenuBar && !this.menuBar) {
+            // This case might indicate that settings changed to show the menu bar after initial setup
+            // where it was false. Consider if _setupMenuBar() needs to be callable here.
+            // For now, we assume _setupMenuBar is primarily for constructor-time setup.
+            // console.warn("AdvancedHudManager: settings.showMenuBar is true, but this.menuBar is not initialized.");
         }
+
         if (this.performancePanel) {
             this.performancePanel.style.display = this.settings.showPerformanceMetrics ? 'block' : 'none';
         }
@@ -424,7 +433,31 @@ export class AdvancedHudManager extends HudManager {
         if (this.statusBar) {
             this.statusBar.style.display = this.settings.showStatusBar ? 'flex' : 'none';
         }
-        // ... other elements based on settings ...
+
+        // Opacity for the entire HUD layer
+        if (this.hudLayer && typeof this.settings.hudOpacity === 'number') {
+            this.hudLayer.style.opacity = this.settings.hudOpacity;
+        }
+
+        // Crosshair logic
+        if (this.crosshairElement) { // Assuming a `this.crosshairElement` might exist or be created elsewhere
+            this.crosshairElement.style.display = this.settings.showCrosshair ? 'block' : 'none';
+        }
+
+        // Update menu item states to reflect current settings
+        if (this.menuBar) {
+            if (settings.showPerformanceMetrics !== undefined) {
+                this.menuBar.updateMenuItemState('togglePerformance', this.settings.showPerformanceMetrics);
+            }
+            if (settings.showMinimap !== undefined) {
+                this.menuBar.updateMenuItemState('toggleMinimap', this.settings.showMinimap);
+            }
+            if (settings.showStatusBar !== undefined) {
+                this.menuBar.updateMenuItemState('toggleStatusBar', this.settings.showStatusBar);
+            }
+            // Add similar updates for other toggleable menu items if they exist
+            // e.g., toggleGrid, toggleAxes, if their state is stored in this.settings
+        }
     }
 
     dispose() {
