@@ -2,6 +2,61 @@ import * as S from '../../index.js';
 // three.js is implicitly available via S.THREE, but direct import can be clearer if used extensively.
 // import * // As THREE from 'three';
 
+// Helper function to setup demo-specific menu items
+function setupDemoMenu(space) {
+    const uiPlugin = space.plugins.getPlugin('UIPlugin');
+    if (uiPlugin && uiPlugin.uiManager && uiPlugin.uiManager.hudManager && uiPlugin.uiManager.hudManager.menuBar) {
+        const menuBar = uiPlugin.uiManager.hudManager.menuBar;
+        const demoMenu = menuBar.addMenu('demoMenu', 'Demo');
+
+        if (demoMenu) {
+            const actionsSection = demoMenu.addSection('demoActions', 'Demo Actions');
+            actionsSection.addMenuItem('addRandomNode', 'Add Random Node', () => {
+                const pos = { x: (Math.random() - 0.5) * 500, y: (Math.random() - 0.5) * 500, z: (Math.random() - 0.5) * 100 };
+                const types = ['html', 'shape', 'image', 'video'];
+                const type = types[Math.floor(Math.random() * types.length)];
+                let data = { label: `Rnd ${type}` };
+                if (type === 'html') data.content = 'Random HTML Node';
+                if (type === 'shape') { data.shape = 'box'; data.color = Math.random() * 0xffffff; }
+                if (type === 'image') data.imageUrl = 'https://placehold.co/100x50.png?text=Rnd';
+                if (type === 'video') data.videoUrl = 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4';
+
+                space.createNode({ type, position: pos, data });
+                uiPlugin.uiManager.hudManager.showNotification('Added Random Node', 'success');
+            });
+
+            actionsSection.addMenuItem('toggleLayout', 'Toggle Layout (Kick)', () => {
+                 const layoutPlugin = space.plugins.getPlugin('LayoutPlugin');
+                 if(layoutPlugin && layoutPlugin.layoutManager) {
+                    layoutPlugin.layoutManager.kick(); // Example: kick layout
+                    uiPlugin.uiManager.hudManager.showNotification('Layout Kicked', 'info');
+                 }
+            });
+
+            const infoSection = demoMenu.addSection('demoInfo', 'Demo Info', false); // Not pinnable
+            const nodeCountElement = document.createElement('div');
+            nodeCountElement.className = 'menu-item-like-text'; // Style like a menu item but not interactive
+            infoSection.addElement(nodeCountElement);
+
+            // Update node count dynamically
+            const updateNodeCount = () => {
+                const nodePlugin = space.plugins.getPlugin('NodePlugin');
+                const count = nodePlugin ? nodePlugin.getNodeCount() : 0;
+                nodeCountElement.textContent = `Node Count: ${count}`;
+            };
+            space.on('node:added', updateNodeCount);
+            space.on('node:removed', updateNodeCount);
+            updateNodeCount(); // Initial count
+
+        } else {
+            console.warn("Demo Menu could not be added. MenuBar not available as expected.");
+        }
+    } else {
+        console.warn("AdvancedHudManager or MenuBar not found, skipping demo menu setup.");
+    }
+}
+
+
 const demoMetadata = {
     id: 'all-features',
     title: 'Full Demo',
@@ -352,4 +407,4 @@ function createGraph(space) {
     }
 }
 
-export { createGraph, demoMetadata };
+export { createGraph, demoMetadata, setupDemoMenu };

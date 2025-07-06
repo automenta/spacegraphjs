@@ -235,7 +235,9 @@ export class FractalZoomManager {
         const nodes = nodePlugin?.getNodes();
         if (nodes) {
             nodes.forEach(node => {
-                this._updateNodeLOD(node, lodConfig);
+                if (node && node.position) {
+                    this._updateNodeLOD(node, lodConfig);
+                }
             });
         }
         
@@ -243,7 +245,9 @@ export class FractalZoomManager {
         const edges = edgePlugin?.getEdges();
         if (edges) {
             edges.forEach(edge => {
-                this._updateEdgeLOD(edge, lodConfig);
+                if (edge && edge.source && edge.source.position && edge.target && edge.target.position) {
+                    this._updateEdgeLOD(edge, lodConfig);
+                }
             });
         }
         
