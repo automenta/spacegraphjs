@@ -53,6 +53,18 @@ export class MenuBar {
         // Update status elements if needed
     }
 
+    updateMenuItemState(itemId, checked) {
+        for (const menu of this.menus.values()) {
+            const item = menu.findItemRecursive(itemId); // Helper to be added to Menu.js
+            if (item && typeof item.setChecked === 'function') {
+                item.setChecked(checked);
+                return true; // Item found and updated
+            }
+        }
+        // console.warn(`MenuBar: MenuItem with id '${itemId}' not found.`);
+        return false; // Item not found
+    }
+
     dispose() {
         this.menus.forEach(menu => menu.dispose());
         this.menus.clear();

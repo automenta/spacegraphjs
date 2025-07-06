@@ -413,15 +413,20 @@ export class AdvancedHudManager extends HudManager {
         // super.applyHudSettings(settings); // Apply base settings and then specific ones - THIS LINE IS REMOVED
 
         // Merge incoming settings with current settings
+        const oldShowMenuBar = this.settings.showMenuBar;
         this.settings = { ...this.settings, ...settings };
+
+        // If menuBar visibility changed from false to true, ensure it's initialized
+        if (!oldShowMenuBar && this.settings.showMenuBar && !this.menuBar) {
+            this._setupMenuBar();
+            this._populateDefaultMenus(); // Populate menus if they weren't before
+        }
 
         if (this.menuBar) {
              this.menuBar.container.style.display = this.settings.showMenuBar ? 'flex' : 'none';
         } else if (this.settings.showMenuBar && !this.menuBar) {
-            // This case might indicate that settings changed to show the menu bar after initial setup
-            // where it was false. Consider if _setupMenuBar() needs to be callable here.
-            // For now, we assume _setupMenuBar is primarily for constructor-time setup.
-            // console.warn("AdvancedHudManager: settings.showMenuBar is true, but this.menuBar is not initialized.");
+            // This should ideally be caught by the block above, but as a fallback:
+            console.warn("AdvancedHudManager: settings.showMenuBar is true, but this.menuBar is still not initialized after attempting setup.");
         }
 
         if (this.performancePanel) {
