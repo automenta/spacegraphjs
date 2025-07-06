@@ -467,7 +467,7 @@ export class AdvancedHudManager extends HudManager {
         this.space.on('layout:adapted', (event) => this._updateLayoutStatus(event));
         
         // Selection events
-        this.space.on('selection:changed', () => this._updateSelectionStatus());
+        this.space.on('selection:changed', () => this.updateHudSelectionInfo());
         
         // Graph events
         this.space.on('node:added', () => this._updateGraphStatus());
