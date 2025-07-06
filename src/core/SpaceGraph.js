@@ -13,10 +13,21 @@ import {FractalZoomPlugin} from '../plugins/FractalZoomPlugin.js';
 import {PerformancePlugin} from '../plugins/PerformancePlugin.js';
 
 export class SpaceGraph {
-    _cam = null;
     _listeners = new Map();
     plugins = null;
     options = {};
+
+    // Properties for camera mouse controls
+    _isDragging = false;
+    _lastMouseX = 0;
+    _lastMouseY = 0;
+
+    // Bound event handlers for camera mouse controls
+    _boundHandleContextMenuEvent = null;
+    _boundHandleMouseDownEvent = null;
+    _boundHandleMouseMoveEvent = null;
+    _boundHandleMouseUpOrLeaveEvent = null;
+    _boundHandleWheelEvent = null;
 
     constructor(containerElement, options = {}) {
         if (!containerElement) throw new Error('SpaceGraph requires a valid HTML container element.');
@@ -50,12 +61,20 @@ export class SpaceGraph {
         this._layoutPlugin = this.plugins.getPlugin('LayoutPlugin');
         this._uiPlugin = this.plugins.getPlugin('UIPlugin');
         this._renderingPlugin = this.plugins.getPlugin('RenderingPlugin');
+        this._dataPlugin = this.plugins.getPlugin('DataPlugin'); // Cache DataPlugin
 
         this._cameraPlugin?.centerView(null, 0);
         this._cameraPlugin?.setInitialState();
 
-        this._setupEventListeners();
-        this._setupCameraMouseControls(); // Add this line
+        // Initialize bound event handlers
+        this._boundHandleContextMenuEvent = this._handleContextMenuEvent.bind(this);
+        this._boundHandleMouseDownEvent = this._handleMouseDownEvent.bind(this);
+        this._boundHandleMouseMoveEvent = this._handleMouseMoveEvent.bind(this);
+        this._boundHandleMouseUpOrLeaveEvent = this._handleMouseUpOrLeaveEvent.bind(this);
+        this._boundHandleWheelEvent = this._handleWheelEvent.bind(this);
+
+        this._setupAllEventListeners();
+        this._setupCameraMouseControls();
     }
 
     on(eventName, callback) {
@@ -75,124 +94,140 @@ export class SpaceGraph {
         });
     }
 
-    _setupEventListeners() {
+    /** Sets up all event listeners by delegating to more specific methods. */
+    _setupAllEventListeners() {
         this._setupNodeEventListeners();
         this._setupEdgeEventListeners();
         this._setupUIEventListeners();
         this._setupCameraEventListeners();
-        this._setupOtherEventListeners();
+        // this._setupOtherEventListeners(); // Retained if other event types are added later
     }
 
+    /** Sets up event listeners related to node operations. */
     _setupNodeEventListeners() {
-        this.on('ui:request:addNode', (nodeInstance) => {
-            this._nodePlugin?.addNode(nodeInstance);
-        });
-
-        this.on('ui:request:createNode', (nodeConfig) => {
-            this._nodePlugin?.createAndAddNode(nodeConfig);
-        });
-
-        this.on('node:added', (addedNodeId, addedNodeInstance) => {
-            if (addedNodeInstance) {
-                setTimeout(() => {
-                    this.focusOnNode(addedNodeInstance, 0.6, true);
-                    this._uiPlugin?.setSelectedNode(addedNodeInstance);
-                    if (addedNodeInstance instanceof HtmlNode && addedNodeInstance.data.editable) {
-                        addedNodeInstance.htmlElement?.querySelector('.node-content')?.focus();
-                    }
-                }, 100);
-            }
-        });
-
-        this.on('ui:request:removeNode', (nodeId) => {
-            this._nodePlugin?.removeNode(nodeId);
-        });
-
-        this.on('ui:request:adjustContentScale', (node, factor) => {
-            if (node instanceof HtmlNode) node.adjustContentScale(factor);
-        });
-
-        this.on('ui:request:adjustNodeSize', (node, factor) => {
-            if (node instanceof HtmlNode) node.adjustNodeSize(factor);
-        });
+        this.on('ui:request:addNode', (nodeInstance) => this._nodePlugin?.addNode(nodeInstance));
+        this.on('ui:request:createNode', (nodeConfig) => this._nodePlugin?.createAndAddNode(nodeConfig));
+        this.on('node:added', this._handleNodeAdded.bind(this));
+        this.on('ui:request:removeNode', (nodeId) => this._nodePlugin?.removeNode(nodeId));
+        this.on('ui:request:adjustContentScale', this._handleAdjustContentScale.bind(this));
+        this.on('ui:request:adjustNodeSize', this._handleAdjustNodeSize.bind(this));
     }
 
+    /** Handles actions to take after a node has been added. */
+    _handleNodeAdded(addedNodeId, addedNodeInstance) {
+        if (!addedNodeInstance) return;
+        // Delay focusing and selecting to allow the graph to settle.
+        setTimeout(() => {
+            this.focusOnNode(addedNodeInstance, 0.6, true);
+            this._uiPlugin?.setSelectedNode(addedNodeInstance);
+            if (addedNodeInstance instanceof HtmlNode && addedNodeInstance.data.editable) {
+                addedNodeInstance.htmlElement?.querySelector('.node-content')?.focus();
+            }
+        }, 100);
+    }
+
+    /** Handles requests to adjust content scale for HTML nodes. */
+    _handleAdjustContentScale(node, factor) {
+        if (node instanceof HtmlNode) {
+            node.adjustContentScale(factor);
+        }
+    }
+
+    /** Handles requests to adjust node size for HTML nodes. */
+    _handleAdjustNodeSize(node, factor) {
+        if (node instanceof HtmlNode) {
+            node.adjustNodeSize(factor);
+        }
+    }
+
+    /** Sets up event listeners related to edge operations. */
     _setupEdgeEventListeners() {
-        this.on('ui:request:addEdge', (sourceNode, targetNode, data) => {
-            this._edgePlugin?.addEdge(sourceNode, targetNode, data);
-        });
+        this.on('ui:request:addEdge', (sourceNode, targetNode, data) => this._edgePlugin?.addEdge(sourceNode, targetNode, data));
+        // 'edge:added' listener can be used for logging or other side effects if needed.
+        this.on('edge:added', () => { /* console.log('Edge added event received'); */ });
+        this.on('ui:request:removeEdge', (edgeId) => this._edgePlugin?.removeEdge(edgeId));
+        this.on('ui:request:reverseEdge', this._handleReverseEdge.bind(this));
+        this.on('ui:request:updateEdge', this._handleUpdateEdge.bind(this));
+    }
 
-        this.on('edge:added', () => {});
+    /** Handles requests to reverse an edge. */
+    _handleReverseEdge(edgeId) {
+        const edge = this._edgePlugin?.getEdgeById(edgeId);
+        if (!edge) return;
 
-        this.on('ui:request:removeEdge', (edgeId) => {
-            this._edgePlugin?.removeEdge(edgeId);
-        });
+        [edge.source, edge.target] = [edge.target, edge.source];
+        edge.update();
+        this._layoutPlugin?.kick();
+    }
 
-        this.on('ui:request:reverseEdge', (edgeId) => {
-            const edge = this._edgePlugin?.getEdgeById(edgeId);
-            if (edge) {
-                [edge.source, edge.target] = [edge.target, edge.source];
-                edge.update();
+    /** Handles requests to update specific properties of an edge. */
+    _handleUpdateEdge(edgeId, property, value) {
+        const edge = this._edgePlugin?.getEdgeById(edgeId);
+        if (!edge) return;
+
+        switch (property) {
+            case 'color':
+                edge.data.color = value;
+                edge.setHighlight(this._uiPlugin?.getSelectedEdges().has(edge));
+                break;
+            case 'thickness':
+                edge.data.thickness = value;
+                if (edge.line?.material) edge.line.material.linewidth = edge.data.thickness;
+                break;
+            case 'constraintType':
+                this._updateEdgeConstraint(edge, value);
                 this._layoutPlugin?.kick();
-            }
-        });
-
-        this.on('ui:request:updateEdge', (edgeId, property, value) => {
-            const edge = this._edgePlugin?.getEdgeById(edgeId);
-            if (!edge) return;
-            switch (property) {
-                case 'color':
-                    edge.data.color = value;
-                    edge.setHighlight(this._uiPlugin?.getSelectedEdges().has(edge));
-                    break;
-                case 'thickness':
-                    edge.data.thickness = value;
-                    if (edge.line?.material) edge.line.material.linewidth = edge.data.thickness;
-                    break;
-                case 'constraintType':
-                    edge.data.constraintType = value;
-                    if (value === 'rigid' && !edge.data.constraintParams?.distance) {
-                        edge.data.constraintParams = {
-                            distance: edge.source.position.distanceTo(edge.target.position),
-                            stiffness: 0.1,
-                        };
-                    } else if (value === 'weld' && !edge.data.constraintParams?.distance) {
-                        edge.data.constraintParams = {
-                            distance: edge.source.getBoundingSphereRadius() + edge.target.getBoundingSphereRadius(),
-                            stiffness: 0.5,
-                        };
-                    } else if (value === 'elastic' && !edge.data.constraintParams?.stiffness) {
-                        edge.data.constraintParams = { stiffness: 0.001, idealLength: 200 };
-                    }
-                    this._layoutPlugin?.kick();
-                    break;
-            }
-        });
+                break;
+            default:
+                // console.warn(`SpaceGraph: Unknown property "${property}" for edge update.`);
+                break;
+        }
     }
 
+    /** Updates the constraint parameters for an edge based on its type. */
+    _updateEdgeConstraint(edge, constraintType) {
+        edge.data.constraintType = constraintType;
+        const params = edge.data.constraintParams || {};
+
+        switch (constraintType) {
+            case 'rigid':
+                if (!params.distance) {
+                    params.distance = edge.source.position.distanceTo(edge.target.position);
+                }
+                params.stiffness = params.stiffness ?? 0.1;
+                break;
+            case 'weld':
+                if (!params.distance) {
+                    params.distance = edge.source.getBoundingSphereRadius() + edge.target.getBoundingSphereRadius();
+                }
+                params.stiffness = params.stiffness ?? 0.5;
+                break;
+            case 'elastic':
+                params.stiffness = params.stiffness ?? 0.001;
+                params.idealLength = params.idealLength ?? 200;
+                break;
+        }
+        edge.data.constraintParams = params;
+    }
+
+
+    /** Sets up event listeners related to UI elements like background. */
     _setupUIEventListeners() {
-        this.on('ui:request:toggleBackground', (color, alpha) => {
-            this._renderingPlugin?.setBackground(color, alpha);
-        });
+        this.on('ui:request:toggleBackground', (color, alpha) => this._renderingPlugin?.setBackground(color, alpha));
     }
 
+    /** Sets up event listeners related to camera controls and view manipulation. */
     _setupCameraEventListeners() {
         this.on('ui:request:autoZoomNode', (node) => this.autoZoom(node));
         this.on('ui:request:centerView', () => this.centerView());
-        this.on('ui:request:resetView', () => {
-            this._cameraPlugin?.resetView();
-        });
-        this.on('ui:request:zoomCamera', (deltaY) => {
-            this._cameraPlugin?.zoom(deltaY);
-        });
-        this.on('ui:request:focusOnNode', (node, duration, pushHistory) =>
-            this.focusOnNode(node, duration, pushHistory)
-        );
+        this.on('ui:request:resetView', () => this._cameraPlugin?.resetView());
+        this.on('ui:request:zoomCamera', (deltaY) => this._cameraPlugin?.zoom(deltaY));
+        this.on('ui:request:focusOnNode', (node, duration, pushHistory) => this.focusOnNode(node, duration, pushHistory));
     }
 
-    _setupOtherEventListeners() {
-        // Placeholder for any other event listeners that don't fit specific categories
-    }
+    // _setupOtherEventListeners() {
+    //     // Placeholder for any other event listeners that don't fit specific categories
+    // }
 
     addNode(nodeInstance) {
         const addedNode = this._nodePlugin?.addNode(nodeInstance);
@@ -342,16 +377,16 @@ export class SpaceGraph {
         // Check non-instanced edges
         closestIntersect = this._intersectNonInstancedEdges(raycaster, closestIntersect);
 
-        return closestIntersect?.type === 'node'
+        if (!closestIntersect) return null;
+
+        return closestIntersect.type === 'node'
             ? { node: closestIntersect.node, distance: closestIntersect.distance }
-            : closestIntersect?.type === 'edge'
-            ? { edge: closestIntersect.edge, distance: closestIntersect.distance }
-            : null;
+            : { edge: closestIntersect.edge, distance: closestIntersect.distance };
     }
 
     animate() {
         const frame = () => {
-            this.plugins.updatePlugins(); // No change needed here as it iterates over all plugins
+            this.plugins.updatePlugins();
             requestAnimationFrame(frame);
         };
         frame();
@@ -362,16 +397,19 @@ export class SpaceGraph {
     }
 
     dispose() {
-        this.plugins.disposePlugins(); // No change needed here
+        this.plugins.disposePlugins();
         this._listeners.clear();
+        // Consider removing event listeners from this.container if they were added directly
+        // For example, if _setupCameraMouseControls adds listeners, they should be removed here.
+        this._removeCameraMouseControls(); // Call a new method to remove listeners
     }
 
     exportGraphToJSON(options) {
-        return this.plugins.getPlugin('DataPlugin')?.exportGraphToJSON(options) || null; // DataPlugin not cached yet
+        return this._dataPlugin?.exportGraphToJSON(options) || null;
     }
 
     async importGraphFromJSON(jsonData, options) {
-        return (await this.plugins.getPlugin('DataPlugin')?.importGraphFromJSON(jsonData, options)) || false; // DataPlugin not cached yet
+        return (await this._dataPlugin?.importGraphFromJSON(jsonData, options)) || false;
     }
 
     _setupCameraMouseControls() {
@@ -379,83 +417,101 @@ export class SpaceGraph {
 
         const cameraControls = this._cameraPlugin.getControls(); // This is the instance of Camera.js
 
-        let lastMouseX = 0;
-        let lastMouseY = 0;
-        let isDragging = false; // General dragging state for any button
+        // Prevent default context menu - this one is simple enough to keep inline or bind if it grew
+        // For consistency with the pattern for others, and if it might grow, binding is safer.
+        // However, the original code had it as an inline arrow function directly accessing cameraControls.
+        // Let's ensure all event listeners are handled via the bound properties.
+        // The original contextmenu handler was:
+        // this.container.addEventListener('contextmenu', (event) => {
+        //     if (cameraControls.cameraMode === 'drag_orbit' && cameraControls.isOrbitDragging) {
+        //         event.preventDefault();
+        //     }
+        // });
+        // This will be replaced by using this._boundHandleContextMenuEvent
 
-        // Prevent default context menu
-        this.container.addEventListener('contextmenu', (event) => {
-            if (cameraControls.cameraMode === 'drag_orbit' && cameraControls.isOrbitDragging) {
+        this.container.addEventListener('contextmenu', this._boundHandleContextMenuEvent);
+        this.container.addEventListener('mousedown', this._boundHandleMouseDownEvent);
+        this.container.addEventListener('mousemove', this._boundHandleMouseMoveEvent);
+        this.container.addEventListener('mouseup', this._boundHandleMouseUpOrLeaveEvent);
+        this.container.addEventListener('mouseleave', this._boundHandleMouseUpOrLeaveEvent); // Correct: mouseup and mouseleave can share handler logic
+        this.container.addEventListener('wheel', this._boundHandleWheelEvent, { passive: false });
+    }
+
+    /** Handles the contextmenu event on the container. */
+    _handleContextMenuEvent(event) {
+        const cameraControls = this._cameraPlugin?.getControls();
+        if (cameraControls?.cameraMode === 'drag_orbit' && cameraControls?.isOrbitDragging) {
+            event.preventDefault();
+        }
+    }
+
+    _handleMouseDownEvent(event) {
+        const cameraControls = this._cameraPlugin?.getControls();
+        if (!cameraControls) return;
+
+        this._isDragging = true;
+        this._lastMouseX = event.clientX;
+        this._lastMouseY = event.clientY;
+
+        if (cameraControls.cameraMode === 'drag_orbit') {
+            if (event.button === 0) { // Left mouse button
+                cameraControls.startPan(event.clientX, event.clientY);
+            } else if (event.button === 1 || event.button === 2) { // Middle or Right mouse button
                 event.preventDefault();
+                cameraControls.startOrbitDrag(event.clientX, event.clientY);
             }
-            // Allow context menu in other modes or if not orbit dragging
-        });
-
-        this.container.addEventListener('mousedown', (event) => {
-            if (!cameraControls) return;
-            isDragging = true;
-            lastMouseX = event.clientX;
-            lastMouseY = event.clientY;
-
-            if (cameraControls.cameraMode === 'drag_orbit') {
-                if (event.button === 0) { // Left mouse button
-                    cameraControls.startPan(event.clientX, event.clientY);
-                } else if (event.button === 1 || event.button === 2) { // Middle or Right mouse button
-                    event.preventDefault(); // Prevent default middle-click (scroll) or right-click (context menu)
-                    cameraControls.startOrbitDrag(event.clientX, event.clientY);
-                }
-            } else if (cameraControls.cameraMode === 'orbit' || cameraControls.cameraMode === 'top_down') {
-                 if (event.button === 0) { // Left mouse button for orbit/top_down pan
-                    cameraControls.startPan(event.clientX, event.clientY);
-                }
+        } else if (cameraControls.cameraMode === 'orbit' || cameraControls.cameraMode === 'top_down') {
+            if (event.button === 0) { // Left mouse button for orbit/top_down pan
+                cameraControls.startPan(event.clientX, event.clientY);
             }
-            // Other modes might have their own specific handling (e.g., Free, First Person via PointerLock)
-        });
+        }
+    }
 
-        this.container.addEventListener('mousemove', (event) => {
-            if (!isDragging || !cameraControls) return;
+    _handleMouseMoveEvent(event) {
+        if (!this._isDragging) return;
+        const cameraControls = this._cameraPlugin?.getControls();
+        if (!cameraControls) return;
 
-            const deltaX = event.clientX - lastMouseX;
-            const deltaY = event.clientY - lastMouseY;
-            lastMouseX = event.clientX;
-            lastMouseY = event.clientY;
+        const deltaX = event.clientX - this._lastMouseX;
+        const deltaY = event.clientY - this._lastMouseY;
+        this._lastMouseX = event.clientX;
+        this._lastMouseY = event.clientY;
 
-            if (cameraControls.isPanning) {
-                cameraControls.pan(deltaX, deltaY);
-            } else if (cameraControls.isOrbitDragging) {
-                cameraControls.orbitDrag(deltaX, deltaY);
-            }
-        });
+        if (cameraControls.isPanning) {
+            cameraControls.pan(deltaX, deltaY);
+        } else if (cameraControls.isOrbitDragging) {
+            cameraControls.orbitDrag(deltaX, deltaY);
+        }
+    }
 
-        const handleMouseUp = () => {
-            if (!isDragging || !cameraControls) return;
+    _handleMouseUpOrLeaveEvent() {
+        if (!this._isDragging) return;
+        const cameraControls = this._cameraPlugin?.getControls();
+        if (!cameraControls) return;
 
-            if (cameraControls.isPanning) {
-                cameraControls.endPan();
-            }
-            if (cameraControls.isOrbitDragging) {
-                cameraControls.endOrbitDrag();
-            }
-            isDragging = false;
-        };
+        if (cameraControls.isPanning) {
+            cameraControls.endPan();
+        }
+        if (cameraControls.isOrbitDragging) {
+            cameraControls.endOrbitDrag();
+        }
+        this._isDragging = false;
+    }
 
-        this.container.addEventListener('mouseup', handleMouseUp);
-        this.container.addEventListener('mouseleave', () => { // Handle case where mouse leaves container while dragging
-            if (isDragging) {
-                handleMouseUp();
-            }
-        });
+    _handleWheelEvent(event) {
+        const cameraControls = this._cameraPlugin?.getControls();
+        if (!cameraControls) return;
+        this.emit('ui:request:zoomCamera', event.deltaY);
+        event.preventDefault();
+    }
 
-        // Wheel events for zoom (already handled by UIPlugin via 'ui:request:zoomCamera', but good to be aware)
-        // Consider if wheel events should also be centralized here if not for the existing event.
-        this.container.addEventListener('wheel', (event) => {
-            if (!cameraControls) return;
-            // Let Camera.js handle zoom logic, including min/max zoom distance
-            // Positive deltaY means scrolling down (zoom out), negative means scrolling up (zoom in)
-            // The existing zoom implementation in Camera.js seems to handle the direction correctly.
-            // cameraControls.zoom(event.deltaY); // This would bypass the UIPlugin event
-            this.emit('ui:request:zoomCamera', event.deltaY); // Continue using the existing event
-            event.preventDefault(); // Prevent page scroll
-        }, { passive: false }); // Allow preventDefault
+    _removeCameraMouseControls() {
+        if (!this.container) return;
+        this.container.removeEventListener('contextmenu', this._boundHandleContextMenuEvent);
+        this.container.removeEventListener('mousedown', this._boundHandleMouseDownEvent);
+        this.container.removeEventListener('mousemove', this._boundHandleMouseMoveEvent);
+        this.container.removeEventListener('mouseup', this._boundHandleMouseUpOrLeaveEvent);
+        this.container.removeEventListener('mouseleave', this._boundHandleMouseUpOrLeaveEvent);
+        this.container.removeEventListener('wheel', this._boundHandleWheelEvent);
     }
 }
