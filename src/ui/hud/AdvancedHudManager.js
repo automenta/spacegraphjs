@@ -26,9 +26,7 @@ export class AdvancedHudManager extends HudManager {
         
         this.settings = { ...DEFAULT_ADVANCED_HUD_SETTINGS, ...this.settings }; // Merge with base settings
 
-        this.performanceMetrics = { // Already present in parent, ensure it's used or overridden
-            fps: 0, frameTime: 0, nodeCount: 0, edgeCount: 0, lastUpdateTime: 0
-        };
+        // this.performanceMetrics is now inherited from HudManager
         this.notifications = this.notifications || []; // Ensure array exists from base or init
         this.progressIndicators = this.progressIndicators || new Map(); // Ensure map exists
 
@@ -90,7 +88,13 @@ export class AdvancedHudManager extends HudManager {
         this.performancePanel.id = 'advanced-performance-panel'; // New ID to avoid conflict
         this.performancePanel.className = 'hud-panel'; // General styling
         this.hudLayer.appendChild(this.performancePanel); // Example: directly on hudLayer
-        this.updatePerformanceMetrics();
+        try {
+            this.updatePerformanceMetrics(); // Initial call to populate metrics
+        } catch (error) {
+            console.error("AdvancedHudManager: Error during initial call to updatePerformanceMetrics", error);
+            // Performance metrics will be updated by the animation loop in HudManager,
+            // or display 'N/A' if errors persist.
+        }
 
 
         // Minimap Panel (can be a pinned window later)
@@ -204,8 +208,18 @@ export class AdvancedHudManager extends HudManager {
         if (this.menuBar) this.menuBar.update();
         this._updateAllStatusDisplays(); // Keep status bar updated
 
-        if (this.fpsStatusElement && this.performanceMetrics) {
-             this.fpsStatusElement.textContent = `FPS: ${this.performanceMetrics.fps?.toFixed(0) || 'N/A'}`;
+        try {
+            if (this.fpsStatusElement && this.performanceMetrics) {
+                const fpsValue = this.performanceMetrics.fps;
+                // Check if fpsValue is a number before calling toFixed
+                const displayFps = typeof fpsValue === 'number' ? fpsValue.toFixed(0) : fpsValue;
+                this.fpsStatusElement.textContent = `FPS: ${displayFps || 'N/A'}`;
+            }
+        } catch (error) {
+            console.error("AdvancedHudManager: Error updating FPS display.", error);
+            if (this.fpsStatusElement) {
+                this.fpsStatusElement.textContent = "FPS: Error";
+            }
         }
     }
 

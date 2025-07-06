@@ -34,10 +34,20 @@ export class HudManager {
         this.keyboardShortcutsDialog = new KeyboardShortcutsDialog(space);
         this.layoutSettingsDialog = new LayoutSettingsDialog(space);
 
+        this.performanceMetrics = {
+            fps: 0,
+            frameTime: 0,
+            nodeCount: 0,
+            edgeCount: 0,
+            lastUpdateTime: performance.now()
+        };
+        this._performanceMonitoringRafId = null;
+
         this._createHudElements();
         this._bindEvents();
         this.updateHudSelectionInfo(); // Initial update
         this.updateHudCameraMode(); // Initial update, this will also update description
+        this._startPerformanceMonitoring();
     }
 
     /**
@@ -318,6 +328,64 @@ export class HudManager {
     }
 
     /**
+     * Starts the performance monitoring loop.
+     * @private
+     */
+    _startPerformanceMonitoring() {
+        try {
+            this.performanceMetrics.lastUpdateTime = performance.now();
+            const monitor = () => {
+                this.updatePerformanceMetrics();
+                this._performanceMonitoringRafId = requestAnimationFrame(monitor);
+            };
+            this._performanceMonitoringRafId = requestAnimationFrame(monitor);
+        } catch (error) {
+            console.error("HudManager: Failed to start performance monitoring.", error);
+            // Ensure performanceMetrics are reset to safe defaults if startup fails
+            this.performanceMetrics = { fps: 'N/A', frameTime: 'N/A', nodeCount: 'N/A', edgeCount: 'N/A', lastUpdateTime: 0 };
+        }
+    }
+
+    /**
+     * Updates performance metrics like FPS and frame time.
+     * Also attempts to update node and edge counts.
+     * Includes error handling to prevent crashes.
+     */
+    updatePerformanceMetrics() {
+        try {
+            const now = performance.now();
+            const deltaTime = now - (this.performanceMetrics.lastUpdateTime || now); // Ensure lastUpdateTime is valid
+            this.performanceMetrics.lastUpdateTime = now;
+
+            if (deltaTime > 0) {
+                this.performanceMetrics.fps = 1000 / deltaTime;
+                this.performanceMetrics.frameTime = deltaTime;
+            } else {
+                // Avoid division by zero or negative fps if deltaTime is 0 or negative
+                this.performanceMetrics.fps = this.performanceMetrics.fps || 0; // Keep previous or 0
+                this.performanceMetrics.frameTime = this.performanceMetrics.frameTime || 0;
+            }
+
+            // Attempt to get node and edge counts
+            const nodePlugin = this.space?.plugins?.getPlugin('NodePlugin');
+            this.performanceMetrics.nodeCount = nodePlugin?.getNodeCount ? nodePlugin.getNodeCount() : (this.performanceMetrics.nodeCount || 0);
+
+            const edgePlugin = this.space?.plugins?.getPlugin('EdgePlugin');
+            this.performanceMetrics.edgeCount = edgePlugin?.getEdgeCount ? edgePlugin.getEdgeCount() : (this.performanceMetrics.edgeCount || 0);
+
+        } catch (error) {
+            console.error("HudManager: Error updating performance metrics.", error);
+            // Set to 'N/A' or keep previous values to indicate an issue without crashing
+            this.performanceMetrics.fps = 'N/A';
+            this.performanceMetrics.frameTime = 'N/A';
+            // Optionally keep node/edge counts or set them to 'N/A' as well
+            // this.performanceMetrics.nodeCount = 'N/A';
+            // this.performanceMetrics.edgeCount = 'N/A';
+        }
+    }
+
+
+    /**
      * Hides all managed dialogs and the HUD popup menu.
      */
     hideAllDialogs() {
@@ -332,6 +400,11 @@ export class HudManager {
      * Cleans up all resources, removes elements, and detaches event listeners.
      */
     dispose() {
+        if (this._performanceMonitoringRafId) {
+            cancelAnimationFrame(this._performanceMonitoringRafId);
+            this._performanceMonitoringRafId = null;
+        }
+
         this.hudMainMenuButton?.removeEventListener('click', this._togglePopupMenu);
         this.hudModeIndicator?.removeEventListener('change', this._onModeIndicatorChange);
         this.hudKeyboardShortcutsButton?.removeEventListener('click', this._onKeyboardShortcutsButtonClick);
