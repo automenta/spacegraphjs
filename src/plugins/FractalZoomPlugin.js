@@ -108,15 +108,7 @@ export class FractalZoomPlugin extends Plugin {
      */
     _onNodeRemoved(nodeId, node) { // node parameter is often passed but might not be used if only id is needed
         try {
-            // Remove content adapter
-            if (this.contentAdapters.has(nodeId)) {
-                const adapter = this.contentAdapters.get(nodeId);
-                if (adapter && typeof adapter.dispose === 'function') {
-                    adapter.dispose();
-                }
-                this.contentAdapters.delete(nodeId);
-                // console.log(`FractalZoomPlugin: Content adapter for node ${nodeId} removed.`);
-            }
+            this.removeContentAdapter(nodeId);
         } catch (error) {
             console.error(`FractalZoomPlugin: Error during _onNodeRemoved for node ${nodeId}:`, error);
         }
@@ -319,10 +311,11 @@ export class FractalZoomPlugin extends Plugin {
                     adapter.dispose();
                 }
                 this.contentAdapters.delete(nodeId);
-                // Optionally, unregister from FractalZoomManager if needed
-                // if (this.fractalZoomManager && typeof this.fractalZoomManager.unregisterContentAdapter === 'function') {
-                //     this.fractalZoomManager.unregisterContentAdapter(nodeId);
-                // }
+
+                // Unregister from FractalZoomManager
+                if (this.fractalZoomManager && typeof this.fractalZoomManager.unregisterContentAdapter === 'function') {
+                    this.fractalZoomManager.unregisterContentAdapter(nodeId);
+                }
             }
         } catch (error) {
             console.error(`FractalZoomPlugin: Error removing content adapter for node ${nodeId}:`, error);

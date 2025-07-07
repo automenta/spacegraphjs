@@ -38,6 +38,16 @@ export class FractalZoomManager {
     }
 
     /**
+     * Unregister a content adapter for a specific node
+     */
+    unregisterContentAdapter(nodeId) {
+        if (this.contentAdapters.has(nodeId)) {
+            this.contentAdapters.delete(nodeId);
+            // console.log(`FractalZoomManager: Content adapter for node ${nodeId} unregistered.`);
+        }
+    }
+
+    /**
      * Initialize default LOD levels with different detail configurations
      */
     _initializeLODLevels() {
@@ -237,6 +247,8 @@ export class FractalZoomManager {
             nodes.forEach(node => {
                 if (node && node.position) {
                     this._updateNodeLOD(node, lodConfig);
+                } else {
+                    // console.warn('FractalZoomManager: Attempted to update LOD for a node without a position or undefined node:', node);
                 }
             });
         }
@@ -247,6 +259,8 @@ export class FractalZoomManager {
             edges.forEach(edge => {
                 if (edge && edge.source && edge.source.position && edge.target && edge.target.position) {
                     this._updateEdgeLOD(edge, lodConfig);
+                } else {
+                    // console.warn('FractalZoomManager: Attempted to update LOD for an edge with missing source/target or positions:', edge);
                 }
             });
         }
