@@ -161,7 +161,7 @@ export class AdvancedHudManager extends HudManager {
     _updateNodeCountStatus() {
         if (!this.settings.showStatusBar || !this.statusNodeCount) return;
         const nodePlugin = this.space.plugins.getPlugin('NodePlugin');
-        const count = nodePlugin?.getNodeCount ? nodePlugin.getNodeCount() : 0;
+        const count = nodePlugin && typeof nodePlugin.getNodes === 'function' ? nodePlugin.getNodes().size : 0;
         this.statusNodeCount.textContent = `Nodes: ${count}`;
     }
 
@@ -198,7 +198,7 @@ export class AdvancedHudManager extends HudManager {
         // console.log("AdvancedHudManager: _updateMinimap called. Minimap drawing logic would go here.");
         // For now, just indicate it's active or needs update
         const nodePlugin = this.space.plugins.getPlugin('NodePlugin');
-        const nodeCount = nodePlugin?.getNodeCount ? nodePlugin.getNodeCount() : 0;
+        const nodeCount = nodePlugin && typeof nodePlugin.getNodes === 'function' ? nodePlugin.getNodes().size : 0;
         this.minimapPanel.innerHTML = `<p>Minimap Active (${nodeCount} nodes)</p><p style='font-size:0.8em; opacity:0.7;'>(Actual drawing not implemented in this fix)</p>`;
     }
 

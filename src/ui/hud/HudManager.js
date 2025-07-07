@@ -368,10 +368,10 @@ export class HudManager {
 
             // Attempt to get node and edge counts
             const nodePlugin = this.space?.plugins?.getPlugin('NodePlugin');
-            this.performanceMetrics.nodeCount = nodePlugin?.getNodeCount ? nodePlugin.getNodeCount() : (this.performanceMetrics.nodeCount || 0);
+            this.performanceMetrics.nodeCount = nodePlugin && typeof nodePlugin.getNodes === 'function' ? nodePlugin.getNodes().size : (this.performanceMetrics.nodeCount || 0);
 
             const edgePlugin = this.space?.plugins?.getPlugin('EdgePlugin');
-            this.performanceMetrics.edgeCount = edgePlugin?.getEdgeCount ? edgePlugin.getEdgeCount() : (this.performanceMetrics.edgeCount || 0);
+            this.performanceMetrics.edgeCount = edgePlugin && typeof edgePlugin.getEdges === 'function' ? edgePlugin.getEdges().size : (this.performanceMetrics.edgeCount || 0);
 
         } catch (error) {
             console.error("HudManager: Error updating performance metrics.", error);
