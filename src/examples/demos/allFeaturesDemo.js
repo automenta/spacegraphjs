@@ -41,7 +41,7 @@ function setupDemoMenu(space) {
             // Update node count dynamically
             const updateNodeCount = () => {
                 const nodePlugin = space.plugins.getPlugin('NodePlugin');
-                const count = nodePlugin ? nodePlugin.getNodeCount() : 0;
+                const count = nodePlugin && typeof nodePlugin.getNodes === 'function' ? nodePlugin.getNodes().size : 0;
                 nodeCountElement.textContent = `Node Count: ${count}`;
             };
             space.on('node:added', updateNodeCount);

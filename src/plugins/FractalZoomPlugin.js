@@ -90,22 +90,35 @@ export class FractalZoomPlugin extends Plugin {
      * Handle node addition
      */
     _onNodeAdded(nodeInstance) {
-        if (!this.fractalZoomManager || !nodeInstance) return; // Added check for nodeInstance
+        if (!this.fractalZoomManager || !nodeInstance || !nodeInstance.id) {
+            // console.warn('FractalZoomPlugin: _onNodeAdded called with invalid arguments or missing fractalZoomManager.');
+            return;
+        }
         
-        // Auto-create content adapter based on node type and content
-        // Pass nodeInstance.id as the first argument and nodeInstance as the second
-        this._createDefaultContentAdapter(nodeInstance.id, nodeInstance);
+        try {
+            // Auto-create content adapter based on node type and content
+            this._createDefaultContentAdapter(nodeInstance.id, nodeInstance);
+        } catch (error) {
+            console.error(`FractalZoomPlugin: Error creating default content adapter for node ${nodeInstance.id}:`, error);
+        }
     }
 
     /**
      * Handle node removal
      */
-    _onNodeRemoved(nodeId, node) {
-        // Remove content adapter
-        if (this.contentAdapters.has(nodeId)) {
-            const adapter = this.contentAdapters.get(nodeId);
-            adapter.dispose();
-            this.contentAdapters.delete(nodeId);
+    _onNodeRemoved(nodeId, node) { // node parameter is often passed but might not be used if only id is needed
+        try {
+            // Remove content adapter
+            if (this.contentAdapters.has(nodeId)) {
+                const adapter = this.contentAdapters.get(nodeId);
+                if (adapter && typeof adapter.dispose === 'function') {
+                    adapter.dispose();
+                }
+                this.contentAdapters.delete(nodeId);
+                // console.log(`FractalZoomPlugin: Content adapter for node ${nodeId} removed.`);
+            }
+        } catch (error) {
+            console.error(`FractalZoomPlugin: Error during _onNodeRemoved for node ${nodeId}:`, error);
         }
     }
 
@@ -134,36 +147,59 @@ export class FractalZoomPlugin extends Plugin {
      * Create default content adapter for a node
      */
     _createDefaultContentAdapter(nodeId, node) {
-        if (!node.htmlElement) return;
-        
-        const content = node.htmlElement.querySelector('.node-content');
-        if (!content) return;
-        
-        const text = content.textContent || content.innerHTML;
-        
-        // Determine adapter type based on content
-        let adapter;
-        
-        if (text.length > 200) {
-            // Long text - create progressive text adapter
-            adapter = createContentAdapter(nodeId, 'text');
-            
-            const summary = this._extractSummary(text);
-            const detail = this._extractDetail(text);
-            
-            adapter.defineProgressiveText(summary, detail, text);
-        } else if (content.querySelector('table, chart, canvas')) {
-            // Data content - create data adapter
-            adapter = createContentAdapter(nodeId, 'data');
-            // TODO: Extract and process data for different zoom levels
-        } else {
-            // Simple content - create basic HTML adapter
-            adapter = createContentAdapter(nodeId, 'html');
-            adapter.defineHTMLLevel(-10, 10, text);
-        }
-        
-        if (adapter) {
-            this.addContentAdapter(nodeId, adapter);
+        try {
+            if (!node || !node.htmlElement) {
+                // console.log(`FractalZoomPlugin: Node ${nodeId} has no htmlElement, skipping default content adapter.`);
+                return;
+            }
+
+            const contentElement = node.htmlElement.querySelector('.node-content');
+            if (!contentElement) {
+                // console.log(`FractalZoomPlugin: Node ${nodeId} has no .node-content element, skipping default content adapter.`);
+                return;
+            }
+
+            const text = contentElement.textContent || contentElement.innerHTML || "";
+            let adapter;
+
+            if (typeof createContentAdapter !== 'function') {
+                console.error('FractalZoomPlugin: createContentAdapter is not a function. Cannot create adapters.');
+                return;
+            }
+
+            if (text.length > 200) {
+                adapter = createContentAdapter(nodeId, 'text');
+                if (adapter && typeof adapter.defineProgressiveText === 'function') {
+                    const summary = this._extractSummary(text);
+                    const detail = this._extractDetail(text);
+                    adapter.defineProgressiveText(summary, detail, text);
+                } else {
+                    console.warn(`FractalZoomPlugin: Failed to create or configure 'text' adapter for node ${nodeId}.`);
+                    adapter = null; // Ensure adapter is null if setup failed
+                }
+            } else if (contentElement.querySelector('table, chart, canvas')) {
+                adapter = createContentAdapter(nodeId, 'data');
+                if (adapter) {
+                    // TODO: Extract and process data for different zoom levels
+                    // console.log(`FractalZoomPlugin: 'data' adapter created for node ${nodeId}. Further implementation needed.`);
+                } else {
+                     console.warn(`FractalZoomPlugin: Failed to create 'data' adapter for node ${nodeId}.`);
+                }
+            } else {
+                adapter = createContentAdapter(nodeId, 'html');
+                if (adapter && typeof adapter.defineHTMLLevel === 'function') {
+                    adapter.defineHTMLLevel(-10, 10, text);
+                } else {
+                    console.warn(`FractalZoomPlugin: Failed to create or configure 'html' adapter for node ${nodeId}.`);
+                    adapter = null; // Ensure adapter is null if setup failed
+                }
+            }
+
+            if (adapter) {
+                this.addContentAdapter(nodeId, adapter);
+            }
+        } catch (error) {
+            console.error(`FractalZoomPlugin: Error in _createDefaultContentAdapter for node ${nodeId}:`, error);
         }
     }
 
@@ -254,15 +290,21 @@ export class FractalZoomPlugin extends Plugin {
      * Add a content adapter for a specific node
      */
     addContentAdapter(nodeId, adapter) {
-        if (this.contentAdapters.has(nodeId)) {
-            // Dispose of existing adapter
-            this.contentAdapters.get(nodeId).dispose();
-        }
-        
-        this.contentAdapters.set(nodeId, adapter);
-        
-        if (this.fractalZoomManager) {
-            this.fractalZoomManager.registerContentAdapter(nodeId, adapter);
+        try {
+            if (this.contentAdapters.has(nodeId)) {
+                const oldAdapter = this.contentAdapters.get(nodeId);
+                if (oldAdapter && typeof oldAdapter.dispose === 'function') {
+                    oldAdapter.dispose();
+                }
+            }
+
+            this.contentAdapters.set(nodeId, adapter);
+
+            if (this.fractalZoomManager && typeof this.fractalZoomManager.registerContentAdapter === 'function') {
+                this.fractalZoomManager.registerContentAdapter(nodeId, adapter);
+            }
+        } catch (error) {
+            console.error(`FractalZoomPlugin: Error adding content adapter for node ${nodeId}:`, error);
         }
     }
 
@@ -270,10 +312,20 @@ export class FractalZoomPlugin extends Plugin {
      * Remove content adapter for a node
      */
     removeContentAdapter(nodeId) {
-        if (this.contentAdapters.has(nodeId)) {
-            const adapter = this.contentAdapters.get(nodeId);
-            adapter.dispose();
-            this.contentAdapters.delete(nodeId);
+        try {
+            if (this.contentAdapters.has(nodeId)) {
+                const adapter = this.contentAdapters.get(nodeId);
+                if (adapter && typeof adapter.dispose === 'function') {
+                    adapter.dispose();
+                }
+                this.contentAdapters.delete(nodeId);
+                // Optionally, unregister from FractalZoomManager if needed
+                // if (this.fractalZoomManager && typeof this.fractalZoomManager.unregisterContentAdapter === 'function') {
+                //     this.fractalZoomManager.unregisterContentAdapter(nodeId);
+                // }
+            }
+        } catch (error) {
+            console.error(`FractalZoomPlugin: Error removing content adapter for node ${nodeId}:`, error);
         }
     }
 
@@ -343,24 +395,38 @@ export class FractalZoomPlugin extends Plugin {
     dispose() {
         super.dispose();
         
-        // Clean up content adapters
-        this.contentAdapters.forEach(adapter => adapter.dispose());
-        this.contentAdapters.clear();
-        
-        // Clean up zoom listeners
-        this.zoomListeners.clear();
-        
-        // Dispose fractal zoom manager
-        if (this.fractalZoomManager) {
-            this.fractalZoomManager.dispose();
-            this.fractalZoomManager = null;
+        try {
+            // Clean up content adapters
+            this.contentAdapters.forEach(adapter => {
+                try {
+                    if (adapter && typeof adapter.dispose === 'function') {
+                        adapter.dispose();
+                    }
+                } catch (adapterError) {
+                    console.error('FractalZoomPlugin: Error disposing an content adapter:', adapterError);
+                }
+            });
+            this.contentAdapters.clear();
+
+            // Clean up zoom listeners
+            this.zoomListeners.clear();
+
+            // Dispose fractal zoom manager
+            if (this.fractalZoomManager) {
+                if (typeof this.fractalZoomManager.dispose === 'function') {
+                    this.fractalZoomManager.dispose();
+                }
+                this.fractalZoomManager = null;
+            }
+
+            // Remove API from space
+            if (this.space && this.space.fractalZoom) {
+                delete this.space.fractalZoom;
+            }
+
+            console.log('FractalZoomPlugin disposed');
+        } catch (error) {
+            console.error('FractalZoomPlugin: Error during dispose:', error);
         }
-        
-        // Remove API from space
-        if (this.space.fractalZoom) {
-            delete this.space.fractalZoom;
-        }
-        
-        console.log('FractalZoomPlugin disposed');
     }
 }
