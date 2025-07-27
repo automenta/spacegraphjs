@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import {CSS3DRenderer} from 'three/addons/renderers/CSS3DRenderer.js';
 import {Plugin} from '../core/Plugin.js';
-import {$} from '../utils.js';
 import {
     BlendFunction,
     BloomEffect,
@@ -138,7 +137,7 @@ export class RenderingPlugin extends Plugin {
             return;
         }
 
-        this.webglCanvas = $('#webgl-canvas') || document.createElement('canvas');
+        this.webglCanvas = document.querySelector('#webgl-canvas') || document.createElement('canvas');
         this.webglCanvas.id = 'webgl-canvas';
         if (!this.webglCanvas.parentNode) {
             this.space.container.appendChild(this.webglCanvas);
@@ -161,7 +160,7 @@ export class RenderingPlugin extends Plugin {
         this.renderCSS3D = new CSS3DRenderer();
         this.renderCSS3D.setSize(window.innerWidth, window.innerHeight);
 
-        this.css3dContainer = $('#css3d-container');
+        this.css3dContainer = document.querySelector('#css3d-container');
         if (!this.css3dContainer) {
             this.css3dContainer = document.createElement('div');
             this.css3dContainer.id = 'css3d-container';
