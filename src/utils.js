@@ -12,3 +12,22 @@ export const toHexColor = (numColor) => {
     }
     return '#' + Math.floor(numColor).toString(16).padStart(6, '0');
 };
+
+export const isObject = (item) => item && typeof item === 'object' && !Array.isArray(item);
+
+export const mergeDeep = (target, ...sources) => {
+    sources.forEach((source) => {
+        if (source && typeof source === 'object') {
+            Object.keys(source).forEach(key => {
+                const targetValue = target[key];
+                const sourceValue = source[key];
+                if (isObject(targetValue) && isObject(sourceValue)) {
+                    mergeDeep(targetValue, sourceValue);
+                } else {
+                    target[key] = sourceValue;
+                }
+            });
+        }
+    });
+    return target;
+};

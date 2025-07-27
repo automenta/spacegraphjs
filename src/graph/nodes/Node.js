@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {Utils} from '../../utils.js';
+import { generateId, mergeDeep } from '../../utils.js';
 
 export class Node {
     space = null;
@@ -13,9 +13,9 @@ export class Node {
     isPinned = false;
 
     constructor(id, position = { x: 0, y: 0, z: 0 }, data = {}, mass = 1.0) {
-        this.id = id ?? Utils.generateId('node');
+        this.id = id ?? generateId('node');
         this.setPosition(position);
-        this.data = Utils.mergeDeep({}, this.getDefaultData(), data);
+        this.data = mergeDeep({}, this.getDefaultData(), data);
         this.mass = Math.max(0.1, mass);
         this.isPinned = this.data.isPinned ?? false;
     }
