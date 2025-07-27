@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import {Plugin} from '../core/Plugin.js';
 import {Camera as CameraControls, CAMERA_MODES} from '../camera/Camera.js'; // Import CAMERA_MODES
 import {AdvancedCameraControls} from '../camera/AdvancedCameraControls.js';
-import {Utils} from '../utils.js';
+import { DEG2RAD } from '../utils.js';
 
 export class CameraPlugin extends Plugin {
     perspectiveCamera = null;
@@ -100,7 +100,7 @@ export class CameraPlugin extends Plugin {
     _determineFocusNodeDistance(node) {
         if (!node || !this.perspectiveCamera) return 50;
 
-        const fov = this.perspectiveCamera.fov * Utils.DEG2RAD;
+        const fov = this.perspectiveCamera.fov * DEG2RAD;
         const aspect = this.perspectiveCamera.aspect;
         const nodeSize = typeof node.getBoundingSphereRadius === 'function' ? node.getBoundingSphereRadius() * 2 : 100;
         const projectedSize = Math.max(nodeSize, nodeSize / aspect);
