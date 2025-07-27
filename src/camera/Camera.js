@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {gsap} from 'gsap';
-import {Utils} from '../utils.js';
+import { clamp, DEG2RAD } from '../utils.js';
 import {PointerLockControls} from 'three/addons/controls/PointerLockControls.js';
 
 export const CAMERA_MODES = { // Added export here
@@ -142,7 +142,7 @@ export class Camera {
         ) return;
 
         const cameraDist = this.currentPosition.distanceTo(this.currentLookAt);
-        const vFOV = this._cam.fov * Utils.DEG2RAD;
+        const vFOV = this._cam.fov * DEG2RAD;
         const viewHeight = this.domElement.clientHeight || window.innerHeight;
         const visibleHeight = 2 * Math.tan(vFOV / 2) * Math.max(1, cameraDist);
         const worldUnitsPerPixel = visibleHeight / viewHeight;
@@ -184,7 +184,7 @@ export class Camera {
         if (this.cameraMode === CAMERA_MODES.TOP_DOWN) {
             const currentY = this.targetPosition.y;
             let newY = currentY * zoomFactor;
-            newY = Utils.clamp(newY, this.minZoomDistance, this.maxZoomDistance);
+            newY = clamp(newY, this.minZoomDistance, this.maxZoomDistance);
             this.targetPosition.y = newY;
             this.targetLookAt.x = this.targetPosition.x;
             this.targetLookAt.z = this.targetPosition.z;
@@ -192,7 +192,7 @@ export class Camera {
         } else {
             const lookAtToCam = new THREE.Vector3().subVectors(this.targetPosition, this.targetLookAt);
             const currentDist = lookAtToCam.length();
-            const newDist = Utils.clamp(currentDist * zoomFactor, this.minZoomDistance, this.maxZoomDistance);
+            const newDist = clamp(currentDist * zoomFactor, this.minZoomDistance, this.maxZoomDistance);
             this.targetPosition.copy(this.targetLookAt).addScaledVector(lookAtToCam.normalize(), newDist);
         }
     }
