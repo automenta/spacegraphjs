@@ -17,15 +17,6 @@ export class EdgeFactory extends BaseFactory { // Extend BaseFactory
     registerCoreEdgeTypes() {
         this.registerType(Edge.typeName, Edge);
         this.registerType(CurvedEdge.typeName, CurvedEdge);
-        this.registerType(LabeledEdge.typeName, LabeledEdge);
-        this.registerType(DottedEdge.typeName, DottedEdge);
-        this.registerType(DynamicThicknessEdge.typeName, DynamicThicknessEdge);
-        
-        // Advanced edge types
-        this.registerType(FlowEdge.typeName, FlowEdge);
-        this.registerType(SpringEdge.typeName, SpringEdge);
-        this.registerType(BezierEdge.typeName, BezierEdge);
-
         this.registerType('default', Edge);
     }
 

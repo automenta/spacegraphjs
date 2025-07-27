@@ -26,29 +26,6 @@ export class NodeFactory extends BaseFactory { // Extend BaseFactory
     registerCoreNodeTypes() {
         this.registerType(HtmlNode.typeName, HtmlNode);
         this.registerType(ShapeNode.typeName, ShapeNode);
-        this.registerType(ImageNode.typeName, ImageNode);
-        this.registerType(VideoNode.typeName, VideoNode);
-        this.registerType(IFrameNode.typeName, IFrameNode);
-        this.registerType(GroupNode.typeName, GroupNode);
-        this.registerType(DataNode.typeName, DataNode);
-        this.registerType(NoteNode.typeName, NoteNode);
-
-        this.registerType(AudioNode.typeName, AudioNode);
-        this.registerType(DocumentNode.typeName, DocumentNode);
-        this.registerType(ChartNode.typeName, ChartNode);
-        
-        // Advanced widget nodes
-        this.registerType(ControlPanelNode.typeName, ControlPanelNode);
-        this.registerType(ProgressNode.typeName, ProgressNode);
-        this.registerType(CanvasNode.typeName, CanvasNode);
-        
-        // Advanced shape nodes
-        this.registerType(ProceduralShapeNode.typeName, ProceduralShapeNode);
-        this.registerType(TextMeshNode.typeName, TextMeshNode);
-        
-        // MetaWidget system
-        this.registerType(MetaWidgetNode.typeName, MetaWidgetNode);
-
         this.registerType('default', ShapeNode);
     }
 

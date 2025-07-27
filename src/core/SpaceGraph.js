@@ -44,11 +44,6 @@ export class SpaceGraph {
         this.plugins.add(new NodePlugin(this, this.plugins));
         this.plugins.add(new EdgePlugin(this, this.plugins));
         this.plugins.add(new LayoutPlugin(this, this.plugins));
-        this.plugins.add(new UIPlugin(this, this.plugins, contextMenuElement, confirmDialogElement));
-        this.plugins.add(new MinimapPlugin(this, this.plugins));
-        this.plugins.add(new DataPlugin(this, this.plugins));
-        this.plugins.add(new FractalZoomPlugin(this, this.plugins));
-        this.plugins.add(new PerformancePlugin(this, this.plugins));
     }
 
     async init() {

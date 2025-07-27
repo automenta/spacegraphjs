@@ -111,11 +111,13 @@ export class Camera {
     }
 
     setInitialState() {
-        this.initialState ??= {
-            position: this.targetPosition.clone(),
-            lookAt: this.targetLookAt.clone(),
-            mode: this.cameraMode
-        };
+        if (!this.initialState) {
+            this.initialState = {
+                position: this.targetPosition.clone(),
+                lookAt: this.targetLookAt.clone(),
+                mode: this.cameraMode
+            };
+        }
     }
 
     startPan(startX, startY) {

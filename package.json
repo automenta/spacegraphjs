@@ -19,20 +19,11 @@
         "LICENSE"
     ],
     "scripts": {
-        "prepare": "husky",
         "build": "tsc --emitDeclarationOnly --outDir dist --project tsconfig.json && vite build --config vite.lib.config.js",
         "build:demo": "vite build --outDir dist-demo",
         "test": "vitest run",
-        "test:watch": "vitest",
-        "coverage": "vitest run --coverage",
-        "docs:build": "jsdoc -c jsdoc.conf.json",
-        "docs:view": "serve ./docs/api -l 8080",
-        "lint": "eslint .",
-        "lint:fix": "eslint . --fix",
-        "format": "prettier --write \"**/*.{js,json,md,html,css}\"",
-        "start": "npx vite dev",
-        "build:watch": "vite build --watch",
-        "build:gh-pages": "mkdir -p docs && cp index.html docs/index.html && echo '<h1>Test Page</h1><p>This is docs/test.html</p>' > docs/test.html && echo 'Content of root index.html that will be copied:' && cat index.html"
+        "start": "vite dev",
+        "build:watch": "vite build --watch"
     },
     "author": "SpaceGraph Contributors",
     "license": "MIT",
