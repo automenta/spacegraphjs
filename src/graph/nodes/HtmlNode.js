@@ -1,5 +1,5 @@
 import {CSS3DObject} from 'three/addons/renderers/CSS3DRenderer.js';
-import {$, Utils} from '../../utils.js';
+import { clamp } from '../../utils.js';
 import {Node} from './Node.js';
 import {applyLabelLOD} from '../../utils/labelUtils.js';
 
@@ -68,7 +68,7 @@ export class HtmlNode extends Node {
     }
 
     _initContentEditable(element) {
-        const contentDiv = $('.node-content', element);
+        const contentDiv = element.querySelector('.node-content');
         if (contentDiv && this.data.editable) {
             contentDiv.contentEditable = 'true';
             let debounceTimer;
@@ -121,8 +121,8 @@ export class HtmlNode extends Node {
     }
 
     setContentScale(scale) {
-        this.data.contentScale = Utils.clamp(scale, HtmlNode.CONTENT_SCALE_RANGE.min, HtmlNode.CONTENT_SCALE_RANGE.max);
-        const contentEl = $('.node-content', this.htmlElement);
+        this.data.contentScale = clamp(scale, HtmlNode.CONTENT_SCALE_RANGE.min, HtmlNode.CONTENT_SCALE_RANGE.max);
+        const contentEl = this.htmlElement.querySelector('.node-content');
         if (contentEl) contentEl.style.transform = `scale(${this.data.contentScale})`;
         this.space?.emit('graph:node:dataChanged', { node: this, property: 'contentScale', value: this.data.contentScale });
     }
