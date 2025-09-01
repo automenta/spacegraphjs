@@ -80,9 +80,13 @@ export class AdvancedCameraControls {
     _initializeEventListeners() {
         // Mouse move for peek mode
         if (this.space.container) { // Guard against undefined container
-            this.space.container.addEventListener('mousemove', this._handleMouseMove.bind(this));
-            this.space.container.addEventListener('mouseenter', this._handleMouseEnter.bind(this));
-            this.space.container.addEventListener('mouseleave', this._handleMouseLeave.bind(this));
+            this._boundHandleMouseMove = this._handleMouseMove.bind(this);
+            this._boundHandleMouseEnter = this._handleMouseEnter.bind(this);
+            this._boundHandleMouseLeave = this._handleMouseLeave.bind(this);
+
+            this.space.container.addEventListener('mousemove', this._boundHandleMouseMove);
+            this.space.container.addEventListener('mouseenter', this._boundHandleMouseEnter);
+            this.space.container.addEventListener('mouseleave', this._boundHandleMouseLeave);
         }
 
         // Key bindings for advanced controls
@@ -593,9 +597,9 @@ export class AdvancedCameraControls {
         clearTimeout(this.autoZoomTimer);
 
         // Remove event listeners
-        this.space.container.removeEventListener('mousemove', this._handleMouseMove.bind(this));
-        this.space.container.removeEventListener('mouseenter', this._handleMouseEnter.bind(this));
-        this.space.container.removeEventListener('mouseleave', this._handleMouseLeave.bind(this));
+        this.space.container.removeEventListener('mousemove', this._boundHandleMouseMove);
+        this.space.container.removeEventListener('mouseenter', this._boundHandleMouseEnter);
+        this.space.container.removeEventListener('mouseleave', this._boundHandleMouseLeave);
         document.removeEventListener('keydown', this._handleKeyDown.bind(this));
         document.removeEventListener('keyup', this._handleKeyUp.bind(this));
 
