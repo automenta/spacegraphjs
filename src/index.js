@@ -18,6 +18,7 @@ export * from './camera/Camera.js';
 export * from './camera/AdvancedCameraControls.js';
 export * from './ui/UIManager.js';
 
+export * from './layout/BaseLayout.js';
 export * from './layout/CircularLayout.js';
 export * from './layout/ForceLayout.js';
 export * from './layout/GridLayout.js';
@@ -32,6 +33,7 @@ export * from './layout/LayoutConnector.js';
 export * from './layout/AdaptiveLayout.js';
 export * from './layout/AdvancedLayoutManager.js';
 
+export * from './graph/BaseEdge.js';
 export * from './graph/edges/CurvedEdge.js';
 export * from './graph/edges/Edge.js';
 export * from './graph/EdgeFactory.js';
@@ -42,6 +44,7 @@ export * from './graph/edges/FlowEdge.js';
 export * from './graph/edges/SpringEdge.js';
 export * from './graph/edges/BezierEdge.js';
 
+export * from './graph/BaseNode.js';
 export * from './graph/nodes/Node.js';
 export * from './graph/nodes/DataNode.js';
 export * from './graph/nodes/GroupNode.js';

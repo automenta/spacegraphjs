@@ -1,32 +1,20 @@
-export class GridLayout {
-    space = null;
-    pluginManager = null;
-    nodes = [];
-    settings = {
-        columns: 0,
-        padding: {x: 150, y: 150, z: 150},
-        plane: 'xy',
-        depthCount: 0,
-        centerOrigin: true,
-        animate: true,
-    };
+import {BaseLayout} from './BaseLayout.js';
 
-    constructor(config = {}) {
-        this.settings = {...this.settings, ...config};
-    }
-
-    setContext(space, pluginManager) {
-        this.space = space;
-        this.pluginManager = pluginManager;
-    }
-
-    updateConfig(newConfig) {
-        this.settings = {...this.settings, ...newConfig};
+export class GridLayout extends BaseLayout {
+    getDefaultSettings() {
+        return {
+            columns: 0,
+            padding: {x: 150, y: 150, z: 150},
+            plane: 'xy',
+            depthCount: 0,
+            centerOrigin: true,
+            animate: true,
+        };
     }
 
     init(nodes, edges, config = {}) {
-        if (config) this.updateConfig(config);
-        this.nodes = [...nodes];
+        // Call parent init method for common functionality
+        super.init(nodes, edges, config);
 
         if (this.nodes.length === 0) return;
 
@@ -93,27 +81,5 @@ export class GridLayout {
         }
     }
 
-    run() {
-    }
-
-    stop() {
-    }
-
-    addNode(node) {
-    }
-
-    removeNode(node) {
-    }
-
-    addEdge(edge) {
-    }
-
-    removeEdge(edge) {
-    }
-
-    dispose() {
-        this.nodes = [];
-        this.space = null;
-        this.pluginManager = null;
-    }
+    // Inherit other methods from BaseLayout
 }

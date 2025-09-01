@@ -1,32 +1,20 @@
-export class CircularLayout {
-    space = null;
-    pluginManager = null;
-    nodes = [];
-    settings = {
-        radius: 200,
-        plane: 'xy',
-        startAngle: 0,
-        angularSpacing: 0,
-        center: {x: 0, y: 0, z: 0},
-        animate: true,
-    };
+import {BaseLayout} from './BaseLayout.js';
 
-    constructor(config = {}) {
-        this.settings = {...this.settings, ...config};
-    }
-
-    setContext(space, pluginManager) {
-        this.space = space;
-        this.pluginManager = pluginManager;
-    }
-
-    updateConfig(newConfig) {
-        this.settings = {...this.settings, ...newConfig};
+export class CircularLayout extends BaseLayout {
+    getDefaultSettings() {
+        return {
+            radius: 200,
+            plane: 'xy',
+            startAngle: 0,
+            angularSpacing: 0,
+            center: {x: 0, y: 0, z: 0},
+            animate: true,
+        };
     }
 
     init(nodes, edges, config = {}) {
-        if (config) this.updateConfig(config);
-        this.nodes = [...nodes];
+        // Call parent init method for common functionality
+        super.init(nodes, edges, config);
 
         if (this.nodes.length === 0) return;
 
@@ -55,27 +43,5 @@ export class CircularLayout {
         });
     }
 
-    run() {
-    }
-
-    stop() {
-    }
-
-    addNode(node) {
-    }
-
-    removeNode(node) {
-    }
-
-    addEdge(edge) {
-    }
-
-    removeEdge(edge) {
-    }
-
-    dispose() {
-        this.nodes = [];
-        this.space = null;
-        this.pluginManager = null;
-    }
+    // Inherit other methods from BaseLayout
 }
