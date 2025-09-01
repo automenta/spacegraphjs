@@ -1,12 +1,12 @@
 import * as THREE from 'three';
-import {Node} from './Node.js';
+import {BaseNode} from '../BaseNode.js';
 import {CSS3DObject} from 'three/addons/renderers/CSS3DRenderer.js';
 
 const DEFAULT_NODE_SIZE = 100;
 const DEFAULT_CHART_BG_COLOR = '#222227';
 const DEFAULT_CHART_TEXT_COLOR = '#eeeeee';
 
-export class DataNode extends Node {
+export class DataNode extends BaseNode {
     static typeName = 'data';
     canvas = null;
     ctx = null;

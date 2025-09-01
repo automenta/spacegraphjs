@@ -45,7 +45,6 @@ export * from './graph/edges/SpringEdge.js';
 export * from './graph/edges/BezierEdge.js';
 
 export * from './graph/BaseNode.js';
-export * from './graph/nodes/Node.js';
 export * from './graph/nodes/DataNode.js';
 export * from './graph/nodes/GroupNode.js';
 export * from './graph/nodes/HtmlNode.js';

@@ -59,7 +59,7 @@ export class NodeFactory extends BaseFactory { // Extend BaseFactory
      * @param {object} position - An object with x, y, z coordinates.
      * @param {object} [data={}] - Custom data for the node.
      * @param {number} [mass=1.0] - The mass of the node.
-     * @returns {Node|null} The created node instance, or null if the type is not found.
+     * @returns {BaseNode|null} The created node instance, or null if the type is not found.
      */
     createNode(id, type, position, data = {}, mass = 1.0) {
         const effectiveType = data?.type || type;

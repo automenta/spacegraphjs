@@ -1,9 +1,9 @@
 import {CSS3DObject} from 'three/addons/renderers/CSS3DRenderer.js';
 import {$, Utils} from '../../utils.js';
-import {Node} from './Node.js';
+import {BaseNode} from '../BaseNode.js';
 import {applyLabelLOD} from '../../rendering/LabelManager.js';
 
-export class HtmlNode extends Node {
+export class HtmlNode extends BaseNode {
     static typeName = 'html';
     static MIN_SIZE = {width: 80, height: 40};
     static CONTENT_SCALE_RANGE = {min: 0.3, max: 3.0};

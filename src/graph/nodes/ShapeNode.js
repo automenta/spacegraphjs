@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
-import {Node} from './Node.js';
+import {BaseNode} from '../BaseNode.js';
 import {applyLabelLOD, createCSS3DLabelObject} from '../../rendering/LabelManager.js';
 
-export class ShapeNode extends Node {
+export class ShapeNode extends BaseNode {
     static typeName = 'shape';
     shape = 'sphere';
     size = 50;

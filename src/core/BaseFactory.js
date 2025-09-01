@@ -12,9 +12,6 @@ export class BaseFactory {
         if (!typeName) {
             throw new Error(`${this.constructor.name}: Attempted to register a class without a typeName.`);
         }
-        if (this.types.has(typeName)) {
-            // console.warn(`${this.constructor.name}: Type "${typeName}" already registered. Overwriting.`);
-        }
         this.types.set(typeName, typeClass);
     }
 

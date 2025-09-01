@@ -1,10 +1,10 @@
 import * as THREE from 'three';
-import {Node} from './Node.js';
+import {BaseNode} from '../BaseNode.js';
 import {applyLabelLOD, createCSS3DLabelObject} from '../../rendering/LabelManager.js';
 
 const loader = new THREE.TextureLoader();
 
-export class ImageNode extends Node {
+export class ImageNode extends BaseNode {
     static typeName = 'image';
     imageUrl = null;
     imageSize = {width: 100, height: 100};

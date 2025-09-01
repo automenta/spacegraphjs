@@ -1,7 +1,7 @@
-import {Node} from './Node.js';
+import {BaseNode} from '../BaseNode.js';
 import * as THREE from 'three';
 
-export class AudioNode extends Node {
+export class AudioNode extends BaseNode {
     static typeName = 'audio';
     audioContext = null;
     audioBuffer = null;

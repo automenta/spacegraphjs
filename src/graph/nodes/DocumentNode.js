@@ -1,8 +1,8 @@
-import {Node} from './Node.js';
+import {BaseNode} from '../BaseNode.js';
 import * as THREE from 'three';
 import {applyLabelLOD, createCSS3DLabelObject} from '../../rendering/LabelManager.js';
 
-export class DocumentNode extends Node {
+export class DocumentNode extends BaseNode {
     static typeName = 'document';
     labelObject = null;
 
