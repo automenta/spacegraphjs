@@ -1,5 +1,5 @@
-import * as S from '../index.js';
-import {EnhancedDemoRunner} from './EnhancedDemoRunner.js';
+import * as S from "../index.js";
+import { EnhancedDemoRunner } from "./EnhancedDemoRunner.js";
 
 let space;
 let demoRunner;
@@ -8,42 +8,43 @@ let demoRunner;
  * Initialize the enhanced demo system
  */
 async function init() {
-    const container = S.$('#mindmap-container');
-    const contextMenuEl = S.$('#context-menu');
-    const confirmDialogEl = S.$('#confirm-dialog');
+  const container = S.$("#mindmap-container");
+  const contextMenuEl = S.$("#context-menu");
+  const confirmDialogEl = S.$("#confirm-dialog");
 
-    if (!container || !contextMenuEl || !confirmDialogEl) {
-        console.error('Init Failed: Missing DOM elements for graph.');
-        if (container) container.innerHTML = "<p style='color:red; padding: 20px;'>Error: Critical HTML elements are missing.</p>";
-        return;
-    }
+  if (!container || !contextMenuEl || !confirmDialogEl) {
+    console.error("Init Failed: Missing DOM elements for graph.");
+    if (container)
+      container.innerHTML =
+        "<p style='color:red; padding: 20px;'>Error: Critical HTML elements are missing.</p>";
+    return;
+  }
 
-    try {
-        // Initialize SpaceGraph
-        space = new S.SpaceGraph(container, {
-            ui: {
-                contextMenuElement: contextMenuEl,
-                confirmDialogElement: confirmDialogEl,
-            },
-        });
+  try {
+    // Initialize SpaceGraph
+    space = new S.SpaceGraph(container, {
+      ui: {
+        contextMenuElement: contextMenuEl,
+        confirmDialogElement: confirmDialogEl,
+      },
+    });
 
-        await space.init();
+    await space.init();
 
-        // Initialize Enhanced Demo Runner
-        demoRunner = new EnhancedDemoRunner(space);
+    // Initialize Enhanced Demo Runner
+    demoRunner = new EnhancedDemoRunner(space);
 
-        // Expose to global scope for debugging and demo interactions
-        window.space = space;
-        window.demoRunner = demoRunner;
+    // Expose to global scope for debugging and demo interactions
+    window.space = space;
+    window.demoRunner = demoRunner;
 
-        // Start the animation loop
-        space.animate();
+    // Start the animation loop
+    space.animate();
 
-        console.log('Enhanced demo system initialized successfully');
-
-    } catch (error) {
-        console.error('Init Failed:', error);
-        container.innerHTML = `
+    console.log("Enhanced demo system initialized successfully");
+  } catch (error) {
+    console.error("Init Failed:", error);
+    container.innerHTML = `
             <div style="color: red; padding: 20px; font-family: Arial, sans-serif;">
                 <h2>❌ Initialization Error</h2>
                 <p><strong>Error:</strong> ${error.message}</p>
@@ -58,33 +59,33 @@ async function init() {
                 </div>
             </div>
         `;
-    }
+  }
 }
 
 /**
  * Cleanup function for page unload
  */
 function cleanup() {
-    if (demoRunner) {
-        demoRunner.dispose();
-        demoRunner = null;
-    }
+  if (demoRunner) {
+    demoRunner.dispose();
+    demoRunner = null;
+  }
 
-    if (space) {
-        space.dispose?.();
-        space = null;
-    }
+  if (space) {
+    space.dispose?.();
+    space = null;
+  }
 }
 
 // Initialize when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init);
 } else {
-    init();
+  init();
 }
 
 // Cleanup on page unload
-window.addEventListener('beforeunload', cleanup);
+window.addEventListener("beforeunload", cleanup);
 
 // Export for debugging
-export {space, demoRunner};
+export { space, demoRunner };

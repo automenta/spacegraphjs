@@ -1,47 +1,50 @@
-import {BaseLayout} from './BaseLayout.js';
+import { BaseLayout } from "./BaseLayout.js";
 
 export class CircularLayout extends BaseLayout {
-    getDefaultSettings() {
-        return {
-            radius: 200,
-            plane: 'xy',
-            startAngle: 0,
-            angularSpacing: 0,
-            center: {x: 0, y: 0, z: 0},
-            animate: true,
-        };
+  getDefaultSettings() {
+    return {
+      radius: 200,
+      plane: "xy",
+      startAngle: 0,
+      angularSpacing: 0,
+      center: { x: 0, y: 0, z: 0 },
+      animate: true,
+    };
+  }
+
+  init(nodes, edges, config = {}) {
+    // Call parent init method for common functionality
+    super.init(nodes, edges, config);
+
+    if (this.nodes.length === 0) return;
+
+    const numNodes = this.nodes.length;
+    const { radius, plane, startAngle, center } = this.settings;
+    const angularSpacing =
+      this.settings.angularSpacing <= 0
+        ? (2 * Math.PI) / numNodes
+        : this.settings.angularSpacing;
+
+    let dynamicRadius = radius;
+    if (radius <= 0) {
+      let totalCircumference = 0;
+      this.nodes.forEach((node) => {
+        const nodeRadius = node.getBoundingSphereRadius?.() || 25;
+        totalCircumference += nodeRadius * 2 * 1.5;
+      });
+      dynamicRadius = Math.max(100, totalCircumference / (2 * Math.PI));
     }
 
-    init(nodes, edges, config = {}) {
-        // Call parent init method for common functionality
-        super.init(nodes, edges, config);
+    this.nodes.forEach((node, index) => {
+      const angle = startAngle + index * angularSpacing;
+      const x = center.x + dynamicRadius * Math.cos(angle);
+      const y = center.y + dynamicRadius * Math.sin(angle);
 
-        if (this.nodes.length === 0) return;
+      if (plane === "xy") node.position.set(x, y, center.z);
+      else if (plane === "xz") node.position.set(x, center.y, y);
+      else node.position.set(center.x, x, y);
+    });
+  }
 
-        const numNodes = this.nodes.length;
-        const {radius, plane, startAngle, center} = this.settings;
-        const angularSpacing = this.settings.angularSpacing <= 0 ? (2 * Math.PI) / numNodes : this.settings.angularSpacing;
-
-        let dynamicRadius = radius;
-        if (radius <= 0) {
-            let totalCircumference = 0;
-            this.nodes.forEach((node) => {
-                const nodeRadius = node.getBoundingSphereRadius?.() || 25;
-                totalCircumference += nodeRadius * 2 * 1.5;
-            });
-            dynamicRadius = Math.max(100, totalCircumference / (2 * Math.PI));
-        }
-
-        this.nodes.forEach((node, index) => {
-            const angle = startAngle + index * angularSpacing;
-            const x = center.x + dynamicRadius * Math.cos(angle);
-            const y = center.y + dynamicRadius * Math.sin(angle);
-
-            if (plane === 'xy') node.position.set(x, y, center.z);
-            else if (plane === 'xz') node.position.set(x, center.y, y);
-            else node.position.set(center.x, x, y);
-        });
-    }
-
-    // Inherit other methods from BaseLayout
+  // Inherit other methods from BaseLayout
 }

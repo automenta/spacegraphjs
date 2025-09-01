@@ -1,8 +1,6 @@
 {
   "source": {
-    "include": [
-      "src"
-    ],
+    "include": ["src"],
     "includePattern": ".+\\.js(doc|x)?$",
     "exclude": [
       "src/examples",
@@ -18,9 +16,7 @@
     "readme": "./README.md",
     "template": "node_modules/docdash"
   },
-  "plugins": [
-    "plugins/markdown"
-  ],
+  "plugins": ["plugins/markdown"],
   "templates": {
     "cleverLinks": true,
     "monospaceLinks": true,

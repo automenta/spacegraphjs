@@ -13,18 +13,18 @@ plugin architecture.
 
 - **2D/3D Graph Visualization**: Renders nodes and edges in a 2D or 3D space.
 - **Versatile Node Types**:
-    - **HTML Nodes**: Embed complex HTML content as node visuals, enabling rich UIs within the graph.
-    - **Shape Nodes**: Supports basic 3D shapes (e.g., spheres, boxes) with 3D text labels.
-    - **Image, Video, IFrame Nodes**, and more. Easily extensible for custom node types.
+  - **HTML Nodes**: Embed complex HTML content as node visuals, enabling rich UIs within the graph.
+  - **Shape Nodes**: Supports basic 3D shapes (e.g., spheres, boxes) with 3D text labels.
+  - **Image, Video, IFrame Nodes**, and more. Easily extensible for custom node types.
 - **Dynamic Layouts**:
-    - Built-in force-directed layout.
-    - Support for various layout algorithms (Circular, Grid, Hierarchical, Radial, Spherical, TreeMap) via plugins.
-    - Pin nodes to fix their positions.
+  - Built-in force-directed layout.
+  - Support for various layout algorithms (Circular, Grid, Hierarchical, Radial, Spherical, TreeMap) via plugins.
+  - Pin nodes to fix their positions.
 - **Interactive UI & Camera**:
-    - Drag & drop nodes.
-    - Smooth camera controls (pan, zoom, focus on node) powered by GSAP.
-    - Camera movement history (back/forward).
-    - Context menus for nodes and edges.
+  - Drag & drop nodes.
+  - Smooth camera controls (pan, zoom, focus on node) powered by GSAP.
+  - Camera movement history (back/forward).
+  - Context menus for nodes and edges.
 - **Extensible Plugin System**: Customize or extend nearly any aspect of the library by creating or modifying plugins
   for rendering, camera behavior, UI interactions, data handling, and more.
 - **Multiple Module Formats**: Supports ES Modules (ESM), CommonJS (CJS), and UMD, compatible with Node.js and modern

@@ -1,77 +1,78 @@
-import {HtmlNode} from './HtmlNode.js';
-import {$} from '../../utils.js';
+import { HtmlNode } from "./HtmlNode.js";
+import { $ } from "../../utils.js";
 
 export class MetaWidgetNode extends HtmlNode {
-    static typeName = 'meta-widget';
+  static typeName = "meta-widget";
 
-    childWidgets = new Map();
-    layout = 'grid';
-    columns = 2;
-    gap = 10;
-    resizable = true;
-    collapsible = true;
-    isCollapsed = false;
+  childWidgets = new Map();
+  layout = "grid";
+  columns = 2;
+  gap = 10;
+  resizable = true;
+  collapsible = true;
+  isCollapsed = false;
 
-    constructor(id, position, data = {}, mass = 1.0) {
-        const metaData = {
-            width: data.width ?? 400,
-            height: data.height ?? 300,
-            title: data.title ?? 'Widget Container',
-            layout: data.layout ?? 'grid',
-            columns: data.columns ?? 2,
-            gap: data.gap ?? 10,
-            resizable: data.resizable ?? true,
-            collapsible: data.collapsible ?? true,
-            backgroundColor: data.backgroundColor ?? 'rgba(25, 30, 45, 0.95)',
-            widgets: data.widgets ?? [],
-            padding: data.padding ?? 15,
-            showHeader: data.showHeader ?? true,
-            ...data,
-        };
+  constructor(id, position, data = {}, mass = 1.0) {
+    const metaData = {
+      width: data.width ?? 400,
+      height: data.height ?? 300,
+      title: data.title ?? "Widget Container",
+      layout: data.layout ?? "grid",
+      columns: data.columns ?? 2,
+      gap: data.gap ?? 10,
+      resizable: data.resizable ?? true,
+      collapsible: data.collapsible ?? true,
+      backgroundColor: data.backgroundColor ?? "rgba(25, 30, 45, 0.95)",
+      widgets: data.widgets ?? [],
+      padding: data.padding ?? 15,
+      showHeader: data.showHeader ?? true,
+      ...data,
+    };
 
-        super(id, position, metaData, mass);
-        this.layout = metaData.layout;
-        this.columns = metaData.columns;
-        this.gap = metaData.gap;
-        this.resizable = metaData.resizable;
-        this.collapsible = metaData.collapsible;
+    super(id, position, metaData, mass);
+    this.layout = metaData.layout;
+    this.columns = metaData.columns;
+    this.gap = metaData.gap;
+    this.resizable = metaData.resizable;
+    this.collapsible = metaData.collapsible;
 
-        this._initializeWidgets();
-        this._setupMetaWidgetEvents();
-    }
+    this._initializeWidgets();
+    this._setupMetaWidgetEvents();
+  }
 
-    getDefaultData() {
-        return {
-            ...super.getDefaultData(),
-            type: 'meta-widget',
-            title: 'Widget Container',
-            layout: 'grid',
-            columns: 2,
-            gap: 10,
-            resizable: true,
-            collapsible: true,
-            backgroundColor: 'rgba(25, 30, 45, 0.95)',
-            widgets: [],
-            padding: 15,
-            showHeader: true,
-        };
-    }
+  getDefaultData() {
+    return {
+      ...super.getDefaultData(),
+      type: "meta-widget",
+      title: "Widget Container",
+      layout: "grid",
+      columns: 2,
+      gap: 10,
+      resizable: true,
+      collapsible: true,
+      backgroundColor: "rgba(25, 30, 45, 0.95)",
+      widgets: [],
+      padding: 15,
+      showHeader: true,
+    };
+  }
 
-    _createElement() {
-        const el = document.createElement('div');
-        el.className = 'node-meta-widget node-common';
-        el.id = `node-meta-widget-${this.id}`;
-        el.dataset.nodeId = this.id;
-        el.style.width = `${this.size.width}px`;
-        el.style.height = `${this.size.height}px`;
-        el.draggable = false;
+  _createElement() {
+    const el = document.createElement("div");
+    el.className = "node-meta-widget node-common";
+    el.id = `node-meta-widget-${this.id}`;
+    el.dataset.nodeId = this.id;
+    el.style.width = `${this.size.width}px`;
+    el.style.height = `${this.size.height}px`;
+    el.draggable = false;
 
-        const headerHeight = this.data.showHeader ? 35 : 0;
-        const contentHeight = this.size.height - headerHeight - (this.data.padding * 2);
+    const headerHeight = this.data.showHeader ? 35 : 0;
+    const contentHeight =
+      this.size.height - headerHeight - this.data.padding * 2;
 
-        el.innerHTML = `
+    el.innerHTML = `
             <div class="meta-widget-container">
-                ${this.data.showHeader ? this._generateHeader() : ''}
+                ${this.data.showHeader ? this._generateHeader() : ""}
                 <div class="meta-widget-content" style="height: ${contentHeight}px;">
                     <div class="widget-grid"></div>
                 </div>
@@ -240,241 +241,241 @@ export class MetaWidgetNode extends HtmlNode {
             </style>
         `;
 
-        this._setupDragAndDrop(el);
-        return el;
-    }
+    this._setupDragAndDrop(el);
+    return el;
+  }
 
-    _generateHeader() {
-        return `
+  _generateHeader() {
+    return `
             <div class="meta-widget-header">
                 <h3 class="meta-widget-title">${this.data.title}</h3>
                 <div class="meta-widget-controls">
                     <select class="layout-selector">
-                        <option value="grid" ${this.layout === 'grid' ? 'selected' : ''}>Grid</option>
-                        <option value="flex-row" ${this.layout === 'flex-row' ? 'selected' : ''}>Row</option>
-                        <option value="flex-column" ${this.layout === 'flex-column' ? 'selected' : ''}>Column</option>
-                        <option value="masonry" ${this.layout === 'masonry' ? 'selected' : ''}>Masonry</option>
+                        <option value="grid" ${this.layout === "grid" ? "selected" : ""}>Grid</option>
+                        <option value="flex-row" ${this.layout === "flex-row" ? "selected" : ""}>Row</option>
+                        <option value="flex-column" ${this.layout === "flex-column" ? "selected" : ""}>Column</option>
+                        <option value="masonry" ${this.layout === "masonry" ? "selected" : ""}>Masonry</option>
                     </select>
                     <button class="meta-control-btn add-widget" title="Add Widget">+</button>
-                    ${this.collapsible ? `<button class="meta-control-btn collapse-btn" title="Collapse">−</button>` : ''}
+                    ${this.collapsible ? `<button class="meta-control-btn collapse-btn" title="Collapse">−</button>` : ""}
                     <button class="meta-control-btn settings-btn" title="Settings">⚙</button>
                 </div>
             </div>
         `;
+  }
+
+  _initializeWidgets() {
+    if (this.data.widgets && this.data.widgets.length > 0) {
+      this.data.widgets.forEach((widgetData, index) => {
+        this.addWidget(widgetData, index);
+      });
+    }
+    this._updateLayout();
+  }
+
+  _setupMetaWidgetEvents() {
+    const header = $(".meta-widget-header", this.htmlElement);
+    if (!header) return;
+
+    // Layout selector
+    const layoutSelector = $(".layout-selector", header);
+    if (layoutSelector) {
+      layoutSelector.addEventListener("change", (e) => {
+        e.stopPropagation();
+        this.setLayout(e.target.value);
+      });
     }
 
-    _initializeWidgets() {
-        if (this.data.widgets && this.data.widgets.length > 0) {
-            this.data.widgets.forEach((widgetData, index) => {
-                this.addWidget(widgetData, index);
-            });
-        }
-        this._updateLayout();
+    // Add widget button
+    const addBtn = $(".add-widget", header);
+    if (addBtn) {
+      addBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this._showAddWidgetDialog();
+      });
     }
 
-    _setupMetaWidgetEvents() {
-        const header = $('.meta-widget-header', this.htmlElement);
-        if (!header) return;
-
-        // Layout selector
-        const layoutSelector = $('.layout-selector', header);
-        if (layoutSelector) {
-            layoutSelector.addEventListener('change', (e) => {
-                e.stopPropagation();
-                this.setLayout(e.target.value);
-            });
-        }
-
-        // Add widget button
-        const addBtn = $('.add-widget', header);
-        if (addBtn) {
-            addBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this._showAddWidgetDialog();
-            });
-        }
-
-        // Collapse button
-        const collapseBtn = $('.collapse-btn', header);
-        if (collapseBtn) {
-            collapseBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.toggleCollapsed();
-            });
-        }
-
-        // Settings button
-        const settingsBtn = $('.settings-btn', header);
-        if (settingsBtn) {
-            settingsBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this._showSettingsDialog();
-            });
-        }
+    // Collapse button
+    const collapseBtn = $(".collapse-btn", header);
+    if (collapseBtn) {
+      collapseBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.toggleCollapsed();
+      });
     }
 
-    _setupDragAndDrop(element) {
-        // Enable drag and drop for widget reordering
-        element.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-        });
+    // Settings button
+    const settingsBtn = $(".settings-btn", header);
+    if (settingsBtn) {
+      settingsBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this._showSettingsDialog();
+      });
+    }
+  }
 
-        element.addEventListener('drop', (e) => {
-            e.preventDefault();
-            const widgetId = e.dataTransfer.getData('text/widget-id');
-            const targetSlot = e.target.closest('.widget-slot');
+  _setupDragAndDrop(element) {
+    // Enable drag and drop for widget reordering
+    element.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+    });
 
-            if (widgetId && targetSlot) {
-                this._handleWidgetDrop(widgetId, targetSlot);
-            }
-        });
+    element.addEventListener("drop", (e) => {
+      e.preventDefault();
+      const widgetId = e.dataTransfer.getData("text/widget-id");
+      const targetSlot = e.target.closest(".widget-slot");
+
+      if (widgetId && targetSlot) {
+        this._handleWidgetDrop(widgetId, targetSlot);
+      }
+    });
+  }
+
+  addWidget(widgetData, position = null) {
+    const widgetId = widgetData.id || this._generateWidgetId();
+    const widget = {
+      id: widgetId,
+      type: widgetData.type || "control-panel",
+      data: widgetData.data || {},
+      position: position !== null ? position : this.childWidgets.size,
+      ...widgetData,
+    };
+
+    this.childWidgets.set(widgetId, widget);
+    this._renderWidget(widget);
+    this._updateLayout();
+
+    this.space?.emit("meta-widget:widget-added", {
+      metaWidget: this,
+      widget,
+      position: widget.position,
+    });
+
+    return widgetId;
+  }
+
+  removeWidget(widgetId) {
+    if (!this.childWidgets.has(widgetId)) return false;
+
+    const widget = this.childWidgets.get(widgetId);
+    this.childWidgets.delete(widgetId);
+
+    const widgetElement = $(`[data-widget-id="${widgetId}"]`, this.htmlElement);
+    if (widgetElement) {
+      widgetElement.remove();
     }
 
-    addWidget(widgetData, position = null) {
-        const widgetId = widgetData.id || this._generateWidgetId();
-        const widget = {
-            id: widgetId,
-            type: widgetData.type || 'control-panel',
-            data: widgetData.data || {},
-            position: position !== null ? position : this.childWidgets.size,
-            ...widgetData
-        };
+    this._updateLayout();
 
-        this.childWidgets.set(widgetId, widget);
-        this._renderWidget(widget);
-        this._updateLayout();
+    this.space?.emit("meta-widget:widget-removed", {
+      metaWidget: this,
+      widget,
+      widgetId,
+    });
 
-        this.space?.emit('meta-widget:widget-added', {
-            metaWidget: this,
-            widget,
-            position: widget.position
-        });
+    return true;
+  }
 
-        return widgetId;
-    }
+  _renderWidget(widget) {
+    const grid = $(".widget-grid", this.htmlElement);
+    if (!grid) return;
 
-    removeWidget(widgetId) {
-        if (!this.childWidgets.has(widgetId)) return false;
+    const slot = document.createElement("div");
+    slot.className = "widget-slot occupied";
+    slot.dataset.widgetId = widget.id;
+    slot.dataset.position = widget.position;
 
-        const widget = this.childWidgets.get(widgetId);
-        this.childWidgets.delete(widgetId);
+    const wrapper = document.createElement("div");
+    wrapper.className = "widget-wrapper";
+    wrapper.draggable = true;
 
-        const widgetElement = $(`[data-widget-id="${widgetId}"]`, this.htmlElement);
-        if (widgetElement) {
-            widgetElement.remove();
-        }
-
-        this._updateLayout();
-
-        this.space?.emit('meta-widget:widget-removed', {
-            metaWidget: this,
-            widget,
-            widgetId
-        });
-
-        return true;
-    }
-
-    _renderWidget(widget) {
-        const grid = $('.widget-grid', this.htmlElement);
-        if (!grid) return;
-
-        const slot = document.createElement('div');
-        slot.className = 'widget-slot occupied';
-        slot.dataset.widgetId = widget.id;
-        slot.dataset.position = widget.position;
-
-        const wrapper = document.createElement('div');
-        wrapper.className = 'widget-wrapper';
-        wrapper.draggable = true;
-
-        // Widget controls
-        const controls = document.createElement('div');
-        controls.className = 'widget-controls';
-        controls.innerHTML = `
+    // Widget controls
+    const controls = document.createElement("div");
+    controls.className = "widget-controls";
+    controls.innerHTML = `
             <button class="widget-control-btn move-btn" title="Move">↕</button>
             <button class="widget-control-btn edit-btn" title="Edit">✎</button>
             <button class="widget-control-btn remove-btn" title="Remove">×</button>
         `;
 
-        // Widget content based on type
-        const content = this._createWidgetContent(widget);
+    // Widget content based on type
+    const content = this._createWidgetContent(widget);
 
-        wrapper.appendChild(content);
-        wrapper.appendChild(controls);
-        slot.appendChild(wrapper);
+    wrapper.appendChild(content);
+    wrapper.appendChild(controls);
+    slot.appendChild(wrapper);
 
-        // Event listeners
-        this._setupWidgetEvents(wrapper, widget);
+    // Event listeners
+    this._setupWidgetEvents(wrapper, widget);
 
-        grid.appendChild(slot);
+    grid.appendChild(slot);
+  }
+
+  _createWidgetContent(widget) {
+    const content = document.createElement("div");
+    content.className = "widget-content";
+    content.style.width = "100%";
+    content.style.height = "100%";
+
+    switch (widget.type) {
+      case "control-panel":
+        content.innerHTML = this._createControlPanelContent(widget);
+        this._setupControlPanelEvents(content, widget);
+        break;
+      case "progress":
+        content.innerHTML = this._createProgressContent(widget);
+        break;
+      case "chart":
+        content.innerHTML = this._createChartContent(widget);
+        break;
+      case "info":
+        content.innerHTML = this._createInfoContent(widget);
+        break;
+      case "custom":
+        content.innerHTML = widget.data.html || "<div>Custom Widget</div>";
+        break;
+      default:
+        content.innerHTML = `<div>Widget: ${widget.type}</div>`;
     }
 
-    _createWidgetContent(widget) {
-        const content = document.createElement('div');
-        content.className = 'widget-content';
-        content.style.width = '100%';
-        content.style.height = '100%';
+    return content;
+  }
 
-        switch (widget.type) {
-            case 'control-panel':
-                content.innerHTML = this._createControlPanelContent(widget);
-                this._setupControlPanelEvents(content, widget);
-                break;
-            case 'progress':
-                content.innerHTML = this._createProgressContent(widget);
-                break;
-            case 'chart':
-                content.innerHTML = this._createChartContent(widget);
-                break;
-            case 'info':
-                content.innerHTML = this._createInfoContent(widget);
-                break;
-            case 'custom':
-                content.innerHTML = widget.data.html || '<div>Custom Widget</div>';
-                break;
-            default:
-                content.innerHTML = `<div>Widget: ${widget.type}</div>`;
-        }
+  _createControlPanelContent(widget) {
+    const controls = widget.data.controls || [];
+    let html = `<div class="mini-control-panel">`;
 
-        return content;
-    }
+    controls.forEach((control) => {
+      html += `<div class="mini-control">`;
+      html += `<label class="mini-control-label">${control.label}</label>`;
 
-    _createControlPanelContent(widget) {
-        const controls = widget.data.controls || [];
-        let html = `<div class="mini-control-panel">`;
-
-        controls.forEach(control => {
-            html += `<div class="mini-control">`;
-            html += `<label class="mini-control-label">${control.label}</label>`;
-
-            switch (control.type) {
-                case 'slider':
-                    html += `<input type="range" class="mini-slider" 
+      switch (control.type) {
+        case "slider":
+          html += `<input type="range" class="mini-slider" 
                              data-control-id="${control.id}"
                              min="${control.min || 0}" max="${control.max || 100}" 
                              value="${control.value || 0}" step="${control.step || 1}">`;
-                    html += `<span class="mini-value">${control.value || 0}</span>`;
-                    break;
-                case 'switch':
-                    html += `<label class="mini-switch">
+          html += `<span class="mini-value">${control.value || 0}</span>`;
+          break;
+        case "switch":
+          html += `<label class="mini-switch">
                         <input type="checkbox" data-control-id="${control.id}" 
-                               ${control.value ? 'checked' : ''}>
+                               ${control.value ? "checked" : ""}>
                         <span class="mini-switch-slider"></span>
                     </label>`;
-                    break;
-                case 'button':
-                    html += `<button class="mini-button" data-control-id="${control.id}">
+          break;
+        case "button":
+          html += `<button class="mini-button" data-control-id="${control.id}">
                         ${control.text || control.label}
                     </button>`;
-                    break;
-            }
-            html += `</div>`;
-        });
+          break;
+      }
+      html += `</div>`;
+    });
 
-        html += `</div>`;
-        html += `<style>
+    html += `</div>`;
+    html += `<style>
             .mini-control-panel { padding: 8px; font-size: 11px; }
             .mini-control { margin-bottom: 8px; }
             .mini-control-label { display: block; color: rgba(255,255,255,0.8); margin-bottom: 3px; }
@@ -492,17 +493,17 @@ export class MetaWidgetNode extends HtmlNode {
                           color: white; font-size: 10px; cursor: pointer; }
         </style>`;
 
-        return html;
-    }
+    return html;
+  }
 
-    _createProgressContent(widget) {
-        const value = widget.data.value || 0;
-        const max = widget.data.max || 100;
-        const percent = (value / max) * 100;
+  _createProgressContent(widget) {
+    const value = widget.data.value || 0;
+    const max = widget.data.max || 100;
+    const percent = (value / max) * 100;
 
-        return `
+    return `
             <div class="mini-progress">
-                <div class="mini-progress-label">${widget.data.label || 'Progress'}</div>
+                <div class="mini-progress-label">${widget.data.label || "Progress"}</div>
                 <div class="mini-progress-bar">
                     <div class="mini-progress-fill" style="width: ${percent}%"></div>
                 </div>
@@ -516,12 +517,12 @@ export class MetaWidgetNode extends HtmlNode {
                 .mini-progress-value { font-size: 10px; color: #4a9eff; margin-top: 4px; }
             </style>
         `;
-    }
+  }
 
-    _createChartContent(widget) {
-        return `
+  _createChartContent(widget) {
+    return `
             <div class="mini-chart">
-                <div class="chart-title">${widget.data.title || 'Chart'}</div>
+                <div class="chart-title">${widget.data.title || "Chart"}</div>
                 <div class="chart-placeholder">📊</div>
             </div>
             <style>
@@ -530,13 +531,13 @@ export class MetaWidgetNode extends HtmlNode {
                 .chart-placeholder { font-size: 24px; opacity: 0.6; }
             </style>
         `;
-    }
+  }
 
-    _createInfoContent(widget) {
-        return `
+  _createInfoContent(widget) {
+    return `
             <div class="mini-info">
-                <div class="info-icon">${widget.data.icon || 'ℹ'}</div>
-                <div class="info-text">${widget.data.text || 'Information'}</div>
+                <div class="info-icon">${widget.data.icon || "ℹ"}</div>
+                <div class="info-text">${widget.data.text || "Information"}</div>
             </div>
             <style>
                 .mini-info { padding: 8px; text-align: center; display: flex; flex-direction: column; justify-content: center; height: 100%; }
@@ -544,96 +545,96 @@ export class MetaWidgetNode extends HtmlNode {
                 .info-text { font-size: 10px; color: rgba(255,255,255,0.8); line-height: 1.3; }
             </style>
         `;
-    }
+  }
 
-    _setupControlPanelEvents(content, widget) {
-        content.querySelectorAll('[data-control-id]').forEach(control => {
-            const controlId = control.dataset.controlId;
+  _setupControlPanelEvents(content, widget) {
+    content.querySelectorAll("[data-control-id]").forEach((control) => {
+      const controlId = control.dataset.controlId;
 
-            control.addEventListener('input', (e) => {
-                e.stopPropagation();
-                let value = e.target.value;
+      control.addEventListener("input", (e) => {
+        e.stopPropagation();
+        let value = e.target.value;
 
-                if (e.target.type === 'checkbox') {
-                    value = e.target.checked;
-                } else if (e.target.type === 'range') {
-                    value = parseFloat(value);
-                    const valueSpan = e.target.parentNode.querySelector('.mini-value');
-                    if (valueSpan) valueSpan.textContent = value;
-                }
+        if (e.target.type === "checkbox") {
+          value = e.target.checked;
+        } else if (e.target.type === "range") {
+          value = parseFloat(value);
+          const valueSpan = e.target.parentNode.querySelector(".mini-value");
+          if (valueSpan) valueSpan.textContent = value;
+        }
 
-                this.space?.emit('meta-widget:control-changed', {
-                    metaWidget: this,
-                    widget,
-                    controlId,
-                    value
-                });
-            });
-
-            if (control.type === 'button' || control.tagName === 'BUTTON') {
-                control.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    this.space?.emit('meta-widget:control-clicked', {
-                        metaWidget: this,
-                        widget,
-                        controlId
-                    });
-                });
-            }
+        this.space?.emit("meta-widget:control-changed", {
+          metaWidget: this,
+          widget,
+          controlId,
+          value,
         });
-    }
+      });
 
-    _setupWidgetEvents(wrapper, widget) {
-        // Drag events
-        wrapper.addEventListener('dragstart', (e) => {
-            e.dataTransfer.setData('text/widget-id', widget.id);
-            e.dataTransfer.effectAllowed = 'move';
+      if (control.type === "button" || control.tagName === "BUTTON") {
+        control.addEventListener("click", (e) => {
+          e.stopPropagation();
+          this.space?.emit("meta-widget:control-clicked", {
+            metaWidget: this,
+            widget,
+            controlId,
+          });
         });
+      }
+    });
+  }
 
-        // Widget control events
-        const removeBtn = $('.remove-btn', wrapper);
-        if (removeBtn) {
-            removeBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.removeWidget(widget.id);
-            });
-        }
+  _setupWidgetEvents(wrapper, widget) {
+    // Drag events
+    wrapper.addEventListener("dragstart", (e) => {
+      e.dataTransfer.setData("text/widget-id", widget.id);
+      e.dataTransfer.effectAllowed = "move";
+    });
 
-        const editBtn = $('.edit-btn', wrapper);
-        if (editBtn) {
-            editBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this._editWidget(widget);
-            });
-        }
+    // Widget control events
+    const removeBtn = $(".remove-btn", wrapper);
+    if (removeBtn) {
+      removeBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.removeWidget(widget.id);
+      });
     }
 
-    _updateLayout() {
-        const grid = $('.widget-grid', this.htmlElement);
-        if (!grid) return;
+    const editBtn = $(".edit-btn", wrapper);
+    if (editBtn) {
+      editBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this._editWidget(widget);
+      });
+    }
+  }
 
-        // Clear existing layout classes
-        grid.className = 'widget-grid';
+  _updateLayout() {
+    const grid = $(".widget-grid", this.htmlElement);
+    if (!grid) return;
 
-        // Add layout-specific class
-        grid.classList.add(`layout-${this.layout}`);
+    // Clear existing layout classes
+    grid.className = "widget-grid";
 
-        // Update CSS custom properties for dynamic layouts
-        if (this.layout === 'grid') {
-            grid.style.gridTemplateColumns = `repeat(${this.columns}, 1fr)`;
-        } else if (this.layout === 'masonry') {
-            grid.style.columns = this.columns;
-            grid.style.columnGap = `${this.gap}px`;
-        }
+    // Add layout-specific class
+    grid.classList.add(`layout-${this.layout}`);
 
-        grid.style.gap = `${this.gap}px`;
+    // Update CSS custom properties for dynamic layouts
+    if (this.layout === "grid") {
+      grid.style.gridTemplateColumns = `repeat(${this.columns}, 1fr)`;
+    } else if (this.layout === "masonry") {
+      grid.style.columns = this.columns;
+      grid.style.columnGap = `${this.gap}px`;
     }
 
-    _showAddWidgetDialog() {
-        // Create a simple modal for adding widgets
-        const dialog = document.createElement('div');
-        dialog.className = 'add-widget-dialog';
-        dialog.innerHTML = `
+    grid.style.gap = `${this.gap}px`;
+  }
+
+  _showAddWidgetDialog() {
+    // Create a simple modal for adding widgets
+    const dialog = document.createElement("div");
+    dialog.className = "add-widget-dialog";
+    dialog.innerHTML = `
             <div class="dialog-backdrop">
                 <div class="dialog-content">
                     <h3>Add Widget</h3>
@@ -706,165 +707,172 @@ export class MetaWidgetNode extends HtmlNode {
             </style>
         `;
 
-        document.body.appendChild(dialog);
+    document.body.appendChild(dialog);
 
-        const cancelBtn = $('.cancel', dialog);
-        const confirmBtn = $('.confirm', dialog);
-        const typeSelect = $('.widget-type-select', dialog);
-        const titleInput = $('.widget-title-input', dialog);
+    const cancelBtn = $(".cancel", dialog);
+    const confirmBtn = $(".confirm", dialog);
+    const typeSelect = $(".widget-type-select", dialog);
+    const titleInput = $(".widget-title-input", dialog);
 
-        const closeDialog = () => {
-            document.body.removeChild(dialog);
-        };
+    const closeDialog = () => {
+      document.body.removeChild(dialog);
+    };
 
-        cancelBtn.addEventListener('click', closeDialog);
+    cancelBtn.addEventListener("click", closeDialog);
 
-        confirmBtn.addEventListener('click', () => {
-            const type = typeSelect.value;
-            const title = titleInput.value || `New ${type}`;
+    confirmBtn.addEventListener("click", () => {
+      const type = typeSelect.value;
+      const title = titleInput.value || `New ${type}`;
 
-            const widgetData = {
-                type,
-                data: {title, label: title}
-            };
+      const widgetData = {
+        type,
+        data: { title, label: title },
+      };
 
-            // Add type-specific default data
-            if (type === 'control-panel') {
-                widgetData.data.controls = [
-                    {id: 'sample', type: 'slider', label: 'Sample', value: 50, min: 0, max: 100}
-                ];
-            } else if (type === 'progress') {
-                widgetData.data.value = 25;
-                widgetData.data.max = 100;
-            }
+      // Add type-specific default data
+      if (type === "control-panel") {
+        widgetData.data.controls = [
+          {
+            id: "sample",
+            type: "slider",
+            label: "Sample",
+            value: 50,
+            min: 0,
+            max: 100,
+          },
+        ];
+      } else if (type === "progress") {
+        widgetData.data.value = 25;
+        widgetData.data.max = 100;
+      }
 
-            this.addWidget(widgetData);
-            closeDialog();
-        });
+      this.addWidget(widgetData);
+      closeDialog();
+    });
 
-        // Close on backdrop click
-        $('.dialog-backdrop', dialog).addEventListener('click', (e) => {
-            if (e.target === e.currentTarget) closeDialog();
-        });
+    // Close on backdrop click
+    $(".dialog-backdrop", dialog).addEventListener("click", (e) => {
+      if (e.target === e.currentTarget) closeDialog();
+    });
+  }
+
+  _editWidget(widget) {
+    // Emit event for external handling
+    this.space?.emit("meta-widget:widget-edit-requested", {
+      metaWidget: this,
+      widget,
+    });
+  }
+
+  _generateWidgetId() {
+    return `widget-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  _handleWidgetDrop(widgetId, targetSlot) {
+    // Implement widget reordering logic
+    const sourceWidget = this.childWidgets.get(widgetId);
+    if (!sourceWidget) return;
+
+    const targetPosition = parseInt(targetSlot.dataset.position);
+    if (!isNaN(targetPosition)) {
+      sourceWidget.position = targetPosition;
+      this._updateLayout();
+    }
+  }
+
+  setLayout(layout) {
+    if (["grid", "flex-row", "flex-column", "masonry"].includes(layout)) {
+      this.layout = layout;
+      this.data.layout = layout;
+      this._updateLayout();
+
+      this.space?.emit("meta-widget:layout-changed", {
+        metaWidget: this,
+        layout,
+      });
+    }
+  }
+
+  setColumns(columns) {
+    this.columns = Math.max(1, columns);
+    this.data.columns = this.columns;
+    this._updateLayout();
+  }
+
+  setGap(gap) {
+    this.gap = Math.max(0, gap);
+    this.data.gap = this.gap;
+    this._updateLayout();
+  }
+
+  toggleCollapsed() {
+    this.isCollapsed = !this.isCollapsed;
+    const content = $(".meta-widget-content", this.htmlElement);
+    const collapseBtn = $(".collapse-btn", this.htmlElement);
+
+    if (content) {
+      content.classList.toggle("collapsed", this.isCollapsed);
     }
 
-    _editWidget(widget) {
-        // Emit event for external handling
-        this.space?.emit('meta-widget:widget-edit-requested', {
-            metaWidget: this,
-            widget
-        });
+    if (collapseBtn) {
+      collapseBtn.textContent = this.isCollapsed ? "+" : "−";
     }
 
-    _generateWidgetId() {
-        return `widget-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    // Adjust height
+    const newHeight = this.isCollapsed ? 60 : this.data.height;
+    this.setSize(this.size.width, newHeight);
+
+    this.space?.emit("meta-widget:collapsed-changed", {
+      metaWidget: this,
+      isCollapsed: this.isCollapsed,
+    });
+  }
+
+  getWidget(widgetId) {
+    return this.childWidgets.get(widgetId);
+  }
+
+  getAllWidgets() {
+    return Array.from(this.childWidgets.values());
+  }
+
+  updateWidget(widgetId, newData) {
+    const widget = this.childWidgets.get(widgetId);
+    if (!widget) return false;
+
+    Object.assign(widget.data, newData);
+
+    // Re-render the widget
+    const widgetElement = $(`[data-widget-id="${widgetId}"]`, this.htmlElement);
+    if (widgetElement) {
+      const content = $(".widget-content", widgetElement);
+      if (content) {
+        content.innerHTML = "";
+        content.appendChild(this._createWidgetContent(widget));
+      }
     }
 
-    _handleWidgetDrop(widgetId, targetSlot) {
-        // Implement widget reordering logic
-        const sourceWidget = this.childWidgets.get(widgetId);
-        if (!sourceWidget) return;
+    this.space?.emit("meta-widget:widget-updated", {
+      metaWidget: this,
+      widget,
+      widgetId,
+    });
 
-        const targetPosition = parseInt(targetSlot.dataset.position);
-        if (!isNaN(targetPosition)) {
-            sourceWidget.position = targetPosition;
-            this._updateLayout();
-        }
-    }
+    return true;
+  }
 
-    setLayout(layout) {
-        if (['grid', 'flex-row', 'flex-column', 'masonry'].includes(layout)) {
-            this.layout = layout;
-            this.data.layout = layout;
-            this._updateLayout();
+  getLayoutData() {
+    return {
+      layout: this.layout,
+      columns: this.columns,
+      gap: this.gap,
+      widgets: Array.from(this.childWidgets.values()),
+    };
+  }
 
-            this.space?.emit('meta-widget:layout-changed', {
-                metaWidget: this,
-                layout
-            });
-        }
-    }
-
-    setColumns(columns) {
-        this.columns = Math.max(1, columns);
-        this.data.columns = this.columns;
-        this._updateLayout();
-    }
-
-    setGap(gap) {
-        this.gap = Math.max(0, gap);
-        this.data.gap = this.gap;
-        this._updateLayout();
-    }
-
-    toggleCollapsed() {
-        this.isCollapsed = !this.isCollapsed;
-        const content = $('.meta-widget-content', this.htmlElement);
-        const collapseBtn = $('.collapse-btn', this.htmlElement);
-
-        if (content) {
-            content.classList.toggle('collapsed', this.isCollapsed);
-        }
-
-        if (collapseBtn) {
-            collapseBtn.textContent = this.isCollapsed ? '+' : '−';
-        }
-
-        // Adjust height
-        const newHeight = this.isCollapsed ? 60 : this.data.height;
-        this.setSize(this.size.width, newHeight);
-
-        this.space?.emit('meta-widget:collapsed-changed', {
-            metaWidget: this,
-            isCollapsed: this.isCollapsed
-        });
-    }
-
-    getWidget(widgetId) {
-        return this.childWidgets.get(widgetId);
-    }
-
-    getAllWidgets() {
-        return Array.from(this.childWidgets.values());
-    }
-
-    updateWidget(widgetId, newData) {
-        const widget = this.childWidgets.get(widgetId);
-        if (!widget) return false;
-
-        Object.assign(widget.data, newData);
-
-        // Re-render the widget
-        const widgetElement = $(`[data-widget-id="${widgetId}"]`, this.htmlElement);
-        if (widgetElement) {
-            const content = $('.widget-content', widgetElement);
-            if (content) {
-                content.innerHTML = '';
-                content.appendChild(this._createWidgetContent(widget));
-            }
-        }
-
-        this.space?.emit('meta-widget:widget-updated', {
-            metaWidget: this,
-            widget,
-            widgetId
-        });
-
-        return true;
-    }
-
-    getLayoutData() {
-        return {
-            layout: this.layout,
-            columns: this.columns,
-            gap: this.gap,
-            widgets: Array.from(this.childWidgets.values())
-        };
-    }
-
-    dispose() {
-        // Clean up child widgets
-        this.childWidgets.clear();
-        super.dispose();
-    }
+  dispose() {
+    // Clean up child widgets
+    this.childWidgets.clear();
+    super.dispose();
+  }
 }

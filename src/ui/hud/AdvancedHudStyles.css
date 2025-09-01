@@ -2,874 +2,892 @@
 
 /* Base HUD layer and positioning */
 #hud-layer {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 1000;
-    font-family: 'Monaco', 'Consolas', 'Menlo', monospace;
-    font-size: 12px;
-    color: #ffffff;
-    user-select: none;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden; /* Prevent full page scroll if content overflows regions */
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1000;
+  font-family: "Monaco", "Consolas", "Menlo", monospace;
+  font-size: 12px;
+  color: #ffffff;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Prevent full page scroll if content overflows regions */
 }
 
 /* HUD Regions */
 .hud-region {
-    pointer-events: none; /* Regions themselves are not interactive */
-    display: flex;
-    padding: 5px;
-    box-sizing: border-box;
+  pointer-events: none; /* Regions themselves are not interactive */
+  display: flex;
+  padding: 5px;
+  box-sizing: border-box;
 }
 
 .hud-region-top {
-    width: 100%;
-    justify-content: space-between; /* Items like menu, notifications, view controls */
-    align-items: flex-start;
-    flex-shrink: 0;
+  width: 100%;
+  justify-content: space-between; /* Items like menu, notifications, view controls */
+  align-items: flex-start;
+  flex-shrink: 0;
 }
 
 .hud-region-middle {
-    flex-grow: 1; /* Takes up remaining space */
-    display: flex;
-    justify-content: space-between; /* For left/right sidebars */
-    overflow: hidden; /* Important for sidebars with scrollable content */
+  flex-grow: 1; /* Takes up remaining space */
+  display: flex;
+  justify-content: space-between; /* For left/right sidebars */
+  overflow: hidden; /* Important for sidebars with scrollable content */
 }
 
-.hud-region-left, .hud-region-right {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    height: 100%; /* Fill the middle region height */
-    overflow-y: auto; /* Allow scrolling if many panels stack */
-    padding: 5px;
-    max-width: 320px; /* Max width for sidebars */
-    pointer-events: auto; /* Sidebars can be interacted with */
+.hud-region-left,
+.hud-region-right {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%; /* Fill the middle region height */
+  overflow-y: auto; /* Allow scrolling if many panels stack */
+  padding: 5px;
+  max-width: 320px; /* Max width for sidebars */
+  pointer-events: auto; /* Sidebars can be interacted with */
 }
 
 .hud-region-left {
-    align-items: flex-start;
+  align-items: flex-start;
 }
 
 .hud-region-right {
-    align-items: flex-end;
+  align-items: flex-end;
 }
 
-
 .hud-region-bottom {
-    width: 100%;
-    justify-content: center; /* For status bar, progress */
-    align-items: flex-end;
-    flex-shrink: 0;
+  width: 100%;
+  justify-content: center; /* For status bar, progress */
+  align-items: flex-end;
+  flex-shrink: 0;
 }
 
 .hud-top-group {
-    display: flex;
-    gap: 10px; /* Spacing between items in a group */
-    align-items: flex-start;
+  display: flex;
+  gap: 10px; /* Spacing between items in a group */
+  align-items: flex-start;
 }
 
 .hud-top-left-group {
-    /* Takes space on the left */
-    margin-right: auto; /* Pushes other groups away */
+  /* Takes space on the left */
+  margin-right: auto; /* Pushes other groups away */
 }
 
 .hud-top-center-group {
-    /* Centers itself if hud-region-top uses justify-content: space-between effectively */
-    /* Or, if hud-region-top is just display:flex, this would need margin: 0 auto; */
-    /* Given hud-region-top has space-between, this group will be in the middle slot */
+  /* Centers itself if hud-region-top uses justify-content: space-between effectively */
+  /* Or, if hud-region-top is just display:flex, this would need margin: 0 auto; */
+  /* Given hud-region-top has space-between, this group will be in the middle slot */
 }
 
 .hud-top-right-group {
-    /* Takes space on the right */
-    margin-left: auto; /* Pushes other groups away */
+  /* Takes space on the right */
+  margin-left: auto; /* Pushes other groups away */
 }
-
 
 /* Individual items within regions (direct children or panels) */
-.hud-region > *, .hud-region-left > *, .hud-region-right > *, .hud-top-group > * {
-    pointer-events: auto; /* Ensure panels/elements are interactive */
+.hud-region > *,
+.hud-region-left > *,
+.hud-region-right > *,
+.hud-top-group > * {
+  pointer-events: auto; /* Ensure panels/elements are interactive */
 }
-
 
 /* Position classes for HUD elements (will be used to assign elements to regions) */
 /* These might be simplified or integrated into panel-specific styles later */
-.hud-top-left { /* Example: for main menu */
-    position: relative; /* No longer absolute */
-    margin: 5px;
+.hud-top-left {
+  /* Example: for main menu */
+  position: relative; /* No longer absolute */
+  margin: 5px;
 }
 
-.hud-top-right { /* Example: for view controls */
-    position: relative;
-    margin: 5px;
+.hud-top-right {
+  /* Example: for view controls */
+  position: relative;
+  margin: 5px;
 }
 
-.hud-top-center { /* Example: for notifications */
-    position: relative;
-    margin: 5px auto; /* Center horizontally */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+.hud-top-center {
+  /* Example: for notifications */
+  position: relative;
+  margin: 5px auto; /* Center horizontally */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .hud-bottom-left {
-    position: relative;
-    margin: 5px;
+  position: relative;
+  margin: 5px;
 }
 
 .hud-bottom-right {
-    position: relative;
-    margin: 5px;
+  position: relative;
+  margin: 5px;
 }
 
 .hud-bottom-center {
-    position: relative;
-    margin: 5px auto;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+  position: relative;
+  margin: 5px auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .hud-bottom-full {
-    position: relative;
-    width: 100%;
+  position: relative;
+  width: 100%;
 }
 
 /* For status bar */
 
-.hud-left-center { /* For panels in the left sidebar */
-    position: relative;
-    margin: 5px;
-    width: 100%;
+.hud-left-center {
+  /* For panels in the left sidebar */
+  position: relative;
+  margin: 5px;
+  width: 100%;
 }
 
-.hud-right-center { /* For panels in the right sidebar */
-    position: relative;
-    margin: 5px;
-    width: 100%;
+.hud-right-center {
+  /* For panels in the right sidebar */
+  position: relative;
+  margin: 5px;
+  width: 100%;
 }
-
 
 /* HUD panels */
 .hud-panel {
-    /* position: absolute; REMOVED - positioning handled by regions/flex */
-    background: rgba(20, 20, 30, 0.85); /* Slightly less opaque */
-    border: 1px solid rgba(100, 150, 255, 0.25); /* Softer border */
-    border-radius: 6px; /* Softer radius */
-    backdrop-filter: blur(8px); /* Slightly less blur */
-    pointer-events: auto;
-    min-width: 180px; /* Adjusted min-width */
-    max-width: 300px; /* Retained max-width, can be overridden */
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25); /* Softer shadow */
-    transition: all 0.3s ease;
-    margin-bottom: 10px; /* Spacing between stacked panels in a sidebar */
-    display: flex;
-    flex-direction: column;
-    max-height: 40vh; /* Max height before panel content scrolls */
+  /* position: absolute; REMOVED - positioning handled by regions/flex */
+  background: rgba(20, 20, 30, 0.85); /* Slightly less opaque */
+  border: 1px solid rgba(100, 150, 255, 0.25); /* Softer border */
+  border-radius: 6px; /* Softer radius */
+  backdrop-filter: blur(8px); /* Slightly less blur */
+  pointer-events: auto;
+  min-width: 180px; /* Adjusted min-width */
+  max-width: 300px; /* Retained max-width, can be overridden */
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25); /* Softer shadow */
+  transition: all 0.3s ease;
+  margin-bottom: 10px; /* Spacing between stacked panels in a sidebar */
+  display: flex;
+  flex-direction: column;
+  max-height: 40vh; /* Max height before panel content scrolls */
 }
 
 .hud-panel:hover {
-    border-color: rgba(100, 150, 255, 0.5);
-    box-shadow: 0 6px 30px rgba(0, 0, 0, 0.4);
+  border-color: rgba(100, 150, 255, 0.5);
+  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.4);
 }
 
 .hud-panel-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 12px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 7px 7px 0 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 7px 7px 0 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .hud-panel-title {
-    font-weight: bold;
-    color: #64B5F6;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+  font-weight: bold;
+  color: #64b5f6;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .hud-panel-toggle {
-    background: none;
-    border: none;
-    color: #ffffff;
-    cursor: pointer;
-    font-size: 14px;
-    padding: 2px;
-    border-radius: 3px;
-    transition: background 0.2s ease;
+  background: none;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px;
+  border-radius: 3px;
+  transition: background 0.2s ease;
 }
 
 .hud-panel-toggle:hover {
-    background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .hud-panel-toggle.collapsed {
-    opacity: 0.6;
+  opacity: 0.6;
 }
 
 .hud-panel-content {
-    padding: 12px;
-    transition: all 0.3s ease;
-    overflow-y: auto; /* Enable vertical scrolling for panel content */
-    flex-grow: 1; /* Allow content to take available space in flex panel */
+  padding: 12px;
+  transition: all 0.3s ease;
+  overflow-y: auto; /* Enable vertical scrolling for panel content */
+  flex-grow: 1; /* Allow content to take available space in flex panel */
 }
 
 .hud-panel-content.collapsed {
-    max-height: 0;
-    padding-top: 0;
-    padding-bottom: 0;
-    opacity: 0;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  opacity: 0;
 }
 
 /* Performance Panel */
 .performance-metric {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-    padding: 4px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 4px 0;
 }
 
 .performance-metric:last-child {
-    margin-bottom: 0;
+  margin-bottom: 0;
 }
 
 .metric-label {
-    color: #B3E5FC;
-    font-size: 11px;
+  color: #b3e5fc;
+  font-size: 11px;
 }
 
 .metric-value {
-    color: #81C784;
-    font-weight: bold;
-    font-size: 11px;
-    min-width: 50px;
-    text-align: right;
+  color: #81c784;
+  font-weight: bold;
+  font-size: 11px;
+  min-width: 50px;
+  text-align: right;
 }
 
 /* Status Bar */
 .hud-status-bar {
-    /* position: absolute; REMOVED */
-    width: 100%; /* Span full width of its container (.hud-region-bottom) */
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: rgba(20, 20, 30, 0.95);
-    border-top: 1px solid rgba(100, 150, 255, 0.3);
-    backdrop-filter: blur(10px);
-    padding: 8px 16px;
-    pointer-events: auto;
-    font-size: 11px;
-    min-height: 32px;
-    box-sizing: border-box;
+  /* position: absolute; REMOVED */
+  width: 100%; /* Span full width of its container (.hud-region-bottom) */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(20, 20, 30, 0.95);
+  border-top: 1px solid rgba(100, 150, 255, 0.3);
+  backdrop-filter: blur(10px);
+  padding: 8px 16px;
+  pointer-events: auto;
+  font-size: 11px;
+  min-height: 32px;
+  box-sizing: border-box;
 }
 
 .status-section {
-    display: flex;
-    gap: 16px;
-    align-items: center;
+  display: flex;
+  gap: 16px;
+  align-items: center;
 }
 
 .status-item {
-    color: #B3E5FC;
-    white-space: nowrap;
-    padding: 2px 8px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 3px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #b3e5fc;
+  white-space: nowrap;
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Notifications */
 .hud-notifications {
-    /* position: absolute; REMOVED - position handled by hud-top-center in flex region */
-    display: flex;
-    flex-direction: column;
-    align-items: center; /* Center notifications if hud-top-center has width */
-    gap: 8px;
-    pointer-events: none; /* Container itself is not interactive */
-    max-width: 400px;
-    z-index: 1100; /* Keep notifications on top */
+  /* position: absolute; REMOVED - position handled by hud-top-center in flex region */
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Center notifications if hud-top-center has width */
+  gap: 8px;
+  pointer-events: none; /* Container itself is not interactive */
+  max-width: 400px;
+  z-index: 1100; /* Keep notifications on top */
 }
 
 .hud-notification {
-    display: flex;
-    align-items: center;
-    background: rgba(20, 20, 30, 0.95);
-    border-radius: 6px;
-    padding: 12px;
-    pointer-events: auto;
-    border-left: 4px solid;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    transform: translateY(-20px);
-    opacity: 0;
-    transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  background: rgba(20, 20, 30, 0.95);
+  border-radius: 6px;
+  padding: 12px;
+  pointer-events: auto;
+  border-left: 4px solid;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  transform: translateY(-20px);
+  opacity: 0;
+  transition: all 0.3s ease;
 }
 
 .hud-notification.notification-visible {
-    transform: translateY(0);
-    opacity: 1;
+  transform: translateY(0);
+  opacity: 1;
 }
 
 .hud-notification-info {
-    border-left-color: #2196F3;
+  border-left-color: #2196f3;
 }
 
 .hud-notification-success {
-    border-left-color: #4CAF50;
+  border-left-color: #4caf50;
 }
 
 .hud-notification-warning {
-    border-left-color: #FF9800;
+  border-left-color: #ff9800;
 }
 
 .hud-notification-error {
-    border-left-color: #F44336;
+  border-left-color: #f44336;
 }
 
 .notification-icon {
-    margin-right: 12px;
-    font-size: 16px;
+  margin-right: 12px;
+  font-size: 16px;
 }
 
 .notification-content {
-    flex: 1;
-    color: #ffffff;
-    font-size: 12px;
-    line-height: 1.4;
+  flex: 1;
+  color: #ffffff;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .notification-close {
-    background: none;
-    border: none;
-    color: #ffffff;
-    cursor: pointer;
-    font-size: 16px;
-    padding: 0;
-    margin-left: 12px;
-    opacity: 0.7;
-    transition: opacity 0.2s ease;
+  background: none;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0;
+  margin-left: 12px;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
 }
 
 .notification-close:hover {
-    opacity: 1;
+  opacity: 1;
 }
 
 /* Progress Indicators */
 .hud-progress-container {
-    /* position: absolute; REMOVED - position handled by hud-bottom-center in flex region */
-    display: flex;
-    flex-direction: column;
-    align-items: center; /* Center progress bars if hud-bottom-center has width */
-    gap: 8px;
-    pointer-events: none; /* Container itself is not interactive */
-    max-width: 300px;
+  /* position: absolute; REMOVED - position handled by hud-bottom-center in flex region */
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Center progress bars if hud-bottom-center has width */
+  gap: 8px;
+  pointer-events: none; /* Container itself is not interactive */
+  max-width: 300px;
 }
 
 .hud-progress-indicator {
-    background: rgba(20, 20, 30, 0.95);
-    border: 1px solid rgba(100, 150, 255, 0.3);
-    border-radius: 6px;
-    padding: 12px;
-    backdrop-filter: blur(10px);
-    pointer-events: auto;
+  background: rgba(20, 20, 30, 0.95);
+  border: 1px solid rgba(100, 150, 255, 0.3);
+  border-radius: 6px;
+  padding: 12px;
+  backdrop-filter: blur(10px);
+  pointer-events: auto;
 }
 
 .progress-label {
-    color: #B3E5FC;
-    font-size: 11px;
-    margin-bottom: 6px;
+  color: #b3e5fc;
+  font-size: 11px;
+  margin-bottom: 6px;
 }
 
 .progress-bar {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-    height: 6px;
-    overflow: hidden;
-    margin-bottom: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  height: 6px;
+  overflow: hidden;
+  margin-bottom: 6px;
 }
 
 .progress-fill {
-    background: linear-gradient(90deg, #4CAF50, #81C784);
-    height: 100%;
-    border-radius: 10px;
-    transition: width 0.3s ease;
-    width: 0;
+  background: linear-gradient(90deg, #4caf50, #81c784);
+  height: 100%;
+  border-radius: 10px;
+  transition: width 0.3s ease;
+  width: 0;
 }
 
 .progress-percent {
-    color: #81C784;
-    font-size: 10px;
-    text-align: center;
+  color: #81c784;
+  font-size: 10px;
+  text-align: center;
 }
 
 /* Indicators */
 .hud-indicator {
-    /* position: absolute; REMOVED - now part of sidebar flex flow */
-    width: 100%; /* Take full width of sidebar region */
-    box-sizing: border-box;
-    display: flex;
-    align-items: center;
-    background: rgba(20, 20, 30, 0.9);
-    border: 1px solid rgba(100, 150, 255, 0.3);
-    border-radius: 6px;
-    padding: 8px 12px;
-    backdrop-filter: blur(10px);
-    pointer-events: auto;
-    transition: all 0.3s ease;
-    margin-bottom: 10px; /* Spacing if multiple indicators/panels in a sidebar */
+  /* position: absolute; REMOVED - now part of sidebar flex flow */
+  width: 100%; /* Take full width of sidebar region */
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  background: rgba(20, 20, 30, 0.9);
+  border: 1px solid rgba(100, 150, 255, 0.3);
+  border-radius: 6px;
+  padding: 8px 12px;
+  backdrop-filter: blur(10px);
+  pointer-events: auto;
+  transition: all 0.3s ease;
+  margin-bottom: 10px; /* Spacing if multiple indicators/panels in a sidebar */
 }
 
 .hud-indicator:hover {
-    background: rgba(20, 20, 30, 0.95);
-    border-color: rgba(100, 150, 255, 0.5);
+  background: rgba(20, 20, 30, 0.95);
+  border-color: rgba(100, 150, 255, 0.5);
 }
 
 .indicator-icon {
-    font-size: 16px;
-    margin-right: 8px;
+  font-size: 16px;
+  margin-right: 8px;
 }
 
 .indicator-details {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .indicator-line {
-    color: #B3E5FC;
-    font-size: 10px;
-    white-space: nowrap;
+  color: #b3e5fc;
+  font-size: 10px;
+  white-space: nowrap;
 }
 
 /* Controls */
 .hud-controls {
-    /* position: absolute; REMOVED - now part of sidebar/topbar flex flow */
-    display: flex;
-    flex-direction: column; /* Default for sidebars */
-    gap: 8px;
-    pointer-events: auto;
-    width: 100%; /* Default for sidebars */
-    box-sizing: border-box;
-    margin-bottom: 10px; /* Spacing if multiple control blocks/panels in a sidebar */
+  /* position: absolute; REMOVED - now part of sidebar/topbar flex flow */
+  display: flex;
+  flex-direction: column; /* Default for sidebars */
+  gap: 8px;
+  pointer-events: auto;
+  width: 100%; /* Default for sidebars */
+  box-sizing: border-box;
+  margin-bottom: 10px; /* Spacing if multiple control blocks/panels in a sidebar */
 }
 
 /* For controls in the top bar, they might need to be row-oriented */
 .hud-region-top > .hud-controls {
-    flex-direction: row; /* ViewModeControls in top bar */
-    width: auto; /* Don't take full width in top bar */
-    align-items: center;
-    margin-bottom: 0;
+  flex-direction: row; /* ViewModeControls in top bar */
+  width: auto; /* Don't take full width in top bar */
+  align-items: center;
+  margin-bottom: 0;
 }
-
 
 .control-group {
-    display: flex;
-    gap: 4px;
+  display: flex;
+  gap: 4px;
 }
 
-.nav-button, .action-button {
-    background: rgba(100, 150, 255, 0.2);
-    border: 1px solid rgba(100, 150, 255, 0.3);
-    color: #ffffff;
-    padding: 8px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 11px;
-    transition: all 0.2s ease;
-    white-space: nowrap;
+.nav-button,
+.action-button {
+  background: rgba(100, 150, 255, 0.2);
+  border: 1px solid rgba(100, 150, 255, 0.3);
+  color: #ffffff;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
-.nav-button:hover, .action-button:hover {
-    background: rgba(100, 150, 255, 0.4);
-    border-color: rgba(100, 150, 255, 0.6);
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+.nav-button:hover,
+.action-button:hover {
+  background: rgba(100, 150, 255, 0.4);
+  border-color: rgba(100, 150, 255, 0.6);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
-.nav-button:active, .action-button:active {
-    transform: translateY(0);
+.nav-button:active,
+.action-button:active {
+  transform: translateY(0);
 }
 
 /* View Mode Controls */
 .view-mode-toggle {
-    display: flex;
-    background: rgba(20, 20, 30, 0.9);
-    border: 1px solid rgba(100, 150, 255, 0.3);
-    border-radius: 6px;
-    overflow: hidden;
-    margin-bottom: 8px;
+  display: flex;
+  background: rgba(20, 20, 30, 0.9);
+  border: 1px solid rgba(100, 150, 255, 0.3);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 8px;
 }
 
 .mode-button {
-    background: none;
-    border: none;
-    color: #B3E5FC;
-    padding: 8px 16px;
-    cursor: pointer;
-    font-size: 11px;
-    transition: all 0.2s ease;
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
+  background: none;
+  border: none;
+  color: #b3e5fc;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.2s ease;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .mode-button:last-child {
-    border-right: none;
+  border-right: none;
 }
 
 .mode-button:hover {
-    background: rgba(100, 150, 255, 0.2);
+  background: rgba(100, 150, 255, 0.2);
 }
 
 .mode-button.active {
-    background: rgba(100, 150, 255, 0.4);
-    color: #ffffff;
+  background: rgba(100, 150, 255, 0.4);
+  color: #ffffff;
 }
 
 .view-options {
-    display: flex;
-    gap: 4px;
+  display: flex;
+  gap: 4px;
 }
 
 .option-button {
-    background: rgba(100, 150, 255, 0.2);
-    border: 1px solid rgba(100, 150, 255, 0.3);
-    color: #ffffff;
-    padding: 6px 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    transition: all 0.2s ease;
+  background: rgba(100, 150, 255, 0.2);
+  border: 1px solid rgba(100, 150, 255, 0.3);
+  color: #ffffff;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s ease;
 }
 
 .option-button:hover {
-    background: rgba(100, 150, 255, 0.4);
-    border-color: rgba(100, 150, 255, 0.6);
+  background: rgba(100, 150, 255, 0.4);
+  border-color: rgba(100, 150, 255, 0.6);
 }
 
 .option-button.active {
-    background: rgba(100, 150, 255, 0.6);
-    border-color: rgba(100, 150, 255, 0.8);
+  background: rgba(100, 150, 255, 0.6);
+  border-color: rgba(100, 150, 255, 0.8);
 }
 
 /* Quick Actions */
 .action-group {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
 }
 
 .action-group:last-child {
-    margin-bottom: 0;
+  margin-bottom: 0;
 }
 
 .action-button {
-    justify-content: flex-start;
-    text-align: left;
-    min-width: 120px;
+  justify-content: flex-start;
+  text-align: left;
+  min-width: 120px;
 }
 
 /* Responsive design */
 @media (max-width: 768px) {
-    .hud-panel {
-        min-width: 150px;
-        max-width: 200px;
-    }
+  .hud-panel {
+    min-width: 150px;
+    max-width: 200px;
+  }
 
-    .hud-status-bar {
-        font-size: 10px;
-        padding: 6px 12px;
-    }
+  .hud-status-bar {
+    font-size: 10px;
+    padding: 6px 12px;
+  }
 
-    .status-section {
-        gap: 8px;
-    }
+  .status-section {
+    gap: 8px;
+  }
 
-    .status-item {
-        padding: 1px 6px;
-    }
+  .status-item {
+    padding: 1px 6px;
+  }
 
-    .hud-notifications {
-        max-width: 250px;
-    }
+  .hud-notifications {
+    max-width: 250px;
+  }
 
-    .nav-button, .action-button {
-        padding: 6px 8px;
-        font-size: 10px;
-    }
+  .nav-button,
+  .action-button {
+    padding: 6px 8px;
+    font-size: 10px;
+  }
 }
 
 /* Styles for HudOverlayPanel */
 .hud-overlay-panel {
-    display: flex; /* Changed from 'none' by JS to 'flex' to enable internal flex layout */
-    flex-direction: column;
-    background: rgba(30, 30, 45, 0.9); /* Darker, more distinct from main panels */
-    border: 1px solid rgba(120, 170, 255, 0.4);
-    border-radius: 8px;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-    color: #e0e0e0; /* Lighter text for better contrast on dark overlay */
-    min-width: 250px; /* Default min width */
-    max-height: 60vh; /* Prevent overlays from becoming too tall */
-    overflow: hidden; /* Header/content manage their own overflow */
+  display: flex; /* Changed from 'none' by JS to 'flex' to enable internal flex layout */
+  flex-direction: column;
+  background: rgba(
+    30,
+    30,
+    45,
+    0.9
+  ); /* Darker, more distinct from main panels */
+  border: 1px solid rgba(120, 170, 255, 0.4);
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  color: #e0e0e0; /* Lighter text for better contrast on dark overlay */
+  min-width: 250px; /* Default min width */
+  max-height: 60vh; /* Prevent overlays from becoming too tall */
+  overflow: hidden; /* Header/content manage their own overflow */
 }
 
 .hud-overlay-panel-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 12px;
-    background: rgba(255, 255, 255, 0.1); /* Slightly lighter header */
-    border-bottom: 1px solid rgba(120, 170, 255, 0.3);
-    cursor: move; /* Draggable by header */
-    border-radius: 7px 7px 0 0; /* Match panel rounding */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.1); /* Slightly lighter header */
+  border-bottom: 1px solid rgba(120, 170, 255, 0.3);
+  cursor: move; /* Draggable by header */
+  border-radius: 7px 7px 0 0; /* Match panel rounding */
 }
 
 .hud-overlay-panel-title {
-    font-weight: bold;
-    color: #90CAF9; /* Brighter title color */
-    font-size: 13px;
+  font-weight: bold;
+  color: #90caf9; /* Brighter title color */
+  font-size: 13px;
 }
 
 .hud-overlay-panel-close {
-    background: none;
-    border: none;
-    color: #e0e0e0;
-    cursor: pointer;
-    font-size: 18px;
-    font-weight: bold;
-    line-height: 1;
-    padding: 2px 6px;
-    border-radius: 4px;
+  background: none;
+  border: none;
+  color: #e0e0e0;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: bold;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
 .hud-overlay-panel-close:hover {
-    background: rgba(255, 0, 0, 0.7);
-    color: #ffffff;
+  background: rgba(255, 0, 0, 0.7);
+  color: #ffffff;
 }
 
 .hud-overlay-panel-content {
-    padding: 12px;
-    overflow-y: auto; /* Allow content to scroll */
-    flex-grow: 1; /* Allow content to fill available space */
+  padding: 12px;
+  overflow-y: auto; /* Allow content to scroll */
+  flex-grow: 1; /* Allow content to fill available space */
 }
 
 /* Styles for new main menu items and submenus */
-#hud-popup-menu { /* Ensure the main popup can contain absolutely positioned submenus */
-    position: relative;
+#hud-popup-menu {
+  /* Ensure the main popup can contain absolutely positioned submenus */
+  position: relative;
 }
 
 .hud-menu-item {
-    display: flex; /* Align icon and label */
-    align-items: center;
-    width: 100%;
-    background: none;
-    border: none;
-    color: #e0e0e0;
-    padding: 8px 12px;
-    text-align: left;
-    cursor: pointer;
-    font-size: 12px;
-    border-radius: 4px; /* Subtle rounding */
-    transition: background-color 0.2s ease;
+  display: flex; /* Align icon and label */
+  align-items: center;
+  width: 100%;
+  background: none;
+  border: none;
+  color: #e0e0e0;
+  padding: 8px 12px;
+  text-align: left;
+  cursor: pointer;
+  font-size: 12px;
+  border-radius: 4px; /* Subtle rounding */
+  transition: background-color 0.2s ease;
 }
 
 .hud-menu-item:hover {
-    background-color: rgba(100, 150, 255, 0.2);
+  background-color: rgba(100, 150, 255, 0.2);
 }
 
 .hud-menu-icon {
-    margin-right: 8px;
-    font-size: 14px; /* Slightly larger icons */
-    width: 1.2em; /* Ensure space for icon */
-    text-align: center;
+  margin-right: 8px;
+  font-size: 14px; /* Slightly larger icons */
+  width: 1.2em; /* Ensure space for icon */
+  text-align: center;
 }
 
 .hud-menu-label {
-    flex-grow: 1;
+  flex-grow: 1;
 }
 
 .hud-menu-static-item {
-    padding: 8px 12px;
-    font-size: 11px;
-    color: #a0a0a0; /* Dimmer color for static info */
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    margin-bottom: 4px;
+  padding: 8px 12px;
+  font-size: 11px;
+  color: #a0a0a0; /* Dimmer color for static info */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 4px;
 }
 
-
 .hud-submenu-trigger .hud-submenu-arrow {
-    margin-left: auto; /* Push arrow to the right */
-    font-size: 10px;
-    color: #a0a0a0;
+  margin-left: auto; /* Push arrow to the right */
+  font-size: 10px;
+  color: #a0a0a0;
 }
 
 .hud-submenu {
-    position: absolute; /* Position relative to #hud-popup-menu */
-    min-width: 180px;
-    background: rgba(40, 40, 55, 0.95); /* Slightly different background for submenu */
-    border: 1px solid rgba(120, 170, 255, 0.3);
-    border-radius: 6px;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
-    z-index: 100; /* Above its parent menu item, but relative to popup */
-    padding: 4px; /* Padding around submenu items */
-    backdrop-filter: blur(8px);
+  position: absolute; /* Position relative to #hud-popup-menu */
+  min-width: 180px;
+  background: rgba(
+    40,
+    40,
+    55,
+    0.95
+  ); /* Slightly different background for submenu */
+  border: 1px solid rgba(120, 170, 255, 0.3);
+  border-radius: 6px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+  z-index: 100; /* Above its parent menu item, but relative to popup */
+  padding: 4px; /* Padding around submenu items */
+  backdrop-filter: blur(8px);
 }
 
 .hud-submenu.hidden {
-    display: none;
+  display: none;
 }
 
 .hud-submenu.visible {
-    display: block;
+  display: block;
 }
 
-
 .hud-menu-separator {
-    border: none;
-    border-top: 1px solid rgba(255, 255, 255, 0.15);
-    margin: 6px 0;
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  margin: 6px 0;
 }
 
 /* Adjustments for existing elements if needed */
 #hud-main-menu-button {
-    z-index: 1002; /* Ensure menu button is above overlays */
+  z-index: 1002; /* Ensure menu button is above overlays */
 }
 
 #hud-popup-menu {
-    z-index: 1001; /* Ensure popup menu is above overlays but below button if overlapping */
-    min-width: 220px; /* Give main popup a bit more space */
+  z-index: 1001; /* Ensure popup menu is above overlays but below button if overlapping */
+  min-width: 220px; /* Give main popup a bit more space */
 }
 
 /* Ensure original panel content looks good inside overlay panel */
 .hud-overlay-panel-content .performance-metric {
-    font-size: 11px; /* Match panel font-size */
+  font-size: 11px; /* Match panel font-size */
 }
 
 .hud-overlay-panel-content .action-group {
-    margin-bottom: 6px;
+  margin-bottom: 6px;
 }
 
 .hud-overlay-panel-content .action-button {
-    font-size: 11px;
-    padding: 6px 10px;
+  font-size: 11px;
+  padding: 6px 10px;
 }
 
 /* Animation keyframes */
 @keyframes pulse {
-    0%, 100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.7;
-    }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
 @keyframes slideInRight {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 @keyframes slideInLeft {
-    from {
-        transform: translateX(-100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 @keyframes slideInUp {
-    from {
-        transform: translateY(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 @keyframes slideInDown {
-    from {
-        transform: translateY(-100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 /* Theme variations */
 .theme-light .hud-panel {
-    background: rgba(255, 255, 255, 0.95);
-    border-color: rgba(0, 0, 0, 0.2);
-    color: #333333;
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 0, 0, 0.2);
+  color: #333333;
 }
 
 .theme-light .hud-status-bar {
-    background: rgba(255, 255, 255, 0.95);
-    border-color: rgba(0, 0, 0, 0.2);
-    color: #333333;
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 0, 0, 0.2);
+  color: #333333;
 }
 
 .theme-light .status-item {
-    background: rgba(0, 0, 0, 0.05);
-    border-color: rgba(0, 0, 0, 0.1);
-    color: #333333;
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #333333;
 }
 
 .theme-light .hud-notification {
-    background: rgba(255, 255, 255, 0.95);
-    color: #333333;
+  background: rgba(255, 255, 255, 0.95);
+  color: #333333;
 }
 
 .theme-light .hud-indicator {
-    background: rgba(255, 255, 255, 0.9);
-    border-color: rgba(0, 0, 0, 0.2);
-    color: #333333;
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(0, 0, 0, 0.2);
+  color: #333333;
 }
 
 /* High contrast mode */
 .high-contrast .hud-panel {
-    border-width: 2px;
-    border-color: #ffffff;
+  border-width: 2px;
+  border-color: #ffffff;
 }
 
 .high-contrast .nav-button,
 .high-contrast .action-button,
 .high-contrast .option-button {
-    border-width: 2px;
+  border-width: 2px;
 }
 
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
-    .hud-panel,
-    .hud-notification,
-    .nav-button,
-    .action-button,
-    .option-button,
-    .progress-fill {
-        transition: none;
-    }
+  .hud-panel,
+  .hud-notification,
+  .nav-button,
+  .action-button,
+  .option-button,
+  .progress-fill {
+    transition: none;
+  }
 
-    .hud-notification {
-        transform: none;
-    }
+  .hud-notification {
+    transform: none;
+  }
 }

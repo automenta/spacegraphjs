@@ -1,369 +1,390 @@
-import * as THREE from 'three';
-import {Edge} from './Edge.js';
+import * as THREE from "three";
+import { Edge } from "./Edge.js";
 
 export class BezierEdge extends Edge {
-    static typeName = 'bezier';
+  static typeName = "bezier";
 
-    controlPoints = [];
-    curve = null;
-    controlPointMeshes = [];
-    controlPointVisible = false;
-    autoControlPoints = true;
-    segments = 50;
+  controlPoints = [];
+  curve = null;
+  controlPointMeshes = [];
+  controlPointVisible = false;
+  autoControlPoints = true;
+  segments = 50;
 
-    constructor(id, sourceNode, targetNode, data = {}) {
-        const bezierData = {
-            segments: data.segments ?? 50,
-            autoControlPoints: data.autoControlPoints ?? true,
-            controlPointsVisible: data.controlPointsVisible ?? false,
-            controlPointSize: data.controlPointSize ?? 3,
-            controlPointColor: data.controlPointColor ?? 0xffff00,
-            curveTension: data.curveTension ?? 0.3,
-            curveType: data.curveType ?? 'cubic', // 'cubic', 'quadratic'
-            manualControlPoints: data.manualControlPoints ?? null,
-            ...data
-        };
+  constructor(id, sourceNode, targetNode, data = {}) {
+    const bezierData = {
+      segments: data.segments ?? 50,
+      autoControlPoints: data.autoControlPoints ?? true,
+      controlPointsVisible: data.controlPointsVisible ?? false,
+      controlPointSize: data.controlPointSize ?? 3,
+      controlPointColor: data.controlPointColor ?? 0xffff00,
+      curveTension: data.curveTension ?? 0.3,
+      curveType: data.curveType ?? "cubic", // 'cubic', 'quadratic'
+      manualControlPoints: data.manualControlPoints ?? null,
+      ...data,
+    };
 
-        super(id, sourceNode, targetNode, bezierData);
+    super(id, sourceNode, targetNode, bezierData);
 
-        this.segments = bezierData.segments;
-        this.autoControlPoints = bezierData.autoControlPoints;
-        this.controlPointVisible = bezierData.controlPointsVisible;
+    this.segments = bezierData.segments;
+    this.autoControlPoints = bezierData.autoControlPoints;
+    this.controlPointVisible = bezierData.controlPointsVisible;
 
-        this._initializeControlPoints();
-        this._createControlPointMeshes();
-        this.update();
+    this._initializeControlPoints();
+    this._createControlPointMeshes();
+    this.update();
+  }
+
+  _initializeControlPoints() {
+    if (!this.source || !this.target) return;
+
+    if (
+      this.data.manualControlPoints &&
+      this.data.manualControlPoints.length > 0
+    ) {
+      // Use manually specified control points
+      this.controlPoints = this.data.manualControlPoints.map(
+        (cp) => new THREE.Vector3(cp.x, cp.y, cp.z || 0),
+      );
+      this.autoControlPoints = false;
+    } else if (this.autoControlPoints) {
+      // Generate automatic control points
+      this._generateAutoControlPoints();
+    } else {
+      // Default control points
+      this.controlPoints = [
+        this.source.position.clone(),
+        new THREE.Vector3(),
+        new THREE.Vector3(),
+        this.target.position.clone(),
+      ];
     }
 
-    _initializeControlPoints() {
-        if (!this.source || !this.target) return;
+    this._updateCurve();
+  }
 
-        if (this.data.manualControlPoints && this.data.manualControlPoints.length > 0) {
-            // Use manually specified control points
-            this.controlPoints = this.data.manualControlPoints.map(cp =>
-                new THREE.Vector3(cp.x, cp.y, cp.z || 0)
-            );
-            this.autoControlPoints = false;
-        } else if (this.autoControlPoints) {
-            // Generate automatic control points
-            this._generateAutoControlPoints();
-        } else {
-            // Default control points
-            this.controlPoints = [
-                this.source.position.clone(),
-                new THREE.Vector3(),
-                new THREE.Vector3(),
-                this.target.position.clone()
-            ];
-        }
+  _generateAutoControlPoints() {
+    const sourcePos = this.source.position;
+    const targetPos = this.target.position;
+    const distance = sourcePos.distanceTo(targetPos);
+    const tension = this.data.curveTension;
 
-        this._updateCurve();
+    // Calculate direction vector
+    const direction = new THREE.Vector3().subVectors(targetPos, sourcePos);
+    const perpendicular = new THREE.Vector3(
+      -direction.z,
+      0,
+      direction.x,
+    ).normalize();
+
+    if (this.data.curveType === "quadratic") {
+      // Single control point for quadratic curve
+      const midPoint = new THREE.Vector3()
+        .addVectors(sourcePos, targetPos)
+        .multiplyScalar(0.5);
+      const offset = perpendicular.multiplyScalar(distance * tension);
+
+      this.controlPoints = [
+        sourcePos.clone(),
+        midPoint.clone().add(offset),
+        targetPos.clone(),
+      ];
+    } else {
+      // Two control points for cubic curve
+      const controlDistance = distance * tension;
+
+      // First control point
+      const cp1Direction = direction.clone().normalize();
+      const cp1Offset = perpendicular
+        .clone()
+        .multiplyScalar(controlDistance * 0.5);
+      const cp1 = sourcePos
+        .clone()
+        .add(cp1Direction.multiplyScalar(controlDistance))
+        .add(cp1Offset);
+
+      // Second control point
+      const cp2Direction = direction.clone().normalize().negate();
+      const cp2Offset = perpendicular
+        .clone()
+        .multiplyScalar(-controlDistance * 0.5);
+      const cp2 = targetPos
+        .clone()
+        .add(cp2Direction.multiplyScalar(controlDistance))
+        .add(cp2Offset);
+
+      this.controlPoints = [sourcePos.clone(), cp1, cp2, targetPos.clone()];
+    }
+  }
+
+  _updateCurve() {
+    if (this.controlPoints.length < 3) return;
+
+    if (
+      this.data.curveType === "quadratic" &&
+      this.controlPoints.length === 3
+    ) {
+      this.curve = new THREE.QuadraticBezierCurve3(
+        this.controlPoints[0],
+        this.controlPoints[1],
+        this.controlPoints[2],
+      );
+    } else if (this.controlPoints.length >= 4) {
+      this.curve = new THREE.CubicBezierCurve3(
+        this.controlPoints[0],
+        this.controlPoints[1],
+        this.controlPoints[2],
+        this.controlPoints[3],
+      );
     }
 
-    _generateAutoControlPoints() {
-        const sourcePos = this.source.position;
-        const targetPos = this.target.position;
-        const distance = sourcePos.distanceTo(targetPos);
-        const tension = this.data.curveTension;
+    this._updateLineGeometry();
+  }
 
-        // Calculate direction vector
-        const direction = new THREE.Vector3().subVectors(targetPos, sourcePos);
-        const perpendicular = new THREE.Vector3(-direction.z, 0, direction.x).normalize();
+  _updateLineGeometry() {
+    if (!this.curve || !this.line) return;
 
-        if (this.data.curveType === 'quadratic') {
-            // Single control point for quadratic curve
-            const midPoint = new THREE.Vector3().addVectors(sourcePos, targetPos).multiplyScalar(0.5);
-            const offset = perpendicular.multiplyScalar(distance * tension);
+    const points = this.curve.getPoints(this.segments);
+    const positions = [];
 
-            this.controlPoints = [
-                sourcePos.clone(),
-                midPoint.clone().add(offset),
-                targetPos.clone()
-            ];
-        } else {
-            // Two control points for cubic curve
-            const controlDistance = distance * tension;
+    points.forEach((point) => {
+      positions.push(point.x, point.y, point.z);
+    });
 
-            // First control point
-            const cp1Direction = direction.clone().normalize();
-            const cp1Offset = perpendicular.clone().multiplyScalar(controlDistance * 0.5);
-            const cp1 = sourcePos.clone()
-                .add(cp1Direction.multiplyScalar(controlDistance))
-                .add(cp1Offset);
+    this.line.geometry.setPositions(positions);
 
-            // Second control point
-            const cp2Direction = direction.clone().normalize().negate();
-            const cp2Offset = perpendicular.clone().multiplyScalar(-controlDistance * 0.5);
-            const cp2 = targetPos.clone()
-                .add(cp2Direction.multiplyScalar(controlDistance))
-                .add(cp2Offset);
+    // Update gradient colors if applicable
+    if (this.data.gradientColors?.length === 2) {
+      const colors = [];
+      const colorStart = new THREE.Color(this.data.gradientColors[0]);
+      const colorEnd = new THREE.Color(this.data.gradientColors[1]);
 
-            this.controlPoints = [
-                sourcePos.clone(),
-                cp1,
-                cp2,
-                targetPos.clone()
-            ];
-        }
+      for (let i = 0; i < points.length; i++) {
+        const t = i / (points.length - 1);
+        const color = colorStart.clone().lerp(colorEnd, t);
+        colors.push(color.r, color.g, color.b);
+      }
+
+      this.line.geometry.setColors(colors);
     }
 
-    _updateCurve() {
-        if (this.controlPoints.length < 3) return;
-
-        if (this.data.curveType === 'quadratic' && this.controlPoints.length === 3) {
-            this.curve = new THREE.QuadraticBezierCurve3(
-                this.controlPoints[0],
-                this.controlPoints[1],
-                this.controlPoints[2]
-            );
-        } else if (this.controlPoints.length >= 4) {
-            this.curve = new THREE.CubicBezierCurve3(
-                this.controlPoints[0],
-                this.controlPoints[1],
-                this.controlPoints[2],
-                this.controlPoints[3]
-            );
-        }
-
-        this._updateLineGeometry();
+    if (this.line.material.dashed) {
+      this.line.computeLineDistances();
     }
 
-    _updateLineGeometry() {
-        if (!this.curve || !this.line) return;
+    this.line.geometry.computeBoundingSphere();
+  }
 
-        const points = this.curve.getPoints(this.segments);
-        const positions = [];
+  _createControlPointMeshes() {
+    this._disposeControlPointMeshes();
 
-        points.forEach(point => {
-            positions.push(point.x, point.y, point.z);
-        });
+    if (!this.controlPointVisible) return;
 
-        this.line.geometry.setPositions(positions);
+    const geometry = new THREE.SphereGeometry(
+      this.data.controlPointSize,
+      16,
+      8,
+    );
 
-        // Update gradient colors if applicable
-        if (this.data.gradientColors?.length === 2) {
-            const colors = [];
-            const colorStart = new THREE.Color(this.data.gradientColors[0]);
-            const colorEnd = new THREE.Color(this.data.gradientColors[1]);
+    this.controlPoints.forEach((point, index) => {
+      // Skip source and target points (they're the nodes themselves)
+      if (index === 0 || index === this.controlPoints.length - 1) return;
 
-            for (let i = 0; i < points.length; i++) {
-                const t = i / (points.length - 1);
-                const color = colorStart.clone().lerp(colorEnd, t);
-                colors.push(color.r, color.g, color.b);
-            }
+      const material = new THREE.MeshBasicMaterial({
+        color: this.data.controlPointColor,
+        transparent: true,
+        opacity: 0.8,
+      });
 
-            this.line.geometry.setColors(colors);
-        }
+      const mesh = new THREE.Mesh(geometry.clone(), material);
+      mesh.position.copy(point);
+      mesh.userData = {
+        edgeId: this.id,
+        type: "control-point",
+        index: index,
+      };
 
-        if (this.line.material.dashed) {
-            this.line.computeLineDistances();
-        }
+      this.controlPointMeshes.push(mesh);
+    });
+  }
 
-        this.line.geometry.computeBoundingSphere();
+  _disposeControlPointMeshes() {
+    this.controlPointMeshes.forEach((mesh) => {
+      mesh.geometry?.dispose();
+      mesh.material?.dispose();
+      mesh.parent?.remove(mesh);
+    });
+    this.controlPointMeshes = [];
+  }
+
+  update() {
+    if (!this.source || !this.target) return;
+
+    // Update source and target positions
+    if (this.controlPoints.length > 0) {
+      this.controlPoints[0].copy(this.source.position);
+      this.controlPoints[this.controlPoints.length - 1].copy(
+        this.target.position,
+      );
+
+      // Regenerate auto control points if enabled
+      if (this.autoControlPoints) {
+        this._generateAutoControlPoints();
+      }
+
+      this._updateCurve();
     }
 
-    _createControlPointMeshes() {
-        this._disposeControlPointMeshes();
+    // Update control point mesh positions
+    this.controlPointMeshes.forEach((mesh, index) => {
+      const controlIndex = index + 1; // Skip source point
+      if (this.controlPoints[controlIndex]) {
+        mesh.position.copy(this.controlPoints[controlIndex]);
+      }
+    });
 
-        if (!this.controlPointVisible) return;
+    super.update();
+  }
 
-        const geometry = new THREE.SphereGeometry(this.data.controlPointSize, 16, 8);
+  setControlPoint(index, position) {
+    if (index >= 0 && index < this.controlPoints.length) {
+      this.controlPoints[index].copy(position);
+      this._updateCurve();
 
-        this.controlPoints.forEach((point, index) => {
-            // Skip source and target points (they're the nodes themselves)
-            if (index === 0 || index === this.controlPoints.length - 1) return;
+      // Update corresponding mesh
+      const meshIndex = index - 1; // Adjust for skipped source point
+      if (meshIndex >= 0 && meshIndex < this.controlPointMeshes.length) {
+        this.controlPointMeshes[meshIndex].position.copy(position);
+      }
 
-            const material = new THREE.MeshBasicMaterial({
-                color: this.data.controlPointColor,
-                transparent: true,
-                opacity: 0.8
-            });
+      this.space?.emit("graph:edge:controlPointChanged", {
+        edge: this,
+        index,
+        position: position.clone(),
+      });
+    }
+  }
 
-            const mesh = new THREE.Mesh(geometry.clone(), material);
-            mesh.position.copy(point);
-            mesh.userData = {
-                edgeId: this.id,
-                type: 'control-point',
-                index: index
-            };
+  addControlPoint(position, index = null) {
+    const insertIndex =
+      index !== null ? index : Math.floor(this.controlPoints.length / 2);
+    const newPoint = new THREE.Vector3().copy(position);
 
-            this.controlPointMeshes.push(mesh);
-        });
+    this.controlPoints.splice(insertIndex, 0, newPoint);
+    this.autoControlPoints = false; // Disable auto mode when manually adding points
+
+    this._updateCurve();
+    this._createControlPointMeshes();
+
+    this.space?.emit("graph:edge:controlPointAdded", {
+      edge: this,
+      index: insertIndex,
+      position: newPoint.clone(),
+    });
+  }
+
+  removeControlPoint(index) {
+    if (index > 0 && index < this.controlPoints.length - 1) {
+      // Can't remove source/target
+      this.controlPoints.splice(index, 1);
+      this._updateCurve();
+      this._createControlPointMeshes();
+
+      this.space?.emit("graph:edge:controlPointRemoved", {
+        edge: this,
+        index,
+      });
+    }
+  }
+
+  setControlPointsVisible(visible) {
+    this.controlPointVisible = visible;
+    this.data.controlPointsVisible = visible;
+
+    if (visible) {
+      this._createControlPointMeshes();
+    } else {
+      this._disposeControlPointMeshes();
+    }
+  }
+
+  setCurveTension(tension) {
+    this.data.curveTension = tension;
+    if (this.autoControlPoints) {
+      this._generateAutoControlPoints();
+      this._updateCurve();
+    }
+  }
+
+  setCurveType(type) {
+    if (type === "quadratic" || type === "cubic") {
+      this.data.curveType = type;
+      this._generateAutoControlPoints();
+      this._updateCurve();
+      this._createControlPointMeshes();
+    }
+  }
+
+  setSegments(segments) {
+    this.segments = Math.max(3, segments);
+    this.data.segments = this.segments;
+    this._updateLineGeometry();
+  }
+
+  setAutoControlPoints(auto) {
+    this.autoControlPoints = auto;
+    this.data.autoControlPoints = auto;
+
+    if (auto) {
+      this._generateAutoControlPoints();
+      this._updateCurve();
+      this._createControlPointMeshes();
+    }
+  }
+
+  getPointOnCurve(t) {
+    return this.curve ? this.curve.getPoint(t) : new THREE.Vector3();
+  }
+
+  getTangentOnCurve(t) {
+    return this.curve ? this.curve.getTangent(t) : new THREE.Vector3();
+  }
+
+  getCurveLength() {
+    return this.curve ? this.curve.getLength() : 0;
+  }
+
+  getControlPoints() {
+    return this.controlPoints.map((p) => p.clone());
+  }
+
+  // Animate control points
+  animateControlPoints(amplitude = 20, frequency = 1) {
+    if (!this.autoControlPoints || this.controlPoints.length < 3) return;
+
+    const time = performance.now() * 0.001;
+
+    // Animate middle control points with sine waves
+    for (let i = 1; i < this.controlPoints.length - 1; i++) {
+      const originalY = this.controlPoints[i].y;
+      const offset = Math.sin(time * frequency + i) * amplitude;
+      this.controlPoints[i].y = originalY + offset;
     }
 
-    _disposeControlPointMeshes() {
-        this.controlPointMeshes.forEach(mesh => {
-            mesh.geometry?.dispose();
-            mesh.material?.dispose();
-            mesh.parent?.remove(mesh);
-        });
-        this.controlPointMeshes = [];
-    }
+    this._updateCurve();
+  }
 
-    update() {
-        if (!this.source || !this.target) return;
+  dispose() {
+    this._disposeControlPointMeshes();
+    super.dispose();
+  }
 
-        // Update source and target positions
-        if (this.controlPoints.length > 0) {
-            this.controlPoints[0].copy(this.source.position);
-            this.controlPoints[this.controlPoints.length - 1].copy(this.target.position);
+  // Methods to add/remove control point meshes from scene
+  addToScene(scene) {
+    this.controlPointMeshes.forEach((mesh) => scene.add(mesh));
+  }
 
-            // Regenerate auto control points if enabled
-            if (this.autoControlPoints) {
-                this._generateAutoControlPoints();
-            }
-
-            this._updateCurve();
-        }
-
-        // Update control point mesh positions
-        this.controlPointMeshes.forEach((mesh, index) => {
-            const controlIndex = index + 1; // Skip source point
-            if (this.controlPoints[controlIndex]) {
-                mesh.position.copy(this.controlPoints[controlIndex]);
-            }
-        });
-
-        super.update();
-    }
-
-    setControlPoint(index, position) {
-        if (index >= 0 && index < this.controlPoints.length) {
-            this.controlPoints[index].copy(position);
-            this._updateCurve();
-
-            // Update corresponding mesh
-            const meshIndex = index - 1; // Adjust for skipped source point
-            if (meshIndex >= 0 && meshIndex < this.controlPointMeshes.length) {
-                this.controlPointMeshes[meshIndex].position.copy(position);
-            }
-
-            this.space?.emit('graph:edge:controlPointChanged', {
-                edge: this,
-                index,
-                position: position.clone()
-            });
-        }
-    }
-
-    addControlPoint(position, index = null) {
-        const insertIndex = index !== null ? index : Math.floor(this.controlPoints.length / 2);
-        const newPoint = new THREE.Vector3().copy(position);
-
-        this.controlPoints.splice(insertIndex, 0, newPoint);
-        this.autoControlPoints = false; // Disable auto mode when manually adding points
-
-        this._updateCurve();
-        this._createControlPointMeshes();
-
-        this.space?.emit('graph:edge:controlPointAdded', {
-            edge: this,
-            index: insertIndex,
-            position: newPoint.clone()
-        });
-    }
-
-    removeControlPoint(index) {
-        if (index > 0 && index < this.controlPoints.length - 1) { // Can't remove source/target
-            this.controlPoints.splice(index, 1);
-            this._updateCurve();
-            this._createControlPointMeshes();
-
-            this.space?.emit('graph:edge:controlPointRemoved', {
-                edge: this,
-                index
-            });
-        }
-    }
-
-    setControlPointsVisible(visible) {
-        this.controlPointVisible = visible;
-        this.data.controlPointsVisible = visible;
-
-        if (visible) {
-            this._createControlPointMeshes();
-        } else {
-            this._disposeControlPointMeshes();
-        }
-    }
-
-    setCurveTension(tension) {
-        this.data.curveTension = tension;
-        if (this.autoControlPoints) {
-            this._generateAutoControlPoints();
-            this._updateCurve();
-        }
-    }
-
-    setCurveType(type) {
-        if (type === 'quadratic' || type === 'cubic') {
-            this.data.curveType = type;
-            this._generateAutoControlPoints();
-            this._updateCurve();
-            this._createControlPointMeshes();
-        }
-    }
-
-    setSegments(segments) {
-        this.segments = Math.max(3, segments);
-        this.data.segments = this.segments;
-        this._updateLineGeometry();
-    }
-
-    setAutoControlPoints(auto) {
-        this.autoControlPoints = auto;
-        this.data.autoControlPoints = auto;
-
-        if (auto) {
-            this._generateAutoControlPoints();
-            this._updateCurve();
-            this._createControlPointMeshes();
-        }
-    }
-
-    getPointOnCurve(t) {
-        return this.curve ? this.curve.getPoint(t) : new THREE.Vector3();
-    }
-
-    getTangentOnCurve(t) {
-        return this.curve ? this.curve.getTangent(t) : new THREE.Vector3();
-    }
-
-    getCurveLength() {
-        return this.curve ? this.curve.getLength() : 0;
-    }
-
-    getControlPoints() {
-        return this.controlPoints.map(p => p.clone());
-    }
-
-    // Animate control points
-    animateControlPoints(amplitude = 20, frequency = 1) {
-        if (!this.autoControlPoints || this.controlPoints.length < 3) return;
-
-        const time = performance.now() * 0.001;
-
-        // Animate middle control points with sine waves
-        for (let i = 1; i < this.controlPoints.length - 1; i++) {
-            const originalY = this.controlPoints[i].y;
-            const offset = Math.sin(time * frequency + i) * amplitude;
-            this.controlPoints[i].y = originalY + offset;
-        }
-
-        this._updateCurve();
-    }
-
-    dispose() {
-        this._disposeControlPointMeshes();
-        super.dispose();
-    }
-
-    // Methods to add/remove control point meshes from scene
-    addToScene(scene) {
-        this.controlPointMeshes.forEach(mesh => scene.add(mesh));
-    }
-
-    removeFromScene(scene) {
-        this.controlPointMeshes.forEach(mesh => scene.remove(mesh));
-    }
+  removeFromScene(scene) {
+    this.controlPointMeshes.forEach((mesh) => scene.remove(mesh));
+  }
 }

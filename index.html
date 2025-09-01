@@ -1,46 +1,49 @@
 <!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8"/>
-    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
-    <link
-            href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>"
-            rel="icon"
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+      name="viewport"
     />
-    <link href="src/index.css" rel="stylesheet"/>
-</head>
-<body>
-<div id="toolbar"></div>
+    <link
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>"
+      rel="icon"
+    />
+    <link href="src/index.css" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="toolbar"></div>
 
-<div id="page-selector">
-    <!-- Buttons will be added here by JavaScript -->
-</div>
-<div id="hud">
-    <!-- Page description will be loaded here -->
-</div>
+    <div id="page-selector">
+      <!-- Buttons will be added here by JavaScript -->
+    </div>
+    <div id="hud">
+      <!-- Page description will be loaded here -->
+    </div>
 
-<div id="mindmap-container">
-    <canvas id="webgl-canvas"></canvas>
-    <div id="css3d-container"></div>
-</div>
+    <div id="mindmap-container">
+      <canvas id="webgl-canvas"></canvas>
+      <div id="css3d-container"></div>
+    </div>
 
-<div class="context-menu" id="context-menu"></div>
+    <div class="context-menu" id="context-menu"></div>
 
-<div class="dialog" id="confirm-dialog">
-    <p id="confirm-message">Are you sure?</p>
-    <button id="confirm-yes">Yes</button>
-    <button id="confirm-no">No</button>
-</div>
+    <div class="dialog" id="confirm-dialog">
+      <p id="confirm-message">Are you sure?</p>
+      <button id="confirm-yes">Yes</button>
+      <button id="confirm-no">No</button>
+    </div>
 
-<script type="importmap">
-    {
+    <script type="importmap">
+      {
         "imports": {
-            "three": "https://cdn.jsdelivr.net/npm/three@0.177.0/build/three.module.js",
-            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.177.0/examples/jsm/",
-            "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
+          "three": "https://cdn.jsdelivr.net/npm/three@0.177.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.177.0/examples/jsm/",
+          "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
         }
-    }
-</script>
-<script src="./src/examples/demo-main.js" type="module"></script>
-</body>
+      }
+    </script>
+    <script src="./src/examples/demo-main.js" type="module"></script>
+  </body>
 </html>

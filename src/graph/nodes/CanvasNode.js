@@ -1,69 +1,69 @@
-import {HtmlNode} from './HtmlNode.js';
-import {$} from '../../utils.js';
+import { HtmlNode } from "./HtmlNode.js";
+import { $ } from "../../utils.js";
 
 export class CanvasNode extends HtmlNode {
-    static typeName = 'canvas';
-    canvas = null;
-    ctx = null;
-    isDrawing = false;
-    lastDrawPoint = null;
-    drawingMode = 'pen';
-    tools = {
-        pen: {color: '#ffffff', size: 2},
-        brush: {color: '#ffffff', size: 8},
-        eraser: {size: 10},
-        line: {color: '#ffffff', size: 2},
-        rectangle: {color: '#ffffff', size: 2, fill: false},
-        circle: {color: '#ffffff', size: 2, fill: false}
+  static typeName = "canvas";
+  canvas = null;
+  ctx = null;
+  isDrawing = false;
+  lastDrawPoint = null;
+  drawingMode = "pen";
+  tools = {
+    pen: { color: "#ffffff", size: 2 },
+    brush: { color: "#ffffff", size: 8 },
+    eraser: { size: 10 },
+    line: { color: "#ffffff", size: 2 },
+    rectangle: { color: "#ffffff", size: 2, fill: false },
+    circle: { color: "#ffffff", size: 2, fill: false },
+  };
+
+  constructor(id, position, data = {}, mass = 1.0) {
+    const canvasData = {
+      width: data.width ?? 400,
+      height: data.height ?? 300,
+      title: data.title ?? "Canvas",
+      backgroundColor: data.backgroundColor ?? "rgba(20, 25, 40, 0.95)",
+      canvasBackground: data.canvasBackground ?? "#1a1a2e",
+      showToolbar: data.showToolbar ?? true,
+      enableDrawing: data.enableDrawing ?? true,
+      preserveContent: data.preserveContent ?? true,
+      ...data,
     };
 
-    constructor(id, position, data = {}, mass = 1.0) {
-        const canvasData = {
-            width: data.width ?? 400,
-            height: data.height ?? 300,
-            title: data.title ?? 'Canvas',
-            backgroundColor: data.backgroundColor ?? 'rgba(20, 25, 40, 0.95)',
-            canvasBackground: data.canvasBackground ?? '#1a1a2e',
-            showToolbar: data.showToolbar ?? true,
-            enableDrawing: data.enableDrawing ?? true,
-            preserveContent: data.preserveContent ?? true,
-            ...data,
-        };
+    super(id, position, canvasData, mass);
+    this._setupCanvas();
+    this._setupTools();
+    this._bindCanvasEvents();
+  }
 
-        super(id, position, canvasData, mass);
-        this._setupCanvas();
-        this._setupTools();
-        this._bindCanvasEvents();
-    }
+  getDefaultData() {
+    return {
+      ...super.getDefaultData(),
+      type: "canvas",
+      title: "Canvas",
+      backgroundColor: "rgba(20, 25, 40, 0.95)",
+      canvasBackground: "#1a1a2e",
+      showToolbar: true,
+      enableDrawing: true,
+      preserveContent: true,
+    };
+  }
 
-    getDefaultData() {
-        return {
-            ...super.getDefaultData(),
-            type: 'canvas',
-            title: 'Canvas',
-            backgroundColor: 'rgba(20, 25, 40, 0.95)',
-            canvasBackground: '#1a1a2e',
-            showToolbar: true,
-            enableDrawing: true,
-            preserveContent: true,
-        };
-    }
+  _createElement() {
+    const el = document.createElement("div");
+    el.className = "node-canvas node-common";
+    el.id = `node-canvas-${this.id}`;
+    el.dataset.nodeId = this.id;
+    el.style.width = `${this.size.width}px`;
+    el.style.height = `${this.size.height}px`;
+    el.draggable = false;
 
-    _createElement() {
-        const el = document.createElement('div');
-        el.className = 'node-canvas node-common';
-        el.id = `node-canvas-${this.id}`;
-        el.dataset.nodeId = this.id;
-        el.style.width = `${this.size.width}px`;
-        el.style.height = `${this.size.height}px`;
-        el.draggable = false;
+    const toolbarHeight = this.data.showToolbar ? 40 : 0;
+    const canvasHeight = this.size.height - 20 - toolbarHeight;
 
-        const toolbarHeight = this.data.showToolbar ? 40 : 0;
-        const canvasHeight = this.size.height - 20 - toolbarHeight;
-
-        el.innerHTML = `
+    el.innerHTML = `
             <div class="canvas-container">
-                ${this.data.showToolbar ? this._generateToolbar() : ''}
+                ${this.data.showToolbar ? this._generateToolbar() : ""}
                 <div class="canvas-wrapper" style="height: ${canvasHeight}px;">
                     <canvas class="drawing-canvas" width="${this.size.width - 20}" height="${canvasHeight}"></canvas>
                 </div>
@@ -179,11 +179,11 @@ export class CanvasNode extends HtmlNode {
             </style>
         `;
 
-        return el;
-    }
+    return el;
+  }
 
-    _generateToolbar() {
-        return `
+  _generateToolbar() {
+    return `
             <div class="canvas-toolbar">
                 <div class="tool-group">
                     <button class="tool-button active" data-tool="pen" title="Pen">✏️</button>
@@ -209,299 +209,325 @@ export class CanvasNode extends HtmlNode {
                 </div>
             </div>
         `;
+  }
+
+  _setupCanvas() {
+    this.canvas = $(".drawing-canvas", this.htmlElement);
+    if (!this.canvas) return;
+
+    this.ctx = this.canvas.getContext("2d");
+    this.ctx.lineCap = "round";
+    this.ctx.lineJoin = "round";
+
+    // Load saved content if available
+    if (this.data.preserveContent && this.data.canvasData) {
+      this._loadCanvasData(this.data.canvasData);
+    }
+  }
+
+  _setupTools() {
+    if (!this.data.showToolbar) return;
+
+    // Tool buttons
+    const toolButtons = this.htmlElement.querySelectorAll("[data-tool]");
+    toolButtons.forEach((button) => {
+      button.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this._setTool(button.dataset.tool);
+        toolButtons.forEach((b) => b.classList.remove("active"));
+        button.classList.add("active");
+      });
+    });
+
+    // Size slider
+    const sizeSlider = $("#size-slider", this.htmlElement);
+    if (sizeSlider) {
+      sizeSlider.addEventListener("input", (e) => {
+        e.stopPropagation();
+        const size = parseInt(e.target.value);
+        this.tools[this.drawingMode].size = size;
+      });
     }
 
-    _setupCanvas() {
-        this.canvas = $('.drawing-canvas', this.htmlElement);
-        if (!this.canvas) return;
-
-        this.ctx = this.canvas.getContext('2d');
-        this.ctx.lineCap = 'round';
-        this.ctx.lineJoin = 'round';
-
-        // Load saved content if available
-        if (this.data.preserveContent && this.data.canvasData) {
-            this._loadCanvasData(this.data.canvasData);
+    // Color picker
+    const colorPicker = $("#color-picker", this.htmlElement);
+    if (colorPicker) {
+      colorPicker.addEventListener("change", (e) => {
+        e.stopPropagation();
+        const color = e.target.value;
+        if (this.tools[this.drawingMode] && this.drawingMode !== "eraser") {
+          this.tools[this.drawingMode].color = color;
         }
+      });
     }
 
-    _setupTools() {
-        if (!this.data.showToolbar) return;
-
-        // Tool buttons
-        const toolButtons = this.htmlElement.querySelectorAll('[data-tool]');
-        toolButtons.forEach(button => {
-            button.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this._setTool(button.dataset.tool);
-                toolButtons.forEach(b => b.classList.remove('active'));
-                button.classList.add('active');
-            });
-        });
-
-        // Size slider
-        const sizeSlider = $('#size-slider', this.htmlElement);
-        if (sizeSlider) {
-            sizeSlider.addEventListener('input', (e) => {
-                e.stopPropagation();
-                const size = parseInt(e.target.value);
-                this.tools[this.drawingMode].size = size;
-            });
-        }
-
-        // Color picker
-        const colorPicker = $('#color-picker', this.htmlElement);
-        if (colorPicker) {
-            colorPicker.addEventListener('change', (e) => {
-                e.stopPropagation();
-                const color = e.target.value;
-                if (this.tools[this.drawingMode] && this.drawingMode !== 'eraser') {
-                    this.tools[this.drawingMode].color = color;
-                }
-            });
-        }
-
-        // Clear button
-        const clearButton = $('#clear-canvas', this.htmlElement);
-        if (clearButton) {
-            clearButton.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.clearCanvas();
-            });
-        }
-
-        // Save button
-        const saveButton = $('#save-canvas', this.htmlElement);
-        if (saveButton) {
-            saveButton.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.saveCanvas();
-            });
-        }
+    // Clear button
+    const clearButton = $("#clear-canvas", this.htmlElement);
+    if (clearButton) {
+      clearButton.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.clearCanvas();
+      });
     }
 
-    _bindCanvasEvents() {
-        if (!this.canvas || !this.data.enableDrawing) return;
-
-        this.canvas.addEventListener('pointerdown', (e) => {
-            e.stopPropagation();
-            this.isDrawing = true;
-            const rect = this.canvas.getBoundingClientRect();
-            const point = {
-                x: e.clientX - rect.left,
-                y: e.clientY - rect.top
-            };
-
-            if (this.drawingMode === 'pen' || this.drawingMode === 'brush' || this.drawingMode === 'eraser') {
-                this.lastDrawPoint = point;
-                this._drawDot(point);
-            } else {
-                this.startPoint = point;
-            }
-        });
-
-        this.canvas.addEventListener('pointermove', (e) => {
-            if (!this.isDrawing) return;
-            e.preventDefault();
-
-            const rect = this.canvas.getBoundingClientRect();
-            const point = {
-                x: e.clientX - rect.left,
-                y: e.clientY - rect.top
-            };
-
-            if (this.drawingMode === 'pen' || this.drawingMode === 'brush' || this.drawingMode === 'eraser') {
-                this._drawLine(this.lastDrawPoint, point);
-                this.lastDrawPoint = point;
-            }
-        });
-
-        this.canvas.addEventListener('pointerup', (e) => {
-            if (!this.isDrawing) return;
-
-            this.isDrawing = false;
-
-            if (this.drawingMode === 'line' || this.drawingMode === 'rectangle' || this.drawingMode === 'circle') {
-                const rect = this.canvas.getBoundingClientRect();
-                const endPoint = {
-                    x: e.clientX - rect.left,
-                    y: e.clientY - rect.top
-                };
-                this._drawShape(this.startPoint, endPoint);
-            }
-
-            this._saveCanvasState();
-        });
-
-        this.canvas.addEventListener('pointerleave', () => {
-            this.isDrawing = false;
-        });
-
-        // Prevent default touch behaviors
-        this.canvas.addEventListener('touchstart', (e) => e.preventDefault());
-        this.canvas.addEventListener('touchmove', (e) => e.preventDefault());
-        this.canvas.addEventListener('touchend', (e) => e.preventDefault());
+    // Save button
+    const saveButton = $("#save-canvas", this.htmlElement);
+    if (saveButton) {
+      saveButton.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.saveCanvas();
+      });
     }
+  }
 
-    _setTool(tool) {
-        this.drawingMode = tool;
-        this.canvas.className = `drawing-canvas ${tool === 'eraser' ? 'eraser' : ''}`;
+  _bindCanvasEvents() {
+    if (!this.canvas || !this.data.enableDrawing) return;
 
-        // Update UI
-        const sizeSlider = $('#size-slider', this.htmlElement);
-        const colorPicker = $('#color-picker', this.htmlElement);
+    this.canvas.addEventListener("pointerdown", (e) => {
+      e.stopPropagation();
+      this.isDrawing = true;
+      const rect = this.canvas.getBoundingClientRect();
+      const point = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      };
 
-        if (sizeSlider && this.tools[tool]) {
-            sizeSlider.value = this.tools[tool].size || 2;
-        }
+      if (
+        this.drawingMode === "pen" ||
+        this.drawingMode === "brush" ||
+        this.drawingMode === "eraser"
+      ) {
+        this.lastDrawPoint = point;
+        this._drawDot(point);
+      } else {
+        this.startPoint = point;
+      }
+    });
 
-        if (colorPicker && this.tools[tool] && tool !== 'eraser') {
-            colorPicker.value = this.tools[tool].color || '#ffffff';
-        }
-    }
+    this.canvas.addEventListener("pointermove", (e) => {
+      if (!this.isDrawing) return;
+      e.preventDefault();
 
-    _drawDot(point) {
-        this.ctx.beginPath();
+      const rect = this.canvas.getBoundingClientRect();
+      const point = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      };
 
-        if (this.drawingMode === 'eraser') {
-            this.ctx.globalCompositeOperation = 'destination-out';
-            this.ctx.arc(point.x, point.y, this.tools.eraser.size / 2, 0, Math.PI * 2);
-        } else {
-            this.ctx.globalCompositeOperation = 'source-over';
-            this.ctx.fillStyle = this.tools[this.drawingMode].color;
-            this.ctx.arc(point.x, point.y, this.tools[this.drawingMode].size / 2, 0, Math.PI * 2);
-        }
+      if (
+        this.drawingMode === "pen" ||
+        this.drawingMode === "brush" ||
+        this.drawingMode === "eraser"
+      ) {
+        this._drawLine(this.lastDrawPoint, point);
+        this.lastDrawPoint = point;
+      }
+    });
 
-        this.ctx.fill();
-    }
+    this.canvas.addEventListener("pointerup", (e) => {
+      if (!this.isDrawing) return;
 
-    _drawLine(from, to) {
-        this.ctx.beginPath();
+      this.isDrawing = false;
 
-        if (this.drawingMode === 'eraser') {
-            this.ctx.globalCompositeOperation = 'destination-out';
-            this.ctx.lineWidth = this.tools.eraser.size;
-        } else {
-            this.ctx.globalCompositeOperation = 'source-over';
-            this.ctx.strokeStyle = this.tools[this.drawingMode].color;
-            this.ctx.lineWidth = this.tools[this.drawingMode].size;
-        }
-
-        this.ctx.moveTo(from.x, from.y);
-        this.ctx.lineTo(to.x, to.y);
-        this.ctx.stroke();
-    }
-
-    _drawShape(start, end) {
-        const tool = this.tools[this.drawingMode];
-        this.ctx.globalCompositeOperation = 'source-over';
-        this.ctx.strokeStyle = tool.color;
-        this.ctx.lineWidth = tool.size;
-
-        this.ctx.beginPath();
-
-        switch (this.drawingMode) {
-            case 'line':
-                this.ctx.moveTo(start.x, start.y);
-                this.ctx.lineTo(end.x, end.y);
-                this.ctx.stroke();
-                break;
-
-            case 'rectangle':
-                const width = end.x - start.x;
-                const height = end.y - start.y;
-                if (tool.fill) {
-                    this.ctx.fillStyle = tool.color;
-                    this.ctx.fillRect(start.x, start.y, width, height);
-                } else {
-                    this.ctx.strokeRect(start.x, start.y, width, height);
-                }
-                break;
-
-            case 'circle':
-                const radius = Math.sqrt(Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2));
-                this.ctx.arc(start.x, start.y, radius, 0, Math.PI * 2);
-                if (tool.fill) {
-                    this.ctx.fillStyle = tool.color;
-                    this.ctx.fill();
-                } else {
-                    this.ctx.stroke();
-                }
-                break;
-        }
-    }
-
-    _saveCanvasState() {
-        if (this.data.preserveContent) {
-            this.data.canvasData = this.canvas.toDataURL();
-            this.space?.emit('graph:node:dataChanged', {
-                node: this,
-                property: 'canvasData',
-                value: this.data.canvasData
-            });
-        }
-    }
-
-    _loadCanvasData(dataUrl) {
-        const img = new Image();
-        img.onload = () => {
-            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-            this.ctx.drawImage(img, 0, 0);
+      if (
+        this.drawingMode === "line" ||
+        this.drawingMode === "rectangle" ||
+        this.drawingMode === "circle"
+      ) {
+        const rect = this.canvas.getBoundingClientRect();
+        const endPoint = {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top,
         };
-        img.src = dataUrl;
+        this._drawShape(this.startPoint, endPoint);
+      }
+
+      this._saveCanvasState();
+    });
+
+    this.canvas.addEventListener("pointerleave", () => {
+      this.isDrawing = false;
+    });
+
+    // Prevent default touch behaviors
+    this.canvas.addEventListener("touchstart", (e) => e.preventDefault());
+    this.canvas.addEventListener("touchmove", (e) => e.preventDefault());
+    this.canvas.addEventListener("touchend", (e) => e.preventDefault());
+  }
+
+  _setTool(tool) {
+    this.drawingMode = tool;
+    this.canvas.className = `drawing-canvas ${tool === "eraser" ? "eraser" : ""}`;
+
+    // Update UI
+    const sizeSlider = $("#size-slider", this.htmlElement);
+    const colorPicker = $("#color-picker", this.htmlElement);
+
+    if (sizeSlider && this.tools[tool]) {
+      sizeSlider.value = this.tools[tool].size || 2;
     }
 
-    clearCanvas() {
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this._saveCanvasState();
-        this.space?.emit('graph:node:canvasCleared', {node: this});
+    if (colorPicker && this.tools[tool] && tool !== "eraser") {
+      colorPicker.value = this.tools[tool].color || "#ffffff";
+    }
+  }
+
+  _drawDot(point) {
+    this.ctx.beginPath();
+
+    if (this.drawingMode === "eraser") {
+      this.ctx.globalCompositeOperation = "destination-out";
+      this.ctx.arc(
+        point.x,
+        point.y,
+        this.tools.eraser.size / 2,
+        0,
+        Math.PI * 2,
+      );
+    } else {
+      this.ctx.globalCompositeOperation = "source-over";
+      this.ctx.fillStyle = this.tools[this.drawingMode].color;
+      this.ctx.arc(
+        point.x,
+        point.y,
+        this.tools[this.drawingMode].size / 2,
+        0,
+        Math.PI * 2,
+      );
     }
 
-    saveCanvas() {
-        const dataUrl = this.canvas.toDataURL('image/png');
-        const link = document.createElement('a');
-        link.download = `canvas-${this.id}.png`;
-        link.href = dataUrl;
-        link.click();
+    this.ctx.fill();
+  }
 
-        this.space?.emit('graph:node:canvasSaved', {
-            node: this,
-            dataUrl,
-            filename: `canvas-${this.id}.png`
-        });
+  _drawLine(from, to) {
+    this.ctx.beginPath();
+
+    if (this.drawingMode === "eraser") {
+      this.ctx.globalCompositeOperation = "destination-out";
+      this.ctx.lineWidth = this.tools.eraser.size;
+    } else {
+      this.ctx.globalCompositeOperation = "source-over";
+      this.ctx.strokeStyle = this.tools[this.drawingMode].color;
+      this.ctx.lineWidth = this.tools[this.drawingMode].size;
     }
 
-    drawImage(image, x = 0, y = 0, width = null, height = null) {
-        if (width && height) {
-            this.ctx.drawImage(image, x, y, width, height);
+    this.ctx.moveTo(from.x, from.y);
+    this.ctx.lineTo(to.x, to.y);
+    this.ctx.stroke();
+  }
+
+  _drawShape(start, end) {
+    const tool = this.tools[this.drawingMode];
+    this.ctx.globalCompositeOperation = "source-over";
+    this.ctx.strokeStyle = tool.color;
+    this.ctx.lineWidth = tool.size;
+
+    this.ctx.beginPath();
+
+    switch (this.drawingMode) {
+      case "line":
+        this.ctx.moveTo(start.x, start.y);
+        this.ctx.lineTo(end.x, end.y);
+        this.ctx.stroke();
+        break;
+
+      case "rectangle":
+        const width = end.x - start.x;
+        const height = end.y - start.y;
+        if (tool.fill) {
+          this.ctx.fillStyle = tool.color;
+          this.ctx.fillRect(start.x, start.y, width, height);
         } else {
-            this.ctx.drawImage(image, x, y);
+          this.ctx.strokeRect(start.x, start.y, width, height);
         }
-        this._saveCanvasState();
+        break;
+
+      case "circle":
+        const radius = Math.sqrt(
+          Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2),
+        );
+        this.ctx.arc(start.x, start.y, radius, 0, Math.PI * 2);
+        if (tool.fill) {
+          this.ctx.fillStyle = tool.color;
+          this.ctx.fill();
+        } else {
+          this.ctx.stroke();
+        }
+        break;
     }
+  }
 
-    drawText(text, x, y, options = {}) {
-        const {
-            color = '#ffffff',
-            font = '16px Arial',
-            align = 'left',
-            baseline = 'top'
-        } = options;
-
-        this.ctx.fillStyle = color;
-        this.ctx.font = font;
-        this.ctx.textAlign = align;
-        this.ctx.textBaseline = baseline;
-        this.ctx.fillText(text, x, y);
-
-        this._saveCanvasState();
+  _saveCanvasState() {
+    if (this.data.preserveContent) {
+      this.data.canvasData = this.canvas.toDataURL();
+      this.space?.emit("graph:node:dataChanged", {
+        node: this,
+        property: "canvasData",
+        value: this.data.canvasData,
+      });
     }
+  }
 
-    getCanvasData() {
-        return this.canvas.toDataURL();
-    }
+  _loadCanvasData(dataUrl) {
+    const img = new Image();
+    img.onload = () => {
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      this.ctx.drawImage(img, 0, 0);
+    };
+    img.src = dataUrl;
+  }
 
-    setCanvasData(dataUrl) {
-        this._loadCanvasData(dataUrl);
+  clearCanvas() {
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this._saveCanvasState();
+    this.space?.emit("graph:node:canvasCleared", { node: this });
+  }
+
+  saveCanvas() {
+    const dataUrl = this.canvas.toDataURL("image/png");
+    const link = document.createElement("a");
+    link.download = `canvas-${this.id}.png`;
+    link.href = dataUrl;
+    link.click();
+
+    this.space?.emit("graph:node:canvasSaved", {
+      node: this,
+      dataUrl,
+      filename: `canvas-${this.id}.png`,
+    });
+  }
+
+  drawImage(image, x = 0, y = 0, width = null, height = null) {
+    if (width && height) {
+      this.ctx.drawImage(image, x, y, width, height);
+    } else {
+      this.ctx.drawImage(image, x, y);
     }
+    this._saveCanvasState();
+  }
+
+  drawText(text, x, y, options = {}) {
+    const {
+      color = "#ffffff",
+      font = "16px Arial",
+      align = "left",
+      baseline = "top",
+    } = options;
+
+    this.ctx.fillStyle = color;
+    this.ctx.font = font;
+    this.ctx.textAlign = align;
+    this.ctx.textBaseline = baseline;
+    this.ctx.fillText(text, x, y);
+
+    this._saveCanvasState();
+  }
+
+  getCanvasData() {
+    return this.canvas.toDataURL();
+  }
+
+  setCanvasData(dataUrl) {
+    this._loadCanvasData(dataUrl);
+  }
 }
