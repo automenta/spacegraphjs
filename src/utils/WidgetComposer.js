@@ -20,50 +20,33 @@ export class WidgetComposer {
             widgets = []
         } = config;
 
+        const dashboardConfig = this._createWidget('meta-widget', config.id || `dashboard-${Date.now()}`, {
+            title,
+            width,
+            height,
+            layout,
+            columns,
+            widgets: widgets.map((widget, index) => ({
+                id: widget.id || `widget-${index}`,
+                ...widget
+            }))
+        });
+
         const dashboard = space.addNode({
-            type: 'meta-widget',
-            id: config.id || `dashboard-${Date.now()}`,
+            type: dashboardConfig.type,
+            id: dashboardConfig.id,
             position,
-            data: {
-                title,
-                width,
-                height,
-                layout,
-                columns,
-                widgets: widgets.map((widget, index) => ({
-                    id: widget.id || `widget-${index}`,
-                    ...widget
-                }))
-            }
+            data: dashboardConfig.data
         });
 
         return dashboard;
     }
 
     static createControlCenter(space, position, systems = []) {
-        const controlWidgets = systems.map((system, index) => ({
-            id: `control-${system.name}`,
-            type: 'control-panel',
-            data: {
-                title: system.title || system.name,
-                controls: system.controls || [
-                    {
-                        id: 'power',
-                        type: 'switch',
-                        label: 'Power',
-                        value: system.enabled || false
-                    },
-                    {
-                        id: 'level',
-                        type: 'slider',
-                        label: 'Level',
-                        value: system.level || 50,
-                        min: 0,
-                        max: 100
-                    }
-                ]
-            }
-        }));
+        const library = this.createWidgetLibrary();
+        const controlWidgets = systems.map((system, index) =>
+            library.slider(`control-${system.name}`, system.title || system.name, system.level || 50, 0, 100) // Using slider as a generic control panel example
+        );
 
         return this.createDashboard(space, position, {
             title: 'Control Center',
@@ -76,56 +59,21 @@ export class WidgetComposer {
     }
 
     static createMonitoringDashboard(space, position, metrics = []) {
-        const monitorWidgets = [];
-
-        metrics.forEach((metric, index) => {
+        const library = this.createWidgetLibrary();
+        const monitorWidgets = metrics.map((metric) => {
+            const id = `${metric.type}-${metric.name}`;
+            const title = metric.title || metric.name;
             switch (metric.type) {
                 case 'gauge':
-                    monitorWidgets.push({
-                        id: `gauge-${metric.name}`,
-                        type: 'progress',
-                        data: {
-                            label: metric.title || metric.name,
-                            progressType: 'gauge',
-                            value: metric.value || 0,
-                            max: metric.max || 100,
-                            color: metric.color || '#4a9eff'
-                        }
-                    });
-                    break;
+                    return library.gauge(id, title, metric.value, metric.max);
                 case 'progress':
-                    monitorWidgets.push({
-                        id: `progress-${metric.name}`,
-                        type: 'progress',
-                        data: {
-                            label: metric.title || metric.name,
-                            progressType: 'bar',
-                            value: metric.value || 0,
-                            max: metric.max || 100,
-                            color: metric.color || '#00ff88'
-                        }
-                    });
-                    break;
+                    return library.progressBar(id, title, metric.value, metric.max);
                 case 'status':
-                    monitorWidgets.push({
-                        id: `status-${metric.name}`,
-                        type: 'info',
-                        data: {
-                            text: metric.title || metric.name,
-                            icon: metric.status === 'ok' ? '✅' : metric.status === 'warning' ? '⚠️' : '❌'
-                        }
-                    });
-                    break;
+                    return library.infoPanel(id, title, metric.status === 'ok' ? '✅' : metric.status === 'warning' ? '⚠️' : '❌');
                 case 'chart':
-                    monitorWidgets.push({
-                        id: `chart-${metric.name}`,
-                        type: 'chart',
-                        data: {
-                            title: metric.title || metric.name,
-                            chartType: metric.chartType || 'line'
-                        }
-                    });
-                    break;
+                    return library.chart(id, title, metric.chartType);
+                default:
+                    return library.infoPanel(id, `Unknown Widget Type: ${metric.type}`);
             }
         });
 
@@ -140,49 +88,20 @@ export class WidgetComposer {
     }
 
     static createWorkflowBuilder(space, position, steps = []) {
-        const workflowWidgets = steps.map((step, index) => ({
-            id: `step-${index}`,
-            type: 'info',
-            data: {
-                text: step.title || `Step ${index + 1}`,
-                icon: step.completed ? '✅' : step.active ? '⚡' : '⏳'
-            }
-        }));
+        const library = this.createWidgetLibrary();
+        const workflowWidgets = steps.map((step, index) =>
+            library.infoPanel(`step-${index}`, step.title || `Step ${index + 1}`, step.completed ? '✅' : step.active ? '⚡' : '⏳')
+        );
 
-        // Add workflow controls
-        workflowWidgets.push({
-            id: 'workflow-controls',
-            type: 'control-panel',
-            data: {
-                title: 'Workflow Controls',
-                controls: [
-                    {
-                        id: 'start',
-                        type: 'button',
-                        label: 'Start Workflow',
-                        text: 'Start'
-                    },
-                    {
-                        id: 'pause',
-                        type: 'button',
-                        label: 'Pause',
-                        text: 'Pause'
-                    },
-                    {
-                        id: 'reset',
-                        type: 'button',
-                        label: 'Reset',
-                        text: 'Reset'
-                    },
-                    {
-                        id: 'auto',
-                        type: 'switch',
-                        label: 'Auto Mode',
-                        value: false
-                    }
-                ]
-            }
-        });
+        workflowWidgets.push(this._createWidget('control-panel', 'workflow-controls', {
+            title: 'Workflow Controls',
+            controls: [
+                library.button('start', 'Start Workflow', 'Start').data.controls[0],
+                library.button('pause', 'Pause', 'Pause').data.controls[0],
+                library.button('reset', 'Reset', 'Reset').data.controls[0],
+                { id: 'auto', type: 'switch', label: 'Auto Mode', value: false }
+            ]
+        }));
 
         return this.createDashboard(space, position, {
             title: 'Workflow Builder',
@@ -194,73 +113,40 @@ export class WidgetComposer {
     }
 
     static createAnalyticsDashboard(space, position, analytics = {}) {
+        const library = this.createWidgetLibrary();
         const widgets = [];
 
-        // Key metrics
         if (analytics.keyMetrics) {
             analytics.keyMetrics.forEach((metric, index) => {
-                widgets.push({
-                    id: `metric-${index}`,
-                    type: 'progress',
-                    data: {
-                        label: metric.name,
-                        progressType: 'circular',
-                        value: metric.value,
-                        max: metric.max || 100,
-                        color: metric.color || '#3498db'
-                    }
-                });
+                widgets.push(this._createWidget('progress', `metric-${index}`, {
+                    label: metric.name,
+                    progressType: 'circular',
+                    value: metric.value,
+                    max: metric.max || 100,
+                    color: metric.color || '#3498db'
+                }));
             });
         }
 
-        // Charts
         if (analytics.charts) {
             analytics.charts.forEach((chart, index) => {
-                widgets.push({
-                    id: `chart-${index}`,
-                    type: 'chart',
-                    data: {
-                        title: chart.title,
-                        chartType: chart.type || 'line'
-                    }
-                });
+                widgets.push(library.chart(`chart-${index}`, chart.title, chart.type));
             });
         }
 
-        // Controls
-        widgets.push({
-            id: 'analytics-controls',
-            type: 'control-panel',
-            data: {
-                title: 'Analytics Controls',
-                controls: [
-                    {
-                        id: 'timeRange',
-                        type: 'select',
-                        label: 'Time Range',
-                        value: '7d',
-                        options: [
-                            {value: '1d', label: 'Last 24 Hours'},
-                            {value: '7d', label: 'Last 7 Days'},
-                            {value: '30d', label: 'Last 30 Days'},
-                            {value: '90d', label: 'Last 90 Days'}
-                        ]
-                    },
-                    {
-                        id: 'refresh',
-                        type: 'button',
-                        label: 'Refresh Data',
-                        text: 'Refresh'
-                    },
-                    {
-                        id: 'autoRefresh',
-                        type: 'switch',
-                        label: 'Auto Refresh',
-                        value: true
-                    }
-                ]
-            }
-        });
+        widgets.push(this._createWidget('control-panel', 'analytics-controls', {
+            title: 'Analytics Controls',
+            controls: [
+                { id: 'timeRange', type: 'select', label: 'Time Range', value: '7d', options: [
+                    {value: '1d', label: 'Last 24 Hours'},
+                    {value: '7d', label: 'Last 7 Days'},
+                    {value: '30d', label: 'Last 30 Days'},
+                    {value: '90d', label: 'Last 90 Days'}
+                ]},
+                library.button('refresh', 'Refresh Data', 'Refresh').data.controls[0],
+                { id: 'autoRefresh', type: 'switch', label: 'Auto Refresh', value: true }
+            ]
+        }));
 
         return this.createDashboard(space, position, {
             title: 'Analytics Dashboard',
@@ -273,58 +159,34 @@ export class WidgetComposer {
     }
 
     static createFormBuilder(space, position, formConfig = {}) {
+        const library = this.createWidgetLibrary();
         const formWidgets = [];
 
-        // Form fields
         if (formConfig.fields) {
             formConfig.fields.forEach((field, index) => {
-                formWidgets.push({
-                    id: `field-${index}`,
-                    type: 'control-panel',
-                    data: {
-                        title: field.label || `Field ${index + 1}`,
-                        controls: [{
-                            id: field.name || `field${index}`,
-                            type: field.type || 'text',
-                            label: field.label || '',
-                            value: field.defaultValue || '',
-                            required: field.required || false,
-                            placeholder: field.placeholder || '',
-                            options: field.options || []
-                        }]
-                    }
-                });
+                formWidgets.push(this._createWidget('control-panel', `field-${index}`, {
+                    title: field.label || `Field ${index + 1}`,
+                    controls: [{
+                        id: field.name || `field${index}`,
+                        type: field.type || 'text',
+                        label: field.label || '',
+                        value: field.defaultValue || '',
+                        required: field.required || false,
+                        placeholder: field.placeholder || '',
+                        options: field.options || []
+                    }]
+                }));
             });
         }
 
-        // Form actions
-        formWidgets.push({
-            id: 'form-actions',
-            type: 'control-panel',
-            data: {
-                title: 'Form Actions',
-                controls: [
-                    {
-                        id: 'submit',
-                        type: 'button',
-                        label: 'Submit Form',
-                        text: 'Submit'
-                    },
-                    {
-                        id: 'clear',
-                        type: 'button',
-                        label: 'Clear Form',
-                        text: 'Clear'
-                    },
-                    {
-                        id: 'save',
-                        type: 'button',
-                        label: 'Save Draft',
-                        text: 'Save Draft'
-                    }
-                ]
-            }
-        });
+        formWidgets.push(this._createWidget('control-panel', 'form-actions', {
+            title: 'Form Actions',
+            controls: [
+                library.button('submit', 'Submit Form', 'Submit').data.controls[0],
+                library.button('clear', 'Clear Form', 'Clear').data.controls[0],
+                library.button('save', 'Save Draft', 'Save Draft').data.controls[0]
+            ]
+        }));
 
         return this.createDashboard(space, position, {
             title: formConfig.title || 'Form Builder',
@@ -336,66 +198,30 @@ export class WidgetComposer {
     }
 
     static createDataVisualization(space, position, datasets = []) {
+        const library = this.createWidgetLibrary();
         const widgets = [];
 
         datasets.forEach((dataset, index) => {
-            // Chart widget for each dataset
-            widgets.push({
-                id: `chart-${index}`,
-                type: 'chart',
-                data: {
-                    title: dataset.name || `Dataset ${index + 1}`,
-                    chartType: dataset.chartType || 'line'
-                }
-            });
+            widgets.push(library.chart(`chart-${index}`, dataset.name, dataset.chartType));
 
-            // Summary stats
             if (dataset.stats) {
-                widgets.push({
-                    id: `stats-${index}`,
-                    type: 'info',
-                    data: {
-                        text: `Records: ${dataset.stats.count || 0}\nAvg: ${dataset.stats.average || 0}`,
-                        icon: '📊'
-                    }
-                });
+                widgets.push(library.infoPanel(`stats-${index}`, `Records: ${dataset.stats.count || 0}\nAvg: ${dataset.stats.average || 0}`, '📊'));
             }
         });
 
-        // Visualization controls
-        widgets.push({
-            id: 'viz-controls',
-            type: 'control-panel',
-            data: {
-                title: 'Visualization Controls',
-                controls: [
-                    {
-                        id: 'chartType',
-                        type: 'select',
-                        label: 'Chart Type',
-                        value: 'line',
-                        options: [
-                            {value: 'line', label: 'Line Chart'},
-                            {value: 'bar', label: 'Bar Chart'},
-                            {value: 'pie', label: 'Pie Chart'},
-                            {value: 'scatter', label: 'Scatter Plot'}
-                        ]
-                    },
-                    {
-                        id: 'showGrid',
-                        type: 'switch',
-                        label: 'Show Grid',
-                        value: true
-                    },
-                    {
-                        id: 'animate',
-                        type: 'switch',
-                        label: 'Animate',
-                        value: true
-                    }
-                ]
-            }
-        });
+        widgets.push(this._createWidget('control-panel', 'viz-controls', {
+            title: 'Visualization Controls',
+            controls: [
+                { id: 'chartType', type: 'select', label: 'Chart Type', value: 'line', options: [
+                    {value: 'line', label: 'Line Chart'},
+                    {value: 'bar', label: 'Bar Chart'},
+                    {value: 'pie', label: 'Pie Chart'},
+                    {value: 'scatter', label: 'Scatter Plot'}
+                ]},
+                { id: 'showGrid', type: 'switch', label: 'Show Grid', value: true },
+                { id: 'animate', type: 'switch', label: 'Animate', value: true }
+            ]
+        }));
 
         return this.createDashboard(space, position, {
             title: 'Data Visualization',
@@ -408,102 +234,35 @@ export class WidgetComposer {
     }
 
     static createGameHUD(space, position, gameConfig = {}) {
+        const library = this.createWidgetLibrary();
         const hudWidgets = [];
 
-        // Player stats
         if (gameConfig.playerStats) {
-            hudWidgets.push({
-                id: 'player-stats',
-                type: 'control-panel',
-                data: {
-                    title: 'Player Stats',
-                    controls: Object.keys(gameConfig.playerStats).map(stat => ({
-                        id: stat,
-                        type: 'progress',
+            hudWidgets.push(this._createWidget('control-panel', 'player-stats', {
+                title: 'Player Stats',
+                controls: Object.keys(gameConfig.playerStats).map(stat =>
+                    this._createWidget('progress', stat, {
                         label: stat.charAt(0).toUpperCase() + stat.slice(1),
                         value: gameConfig.playerStats[stat],
                         max: 100
-                    }))
-                }
-            });
+                    }).data // Directly use the data of the progress widget
+                )
+            }));
         }
 
-        // Health bar
-        hudWidgets.push({
-            id: 'health',
-            type: 'progress',
-            data: {
-                label: 'Health',
-                progressType: 'bar',
-                value: gameConfig.health || 100,
-                max: 100,
-                color: '#e74c3c',
-                animated: true
-            }
-        });
+        hudWidgets.push(library.progressBar('health', 'Health', gameConfig.health || 100, 100));
+        hudWidgets.push(library.progressBar('energy', 'Energy', gameConfig.energy || 100, 100));
+        hudWidgets.push(library.infoPanel('minimap', 'Mini Map', '🗺️'));
+        hudWidgets.push(library.infoPanel('inventory', `Items: ${gameConfig.inventoryCount || 0}`, '🎒'));
 
-        // Mana/Energy bar
-        hudWidgets.push({
-            id: 'energy',
-            type: 'progress',
-            data: {
-                label: 'Energy',
-                progressType: 'bar',
-                value: gameConfig.energy || 100,
-                max: 100,
-                color: '#3498db',
-                animated: true
-            }
-        });
-
-        // Mini map placeholder
-        hudWidgets.push({
-            id: 'minimap',
-            type: 'info',
-            data: {
-                text: 'Mini Map',
-                icon: '🗺️'
-            }
-        });
-
-        // Inventory
-        hudWidgets.push({
-            id: 'inventory',
-            type: 'info',
-            data: {
-                text: `Items: ${gameConfig.inventoryCount || 0}`,
-                icon: '🎒'
-            }
-        });
-
-        // Game controls
-        hudWidgets.push({
-            id: 'game-controls',
-            type: 'control-panel',
-            data: {
-                title: 'Game Controls',
-                controls: [
-                    {
-                        id: 'pause',
-                        type: 'button',
-                        label: 'Pause',
-                        text: '⏸️'
-                    },
-                    {
-                        id: 'settings',
-                        type: 'button',
-                        label: 'Settings',
-                        text: '⚙️'
-                    },
-                    {
-                        id: 'menu',
-                        type: 'button',
-                        label: 'Menu',
-                        text: '📋'
-                    }
-                ]
-            }
-        });
+        hudWidgets.push(this._createWidget('control-panel', 'game-controls', {
+            title: 'Game Controls',
+            controls: [
+                library.button('pause', 'Pause', '⏸️').data.controls[0],
+                library.button('settings', 'Settings', '⚙️').data.controls[0],
+                library.button('menu', 'Menu', '📋').data.controls[0]
+            ]
+        }));
 
         return this.createDashboard(space, position, {
             title: 'Game HUD',
@@ -574,78 +333,53 @@ export class WidgetComposer {
         });
     }
 
+    static _createWidget(type, id, data = {}) {
+        const widgetConfig = { id: id || `${type}-${Date.now()}`, type, data };
+        switch (type) {
+            case 'control-panel':
+                widgetConfig.data = { title: 'Control Panel', controls: [], ...data };
+                break;
+            case 'progress':
+                widgetConfig.data = { label: 'Progress', progressType: 'bar', value: 0, max: 100, ...data };
+                break;
+            case 'info':
+                widgetConfig.data = { text: 'Information', icon: 'ℹ', ...data };
+                break;
+            case 'chart':
+                widgetConfig.data = { title: 'Chart', chartType: 'line', ...data };
+                break;
+            case 'meta-widget':
+                widgetConfig.data = { title: 'Dashboard', ...data };
+                break;
+        }
+        return widgetConfig;
+    }
+
     static createWidgetLibrary() {
         return {
-            // Basic widgets
-            slider: (id, label, value = 50, min = 0, max = 100) => ({
-                id: id || 'slider',
-                type: 'control-panel',
-                data: {
+            slider: (id, label, value = 50, min = 0, max = 100) =>
+                this._createWidget('control-panel', id, {
                     title: 'Slider Control',
-                    controls: [{
-                        id,
-                        type: 'slider',
-                        label,
-                        value,
-                        min,
-                        max
-                    }]
-                }
-            }),
+                    controls: [{ id, type: 'slider', label, value, min, max }]
+                }),
 
-            button: (id, label, text) => ({
-                id: id || 'button',
-                type: 'control-panel',
-                data: {
+            button: (id, label, text) =>
+                this._createWidget('control-panel', id, {
                     title: 'Button Control',
-                    controls: [{
-                        id,
-                        type: 'button',
-                        label: label || text,
-                        text: text || label
-                    }]
-                }
-            }),
+                    controls: [{ id, type: 'button', label: label || text, text: text || label }]
+                }),
 
-            progressBar: (id, label, value = 0, max = 100) => ({
-                id: id || 'progress',
-                type: 'progress',
-                data: {
-                    label,
-                    progressType: 'bar',
-                    value,
-                    max
-                }
-            }),
+            progressBar: (id, label, value = 0, max = 100) =>
+                this._createWidget('progress', id, { label, progressType: 'bar', value, max }),
 
-            gauge: (id, label, value = 0, max = 100) => ({
-                id: id || 'gauge',
-                type: 'progress',
-                data: {
-                    label,
-                    progressType: 'gauge',
-                    value,
-                    max
-                }
-            }),
+            gauge: (id, label, value = 0, max = 100) =>
+                this._createWidget('progress', id, { label, progressType: 'gauge', value, max }),
 
-            infoPanel: (id, text, icon = 'ℹ') => ({
-                id: id || 'info',
-                type: 'info',
-                data: {
-                    text,
-                    icon
-                }
-            }),
+            infoPanel: (id, text, icon = 'ℹ') =>
+                this._createWidget('info', id, { text, icon }),
 
-            chart: (id, title, chartType = 'line') => ({
-                id: id || 'chart',
-                type: 'chart',
-                data: {
-                    title,
-                    chartType
-                }
-            })
+            chart: (id, title, chartType = 'line') =>
+                this._createWidget('chart', id, { title, chartType })
         };
     }
 }

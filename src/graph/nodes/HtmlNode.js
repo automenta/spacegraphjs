@@ -1,7 +1,7 @@
 import {CSS3DObject} from 'three/addons/renderers/CSS3DRenderer.js';
 import {$, Utils} from '../../utils.js';
 import {Node} from './Node.js';
-import {applyLabelLOD} from '../../utils/labelUtils.js';
+import {applyLabelLOD} from '../../rendering/LabelManager.js';
 
 export class HtmlNode extends Node {
     static typeName = 'html';

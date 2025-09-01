@@ -1,5 +1,5 @@
 import {Edge} from './Edge.js';
-import {applyLabelLOD, createCSS3DLabelObject} from '../../utils/labelUtils.js';
+import {applyLabelLOD, createCSS3DLabelObject} from '../../rendering/LabelManager.js';
 
 export class LabeledEdge extends Edge {
     static typeName = 'labeled';
