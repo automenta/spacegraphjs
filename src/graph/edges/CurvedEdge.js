@@ -164,7 +164,8 @@ export class CurvedEdge extends Edge {
   }
 
   _updateArrowheadsAlongCurve(points) {
-    if (!points || points.length < 2) return;
+    // Skip arrowhead updates for instanced edges as they are managed separately
+    if (this.isInstanced || !points || points.length < 2) return;
 
     const numSegments = points.length - 1;
 

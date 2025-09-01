@@ -50,16 +50,16 @@ export class PluginManager {
   async initPlugins() {
     // Define initialization order to ensure dependencies are met
     const initOrder = [
-      "CameraPlugin",     // Camera first as other plugins depend on it
-      "RenderingPlugin",  // Rendering depends on Camera
-      "NodePlugin",       // Node plugin
-      "EdgePlugin",       // Edge plugin depends on Node
-      "LayoutPlugin",     // Layout depends on Node/Edge
-      "UIPlugin",         // UI depends on other components
-      "MinimapPlugin",    // Minimap depends on Camera and Node
-      "DataPlugin",       // Data plugin
+      "CameraPlugin", // Camera first as other plugins depend on it
+      "RenderingPlugin", // Rendering depends on Camera
+      "NodePlugin", // Node plugin
+      "EdgePlugin", // Edge plugin depends on Node
+      "LayoutPlugin", // Layout depends on Node/Edge
+      "UIPlugin", // UI depends on other components
+      "MinimapPlugin", // Minimap depends on Camera and Node
+      "DataPlugin", // Data plugin
       "FractalZoomPlugin", // Fractal zoom
-      "PerformancePlugin" // Performance monitoring last
+      "PerformancePlugin", // Performance monitoring last
     ];
 
     // Initialize plugins in the defined order

@@ -1,6 +1,17 @@
-import { SpaceGraph, ConsolidatedNode, ConsolidatedEdge, ConsolidatedPlugin, 
-         NodeFactory, EdgeFactory, ConsolidatedFactory, PluginManager,
-         ConsolidatedLayoutManager, UIManager, Camera, AdvancedCameraControls } from "../../index.js";
+import {
+  SpaceGraph,
+  ConsolidatedNode,
+  ConsolidatedEdge,
+  ConsolidatedPlugin,
+  NodeFactory,
+  EdgeFactory,
+  ConsolidatedFactory,
+  PluginManager,
+  ConsolidatedLayoutManager,
+  UIManager,
+  Camera,
+  AdvancedCameraControls,
+} from "../../index.js";
 import * as THREE from "three";
 
 // Simplified demo that showcases the consolidated approach

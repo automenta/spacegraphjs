@@ -97,9 +97,38 @@ export class ConsolidatedEdge extends BaseEdge {
     switch (edgeType) {
       case "curved":
         this._updateCurvedEdge();
+        // Call base update for common functionality
+        super.update();
+        break;
+      case "dotted":
+        this._updateDottedEdge();
+        // Call base update for common functionality
+        super.update();
+        break;
+      case "labeled":
+        this._updateLabeledEdge();
+        // Call base update for common functionality
+        super.update();
+        break;
+      case "dynamic":
+        this._updateDynamicEdge();
+        // Call base update for common functionality
+        super.update();
+        break;
+      case "flow":
+        this._updateFlowEdge();
+        // Call base update for common functionality
+        super.update();
+        break;
+      case "spring":
+        this._updateSpringEdge();
+        // Call base update for common functionality
+        super.update();
         break;
       case "bezier":
         this._updateBezierEdge();
+        // Call base update for common functionality
+        super.update();
         break;
       default:
         // Use base edge update
@@ -184,6 +213,12 @@ export class ConsolidatedEdge extends BaseEdge {
 
     this.line.geometry.setPositions(positions);
 
+    // Ensure the geometry attributes are properly updated
+    this.line.geometry.attributes.position.needsUpdate = true;
+
+    // Update bounding sphere for frustum culling
+    this.line.geometry.computeBoundingSphere();
+
     const posAttribute = this.line.geometry.attributes.position;
     if (!posAttribute || posAttribute.count === 0) return;
 
@@ -233,6 +268,26 @@ export class ConsolidatedEdge extends BaseEdge {
   _updateBezierEdge() {
     // Simplified bezier edge update
     this._updateCurvedEdge();
+  }
+
+  _updateDottedEdge() {
+    // Dotted edge update - handled by base class with dashed properties
+  }
+
+  _updateLabeledEdge() {
+    // Labeled edge update - handled by base class
+  }
+
+  _updateDynamicEdge() {
+    // Dynamic edge update - handled by base class
+  }
+
+  _updateFlowEdge() {
+    // Flow edge update - handled by base class
+  }
+
+  _updateSpringEdge() {
+    // Spring edge update - handled by base class
   }
 
   _updateArrowheadsAlongCurve(points) {

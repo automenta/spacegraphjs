@@ -689,6 +689,9 @@ class LODManager {
     if (!this.enabled || !this.camera) return;
 
     this.lodObjects.forEach((currentLOD, object) => {
+      // Safely check if object and its position exist
+      if (!object || !object.position) return;
+
       const distance = object.position.distanceTo(this.camera.position);
       const newLOD = this._calculateLOD(distance);
 

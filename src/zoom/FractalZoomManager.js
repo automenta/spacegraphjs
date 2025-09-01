@@ -343,6 +343,9 @@ export class FractalZoomManager {
   _updateEdgeLOD(edge, lodConfig) {
     if (!edge || !lodConfig) return;
 
+    // Skip LOD updates for instanced edges as they are managed separately
+    if (edge.isInstanced) return;
+
     // Update edge visibility and detail level
     if (edge.line) {
       const material = edge.line.material;

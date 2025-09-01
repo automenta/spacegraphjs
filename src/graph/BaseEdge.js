@@ -190,6 +190,9 @@ export class BaseEdge {
       targetPos.z,
     ]);
 
+    // Ensure the geometry attributes are properly updated
+    this.line.geometry.attributes.position.needsUpdate = true;
+
     if (this.line.geometry.attributes.position.count === 0) return;
 
     this._setGradientColors(); // Call the optimized method
@@ -206,6 +209,9 @@ export class BaseEdge {
    * @protected
    */
   _updateArrowheads() {
+    // Skip arrowhead updates for instanced edges as they are managed separately
+    if (this.isInstanced) return;
+
     const sourcePos = this.source.position;
     const targetPos = this.target.position;
 

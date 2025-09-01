@@ -28,6 +28,15 @@ class InstancedArrowheadGroup {
     this.arrowheadIdToInstanceId = new Map(); // Maps edgeId_source/target to instanceId
     this.instanceIdToArrowheadId = new Map(); // Maps instanceId to edgeId_source/target
     this.activeInstances = 0;
+
+    // Reusable objects for performance
+    this._matrix = new THREE.Matrix4();
+    this._position = new THREE.Vector3();
+    this._direction = new THREE.Vector3();
+    this._quaternion = new THREE.Quaternion();
+    this._scale = new THREE.Vector3();
+    this._up = new THREE.Vector3(0, 1, 0);
+    this._color = new THREE.Color();
   }
 
   addArrowhead(edge, type) {
@@ -57,51 +66,58 @@ class InstancedArrowheadGroup {
     const sourcePos = edge.source.position;
     const targetPos = edge.target.position;
 
-    const matrix = new THREE.Matrix4();
-    const position = new THREE.Vector3();
-    const direction = new THREE.Vector3()
-      .subVectors(targetPos, sourcePos)
-      .normalize();
     const arrowheadSize = edge.data?.arrowheadSize ?? DEFAULT_ARROWHEAD_SIZE;
 
+    // Calculate direction
+    this._direction.subVectors(targetPos, sourcePos).normalize();
+
+    // Calculate position
     if (type === "target") {
-      position
+      this._position
         .copy(targetPos)
-        .sub(direction.clone().multiplyScalar(arrowheadSize * 0.5)); // Position at target, slightly offset
+        .sub(this._direction.clone().multiplyScalar(arrowheadSize * 0.5));
     } else {
       // 'source'
-      position
+      this._position
         .copy(sourcePos)
-        .add(direction.clone().multiplyScalar(arrowheadSize * 0.5)); // Position at source, slightly offset
+        .add(this._direction.clone().multiplyScalar(arrowheadSize * 0.5));
     }
 
-    const quaternion = new THREE.Quaternion();
-    const up = new THREE.Vector3(0, 1, 0);
-    if (!direction.equals(new THREE.Vector3(0, 0, 0))) {
-      if (up.dot(direction) > 0.9999 || up.dot(direction) < -0.9999) {
-        if (up.dot(direction) < -0.9999)
-          quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
+    // Calculate orientation
+    if (!this._direction.equals(new THREE.Vector3(0, 0, 0))) {
+      if (
+        this._up.dot(this._direction) > 0.9999 ||
+        this._up.dot(this._direction) < -0.9999
+      ) {
+        if (this._up.dot(this._direction) < -0.9999)
+          this._quaternion.setFromAxisAngle(
+            new THREE.Vector3(1, 0, 0),
+            Math.PI,
+          );
       } else {
-        quaternion.setFromUnitVectors(up, direction);
+        this._quaternion.setFromUnitVectors(this._up, this._direction);
       }
+    } else {
+      this._quaternion.identity();
     }
 
-    const scale = new THREE.Vector3(
-      arrowheadSize,
-      arrowheadSize,
-      arrowheadSize,
-    );
+    // Set scale
+    this._scale.set(arrowheadSize, arrowheadSize, arrowheadSize);
 
-    matrix.compose(position, quaternion, scale);
-    this.instancedMesh.setMatrixAt(instanceId, matrix);
+    // Compose matrix and update
+    this._matrix.compose(this._position, this._quaternion, this._scale);
+    this.instancedMesh.setMatrixAt(instanceId, this._matrix);
     this.instancedMesh.instanceMatrix.needsUpdate = true;
   }
 
   updateArrowheadColor(edge, instanceId) {
     if (instanceId === undefined || !this.instancedMesh.instanceColor) return;
 
-    const color = new THREE.Color(edge.data?.color ?? 0x888888);
-    this.instancedMesh.setColorAt(instanceId, color);
+    // Use arrowhead color if specified, otherwise use edge color
+    const colorValue =
+      edge.data?.arrowheadColor ?? edge.data?.color ?? 0x888888;
+    this._color.set(colorValue);
+    this.instancedMesh.setColorAt(instanceId, this._color);
     this.instancedMesh.instanceColor.needsUpdate = true;
   }
 
@@ -110,10 +126,8 @@ class InstancedArrowheadGroup {
     const instanceId = this.arrowheadIdToInstanceId.get(arrowheadId);
     if (instanceId === undefined) return;
 
-    this.instancedMesh.setMatrixAt(
-      instanceId,
-      new THREE.Matrix4().makeScale(0, 0, 0),
-    );
+    // Scale to zero to effectively hide
+    this.instancedMesh.setMatrixAt(instanceId, this._matrix.makeScale(0, 0, 0));
     this.instancedMesh.instanceMatrix.needsUpdate = true;
 
     this.arrowheadIdToInstanceId.delete(arrowheadId);
@@ -153,6 +167,15 @@ class InstancedEdgeGroup {
     this.edgeIdToInstanceId = new Map();
     this.instanceIdToEdgeId = new Map();
     this.activeInstances = 0;
+
+    // Reusable objects for performance
+    this._matrix = new THREE.Matrix4();
+    this._position = new THREE.Vector3();
+    this._direction = new THREE.Vector3();
+    this._quaternion = new THREE.Quaternion();
+    this._scale = new THREE.Vector3();
+    this._up = new THREE.Vector3(0, 1, 0);
+    this._color = new THREE.Color();
   }
 
   addEdge(edge) {
@@ -176,38 +199,59 @@ class InstancedEdgeGroup {
     const sourcePos = edge.source.position;
     const targetPos = edge.target.position;
 
-    const matrix = new THREE.Matrix4();
-    const position = new THREE.Vector3()
-      .addVectors(sourcePos, targetPos)
-      .multiplyScalar(0.5);
-    const direction = new THREE.Vector3().subVectors(targetPos, sourcePos);
-    const length = direction.length();
-    direction.normalize();
+    // Calculate midpoint position
+    this._position.addVectors(sourcePos, targetPos).multiplyScalar(0.5);
 
-    const quaternion = new THREE.Quaternion();
-    const up = new THREE.Vector3(0, 1, 0);
-    if (!direction.equals(new THREE.Vector3(0, 0, 0))) {
-      if (up.dot(direction) > 0.9999 || up.dot(direction) < -0.9999) {
-        if (up.dot(direction) < -0.9999)
-          quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
-      } else {
-        quaternion.setFromUnitVectors(up, direction);
-      }
+    // Calculate direction and length
+    this._direction.subVectors(targetPos, sourcePos);
+    const length = this._direction.length();
+
+    // Handle zero-length edges
+    if (length === 0) {
+      this.instancedMesh.setMatrixAt(
+        instanceId,
+        this._matrix.makeScale(0, 0, 0),
+      );
+      this.instancedMesh.instanceMatrix.needsUpdate = true;
+      return;
     }
 
-    const thickness = edge.data?.thicknessInstanced ?? DEFAULT_EDGE_THICKNESS;
-    const scale = new THREE.Vector3(thickness * 2, length, thickness * 2);
+    this._direction.normalize();
 
-    matrix.compose(position, quaternion, scale);
-    this.instancedMesh.setMatrixAt(instanceId, matrix);
+    // Calculate orientation
+    if (!this._direction.equals(new THREE.Vector3(0, 0, 0))) {
+      if (
+        this._up.dot(this._direction) > 0.9999 ||
+        this._up.dot(this._direction) < -0.9999
+      ) {
+        if (this._up.dot(this._direction) < -0.9999)
+          this._quaternion.setFromAxisAngle(
+            new THREE.Vector3(1, 0, 0),
+            Math.PI,
+          );
+      } else {
+        this._quaternion.setFromUnitVectors(this._up, this._direction);
+      }
+    } else {
+      this._quaternion.identity();
+    }
+
+    // Calculate scale (thickness, length, thickness)
+    const thickness = edge.data?.thicknessInstanced ?? DEFAULT_EDGE_THICKNESS;
+    this._scale.set(thickness, length, thickness);
+
+    // Compose matrix and update
+    this._matrix.compose(this._position, this._quaternion, this._scale);
+    this.instancedMesh.setMatrixAt(instanceId, this._matrix);
     this.instancedMesh.instanceMatrix.needsUpdate = true;
   }
 
   updateEdgeColor(edge, instanceId = this.edgeIdToInstanceId.get(edge.id)) {
     if (instanceId === undefined || !this.instancedMesh.instanceColor) return;
 
-    const color = new THREE.Color(edge.data?.color ?? 0x888888);
-    this.instancedMesh.setColorAt(instanceId, color);
+    const colorValue = edge.data?.color ?? 0x888888;
+    this._color.set(colorValue);
+    this.instancedMesh.setColorAt(instanceId, this._color);
     this.instancedMesh.instanceColor.needsUpdate = true;
   }
 
@@ -215,10 +259,8 @@ class InstancedEdgeGroup {
     const instanceId = this.edgeIdToInstanceId.get(edge.id);
     if (instanceId === undefined) return;
 
-    this.instancedMesh.setMatrixAt(
-      instanceId,
-      new THREE.Matrix4().makeScale(0, 0, 0),
-    );
+    // Scale to zero to effectively hide
+    this.instancedMesh.setMatrixAt(instanceId, this._matrix.makeScale(0, 0, 0));
     this.instancedMesh.instanceMatrix.needsUpdate = true;
 
     this.edgeIdToInstanceId.delete(edge.id);
@@ -298,6 +340,8 @@ export class InstancedEdgeManager {
 
   dispose() {
     this.edgeGroup?.dispose();
+    this.arrowheadGroup?.dispose();
     this.edgeGroup = null;
+    this.arrowheadGroup = null;
   }
 }
