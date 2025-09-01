@@ -11,7 +11,7 @@ export class HierarchicalLayout {
     nodeMap = new Map();
 
     constructor(config = {}) {
-        this.settings = { ...this.settings, ...config };
+        this.settings = {...this.settings, ...config};
     }
 
     setContext(space, pluginManager) {
@@ -107,16 +107,29 @@ export class HierarchicalLayout {
     }
 
     updateConfig(newConfig) {
-        this.settings = { ...this.settings, ...newConfig };
+        this.settings = {...this.settings, ...newConfig};
     }
 
-    run() {}
-    stop() {}
-    kick() {}
-    addNode(node) {}
-    removeNode(node) {}
-    addEdge(edge) {}
-    removeEdge(edge) {}
+    run() {
+    }
+
+    stop() {
+    }
+
+    kick() {
+    }
+
+    addNode(node) {
+    }
+
+    removeNode(node) {
+    }
+
+    addEdge(edge) {
+    }
+
+    removeEdge(edge) {
+    }
 
     dispose() {
         this.space = null;

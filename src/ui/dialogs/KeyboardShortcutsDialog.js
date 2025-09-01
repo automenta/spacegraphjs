@@ -1,22 +1,22 @@
-import { $ } from '../../utils.js';
+import {$} from '../../utils.js';
 
 export class KeyboardShortcutsDialog {
     constructor(space) {
         this.space = space;
         this.keyboardShortcutsDialogElement = null;
         this.keyboardShortcuts = [
-            { keys: ['Delete', 'Backspace'], description: 'Delete selected node(s) or edge(s)' },
-            { keys: ['Escape'], description: 'Close menus, cancel linking, deselect all, or exit pointer lock' },
-            { keys: ['Enter'], description: 'Focus content of selected HTML node (if editable)' },
-            { keys: ['+', '='], description: 'Zoom in content of selected HTML node' },
-            { keys: ['Ctrl/Meta + +', 'Ctrl/Meta + ='], description: 'Increase size of selected HTML node' },
-            { keys: ['-'], description: 'Zoom out content of selected HTML node' },
-            { keys: ['Ctrl/Meta + -'], description: 'Decrease size of selected HTML node' },
-            { keys: ['Spacebar'], description: 'Focus on selected item or center view' },
-            { keys: ['Scroll Wheel'], description: 'Zoom camera' },
-            { keys: ['Ctrl/Meta + Scroll Wheel'], description: 'Adjust content scale of hovered HTML node' },
-            { keys: ['Middle Mouse Button (on node)'], description: 'Auto-zoom to node' },
-            { keys: ['Alt + Drag Node (vertical)'], description: 'Adjust node Z-depth' },
+            {keys: ['Delete', 'Backspace'], description: 'Delete selected node(s) or edge(s)'},
+            {keys: ['Escape'], description: 'Close menus, cancel linking, deselect all, or exit pointer lock'},
+            {keys: ['Enter'], description: 'Focus content of selected HTML node (if editable)'},
+            {keys: ['+', '='], description: 'Zoom in content of selected HTML node'},
+            {keys: ['Ctrl/Meta + +', 'Ctrl/Meta + ='], description: 'Increase size of selected HTML node'},
+            {keys: ['-'], description: 'Zoom out content of selected HTML node'},
+            {keys: ['Ctrl/Meta + -'], description: 'Decrease size of selected HTML node'},
+            {keys: ['Spacebar'], description: 'Focus on selected item or center view'},
+            {keys: ['Scroll Wheel'], description: 'Zoom camera'},
+            {keys: ['Ctrl/Meta + Scroll Wheel'], description: 'Adjust content scale of hovered HTML node'},
+            {keys: ['Middle Mouse Button (on node)'], description: 'Auto-zoom to node'},
+            {keys: ['Alt + Drag Node (vertical)'], description: 'Adjust node Z-depth'},
         ];
     }
 

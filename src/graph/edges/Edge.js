@@ -13,7 +13,7 @@ export class Edge {
     static DEFAULT_HOVER_THICKNESS_MULTIPLIER = 1.1;
 
     line = null;
-    arrowheads = { source: null, target: null };
+    arrowheads = {source: null, target: null};
     isInstanced = false;
     instanceId = null;
     isHighlighted = false;
@@ -29,7 +29,7 @@ export class Edge {
         thickness: 3,
         thicknessInstanced: 0.5,
         constraintType: 'elastic',
-        constraintParams: { stiffness: 0.001, idealLength: 200 },
+        constraintParams: {stiffness: 0.001, idealLength: 200},
         arrowhead: false,
         arrowheadSize: 10,
         arrowheadColor: null,
@@ -47,7 +47,7 @@ export class Edge {
             thickness: 3,
             thicknessInstanced: 0.5,
             constraintType: 'elastic',
-            constraintParams: { stiffness: 0.001, idealLength: 200 },
+            constraintParams: {stiffness: 0.001, idealLength: 200},
             arrowhead: false,
             arrowheadSize: 10,
             arrowheadColor: null,
@@ -79,7 +79,7 @@ export class Edge {
 
     _createLine() {
         const geometry = new LineGeometry();
-        geometry.setPositions([0,0,0, 0,0,0.001]);
+        geometry.setPositions([0, 0, 0, 0, 0, 0.001]);
 
         const materialConfig = {
             linewidth: this.data.thickness,
@@ -108,7 +108,7 @@ export class Edge {
 
         if (material.dashed) line.computeLineDistances();
         line.renderOrder = -1;
-        line.userData = { edgeId: this.id };
+        line.userData = {edgeId: this.id};
         return line;
     }
 
@@ -212,7 +212,7 @@ export class Edge {
         });
         const arrowhead = new THREE.Mesh(geometry, material);
         arrowhead.renderOrder = this.line.renderOrder + 1;
-        arrowhead.userData = { edgeId: this.id, type: 'edge-arrowhead' };
+        arrowhead.userData = {edgeId: this.id, type: 'edge-arrowhead'};
         return arrowhead;
     }
 

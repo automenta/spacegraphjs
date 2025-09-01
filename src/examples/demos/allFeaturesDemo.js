@@ -12,25 +12,32 @@ function setupDemoMenu(space) {
         if (demoMenu) {
             const actionsSection = demoMenu.addSection('demoActions', 'Demo Actions');
             actionsSection.addMenuItem('addRandomNode', 'Add Random Node', () => {
-                const pos = { x: (Math.random() - 0.5) * 500, y: (Math.random() - 0.5) * 500, z: (Math.random() - 0.5) * 100 };
+                const pos = {
+                    x: (Math.random() - 0.5) * 500,
+                    y: (Math.random() - 0.5) * 500,
+                    z: (Math.random() - 0.5) * 100
+                };
                 const types = ['html', 'shape', 'image', 'video'];
                 const type = types[Math.floor(Math.random() * types.length)];
-                let data = { label: `Rnd ${type}` };
+                let data = {label: `Rnd ${type}`};
                 if (type === 'html') data.content = 'Random HTML Node';
-                if (type === 'shape') { data.shape = 'box'; data.color = Math.random() * 0xffffff; }
+                if (type === 'shape') {
+                    data.shape = 'box';
+                    data.color = Math.random() * 0xffffff;
+                }
                 if (type === 'image') data.imageUrl = 'https://placehold.co/100x50.png?text=Rnd';
                 if (type === 'video') data.videoUrl = 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4';
 
-                space.createNode({ type, position: pos, data });
+                space.createNode({type, position: pos, data});
                 uiPlugin.uiManager.hudManager.showNotification('Added Random Node', 'success');
             });
 
             actionsSection.addMenuItem('toggleLayout', 'Toggle Layout (Kick)', () => {
-                 const layoutPlugin = space.plugins.getPlugin('LayoutPlugin');
-                 if(layoutPlugin && layoutPlugin.layoutManager) {
+                const layoutPlugin = space.plugins.getPlugin('LayoutPlugin');
+                if (layoutPlugin && layoutPlugin.layoutManager) {
                     layoutPlugin.layoutManager.kick(); // Example: kick layout
                     uiPlugin.uiManager.hudManager.showNotification('Layout Kicked', 'info');
-                 }
+                }
             });
 
             const infoSection = demoMenu.addSection('demoInfo', 'Demo Info', false); // Not pinnable
@@ -82,7 +89,7 @@ function createGraph(space) {
     const n1 = space.addNode(
         new S.NoteNode(
             'core',
-            { x: 0, y: 0, z: 0 },
+            {x: 0, y: 0, z: 0},
             {
                 content: '<h1>🚀 READY 🧠</h1><p>Enhanced Mind Map</p>',
                 width: 300,
@@ -96,14 +103,14 @@ function createGraph(space) {
     const n_features = space.addNode(
         new S.NoteNode(
             'features',
-            { x: 350, y: 100, z: 20 },
+            {x: 350, y: 100, z: 20},
             {
                 content:
                     '<h2>Features ✨</h2><ul><li>HTML & 3D Nodes</li><li>Node Mass/Momentum</li><li>Edge Menu & Constraints</li><li>BG Toggle</li><li>3D Labels</li></ul>',
                 width: 240,
                 height: 190,
                 backgroundColor: nextColor(),
-                labelLod: [{ distance: 1000, style: 'visibility:hidden;' }],
+                labelLod: [{distance: 1000, style: 'visibility:hidden;'}],
             },
             1.5
         )
@@ -113,7 +120,7 @@ function createGraph(space) {
     const n_box = space.addNode(
         new S.ShapeNode(
             'box1',
-            { x: 600, y: 150, z: 30 },
+            {x: 600, y: 150, z: 30},
             {
                 label: 'Box Node 📦 (Mass 2.0)',
                 shape: 'box',
@@ -123,12 +130,12 @@ function createGraph(space) {
             2.0
         )
     );
-    space.addEdge(n_features, n_box, { constraintType: 'rigid', constraintParams: { distance: 180, stiffness: 0.08 } });
+    space.addEdge(n_features, n_box, {constraintType: 'rigid', constraintParams: {distance: 180, stiffness: 0.08}});
 
     const n_sphere = space.addNode(
         new S.ShapeNode(
             'sphere1',
-            { x: 650, y: 0, z: -20 },
+            {x: 650, y: 0, z: -20},
             {
                 label: 'Sphere Node 🌐 (Mass 1.0)',
                 shape: 'sphere',
@@ -140,14 +147,14 @@ function createGraph(space) {
     );
     space.addEdge(n_box, n_sphere, {
         constraintType: 'elastic',
-        constraintParams: { idealLength: 150, stiffness: 0.002 },
+        constraintParams: {idealLength: 150, stiffness: 0.002},
     });
     space.addEdge(n_features, n_sphere);
 
     const n_tech = space.addNode(
         new S.NoteNode(
             'tech',
-            { x: -350, y: 100, z: -10 },
+            {x: -350, y: 100, z: -10},
             {
                 content:
                     '<h2>Technology 💻</h2><p><code>Three.js</code> (WebGL, CSS3D)</p><p><code>GSAP</code>, <code>ES Modules</code></p>',
@@ -162,7 +169,7 @@ function createGraph(space) {
     const n_style = space.addNode(
         new S.NoteNode(
             'style',
-            { x: 0, y: -250, z: 0 },
+            {x: 0, y: -250, z: 0},
             {
                 content: '<h2>Style 🎨</h2><p>✨ Dark/Transparent BG</p><p>🎨 Node Colors</p><p>🕸️ Dot Grid BG</p>',
                 width: 220,
@@ -171,12 +178,12 @@ function createGraph(space) {
             }
         )
     );
-    space.addEdge(n1, n_style, { constraintType: 'weld' });
+    space.addEdge(n1, n_style, {constraintType: 'weld'});
 
     const n_interactive = space.addNode(
         new S.NoteNode(
             'interactive',
-            { x: 350, y: -150, z: -30 },
+            {x: 350, y: -150, z: -30},
             {
                 content: `<h2>Interactive</h2><p>Slider: <span class="slider-val">50</span></p>
         <input type="range" min="0" max="100" value="50" style="width: 90%; pointer-events: auto; cursor: pointer;"
@@ -190,7 +197,7 @@ function createGraph(space) {
         )
     );
     space.addEdge(n_features, n_interactive);
-    space.addEdge(n_style, n_interactive, { constraintType: 'elastic', constraintParams: { idealLength: 250 } });
+    space.addEdge(n_style, n_interactive, {constraintType: 'elastic', constraintParams: {idealLength: 250}});
 
     if (n_tech && n_style) {
         space.addEdge(n_tech, n_style, {
@@ -217,7 +224,7 @@ function createGraph(space) {
     const n_image = space.createNode({
         id: 'imageNode1',
         type: 'image',
-        position: { x: -350, y: -150, z: 40 },
+        position: {x: -350, y: -150, z: 40},
         data: {
             label: 'Image Node 🖼️',
             imageUrl: 'https://placehold.co/200x150.png?text=SpaceGraph.js',
@@ -236,7 +243,7 @@ function createGraph(space) {
     const n_gltf = space.createNode({
         id: 'gltfNode1',
         type: 'shape',
-        position: { x: 0, y: 250, z: 50 },
+        position: {x: 0, y: 250, z: 50},
         data: {
             label: 'GLTF Model 🚀',
             shape: 'gltf',
@@ -251,11 +258,11 @@ function createGraph(space) {
                         'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/ToyCar/glTF-Binary/ToyCar.glb',
                     gltfScale: 80,
                 },
-                { distance: 600, shape: 'box', size: 40, color: 0xff8844 },
-                { distance: 1200, shape: 'sphere', size: 20, color: 0x88ff44 },
+                {distance: 600, shape: 'box', size: 40, color: 0xff8844},
+                {distance: 1200, shape: 'sphere', size: 20, color: 0x88ff44},
             ],
             labelLod: [
-                { distance: 500, style: 'visibility:hidden;' },
+                {distance: 500, style: 'visibility:hidden;'},
             ],
         },
         mass: 1.8,
@@ -311,14 +318,14 @@ function createGraph(space) {
             curvature: 0.35,
             gradientColors: [0xaa00ff, 0xffaa00],
             thickness: 3,
-            labelLod: [{ distance: 700, style: 'visibility:hidden;' }],
+            labelLod: [{distance: 700, style: 'visibility:hidden;'}],
         });
     }
 
     const n_video = space.createNode({
         id: 'videoNode1',
         type: 'video',
-        position: { x: -600, y: 0, z: -50 },
+        position: {x: -600, y: 0, z: -50},
         data: {
             label: 'Big Buck Bunny 🎬',
             videoUrl: 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4',
@@ -345,7 +352,7 @@ function createGraph(space) {
     const n_iframe = space.createNode({
         id: 'iframeNode1',
         type: 'iframe',
-        position: { x: -600, y: -250, z: 0 },
+        position: {x: -600, y: -250, z: 0},
         data: {
             label: 'Embedded Content 🌐',
             iframeUrl: 'https://en.m.wikipedia.org/wiki/Special:Random',
@@ -368,14 +375,14 @@ function createGraph(space) {
     const gc1 = space.createNode({
         id: 'groupChild1',
         type: 'html',
-        position: { x: 200, y: 300, z: 0 },
-        data: { label: 'Child 1', content: '<p>Inside Group</p>', width: 120, height: 60, backgroundColor: '#445566' },
+        position: {x: 200, y: 300, z: 0},
+        data: {label: 'Child 1', content: '<p>Inside Group</p>', width: 120, height: 60, backgroundColor: '#445566'},
     });
     const gc2 = space.createNode({
         id: 'groupChild2',
         type: 'shape',
-        position: { x: 300, y: 350, z: 10 },
-        data: { label: 'Child 2 (Sphere)', shape: 'sphere', size: 40, color: 0x66ff99 },
+        position: {x: 300, y: 350, z: 10},
+        data: {label: 'Child 2 (Sphere)', shape: 'sphere', size: 40, color: 0x66ff99},
     });
 
     let n_group = null;
@@ -383,7 +390,7 @@ function createGraph(space) {
         n_group = space.createNode({
             id: 'groupNode1',
             type: 'group',
-            position: { x: 250, y: 250, z: -10 },
+            position: {x: 250, y: 250, z: -10},
             data: {
                 label: 'My Test Group',
                 children: [gc1.id, gc2.id],
@@ -407,4 +414,4 @@ function createGraph(space) {
     }
 }
 
-export { createGraph, demoMetadata, setupDemoMenu };
+export {createGraph, demoMetadata, setupDemoMenu};

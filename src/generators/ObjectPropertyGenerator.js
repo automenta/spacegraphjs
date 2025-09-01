@@ -31,14 +31,14 @@ export class ObjectPropertyGenerator {
         }
 
         const defaultOptions = {
-            rootPosition: { x: 0, y: 0, z: 0 },
+            rootPosition: {x: 0, y: 0, z: 0},
             nodeType: 'html', // Default type for properties
             maxDepth: 5, // To prevent infinite recursion with circular objects
             valueNodeColor: 0x66aaee,
             objectNodeColor: 0xeeaa66,
             arrayNodeColor: 0x66eeaa,
         };
-        const config = { ...defaultOptions, ...options };
+        const config = {...defaultOptions, ...options};
 
         this._traverseObject(obj, space, config, config.rootPosition, null, 'root', 0);
     }
@@ -58,13 +58,13 @@ export class ObjectPropertyGenerator {
                 mass: 0.7
             });
             if (parentNode && maxDepthNode) {
-                space.addEdge(parentNode, maxDepthNode, { color: 0xaaaaaa });
+                space.addEdge(parentNode, maxDepthNode, {color: 0xaaaaaa});
             }
             return maxDepthNode;
         }
 
         let currentNode;
-        const commonNodeData = { width: 180, height: 40 }; // Default size for HtmlNode
+        const commonNodeData = {width: 180, height: 40}; // Default size for HtmlNode
 
         if (Array.isArray(currentObject)) {
             currentNode = space.createNode({
@@ -110,14 +110,14 @@ export class ObjectPropertyGenerator {
         }
 
         if (parentNode && currentNode) {
-            space.addEdge(parentNode, currentNode, { color: 0xbbbbbb, thickness: 1.5 });
+            space.addEdge(parentNode, currentNode, {color: 0xbbbbbb, thickness: 1.5});
         }
 
         if (Array.isArray(currentObject)) {
             currentObject.forEach((item, index) => {
                 const childPos = {
                     x: position.x + (index % 3 - 1) * 200,
-                    y: position.y - 150 - Math.floor(index/3) * 100,
+                    y: position.y - 150 - Math.floor(index / 3) * 100,
                     z: position.z + (index % 2 === 0 ? 20 : -20)
                 };
                 this._traverseObject(item, space, config, childPos, currentNode, `[${index}]`, depth + 1);
@@ -128,7 +128,7 @@ export class ObjectPropertyGenerator {
                 if (Object.prototype.hasOwnProperty.call(currentObject, prop)) {
                     const childPos = {
                         x: position.x + (index % 3 - 1) * 220,
-                        y: position.y - 180 - Math.floor(index/3) * 120,
+                        y: position.y - 180 - Math.floor(index / 3) * 120,
                         z: position.z + (index % 2 === 0 ? 25 : -25)
                     };
                     this._traverseObject(currentObject[prop], space, config, childPos, currentNode, prop, depth + 1);

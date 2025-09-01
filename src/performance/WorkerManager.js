@@ -9,14 +9,14 @@ export class WorkerManager {
         this.taskQueue = [];
         this.activeJobs = new Map();
         this.jobIdCounter = 0;
-        
+
         // Configuration
         this.config = {
             maxWorkers: navigator.hardwareConcurrency || 4,
             workerTimeout: 30000, // 30 seconds
             enableWorkers: this._checkWorkerSupport()
         };
-        
+
         // console.log(`WorkerManager initialized with ${this.config.maxWorkers} max workers`);
     }
 
@@ -38,18 +38,18 @@ export class WorkerManager {
 
         try {
             let worker;
-            
+
             if (workerScript instanceof URL) {
                 worker = new Worker(workerScript);
             } else if (typeof workerScript === 'string') {
                 // Create worker from script string (for inline workers)
-                const blob = new Blob([workerScript], { type: 'application/javascript' });
+                const blob = new Blob([workerScript], {type: 'application/javascript'});
                 const workerUrl = URL.createObjectURL(blob);
                 worker = new Worker(workerUrl);
             } else {
                 throw new Error('Invalid worker script type');
             }
-            
+
             const workerInfo = {
                 worker: worker,
                 type: workerType,
@@ -58,16 +58,16 @@ export class WorkerManager {
                 lastUsed: Date.now(),
                 jobsCompleted: 0
             };
-            
+
             // Setup worker message handling
             worker.onmessage = (e) => this._handleWorkerMessage(workerType, e);
             worker.onerror = (e) => this._handleWorkerError(workerType, e);
-            
+
             this.workers.set(workerType, workerInfo);
-            
+
             // console.log(`Created worker for ${workerType}`);
             return worker;
-            
+
         } catch (error) {
             console.error(`Failed to create worker for ${workerType}:`, error);
             return null;
@@ -84,7 +84,7 @@ export class WorkerManager {
 
         poolSize = Math.min(poolSize, this.config.maxWorkers);
         const pool = [];
-        
+
         for (let i = 0; i < poolSize; i++) {
             const worker = this.createWorker(`${workerType}_${i}`, workerScript);
             if (worker) {
@@ -95,13 +95,13 @@ export class WorkerManager {
                 });
             }
         }
-        
+
         if (pool.length > 0) {
             this.workerPools.set(workerType, pool);
             // console.log(`Created worker pool for ${workerType} with ${pool.length} workers`);
             return true;
         }
-        
+
         return false;
     }
 
@@ -113,14 +113,14 @@ export class WorkerManager {
         if (this.workerPools.has(workerType)) {
             const pool = this.workerPools.get(workerType);
             const availableWorker = pool.find(w => !w.busy);
-            
+
             if (availableWorker) {
                 availableWorker.busy = true;
                 return availableWorker;
             }
             return null; // All workers busy
         }
-        
+
         // Check single worker
         if (this.workers.has(workerType)) {
             const workerInfo = this.workers.get(workerType);
@@ -129,7 +129,7 @@ export class WorkerManager {
                 return workerInfo;
             }
         }
-        
+
         return null;
     }
 
@@ -147,7 +147,7 @@ export class WorkerManager {
                 return;
             }
         }
-        
+
         // Check single workers
         if (this.workers.has(workerId)) {
             const workerInfo = this.workers.get(workerId);
@@ -177,7 +177,7 @@ export class WorkerManager {
                 timeout: timeout,
                 startTime: Date.now()
             };
-            
+
             // Try to execute immediately
             const workerInfo = this._getAvailableWorker(workerType);
             if (workerInfo) {
@@ -199,15 +199,15 @@ export class WorkerManager {
             workerId: workerInfo.workerId || workerInfo.type,
             worker: workerInfo.worker
         });
-        
+
         // Set timeout
         const timeoutId = setTimeout(() => {
             this._handleJobTimeout(job.id);
         }, job.timeout);
-        
+
         const activeJob = this.activeJobs.get(job.id);
         activeJob.timeoutId = timeoutId;
-        
+
         // Send task to worker
         try {
             workerInfo.worker.postMessage({
@@ -215,9 +215,9 @@ export class WorkerManager {
                 type: 'task',
                 data: job.taskData
             });
-            
+
             // console.log(`Executing job ${job.id} on worker ${activeJob.workerId}`);
-            
+
         } catch (error) {
             this._handleJobError(job.id, error);
         }
@@ -227,20 +227,20 @@ export class WorkerManager {
      * Handle worker messages
      */
     _handleWorkerMessage(workerType, event) {
-        const { jobId, type, data, error } = event.data;
-        
+        const {jobId, type, data, error} = event.data;
+
         if (!jobId) {
             // Handle non-job messages (like worker ready signals)
             // console.log(`Worker ${workerType} message:`, type, data);
             return;
         }
-        
+
         const job = this.activeJobs.get(jobId);
         if (!job) {
             console.warn(`Received message for unknown job ${jobId}`);
             return;
         }
-        
+
         if (error) {
             this._handleJobError(jobId, new Error(error));
         } else {
@@ -253,7 +253,7 @@ export class WorkerManager {
      */
     _handleWorkerError(workerType, error) {
         console.error(`Worker ${workerType} error:`, error);
-        
+
         // Find and fail all jobs on this worker
         this.activeJobs.forEach((job, jobId) => {
             if (job.workerId === workerType) {
@@ -268,24 +268,24 @@ export class WorkerManager {
     _handleJobSuccess(jobId, result) {
         const job = this.activeJobs.get(jobId);
         if (!job) return;
-        
+
         // Clear timeout
         if (job.timeoutId) {
             clearTimeout(job.timeoutId);
         }
-        
+
         // Release worker
         this._releaseWorker(job.workerId);
-        
+
         // Remove from active jobs
         this.activeJobs.delete(jobId);
-        
+
         // Resolve promise
         job.resolve(result);
-        
+
         // Process next job in queue
         this._processQueue();
-        
+
         // console.log(`Job ${jobId} completed successfully`);
     }
 
@@ -295,24 +295,24 @@ export class WorkerManager {
     _handleJobError(jobId, error) {
         const job = this.activeJobs.get(jobId);
         if (!job) return;
-        
+
         // Clear timeout
         if (job.timeoutId) {
             clearTimeout(job.timeoutId);
         }
-        
+
         // Release worker
         this._releaseWorker(job.workerId);
-        
+
         // Remove from active jobs
         this.activeJobs.delete(jobId);
-        
+
         // Reject promise
         job.reject(error);
-        
+
         // Process next job in queue
         this._processQueue();
-        
+
         console.error(`Job ${jobId} failed:`, error);
     }
 
@@ -322,7 +322,7 @@ export class WorkerManager {
     _handleJobTimeout(jobId) {
         const job = this.activeJobs.get(jobId);
         if (!job) return;
-        
+
         console.warn(`Job ${jobId} timed out after ${job.timeout}ms`);
         this._handleJobError(jobId, new Error(`Job ${jobId} timed out`));
     }
@@ -332,11 +332,11 @@ export class WorkerManager {
      */
     _processQueue() {
         if (this.taskQueue.length === 0) return;
-        
+
         // Find available workers and execute queued jobs
         const job = this.taskQueue.shift();
         const workerInfo = this._getAvailableWorker(job.workerType);
-        
+
         if (workerInfo) {
             this._executeJob(job, workerInfo);
         } else {
@@ -364,7 +364,7 @@ export class WorkerManager {
             queuedJobs: this.taskQueue.length,
             workers: {}
         };
-        
+
         // Individual worker stats
         this.workers.forEach((info, type) => {
             stats.workers[type] = {
@@ -374,7 +374,7 @@ export class WorkerManager {
                 lastUsed: Date.now() - info.lastUsed
             };
         });
-        
+
         return stats;
     }
 
@@ -388,7 +388,7 @@ export class WorkerManager {
             this.workers.delete(workerType);
             // console.log(`Terminated worker ${workerType}`);
         }
-        
+
         // Also check worker pools
         if (this.workerPools.has(workerType)) {
             const pool = this.workerPools.get(workerType);
@@ -409,17 +409,17 @@ export class WorkerManager {
         this.workers.forEach((info, type) => {
             info.worker.terminate();
         });
-        
+
         // Clear all active jobs with errors
         this.activeJobs.forEach((job, jobId) => {
             job.reject(new Error('Worker manager shutting down'));
         });
-        
+
         this.workers.clear();
         this.workerPools.clear();
         this.activeJobs.clear();
         this.taskQueue = [];
-        
+
         console.log('All workers terminated');
     }
 
@@ -429,17 +429,17 @@ export class WorkerManager {
     cleanupIdleWorkers(maxIdleTime = 300000) { // 5 minutes
         const now = Date.now();
         const workersToTerminate = [];
-        
+
         this.workers.forEach((info, type) => {
             if (!info.busy && (now - info.lastUsed) > maxIdleTime) {
                 workersToTerminate.push(type);
             }
         });
-        
+
         workersToTerminate.forEach(workerType => {
             this.terminateWorker(workerType);
         });
-        
+
         if (workersToTerminate.length > 0) {
             // console.log(`Cleaned up ${workersToTerminate.length} idle workers`);
         }
@@ -457,7 +457,7 @@ export class WorkerManager {
      */
     setEnabled(enabled) {
         this.config.enableWorkers = enabled && this._checkWorkerSupport();
-        
+
         if (!this.config.enableWorkers) {
             this.terminateAll();
         }
@@ -467,7 +467,7 @@ export class WorkerManager {
      * Update configuration
      */
     updateConfig(newConfig) {
-        this.config = { ...this.config, ...newConfig };
+        this.config = {...this.config, ...newConfig};
     }
 
     /**
@@ -502,14 +502,14 @@ export class LayoutWorkerManager extends WorkerManager {
             // Create layout worker script URL
             // Note: In a real implementation, this would load the actual worker file
             const workerUrl = new URL('../performance/workers/LayoutWorker.js', import.meta.url);
-            
+
             // Create a pool of layout workers
             const success = this.createWorkerPool('layout', workerUrl, Math.min(2, this.config.maxWorkers));
-            
+
             this.initialized = success;
             // console.log(`Layout worker manager initialized: ${success}`);
             return success;
-            
+
         } catch (error) {
             console.error('Failed to initialize layout workers:', error);
             this.initialized = false;
@@ -570,7 +570,7 @@ export class LayoutWorkerManager extends WorkerManager {
     async stopContinuousLayout() {
         if (!this.initialized) return;
 
-        const taskData = { type: 'stop_continuous' };
+        const taskData = {type: 'stop_continuous'};
         return this.executeTask('layout', taskData);
     }
 }

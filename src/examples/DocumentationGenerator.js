@@ -9,7 +9,7 @@ export class DocumentationGenerator {
         this.apiDocumentation = new Map();
         this.demoDocumentation = new Map();
         this.featureMatrix = new Map();
-        
+
         this._analyzeAPI();
         this._analyzeDemos();
         this._buildFeatureMatrix();
@@ -189,7 +189,7 @@ await space.init();`
      */
     _extractAPIUsage(demo) {
         const usage = [];
-        
+
         // Analyze which APIs the demo likely uses based on features
         if (demo.features.includes('Performance')) {
             usage.push('space.performance');
@@ -261,7 +261,7 @@ await space.init();`
     _buildFeatureMatrix() {
         const features = new Set();
         const browsers = ['Chrome', 'Firefox', 'Safari', 'Edge'];
-        
+
         // Collect all features
         this.demoRunner?.enhancedPages?.forEach(demo => {
             demo.features.forEach(feature => features.add(feature));
@@ -409,7 +409,7 @@ await space.init();`
      */
     exportAsHTML() {
         const docs = this.generateDocumentation();
-        
+
         return `
 <!DOCTYPE html>
 <html lang="en">
@@ -464,10 +464,10 @@ await space.init();`
      */
     exportAsMarkdown() {
         const docs = this.generateDocumentation();
-        
+
         let markdown = `# SpaceGraphJS Documentation\n\n`;
         markdown += `${docs.overview.description}\n\n`;
-        
+
         // Table of Contents
         markdown += `## Table of Contents\n\n`;
         markdown += `- [Overview](#overview)\n`;
@@ -476,23 +476,23 @@ await space.init();`
         markdown += `- [Demo Guide](#demo-guide)\n`;
         markdown += `- [Feature Matrix](#feature-matrix)\n`;
         markdown += `- [Troubleshooting](#troubleshooting)\n\n`;
-        
+
         // Overview
         markdown += `## Overview\n\n`;
         markdown += `${docs.overview.description}\n\n`;
-        
+
         // Quick Start
         markdown += `## Quick Start\n\n`;
         markdown += this._renderQuickStartMarkdown(docs.quickStart);
-        
+
         // API Reference
         markdown += `## API Reference\n\n`;
         markdown += this._renderAPIReferenceMarkdown(docs.apiReference);
-        
+
         // Demo Guide
         markdown += `## Demo Guide\n\n`;
         markdown += this._renderDemoGuideMarkdown(docs.demoGuide);
-        
+
         return markdown;
     }
 
@@ -554,7 +554,7 @@ await space.init();`
     _getDemosByComplexity(complexity) {
         return Array.from(this.demoDocumentation.values())
             .filter(demo => demo.complexity === complexity)
-            .map(demo => ({ id: demo.id, title: demo.title }));
+            .map(demo => ({id: demo.id, title: demo.title}));
     }
 
     _getDocumentationCSS() {
@@ -689,37 +689,128 @@ await space.init();`
     }
 
     // Additional helper methods would be implemented here...
-    _renderOverview(overview) { return `<section class="section" id="overview"><h2>Overview</h2><p>${overview.description}</p></section>`; }
-    _renderQuickStart(quickStart) { return `<section class="section" id="quick-start"><h2>Quick Start</h2></section>`; }
-    _renderAPIReference(apiRef) { return `<section class="section" id="api-reference"><h2>API Reference</h2></section>`; }
-    _renderDemoGuide(demoGuide) { return `<section class="section" id="demo-guide"><h2>Demo Guide</h2></section>`; }
-    _renderFeatureMatrix(matrix) { return `<section class="section" id="feature-matrix"><h2>Feature Matrix</h2></section>`; }
-    _renderTroubleshooting(troubleshooting) { return `<section class="section" id="troubleshooting"><h2>Troubleshooting</h2></section>`; }
+    _renderOverview(overview) {
+        return `<section class="section" id="overview"><h2>Overview</h2><p>${overview.description}</p></section>`;
+    }
+
+    _renderQuickStart(quickStart) {
+        return `<section class="section" id="quick-start"><h2>Quick Start</h2></section>`;
+    }
+
+    _renderAPIReference(apiRef) {
+        return `<section class="section" id="api-reference"><h2>API Reference</h2></section>`;
+    }
+
+    _renderDemoGuide(demoGuide) {
+        return `<section class="section" id="demo-guide"><h2>Demo Guide</h2></section>`;
+    }
+
+    _renderFeatureMatrix(matrix) {
+        return `<section class="section" id="feature-matrix"><h2>Feature Matrix</h2></section>`;
+    }
+
+    _renderTroubleshooting(troubleshooting) {
+        return `<section class="section" id="troubleshooting"><h2>Troubleshooting</h2></section>`;
+    }
 
     // Placeholder implementations for other helper methods
-    _extractParameters(func) { return []; }
-    _inferReturnType(methodName) { return 'unknown'; }
-    _getPropertyValue(value) { return typeof value === 'object' ? '[Object]' : String(value); }
-    _identifyPatterns(demo) { return []; }
-    _extractTechniques(demo) { return []; }
-    _determineRelationship(demo1, demo2) { return 'similar'; }
-    _getFeatureDescription(feature) { return `${feature} functionality`; }
-    _getBrowserSupport(feature) { return { chrome: true, firefox: true, safari: true, edge: true }; }
-    _getFeatureRequirements(feature) { return []; }
-    _getFeatureAlternatives(feature) { return []; }
-    _describeArchitecture() { return 'Plugin-based architecture with modular components'; }
-    _listKeyFeatures() { return ['3D Visualization', 'Fractal Zooming', 'Performance Optimization']; }
-    _describeUseCases() { return ['Data visualization', 'Network analysis', 'Interactive presentations']; }
-    _describePerformance() { return 'Optimized for handling large datasets with smooth interactions'; }
-    _getInstallationInstructions() { return 'npm install spacegraphjs'; }
-    _getBasicUsageExample() { return 'const space = new SpaceGraph(container);'; }
-    _getFirstDemoInstructions() { return 'Try the basic widgets demo first'; }
-    _getNextStepsGuidance() { return 'Explore advanced features like fractal zooming'; }
-    _getCompatibilityRecommendations() { return ['Use modern browsers', 'Enable hardware acceleration']; }
-    _generateTroubleshooting() { return { title: 'Troubleshooting', common: [] }; }
-    _generateMigrationGuide() { return { title: 'Migration Guide' }; }
-    _generateContributingGuide() { return { title: 'Contributing Guide' }; }
-    _renderQuickStartMarkdown(quickStart) { return '### Installation\n\n```bash\nnpm install spacegraphjs\n```\n\n'; }
-    _renderAPIReferenceMarkdown(apiRef) { return '### API Methods\n\n'; }
-    _renderDemoGuideMarkdown(demoGuide) { return '### Available Demos\n\n'; }
+    _extractParameters(func) {
+        return [];
+    }
+
+    _inferReturnType(methodName) {
+        return 'unknown';
+    }
+
+    _getPropertyValue(value) {
+        return typeof value === 'object' ? '[Object]' : String(value);
+    }
+
+    _identifyPatterns(demo) {
+        return [];
+    }
+
+    _extractTechniques(demo) {
+        return [];
+    }
+
+    _determineRelationship(demo1, demo2) {
+        return 'similar';
+    }
+
+    _getFeatureDescription(feature) {
+        return `${feature} functionality`;
+    }
+
+    _getBrowserSupport(feature) {
+        return {chrome: true, firefox: true, safari: true, edge: true};
+    }
+
+    _getFeatureRequirements(feature) {
+        return [];
+    }
+
+    _getFeatureAlternatives(feature) {
+        return [];
+    }
+
+    _describeArchitecture() {
+        return 'Plugin-based architecture with modular components';
+    }
+
+    _listKeyFeatures() {
+        return ['3D Visualization', 'Fractal Zooming', 'Performance Optimization'];
+    }
+
+    _describeUseCases() {
+        return ['Data visualization', 'Network analysis', 'Interactive presentations'];
+    }
+
+    _describePerformance() {
+        return 'Optimized for handling large datasets with smooth interactions';
+    }
+
+    _getInstallationInstructions() {
+        return 'npm install spacegraphjs';
+    }
+
+    _getBasicUsageExample() {
+        return 'const space = new SpaceGraph(container);';
+    }
+
+    _getFirstDemoInstructions() {
+        return 'Try the basic widgets demo first';
+    }
+
+    _getNextStepsGuidance() {
+        return 'Explore advanced features like fractal zooming';
+    }
+
+    _getCompatibilityRecommendations() {
+        return ['Use modern browsers', 'Enable hardware acceleration'];
+    }
+
+    _generateTroubleshooting() {
+        return {title: 'Troubleshooting', common: []};
+    }
+
+    _generateMigrationGuide() {
+        return {title: 'Migration Guide'};
+    }
+
+    _generateContributingGuide() {
+        return {title: 'Contributing Guide'};
+    }
+
+    _renderQuickStartMarkdown(quickStart) {
+        return '### Installation\n\n```bash\nnpm install spacegraphjs\n```\n\n';
+    }
+
+    _renderAPIReferenceMarkdown(apiRef) {
+        return '### API Methods\n\n';
+    }
+
+    _renderDemoGuideMarkdown(demoGuide) {
+        return '### Available Demos\n\n';
+    }
 }

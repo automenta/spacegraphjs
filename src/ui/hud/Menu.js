@@ -1,6 +1,6 @@
 // src/ui/hud/Menu.js
-import { MenuItem } from './MenuItem.js';
-import { MenuSection } from './MenuSection.js';
+import {MenuItem} from './MenuItem.js';
+import {MenuSection} from './MenuSection.js';
 
 export class Menu {
     constructor(menuBar, menuId, label) {

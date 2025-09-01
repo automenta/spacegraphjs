@@ -13,7 +13,7 @@ export class DataPlugin extends Plugin {
         super.init();
     }
 
-    exportGraphToJSON(options = { prettyPrint: false, includeCamera: false }) {
+    exportGraphToJSON(options = {prettyPrint: false, includeCamera: false}) {
         const nodePlugin = this.pluginManager.getPlugin('NodePlugin');
         const edgePlugin = this.pluginManager.getPlugin('EdgePlugin');
         const cameraPlugin = this.pluginManager.getPlugin('CameraPlugin');
@@ -27,15 +27,15 @@ export class DataPlugin extends Plugin {
             nodes: [...nodePlugin.getNodes().values()].map((node) => ({
                 id: node.id,
                 type: node.data.type || 'unknown',
-                position: { x: node.position.x, y: node.position.y, z: node.position.z },
+                position: {x: node.position.x, y: node.position.y, z: node.position.z},
                 mass: node.mass,
                 isPinned: node.isPinned || false,
-                data: { ...node.data },
+                data: {...node.data},
             })),
             edges: [...edgePlugin.getEdges().values()].map((edge) => ({
                 sourceId: edge.source.id,
                 targetId: edge.target.id,
-                data: { ...edge.data },
+                data: {...edge.data},
             })),
         };
 
@@ -43,8 +43,16 @@ export class DataPlugin extends Plugin {
             const camControls = cameraPlugin.getControls();
             if (camControls) {
                 graphData.camera = {
-                    position: { x: camControls.targetPosition.x, y: camControls.targetPosition.y, z: camControls.targetPosition.z },
-                    lookAt: { x: camControls.targetLookAt.x, y: camControls.targetLookAt.y, z: camControls.targetLookAt.z },
+                    position: {
+                        x: camControls.targetPosition.x,
+                        y: camControls.targetPosition.y,
+                        z: camControls.targetPosition.z
+                    },
+                    lookAt: {
+                        x: camControls.targetLookAt.x,
+                        y: camControls.targetLookAt.y,
+                        z: camControls.targetLookAt.z
+                    },
                     mode: camControls.getCameraMode?.() || 'orbit',
                 };
             }
@@ -58,7 +66,7 @@ export class DataPlugin extends Plugin {
         }
     }
 
-    async importGraphFromJSON(jsonData, options = { clearExistingGraph: true }) {
+    async importGraphFromJSON(jsonData, options = {clearExistingGraph: true}) {
         const nodePlugin = this.pluginManager.getPlugin('NodePlugin');
         const edgePlugin = this.pluginManager.getPlugin('EdgePlugin');
         const layoutPlugin = this.pluginManager.getPlugin('LayoutPlugin');
@@ -87,7 +95,11 @@ export class DataPlugin extends Plugin {
         const importedNodesMap = new Map();
         for (const nodeData of graphData.nodes) {
             const node = nodePlugin.createAndAddNode({
-                id: nodeData.id, type: nodeData.type, position: nodeData.position, data: nodeData.data, mass: nodeData.mass,
+                id: nodeData.id,
+                type: nodeData.type,
+                position: nodeData.position,
+                data: nodeData.data,
+                mass: nodeData.mass,
             });
             if (node) {
                 if (nodeData.isPinned) node.isPinned = true;

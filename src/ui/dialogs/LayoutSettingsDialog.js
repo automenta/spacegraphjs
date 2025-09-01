@@ -1,4 +1,4 @@
-import { $ } from '../../utils.js';
+import {$} from '../../utils.js';
 
 export class LayoutSettingsDialog {
     constructor(space) {

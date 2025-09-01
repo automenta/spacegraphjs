@@ -232,7 +232,7 @@ export class ControlPanelNode extends HtmlNode {
 
         closeBtn?.addEventListener('click', (e) => {
             e.stopPropagation();
-            this.space?.emit('graph:node:delete', { node: this });
+            this.space?.emit('graph:node:delete', {node: this});
         });
     }
 
@@ -310,7 +310,7 @@ export class ControlPanelNode extends HtmlNode {
         input.addEventListener('input', (e) => {
             const value = parseFloat(e.target.value);
             this.values.set(control.id, value);
-            
+
             const valueSpan = e.target.parentNode.querySelector('.control-value');
             if (valueSpan) valueSpan.textContent = value;
 
@@ -324,7 +324,7 @@ export class ControlPanelNode extends HtmlNode {
         const button = document.createElement('button');
         button.className = 'control-button';
         button.textContent = control.text ?? control.label;
-        
+
         button.addEventListener('click', (e) => {
             e.stopPropagation();
             this._emitControlChange(control.id, true, control);
@@ -386,7 +386,7 @@ export class ControlPanelNode extends HtmlNode {
         input.addEventListener('input', (e) => {
             const value = parseFloat(e.target.value) || 0;
             this.values.set(control.id, value);
-            
+
             const valueSpan = e.target.parentNode.querySelector('.control-value');
             if (valueSpan) valueSpan.textContent = value;
 

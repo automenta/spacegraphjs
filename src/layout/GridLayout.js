@@ -4,7 +4,7 @@ export class GridLayout {
     nodes = [];
     settings = {
         columns: 0,
-        padding: { x: 150, y: 150, z: 150 },
+        padding: {x: 150, y: 150, z: 150},
         plane: 'xy',
         depthCount: 0,
         centerOrigin: true,
@@ -12,7 +12,7 @@ export class GridLayout {
     };
 
     constructor(config = {}) {
-        this.settings = { ...this.settings, ...config };
+        this.settings = {...this.settings, ...config};
     }
 
     setContext(space, pluginManager) {
@@ -21,7 +21,7 @@ export class GridLayout {
     }
 
     updateConfig(newConfig) {
-        this.settings = { ...this.settings, ...newConfig };
+        this.settings = {...this.settings, ...newConfig};
     }
 
     init(nodes, edges, config = {}) {
@@ -31,9 +31,9 @@ export class GridLayout {
         if (this.nodes.length === 0) return;
 
         const numNodes = this.nodes.length;
-        let { columns, padding, plane, depthCount, centerOrigin } = this.settings;
+        let {columns, padding, plane, depthCount, centerOrigin} = this.settings;
 
-        padding = typeof padding === 'number' ? { x: padding, y: padding, z: padding } : padding;
+        padding = typeof padding === 'number' ? {x: padding, y: padding, z: padding} : padding;
 
         let cols = columns;
         if (plane === 'xyz' && depthCount > 0) {
@@ -93,12 +93,23 @@ export class GridLayout {
         }
     }
 
-    run() {}
-    stop() {}
-    addNode(node) {}
-    removeNode(node) {}
-    addEdge(edge) {}
-    removeEdge(edge) {}
+    run() {
+    }
+
+    stop() {
+    }
+
+    addNode(node) {
+    }
+
+    removeNode(node) {
+    }
+
+    addEdge(edge) {
+    }
+
+    removeEdge(edge) {
+    }
 
     dispose() {
         this.nodes = [];

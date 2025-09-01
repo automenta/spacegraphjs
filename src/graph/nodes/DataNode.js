@@ -31,9 +31,9 @@ export class DataNode extends Node {
             size: DEFAULT_NODE_SIZE,
             chartType: 'bar',
             chartData: [
-                { label: 'A', value: 10, color: '#ff6384' },
-                { label: 'B', value: 20, color: '#36a2eb' },
-                { label: 'C', value: 15, color: '#ffce56' },
+                {label: 'A', value: 10, color: '#ff6384'},
+                {label: 'B', value: 20, color: '#36a2eb'},
+                {label: 'C', value: 15, color: '#ffce56'},
             ],
             chartBackgroundColor: DEFAULT_CHART_BG_COLOR,
             chartTextColor: DEFAULT_CHART_TEXT_COLOR,
@@ -59,7 +59,7 @@ export class DataNode extends Node {
             metalness: 0.1,
         });
         this.mesh = new THREE.Mesh(geometry, material);
-        this.mesh.userData = { nodeId: this.id, type: 'data-node-mesh' };
+        this.mesh.userData = {nodeId: this.id, type: 'data-node-mesh'};
         this.mesh.castShadow = true;
         this.mesh.receiveShadow = true;
 
@@ -69,8 +69,8 @@ export class DataNode extends Node {
     _drawChart() {
         if (!this.ctx || !this.canvas) return;
 
-        const { chartType, chartData, chartBackgroundColor, chartTextColor } = this.data;
-        const { width, height } = this.canvas;
+        const {chartType, chartData, chartBackgroundColor, chartTextColor} = this.data;
+        const {width, height} = this.canvas;
 
         this.ctx.fillStyle = chartBackgroundColor || DEFAULT_CHART_BG_COLOR;
         this.ctx.fillRect(0, 0, width, height);

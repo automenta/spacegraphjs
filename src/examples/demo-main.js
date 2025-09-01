@@ -1,7 +1,7 @@
 import * as S from '../index.js'; // Adjusted path
-import { pages } from './pages.js';
+import {pages} from './pages.js';
 // Import setupDemoMenu specifically for the allFeaturesDemo
-import { setupDemoMenu as allFeaturesSetupDemoMenu } from './demos/allFeaturesDemo.js';
+import {setupDemoMenu as allFeaturesSetupDemoMenu} from './demos/allFeaturesDemo.js';
 
 let space; // Make space globally accessible within this script
 const pageSelectorEl = S.$('#page-selector');
@@ -45,7 +45,7 @@ async function loadPage(pageId) {
     }
 
     // Clear previous graph content
-    await space.importGraphFromJSON({ nodes: [], edges: [] });
+    await space.importGraphFromJSON({nodes: [], edges: []});
 
     if (hudEl) {
         hudEl.innerHTML = page.description;

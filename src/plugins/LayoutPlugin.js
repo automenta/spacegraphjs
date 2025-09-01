@@ -130,7 +130,7 @@ export class LayoutPlugin extends Plugin {
         const currentLayout = this.layoutManager?.getActiveLayout();
         if (currentLayout && typeof currentLayout.setPinState === 'function') {
             currentLayout.setPinState(node, !node.isPinned);
-            this.space.emit('node:pinned', { node, isPinned: node.isPinned });
+            this.space.emit('node:pinned', {node, isPinned: node.isPinned});
         } else {
             console.warn(`LayoutPlugin: Active layout does not support pinning.`);
         }

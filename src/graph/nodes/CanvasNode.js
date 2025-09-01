@@ -9,12 +9,12 @@ export class CanvasNode extends HtmlNode {
     lastDrawPoint = null;
     drawingMode = 'pen';
     tools = {
-        pen: { color: '#ffffff', size: 2 },
-        brush: { color: '#ffffff', size: 8 },
-        eraser: { size: 10 },
-        line: { color: '#ffffff', size: 2 },
-        rectangle: { color: '#ffffff', size: 2, fill: false },
-        circle: { color: '#ffffff', size: 2, fill: false }
+        pen: {color: '#ffffff', size: 2},
+        brush: {color: '#ffffff', size: 8},
+        eraser: {size: 10},
+        line: {color: '#ffffff', size: 2},
+        rectangle: {color: '#ffffff', size: 2, fill: false},
+        circle: {color: '#ffffff', size: 2, fill: false}
     };
 
     constructor(id, position, data = {}, mass = 1.0) {
@@ -291,7 +291,7 @@ export class CanvasNode extends HtmlNode {
                 x: e.clientX - rect.left,
                 y: e.clientY - rect.top
             };
-            
+
             if (this.drawingMode === 'pen' || this.drawingMode === 'brush' || this.drawingMode === 'eraser') {
                 this.lastDrawPoint = point;
                 this._drawDot(point);
@@ -303,7 +303,7 @@ export class CanvasNode extends HtmlNode {
         this.canvas.addEventListener('pointermove', (e) => {
             if (!this.isDrawing) return;
             e.preventDefault();
-            
+
             const rect = this.canvas.getBoundingClientRect();
             const point = {
                 x: e.clientX - rect.left,
@@ -318,9 +318,9 @@ export class CanvasNode extends HtmlNode {
 
         this.canvas.addEventListener('pointerup', (e) => {
             if (!this.isDrawing) return;
-            
+
             this.isDrawing = false;
-            
+
             if (this.drawingMode === 'line' || this.drawingMode === 'rectangle' || this.drawingMode === 'circle') {
                 const rect = this.canvas.getBoundingClientRect();
                 const endPoint = {
@@ -346,15 +346,15 @@ export class CanvasNode extends HtmlNode {
     _setTool(tool) {
         this.drawingMode = tool;
         this.canvas.className = `drawing-canvas ${tool === 'eraser' ? 'eraser' : ''}`;
-        
+
         // Update UI
         const sizeSlider = $('#size-slider', this.htmlElement);
         const colorPicker = $('#color-picker', this.htmlElement);
-        
+
         if (sizeSlider && this.tools[tool]) {
             sizeSlider.value = this.tools[tool].size || 2;
         }
-        
+
         if (colorPicker && this.tools[tool] && tool !== 'eraser') {
             colorPicker.value = this.tools[tool].color || '#ffffff';
         }
@@ -362,7 +362,7 @@ export class CanvasNode extends HtmlNode {
 
     _drawDot(point) {
         this.ctx.beginPath();
-        
+
         if (this.drawingMode === 'eraser') {
             this.ctx.globalCompositeOperation = 'destination-out';
             this.ctx.arc(point.x, point.y, this.tools.eraser.size / 2, 0, Math.PI * 2);
@@ -371,13 +371,13 @@ export class CanvasNode extends HtmlNode {
             this.ctx.fillStyle = this.tools[this.drawingMode].color;
             this.ctx.arc(point.x, point.y, this.tools[this.drawingMode].size / 2, 0, Math.PI * 2);
         }
-        
+
         this.ctx.fill();
     }
 
     _drawLine(from, to) {
         this.ctx.beginPath();
-        
+
         if (this.drawingMode === 'eraser') {
             this.ctx.globalCompositeOperation = 'destination-out';
             this.ctx.lineWidth = this.tools.eraser.size;
@@ -386,7 +386,7 @@ export class CanvasNode extends HtmlNode {
             this.ctx.strokeStyle = this.tools[this.drawingMode].color;
             this.ctx.lineWidth = this.tools[this.drawingMode].size;
         }
-        
+
         this.ctx.moveTo(from.x, from.y);
         this.ctx.lineTo(to.x, to.y);
         this.ctx.stroke();
@@ -397,16 +397,16 @@ export class CanvasNode extends HtmlNode {
         this.ctx.globalCompositeOperation = 'source-over';
         this.ctx.strokeStyle = tool.color;
         this.ctx.lineWidth = tool.size;
-        
+
         this.ctx.beginPath();
-        
+
         switch (this.drawingMode) {
             case 'line':
                 this.ctx.moveTo(start.x, start.y);
                 this.ctx.lineTo(end.x, end.y);
                 this.ctx.stroke();
                 break;
-                
+
             case 'rectangle':
                 const width = end.x - start.x;
                 const height = end.y - start.y;
@@ -417,7 +417,7 @@ export class CanvasNode extends HtmlNode {
                     this.ctx.strokeRect(start.x, start.y, width, height);
                 }
                 break;
-                
+
             case 'circle':
                 const radius = Math.sqrt(Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2));
                 this.ctx.arc(start.x, start.y, radius, 0, Math.PI * 2);
@@ -454,7 +454,7 @@ export class CanvasNode extends HtmlNode {
     clearCanvas() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this._saveCanvasState();
-        this.space?.emit('graph:node:canvasCleared', { node: this });
+        this.space?.emit('graph:node:canvasCleared', {node: this});
     }
 
     saveCanvas() {
@@ -463,9 +463,9 @@ export class CanvasNode extends HtmlNode {
         link.download = `canvas-${this.id}.png`;
         link.href = dataUrl;
         link.click();
-        
-        this.space?.emit('graph:node:canvasSaved', { 
-            node: this, 
+
+        this.space?.emit('graph:node:canvasSaved', {
+            node: this,
             dataUrl,
             filename: `canvas-${this.id}.png`
         });
@@ -493,7 +493,7 @@ export class CanvasNode extends HtmlNode {
         this.ctx.textAlign = align;
         this.ctx.textBaseline = baseline;
         this.ctx.fillText(text, x, y);
-        
+
         this._saveCanvasState();
     }
 

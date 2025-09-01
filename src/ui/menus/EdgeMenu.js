@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
+import {CSS3DObject} from 'three/addons/renderers/CSS3DRenderer.js';
 
 export class EdgeMenu {
     constructor(space, uiPluginCallbacks) {
@@ -16,7 +16,7 @@ export class EdgeMenu {
         this.edgeMenuObject = new CSS3DObject(menuElement);
         this.space.plugins.getPlugin('RenderingPlugin')?.getCSS3DScene()?.add(this.edgeMenuObject);
         this.updatePosition(edge);
-        this.space.emit('ui:edgemenu:shown', { edge });
+        this.space.emit('ui:edgemenu:shown', {edge});
     }
 
     _createEdgeMenuElement(edge) {
@@ -31,8 +31,8 @@ export class EdgeMenu {
             <input type="range" min="0.5" max="10" step="0.1" value="${edge.data.thickness || 1}" title="Edge Thickness" data-property="thickness">
             <select title="Constraint Type" data-property="constraintType">
                 ${['elastic', 'rigid', 'weld', 'none'].map(type =>
-                    `<option value="${type}" ${edge.data.constraintType === type ? 'selected' : ''}>${type.charAt(0).toUpperCase() + type.slice(1)}</option>`
-                ).join('')}
+            `<option value="${type}" ${edge.data.constraintType === type ? 'selected' : ''}>${type.charAt(0).toUpperCase() + type.slice(1)}</option>`
+        ).join('')}
             </select>
             <button title="Delete Edge" class="delete-button" data-action="delete-edge">×</button>
         `;

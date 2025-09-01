@@ -1,4 +1,4 @@
-import { Plugin } from './Plugin.js';
+import {Plugin} from './Plugin.js';
 
 export class PluginManager {
     space = null;

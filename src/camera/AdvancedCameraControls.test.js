@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { AdvancedCameraControls } from './AdvancedCameraControls.js';
+import {beforeEach, describe, expect, it, vi} from 'vitest';
+import {AdvancedCameraControls} from './AdvancedCameraControls.js';
 
 // Mock Three.js dependencies
 const mockThree = {
@@ -33,7 +33,7 @@ describe('AdvancedCameraControls', () => {
     let mockCamera;
     let mockSpace;
     let mockCameraControls; // Added mock for actual camera controls dependency
-    
+
     beforeEach(() => {
         mockCamera = {
             position: new mockThree.Vector3(0, 0, 10), // Use mocked THREE.Vector3
@@ -43,7 +43,7 @@ describe('AdvancedCameraControls', () => {
             updateProjectionMatrix: vi.fn(),
             fov: 50, // Add fov for calculations
         };
-        
+
         mockSpace = {
             camera: mockCamera,
             // Provide a container mock that matches what AdvancedCameraControls expects
@@ -61,15 +61,15 @@ describe('AdvancedCameraControls', () => {
             plugins: { // Mocking plugins structure if space.plugins.getPlugin is used
                 getPlugin: vi.fn((pluginName) => {
                     if (pluginName === 'NodePlugin') {
-                        return { getNodes: vi.fn(() => new Map()) };
+                        return {getNodes: vi.fn(() => new Map())};
                     }
                     if (pluginName === 'EdgePlugin') {
-                        return { getEdges: vi.fn(() => new Map()) };
+                        return {getEdges: vi.fn(() => new Map())};
                     }
                     return null;
                 })
             },
-            renderer: { domElement: { clientWidth: 800, clientHeight: 600 } }, // Kept, though container is now primary
+            renderer: {domElement: {clientWidth: 800, clientHeight: 600}}, // Kept, though container is now primary
             emit: vi.fn(),
             on: vi.fn(), // Added mock for space.on
         };
@@ -85,7 +85,7 @@ describe('AdvancedCameraControls', () => {
             cameraMode: 'ORBIT', // Assuming a property to indicate current mode
             // Add any other methods/properties AdvancedCameraControls interacts with
         };
-        
+
         // Options are now part of the default settings in AdvancedCameraControls
         // or can be set via updateSettings if needed for a test.
         controls = new AdvancedCameraControls(mockSpace, mockCameraControls);
@@ -100,8 +100,8 @@ describe('AdvancedCameraControls', () => {
 
     it('should update settings correctly', () => {
         const newSettings = {
-            autoZoom: { enabled: true, minDistance: 100 },
-            rotation: { speed: 0.01 },
+            autoZoom: {enabled: true, minDistance: 100},
+            rotation: {speed: 0.01},
         };
         controls.updateSettings(newSettings);
         expect(controls.settings.autoZoom.enabled).toBe(true);
@@ -119,7 +119,7 @@ describe('AdvancedCameraControls', () => {
     it('should enable and disable auto-zoom', () => {
         controls.toggleAutoZoom(true);
         expect(controls.isAutoZoomEnabled()).toBe(true);
-        
+
         controls.toggleAutoZoom(false);
         expect(controls.isAutoZoomEnabled()).toBe(false);
     });
@@ -133,7 +133,7 @@ describe('AdvancedCameraControls', () => {
     it('should enable and disable auto-rotation', () => {
         controls.toggleAutoRotation(true);
         expect(controls.isAutoRotating()).toBe(true);
-        
+
         controls.toggleAutoRotation(false);
         expect(controls.isAutoRotating()).toBe(false);
     });
@@ -148,7 +148,7 @@ describe('AdvancedCameraControls', () => {
         // const targetPosition = { x: 5, y: 0, z: 0 }; // peekAt is internal
         controls.togglePeekMode(true);
         expect(controls.isPeekModeEnabled()).toBe(true);
-        
+
         // controls.peekAt(targetPosition); // This method is not public
         // expect(controls.peekTarget).toEqual(targetPosition); // peekTarget is internal
         controls.togglePeekMode(false);
@@ -162,15 +162,15 @@ describe('AdvancedCameraControls', () => {
     });
 
     it('should manage cinematic keyframes (internally)', () => {
-        const nodeMapWithOneNode = new Map([['node1', { id: 'node1', position: new mockThree.Vector3(0,0,0) }]]);
+        const nodeMapWithOneNode = new Map([['node1', {id: 'node1', position: new mockThree.Vector3(0, 0, 0)}]]);
 
         // Configure the mock for getPlugin to return a NodePlugin whose getNodes returns the desired map
         mockSpace.plugins.getPlugin.mockImplementation((pluginName) => {
             if (pluginName === 'NodePlugin') {
-                return { getNodes: vi.fn(() => nodeMapWithOneNode) };
+                return {getNodes: vi.fn(() => nodeMapWithOneNode)};
             }
             if (pluginName === 'EdgePlugin') {
-                return { getEdges: vi.fn(() => new Map()) };
+                return {getEdges: vi.fn(() => new Map())};
             }
             return null;
         });
@@ -180,17 +180,17 @@ describe('AdvancedCameraControls', () => {
     });
 
     it('should start and stop cinematic mode', () => {
-        const nodeMapWithOneNode = new Map([['node1', { id: 'node1', position: new mockThree.Vector3(0,0,0) }]]);
+        const nodeMapWithOneNode = new Map([['node1', {id: 'node1', position: new mockThree.Vector3(0, 0, 0)}]]);
         mockSpace.plugins.getPlugin.mockImplementation((pluginName) => {
             if (pluginName === 'NodePlugin') {
-                return { getNodes: vi.fn(() => nodeMapWithOneNode) };
+                return {getNodes: vi.fn(() => nodeMapWithOneNode)};
             }
             return null;
         });
-        
+
         controls.toggleCinematicMode(true);
         expect(controls.isCinematicModeActive()).toBe(true);
-        
+
         controls.toggleCinematicMode(false);
         expect(controls.isCinematicModeActive()).toBe(false);
     });
@@ -199,12 +199,12 @@ describe('AdvancedCameraControls', () => {
         // setAutoZoomTarget is internal. Test outcome of toggleAutoZoom.
         const mockNodePlugin = mockSpace.plugins.getPlugin('NodePlugin');
         mockNodePlugin.getNodes = vi.fn(() => new Map([
-            ['node1', { position: new mockThree.Vector3(0,0,0), getBoundingSphereRadius: () => 10 }],
-            ['node2', { position: new mockThree.Vector3(100,0,0), getBoundingSphereRadius: () => 10 }]
+            ['node1', {position: new mockThree.Vector3(0, 0, 0), getBoundingSphereRadius: () => 10}],
+            ['node2', {position: new mockThree.Vector3(100, 0, 0), getBoundingSphereRadius: () => 10}]
         ]));
 
         controls.toggleAutoZoom(true); // This will trigger _performAutoZoom
-        
+
         // Check if cameraControls.moveTo was called (indirectly by _performAutoZoom)
         // This requires _performAutoZoom to eventually call this.cameraControls.moveTo
         // Need to wait for setTimeout in _onGraphChange and _performAutoZoom if testing real behavior
@@ -216,7 +216,7 @@ describe('AdvancedCameraControls', () => {
 
     it('should rotate camera during auto-rotation', () => {
         controls.toggleAutoRotation(true); // Enables auto-rotation
-        
+
         const updateRotationSpy = vi.spyOn(controls, '_updateRotation');
         // _updateRotation is called by internal _startUpdateLoop -> requestAnimationFrame.
         // Hard to test directly without more control or calling update methods manually.
@@ -229,7 +229,7 @@ describe('AdvancedCameraControls', () => {
     it('should handle multiple camera modes simultaneously', () => {
         controls.toggleAutoZoom(true);
         controls.toggleAutoRotation(true);
-        
+
         expect(controls.isAutoZoomEnabled()).toBe(true);
         expect(controls.isAutoRotating()).toBe(true);
     });
@@ -261,7 +261,7 @@ describe('AdvancedCameraControls', () => {
         expect(mockSpace.emit).toHaveBeenCalledWith('camera:autoZoomToggled', {
             enabled: true
         });
-        
+
         controls.toggleAutoRotation(true);
         expect(mockSpace.emit).toHaveBeenCalledWith('camera:autoRotationToggled', {
             enabled: true

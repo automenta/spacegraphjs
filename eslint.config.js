@@ -20,7 +20,7 @@ export default [
         },
         rules: {
             'no-console': 'warn',
-            'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+            'no-unused-vars': ['warn', {argsIgnorePattern: '^_'}],
         },
         // Apply this configuration to all JavaScript files.
         // ESLint CLI will target specific files, but this ensures these rules apply to .js files.

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { gsap } from 'gsap';
-import { CAMERA_MODES } from './Camera.js';
+import {gsap} from 'gsap';
+import {CAMERA_MODES} from './Camera.js';
 
 export class AdvancedCameraControls {
     space = null;
@@ -72,7 +72,7 @@ export class AdvancedCameraControls {
         this.space = space;
         this.cameraControls = cameraControls;
         this.camera = space._cam; // Reverted to _cam
-        
+
         this._initializeEventListeners();
         this._startUpdateLoop();
     }
@@ -176,19 +176,19 @@ export class AdvancedCameraControls {
     // Auto-zoom functionality
     toggleAutoZoom(enabled = null) {
         this.autoZoomEnabled = enabled !== null ? enabled : !this.autoZoomEnabled;
-        
+
         if (this.autoZoomEnabled) {
             this._performAutoZoom();
         }
 
-        this.space.emit('camera:autoZoomToggled', { enabled: this.autoZoomEnabled });
+        this.space.emit('camera:autoZoomToggled', {enabled: this.autoZoomEnabled});
         return this.autoZoomEnabled;
     }
 
     _performAutoZoom() {
         const nodePlugin = this.space.plugins.getPlugin('NodePlugin');
         const nodes = Array.from(nodePlugin?.getNodes()?.values() || []);
-        
+
         if (nodes.length === 0) return;
 
         const boundingBox = this._calculateSceneBoundingBox(nodes);
@@ -210,17 +210,17 @@ export class AdvancedCameraControls {
 
     _calculateSceneBoundingBox(nodes) {
         const box = new THREE.Box3();
-        
+
         nodes.forEach(node => {
             const nodeBox = new THREE.Box3();
             const radius = node.getBoundingSphereRadius?.() || 50;
             const pos = node.position;
-            
+
             nodeBox.setFromCenterAndSize(
                 pos,
                 new THREE.Vector3(radius * 2, radius * 2, radius * 2)
             );
-            
+
             box.union(nodeBox);
         });
 
@@ -230,15 +230,15 @@ export class AdvancedCameraControls {
     _calculateOptimalZoomDistance(boundingBox, nodeCount) {
         const size = boundingBox.getSize(new THREE.Vector3());
         const maxDimension = Math.max(size.x, size.y, size.z);
-        
+
         // Calculate distance based on camera FOV
         const fov = this.camera.fov * Math.PI / 180;
         const distance = (maxDimension * this.settings.autoZoom.targetPadding) / (2 * Math.tan(fov / 2));
-        
+
         // Adjust based on node count and density
         const densityFactor = Math.min(1.5, nodeCount / 20);
         const adjustedDistance = distance * (1 + densityFactor * 0.3);
-        
+
         return THREE.MathUtils.clamp(
             adjustedDistance,
             this.settings.autoZoom.minDistance,
@@ -249,12 +249,12 @@ export class AdvancedCameraControls {
     // Rotation controls
     toggleAutoRotation(enabled = null) {
         this.settings.rotation.autoRotate = enabled !== null ? enabled : !this.settings.rotation.autoRotate;
-        
+
         if (!this.settings.rotation.autoRotate) {
             this.autoRotateAngle = 0;
         }
 
-        this.space.emit('camera:autoRotationToggled', { enabled: this.settings.rotation.autoRotate });
+        this.space.emit('camera:autoRotationToggled', {enabled: this.settings.rotation.autoRotate});
         return this.settings.rotation.autoRotate;
     }
 
@@ -265,15 +265,15 @@ export class AdvancedCameraControls {
     _updateRotation() {
         if (this.settings.rotation.autoRotate && this.cameraControls.cameraMode === CAMERA_MODES.ORBIT) {
             this.autoRotateAngle += this.settings.rotation.autoRotateSpeed;
-            
+
             // Apply smooth orbital rotation around the current lookAt target
             const lookAt = this.cameraControls.targetLookAt.clone();
             const currentPos = this.camera.position.clone();
             const radius = currentPos.distanceTo(lookAt);
-            
+
             const newX = lookAt.x + Math.cos(this.autoRotateAngle) * radius;
             const newZ = lookAt.z + Math.sin(this.autoRotateAngle) * radius;
-            
+
             this.cameraControls.targetPosition.set(newX, currentPos.y, newZ);
         }
 
@@ -284,12 +284,12 @@ export class AdvancedCameraControls {
     // Peek around corners functionality
     togglePeekMode(enabled = null) {
         this.settings.peekMode.enabled = enabled !== null ? enabled : !this.settings.peekMode.enabled;
-        
+
         if (!this.settings.peekMode.enabled && this.isPeeking) {
             this._exitPeekMode();
         }
 
-        this.space.emit('camera:peekModeToggled', { enabled: this.settings.peekMode.enabled });
+        this.space.emit('camera:peekModeToggled', {enabled: this.settings.peekMode.enabled});
         return this.settings.peekMode.enabled;
     }
 
@@ -301,7 +301,7 @@ export class AdvancedCameraControls {
 
         // Check if mouse is near screen edges (corners)
         const nearEdge = Math.abs(this.mousePosition.x) > 0.7 || Math.abs(this.mousePosition.y) > 0.7;
-        
+
         if (nearEdge && movementMagnitude > 0.01) {
             if (!this.isPeeking) {
                 this._enterPeekMode();
@@ -322,15 +322,15 @@ export class AdvancedCameraControls {
         }
         this.peekStartPosition.copy(this.camera.position);
         this.peekStartTarget.copy(this.cameraControls.targetLookAt);
-        
+
         this.space.emit('camera:peekModeEntered');
     }
 
     _exitPeekMode() {
         if (!this.isPeeking) return;
-        
+
         this.isPeeking = false;
-        
+
         // Smooth return to original position
         gsap.to(this.cameraControls.targetPosition, {
             x: this.peekStartPosition.x,
@@ -383,14 +383,14 @@ export class AdvancedCameraControls {
     // Cinematic mode
     toggleCinematicMode(enabled = null) {
         this.cinematicMode = enabled !== null ? enabled : !this.cinematicMode;
-        
+
         if (this.cinematicMode) {
             this._startCinematicMode();
         } else {
             this._stopCinematicMode();
         }
 
-        this.space.emit('camera:cinematicModeToggled', { enabled: this.cinematicMode });
+        this.space.emit('camera:cinematicModeToggled', {enabled: this.cinematicMode});
         return this.cinematicMode;
     }
 
@@ -408,7 +408,7 @@ export class AdvancedCameraControls {
     _generateCinematicPath() {
         const nodePlugin = this.space.plugins.getPlugin('NodePlugin');
         const nodes = Array.from(nodePlugin?.getNodes()?.values() || []);
-        
+
         if (nodes.length === 0) return;
 
         const center = new THREE.Vector3();
@@ -425,7 +425,7 @@ export class AdvancedCameraControls {
             const x = center.x + Math.cos(angle) * radius;
             const z = center.z + Math.sin(angle) * radius;
             const y = center.y + height + Math.sin(angle * 2) * 50; // Wave motion
-            
+
             this.cinematicPath.push({
                 position: new THREE.Vector3(x, y, z),
                 lookAt: center.clone()
@@ -437,7 +437,7 @@ export class AdvancedCameraControls {
         if (!this.cinematicMode || this.cinematicPath.length === 0) return;
 
         this.cinematicProgress += this.settings.cinematic.cinematicSpeed * this.cinematicDirection * 0.01;
-        
+
         // Ping-pong motion
         if (this.cinematicProgress >= 1) {
             this.cinematicProgress = 1;
@@ -487,7 +487,7 @@ export class AdvancedCameraControls {
             // Find connected nodes
             const edgePlugin = this.space.plugins.getPlugin('EdgePlugin');
             const edges = Array.from(edgePlugin?.getEdges()?.values() || []);
-            
+
             const connectedNodes = new Set([node]);
             edges.forEach(edge => {
                 if (edge.source === node && edge.target.position.distanceTo(node.position) < contextRadius) {
@@ -514,7 +514,7 @@ export class AdvancedCameraControls {
         const center = focusArea.getCenter(new THREE.Vector3());
         const size = focusArea.getSize(new THREE.Vector3());
         const maxDimension = Math.max(size.x, size.y, size.z);
-        
+
         const fov = this.camera.fov * Math.PI / 180;
         const distance = (maxDimension * 1.5) / (2 * Math.tan(fov / 2));
 
@@ -565,11 +565,11 @@ export class AdvancedCameraControls {
 
     // Configuration
     updateSettings(newSettings) {
-        this.settings = { ...this.settings, ...newSettings };
+        this.settings = {...this.settings, ...newSettings};
     }
 
     getSettings() {
-        return { ...this.settings };
+        return {...this.settings};
     }
 
     // Status getters
@@ -591,7 +591,7 @@ export class AdvancedCameraControls {
 
     dispose() {
         clearTimeout(this.autoZoomTimer);
-        
+
         // Remove event listeners
         this.space.container.removeEventListener('mousemove', this._handleMouseMove.bind(this));
         this.space.container.removeEventListener('mouseenter', this._handleMouseEnter.bind(this));

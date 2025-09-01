@@ -1,4 +1,3 @@
-import * as THREE from 'three';
 import {CSS3DObject} from 'three/addons/renderers/CSS3DRenderer.js';
 
 /**
@@ -37,7 +36,7 @@ export function createLabelElement(labelText, id, className, styleData = {}) {
 export function createCSS3DLabelObject(labelText, id, className, styleData, type) {
     const div = createLabelElement(labelText, id, className, styleData);
     const label = new CSS3DObject(div);
-    label.userData = { id: id, type: type };
+    label.userData = {id: id, type: type};
     return label;
 }
 

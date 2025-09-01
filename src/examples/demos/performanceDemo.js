@@ -52,7 +52,7 @@ function createPerformanceDemo(space) {
     }
 
     console.log('Performance Optimization Demo created successfully');
-    
+
     return {
         name: 'Performance Optimization Demo',
         description: 'Large-scale graph demonstrating instancing, culling, LOD, and web workers',
@@ -72,7 +72,7 @@ function createPerformanceDemo(space) {
  */
 function createPerformanceMonitor(space) {
     const monitor = space.addNode('performance-monitor', 'html', {
-        position: { x: -400, y: 300, z: 0 },
+        position: {x: -400, y: 300, z: 0},
         content: `
             <div id="performance-metrics" class="performance-monitor">
                 <h4>⚡ Performance Metrics</h4>
@@ -107,7 +107,7 @@ function createPerformanceMonitor(space) {
                 </div>
             </div>
         `,
-        size: { width: 250, height: 200 }
+        size: {width: 250, height: 200}
     });
 
     // Update performance metrics in real-time
@@ -203,7 +203,7 @@ function createLargeNodeClusters(space) {
 
         // Create cluster center node
         const centerNode = space.addNode(`cluster-${cluster}-center`, 'shape', {
-            position: { x: clusterX, y: clusterY, z: clusterZ },
+            position: {x: clusterX, y: clusterY, z: clusterZ},
             shape: 'sphere',
             color: `hsl(${cluster * 72}, 80%, 60%)`,
             size: 20
@@ -213,13 +213,13 @@ function createLargeNodeClusters(space) {
         for (let i = 0; i < nodesPerCluster; i++) {
             const nodeAngle = (i / nodesPerCluster) * Math.PI * 2;
             const nodeRadius = Math.random() * clusterRadius + 50;
-            
+
             const nodeX = clusterX + Math.cos(nodeAngle) * nodeRadius;
             const nodeY = clusterY + Math.sin(nodeAngle) * nodeRadius;
             const nodeZ = clusterZ + (Math.random() - 0.5) * 100;
 
             const node = space.addNode(`cluster-${cluster}-node-${i}`, 'shape', {
-                position: { x: nodeX, y: nodeY, z: nodeZ },
+                position: {x: nodeX, y: nodeY, z: nodeZ},
                 shape: 'box',
                 color: `hsl(${cluster * 72}, 60%, 40%)`,
                 size: 8 + Math.random() * 4
@@ -234,9 +234,9 @@ function createLargeNodeClusters(space) {
             if (i > 0 && Math.random() < 0.3) {
                 const targetIndex = Math.max(0, i - 1 - Math.floor(Math.random() * 3));
                 space.addEdge(
-                    `cluster-${cluster}-internal-${i}-${targetIndex}`, 
-                    node.id, 
-                    `cluster-${cluster}-node-${targetIndex}`, 
+                    `cluster-${cluster}-internal-${i}-${targetIndex}`,
+                    node.id,
+                    `cluster-${cluster}-node-${targetIndex}`,
                     'curved'
                 );
             }
@@ -251,10 +251,10 @@ function createLargeNodeClusters(space) {
  */
 function createRepeatingPatterns(space) {
     const patternTypes = [
-        { shape: 'sphere', color: '#ff6b6b', size: 6 },
-        { shape: 'box', color: '#4ecdc4', size: 8 },
-        { shape: 'cylinder', color: '#45b7d1', size: 7 },
-        { shape: 'cone', color: '#f9ca24', size: 9 }
+        {shape: 'sphere', color: '#ff6b6b', size: 6},
+        {shape: 'box', color: '#4ecdc4', size: 8},
+        {shape: 'cylinder', color: '#45b7d1', size: 7},
+        {shape: 'cone', color: '#f9ca24', size: 9}
     ];
 
     const gridSize = 20;
@@ -272,7 +272,7 @@ function createRepeatingPatterns(space) {
             const nodeZ = -500 + Math.sin(x * 0.5) * Math.cos(y * 0.5) * 100;
 
             space.addNode(`pattern-${x}-${y}`, 'shape', {
-                position: { x: nodeX, y: nodeY, z: nodeZ },
+                position: {x: nodeX, y: nodeY, z: nodeZ},
                 shape: pattern.shape,
                 color: pattern.color,
                 size: pattern.size
@@ -283,16 +283,16 @@ function createRepeatingPatterns(space) {
                 space.addEdge(
                     `pattern-edge-h-${x}-${y}`,
                     `pattern-${x}-${y}`,
-                    `pattern-${x-1}-${y}`,
+                    `pattern-${x - 1}-${y}`,
                     'straight'
                 );
             }
-            
+
             if (y > 0 && Math.random() < 0.2) {
                 space.addEdge(
                     `pattern-edge-v-${x}-${y}`,
                     `pattern-${x}-${y}`,
-                    `pattern-${x}-${y-1}`,
+                    `pattern-${x}-${y - 1}`,
                     'straight'
                 );
             }
@@ -316,7 +316,7 @@ function createDistanceBasedLOD(space) {
 
         // Create nodes with different detail levels
         const detailNode = space.addNode(`lod-demo-${index}`, 'html', {
-            position: { x: x, y: y, z: 0 },
+            position: {x: x, y: y, z: 0},
             content: `
                 <div class="lod-demo-node">
                     <h3>LOD Level: ${detailLevels[index]}</h3>
@@ -345,9 +345,9 @@ function createDistanceBasedLOD(space) {
                     </div>
                 </div>
             `,
-            size: { 
-                width: Math.max(100, 200 - index * 30), 
-                height: Math.max(80, 150 - index * 20) 
+            size: {
+                width: Math.max(100, 200 - index * 30),
+                height: Math.max(80, 150 - index * 20)
             }
         });
 
@@ -355,12 +355,12 @@ function createDistanceBasedLOD(space) {
         for (let i = 0; i < Math.max(1, 6 - index); i++) {
             const detailAngle = (i / Math.max(1, 6 - index)) * Math.PI * 2;
             const detailRadius = 50 + index * 10;
-            
+
             const detailX = x + Math.cos(detailAngle) * detailRadius;
             const detailY = y + Math.sin(detailAngle) * detailRadius;
 
             space.addNode(`lod-detail-${index}-${i}`, 'shape', {
-                position: { x: detailX, y: detailY, z: 0 },
+                position: {x: detailX, y: detailY, z: 0},
                 shape: 'sphere',
                 color: `hsl(${index * 60}, 70%, 50%)`,
                 size: Math.max(3, 8 - index)
@@ -383,7 +383,7 @@ function createDistanceBasedLOD(space) {
  */
 function createControlPanel(space) {
     const controlPanel = space.addNode('performance-controls', 'html', {
-        position: { x: 400, y: 300, z: 0 },
+        position: {x: 400, y: 300, z: 0},
         content: `
             <div class="performance-controls">
                 <h4>⚡ Performance Controls</h4>
@@ -426,7 +426,7 @@ function createControlPanel(space) {
                 </div>
             </div>
         `,
-        size: { width: 220, height: 300 }
+        size: {width: 220, height: 300}
     });
 
     // Add event listeners for controls
@@ -537,13 +537,13 @@ function updateWorkerStats(panel) {
     if (!statsElement || !space.performance) return;
 
     const workerStats = space.performance.getWorkerStats();
-    
+
     let statsText = 'No worker data';
     if (workerStats.workerManager) {
         const wm = workerStats.workerManager;
         statsText = `Workers: ${wm.totalWorkers}\nActive: ${wm.activeJobs}\nQueue: ${wm.queuedJobs}`;
     }
-    
+
     statsElement.textContent = statsText;
 }
 
@@ -560,7 +560,7 @@ function addStressTestNodes(space) {
         const z = (Math.random() - 0.5) * range;
 
         space.addNode(`stress-${Date.now()}-${i}`, 'shape', {
-            position: { x, y, z },
+            position: {x, y, z},
             shape: Math.random() > 0.5 ? 'sphere' : 'box',
             color: `hsl(${Math.random() * 360}, 70%, 50%)`,
             size: 3 + Math.random() * 5

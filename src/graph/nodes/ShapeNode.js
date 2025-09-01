@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {Node} from './Node.js';
-import {createCSS3DLabelObject, applyLabelLOD} from '../../utils/labelUtils.js';
+import {applyLabelLOD, createCSS3DLabelObject} from '../../utils/labelUtils.js';
 
 export class ShapeNode extends Node {
     static typeName = 'shape';
@@ -23,12 +23,12 @@ export class ShapeNode extends Node {
         this.lodData = this.data.lodLevels ?? [];
 
         this.mesh = new THREE.LOD();
-        this.mesh.userData = { nodeId: this.id, type: 'shape-node-lod' };
+        this.mesh.userData = {nodeId: this.id, type: 'shape-node-lod'};
         this._setupLODLevels();
 
         if (this.data.label) {
             this.labelObject = this._createLabel();
-            this.labelObject.userData = { nodeId: this.id, type: 'shape-label' };
+            this.labelObject.userData = {nodeId: this.id, type: 'shape-label'};
         }
         this.update();
         // Initial bounding sphere update, will be re-updated on GLTF load

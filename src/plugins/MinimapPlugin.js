@@ -57,7 +57,7 @@ export class MinimapPlugin extends Plugin {
             this.minimapCamera.top = MINIMAP_SIZE / 2;
             this.minimapCamera.bottom = -MINIMAP_SIZE / 2;
             this.minimapCamera.position.set(0, 0, 1000);
-            this.minimapCamera.lookAt(0,0,0);
+            this.minimapCamera.lookAt(0, 0, 0);
             this.minimapCamera.updateProjectionMatrix();
             return;
         }
@@ -71,7 +71,7 @@ export class MinimapPlugin extends Plugin {
         });
 
         if (boundingBox.isEmpty()) {
-             // Default view if bounding box is empty (e.g. nodes at same point with zero radius)
+            // Default view if bounding box is empty (e.g. nodes at same point with zero radius)
             this.minimapCamera.left = -MINIMAP_SIZE / 2;
             this.minimapCamera.right = MINIMAP_SIZE / 2;
             this.minimapCamera.top = MINIMAP_SIZE / 2;
@@ -160,21 +160,21 @@ export class MinimapPlugin extends Plugin {
         // but typically that's handled by the main render loop.
         // If the helper is not updating, explicitly call:
         if (this.frustumHelper) {
-             // this.frustumHelper.update(); // Often not needed if main camera updates its matrixWorld
-             // Ensure the helper itself is visible if it was ever turned off
-             this.frustumHelper.visible = true;
+            // this.frustumHelper.update(); // Often not needed if main camera updates its matrixWorld
+            // Ensure the helper itself is visible if it was ever turned off
+            this.frustumHelper.visible = true;
 
-             // CameraHelper's default colors might not match FRUSTUM_COLOR.
-             // To customize CameraHelper appearance, one might need to access its internal lines/materials
-             // or use a more manual approach if specific styling is critical.
-             // For now, default CameraHelper appearance is accepted.
-             if (this.frustumHelper.material) {
+            // CameraHelper's default colors might not match FRUSTUM_COLOR.
+            // To customize CameraHelper appearance, one might need to access its internal lines/materials
+            // or use a more manual approach if specific styling is critical.
+            // For now, default CameraHelper appearance is accepted.
+            if (this.frustumHelper.material) {
                 // Attempt to set color, though CameraHelper uses specific point/line materials
                 if (this.frustumHelper.material.color) {
                     this.frustumHelper.material.color.setHex(FRUSTUM_COLOR);
                 }
-             }
-             // For more detailed styling, one might iterate over frustumHelper.children if it's a Group
+            }
+            // For more detailed styling, one might iterate over frustumHelper.children if it's a Group
         }
     }
 

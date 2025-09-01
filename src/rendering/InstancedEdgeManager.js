@@ -199,7 +199,7 @@ class InstancedEdgeGroup {
 
         const instanceId = intersection[0].instanceId;
         const edgeId = this.instanceIdToEdgeId.get(instanceId);
-        return edgeId ? { ...intersection[0], edgeId } : null;
+        return edgeId ? {...intersection[0], edgeId} : null;
     }
 
     dispose() {

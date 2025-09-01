@@ -1,33 +1,33 @@
 import * as THREE from 'three';
 import {Node} from './Node.js';
-import {createCSS3DLabelObject, applyLabelLOD} from '../../utils/labelUtils.js';
+import {applyLabelLOD, createCSS3DLabelObject} from '../../utils/labelUtils.js';
 
 const loader = new THREE.TextureLoader();
 
 export class ImageNode extends Node {
     static typeName = 'image';
     imageUrl = null;
-    imageSize = { width: 100, height: 100 };
+    imageSize = {width: 100, height: 100};
 
     constructor(id, position, data = {}, mass = 1.0) {
         super(id, position, data, mass);
         this.nodeType = 'ImageNode';
         this.imageUrl = this.data.imageUrl || null;
         if (typeof this.data.size === 'number') {
-            this.imageSize = { width: this.data.size, height: this.data.size };
+            this.imageSize = {width: this.data.size, height: this.data.size};
         } else if (typeof this.data.size === 'object' && this.data.size.width && this.data.size.height) {
-            this.imageSize = { ...this.data.size };
+            this.imageSize = {...this.data.size};
         } else {
-            this.imageSize = { width: 100, height: 100 };
+            this.imageSize = {width: 100, height: 100};
         }
 
         this.mesh = this._createMesh();
-        this.mesh.userData = { nodeId: this.id, type: 'image-node' };
+        this.mesh.userData = {nodeId: this.id, type: 'image-node'};
 
         if (this.imageUrl) {
             this._loadImageTexture();
         } else {
-            this.mesh.material = new THREE.MeshStandardMaterial({ color: 0x555555, side: THREE.DoubleSide });
+            this.mesh.material = new THREE.MeshStandardMaterial({color: 0x555555, side: THREE.DoubleSide});
         }
 
         if (this.data.label) this.labelObject = this._createLabel();
@@ -84,10 +84,10 @@ export class ImageNode extends Node {
                 }
 
                 this.mesh.scale.set(planeWidth, planeHeight, 1);
-                this.imageSize = { width: planeWidth, height: planeHeight };
+                this.imageSize = {width: planeWidth, height: planeHeight};
 
                 this.updateBoundingSphere();
-                this.space?.emit('node:updated', { node: this, property: 'mesh' });
+                this.space?.emit('node:updated', {node: this, property: 'mesh'});
             },
             undefined,
             () => {
@@ -99,7 +99,7 @@ export class ImageNode extends Node {
     updateBoundingSphere() {
         if (this.mesh) {
             if (!this._boundingSphere) this._boundingSphere = new THREE.Sphere();
-            const { x: width, y: height } = this.mesh.scale;
+            const {x: width, y: height} = this.mesh.scale;
             this._boundingSphere.radius = Math.sqrt(width * width + height * height) / 2;
             this._boundingSphere.center.copy(this.position);
         }

@@ -95,7 +95,7 @@ export class NodePlugin extends Plugin {
         return nodeInstance;
     }
 
-    createAndAddNode({ id, type, position, data = {}, mass = 1.0 }) {
+    createAndAddNode({id, type, position, data = {}, mass = 1.0}) {
         const nodeId = id || Utils.generateId('node');
         if (!type || !position) {
             console.error('NodePlugin: Type and position required.');

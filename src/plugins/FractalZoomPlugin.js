@@ -1,6 +1,6 @@
-import { Plugin } from '../core/Plugin.js';
-import { FractalZoomManager } from '../zoom/FractalZoomManager.js';
-import { createContentAdapter } from '../zoom/ContentAdapter.js';
+import {Plugin} from '../core/Plugin.js';
+import {FractalZoomManager} from '../zoom/FractalZoomManager.js';
+import {createContentAdapter} from '../zoom/ContentAdapter.js';
 
 /**
  * FractalZoomPlugin integrates fractal zooming capabilities into SpaceGraphJS.
@@ -9,7 +9,7 @@ import { createContentAdapter } from '../zoom/ContentAdapter.js';
 export class FractalZoomPlugin extends Plugin {
     constructor(spaceGraph, pluginManager, config = {}) {
         super(spaceGraph, pluginManager);
-        
+
         this.config = {
             enabled: true,
             autoLOD: true,
@@ -19,7 +19,7 @@ export class FractalZoomPlugin extends Plugin {
             transitionDuration: 0.8,
             ...config
         };
-        
+
         this.fractalZoomManager = null;
         this.contentAdapters = new Map();
         this.zoomListeners = new Set();
@@ -31,27 +31,27 @@ export class FractalZoomPlugin extends Plugin {
 
     init() {
         super.init();
-        
+
         if (!this.config.enabled) return;
-        
+
         // Create fractal zoom manager
         this.fractalZoomManager = new FractalZoomManager(this.space);
-        
+
         // Configure zoom parameters
         this.fractalZoomManager.zoomStep = this.config.zoomStep;
         this.fractalZoomManager.maxZoomIn = this.config.maxZoomIn;
         this.fractalZoomManager.maxZoomOut = this.config.maxZoomOut;
         this.fractalZoomManager.transitionDuration = this.config.transitionDuration;
-        
+
         // Initialize with camera plugin
         const cameraPlugin = this.pluginManager.getPlugin('CameraPlugin');
         if (cameraPlugin) {
             this.fractalZoomManager.init(cameraPlugin);
         }
-        
+
         this._subscribeToEvents();
         this._setupDefaultContentAdapters();
-        
+
         // Expose fractal zoom API
         this.space.fractalZoom = {
             zoomToLevel: this.zoomToLevel.bind(this),
@@ -64,7 +64,7 @@ export class FractalZoomPlugin extends Plugin {
             addLODLevel: this.addLODLevel.bind(this),
             isTransitioning: this.isTransitioning.bind(this)
         };
-        
+
         console.log('FractalZoomPlugin initialized');
     }
 
@@ -94,7 +94,7 @@ export class FractalZoomPlugin extends Plugin {
             // console.warn('FractalZoomPlugin: _onNodeAdded called with invalid arguments or missing fractalZoomManager.');
             return;
         }
-        
+
         try {
             // Auto-create content adapter based on node type and content
             this._createDefaultContentAdapter(nodeInstance.id, nodeInstance);
@@ -119,7 +119,7 @@ export class FractalZoomPlugin extends Plugin {
      */
     _onZoomLevelChanged(data) {
         this.space.emit('ui:fractalZoom:levelChanged', data);
-        
+
         // Notify zoom listeners
         this.zoomListeners.forEach(listener => {
             if (typeof listener === 'function') {
@@ -175,7 +175,7 @@ export class FractalZoomPlugin extends Plugin {
                     // TODO: Extract and process data for different zoom levels
                     // console.log(`FractalZoomPlugin: 'data' adapter created for node ${nodeId}. Further implementation needed.`);
                 } else {
-                     console.warn(`FractalZoomPlugin: Failed to create 'data' adapter for node ${nodeId}.`);
+                    console.warn(`FractalZoomPlugin: Failed to create 'data' adapter for node ${nodeId}.`);
                 }
             } else {
                 adapter = createContentAdapter(nodeId, 'html');
@@ -359,8 +359,8 @@ export class FractalZoomPlugin extends Plugin {
      * Update plugin configuration
      */
     updateConfig(newConfig) {
-        this.config = { ...this.config, ...newConfig };
-        
+        this.config = {...this.config, ...newConfig};
+
         if (this.fractalZoomManager) {
             this.fractalZoomManager.zoomStep = this.config.zoomStep;
             this.fractalZoomManager.maxZoomIn = this.config.maxZoomIn;
@@ -387,7 +387,7 @@ export class FractalZoomPlugin extends Plugin {
 
     dispose() {
         super.dispose();
-        
+
         try {
             // Clean up content adapters
             this.contentAdapters.forEach(adapter => {

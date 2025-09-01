@@ -23,7 +23,10 @@ export class LayoutManager {
         }
 
         this.activeLayout?.stop?.();
-        this.activeLayout && this.space.emit('layout:stopped', { name: this.activeLayoutName, layout: this.activeLayout });
+        this.activeLayout && this.space.emit('layout:stopped', {
+            name: this.activeLayoutName,
+            layout: this.activeLayout
+        });
 
         this.activeLayout = newLayout;
         this.activeLayoutName = name;
@@ -61,7 +64,7 @@ export class LayoutManager {
         }
 
         if (this.activeLayout.run) {
-            this.space.emit('layout:started', { name: this.activeLayoutName, layout: this.activeLayout });
+            this.space.emit('layout:started', {name: this.activeLayoutName, layout: this.activeLayout});
             await this.activeLayout.run();
         }
         return true;
@@ -69,7 +72,10 @@ export class LayoutManager {
 
     stopLayout() {
         this.activeLayout?.stop?.();
-        this.activeLayout && this.space.emit('layout:stopped', { name: this.activeLayoutName, layout: this.activeLayout });
+        this.activeLayout && this.space.emit('layout:stopped', {
+            name: this.activeLayoutName,
+            layout: this.activeLayout
+        });
     }
 
     update() {

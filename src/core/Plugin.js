@@ -7,9 +7,11 @@ export class Plugin {
         this.pluginManager = pluginManagerInstance;
     }
 
-    init() {}
+    init() {
+    }
 
-    update() {}
+    update() {
+    }
 
     dispose() {
         this.space = null;

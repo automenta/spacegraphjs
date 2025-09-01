@@ -1,5 +1,5 @@
 import * as S from '../index.js';
-import { EnhancedDemoRunner } from './EnhancedDemoRunner.js';
+import {EnhancedDemoRunner} from './EnhancedDemoRunner.js';
 
 let space;
 let demoRunner;
@@ -26,12 +26,12 @@ async function init() {
                 confirmDialogElement: confirmDialogEl,
             },
         });
-        
+
         await space.init();
 
         // Initialize Enhanced Demo Runner
         demoRunner = new EnhancedDemoRunner(space);
-        
+
         // Expose to global scope for debugging and demo interactions
         window.space = space;
         window.demoRunner = demoRunner;
@@ -69,7 +69,7 @@ function cleanup() {
         demoRunner.dispose();
         demoRunner = null;
     }
-    
+
     if (space) {
         space.dispose?.();
         space = null;
@@ -87,4 +87,4 @@ if (document.readyState === 'loading') {
 window.addEventListener('beforeunload', cleanup);
 
 // Export for debugging
-export { space, demoRunner };
+export {space, demoRunner};

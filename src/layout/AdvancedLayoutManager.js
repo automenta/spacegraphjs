@@ -1,18 +1,18 @@
-import { LayoutManager } from './LayoutManager.js';
-import { ConstraintLayout } from './ConstraintLayout.js';
-import { NestedLayout } from './NestedLayout.js';
-import { LayoutConnector } from './LayoutConnector.js';
-import { AdaptiveLayout } from './AdaptiveLayout.js';
+import {LayoutManager} from './LayoutManager.js';
+import {ConstraintLayout} from './ConstraintLayout.js';
+import {NestedLayout} from './NestedLayout.js';
+import {LayoutConnector} from './LayoutConnector.js';
+import {AdaptiveLayout} from './AdaptiveLayout.js';
 
 export class AdvancedLayoutManager extends LayoutManager {
     constructor(space, pluginManager) {
         super(space, pluginManager);
-        
+
         this.constraintSystem = new ConstraintLayout();
         this.nestedSystem = new NestedLayout();
         this.connector = new LayoutConnector();
         this.adaptiveSystem = new AdaptiveLayout();
-        
+
         this.layoutModes = {
             STANDARD: 'standard',
             CONSTRAINT: 'constraint',
@@ -20,7 +20,7 @@ export class AdvancedLayoutManager extends LayoutManager {
             ADAPTIVE: 'adaptive',
             HYBRID: 'hybrid'
         };
-        
+
         this.currentMode = this.layoutModes.STANDARD;
         this.settings = {
             enableConnections: true,
@@ -46,10 +46,10 @@ export class AdvancedLayoutManager extends LayoutManager {
     _registerAdvancedLayouts() {
         // Register constraint-based layout
         this.registerLayout('constraint', this.constraintSystem);
-        
+
         // Register nested layout
         this.registerLayout('nested', this.nestedSystem);
-        
+
         // Register adaptive layout
         this.registerLayout('adaptive', this.adaptiveSystem);
 
@@ -64,7 +64,7 @@ export class AdvancedLayoutManager extends LayoutManager {
     async applyLayout(name, config = {}) {
         // Determine layout mode
         const mode = this._determineLayoutMode(name, config);
-        
+
         switch (mode) {
             case this.layoutModes.CONSTRAINT:
                 return this._applyConstraintLayout(name, config);
@@ -81,7 +81,7 @@ export class AdvancedLayoutManager extends LayoutManager {
 
     _determineLayoutMode(name, config) {
         if (config.mode) return config.mode;
-        
+
         if (this.settings.autoModeSelection) {
             return this._autoSelectMode(name, config);
         }
@@ -96,32 +96,32 @@ export class AdvancedLayoutManager extends LayoutManager {
         if (name === 'nested' || this.settings.enableNesting) {
             return this.layoutModes.NESTED;
         }
-        
+
         return this.layoutModes.STANDARD;
     }
 
     _autoSelectMode(name, config) {
         const nodePlugin = this.pluginManager.getPlugin('NodePlugin');
         const edgePlugin = this.pluginManager.getPlugin('EdgePlugin');
-        
+
         if (!nodePlugin || !edgePlugin) return this.layoutModes.STANDARD;
 
         const nodes = Array.from(nodePlugin.getNodes().values());
         const edges = Array.from(edgePlugin.getEdges().values());
 
         // Check for container nodes (nested layout)
-        const hasContainers = nodes.some(node => 
+        const hasContainers = nodes.some(node =>
             node.data?.isContainer || node.data?.childLayout
         );
-        
+
         // Check for constraint requirements
-        const hasConstraints = edges.some(edge => 
+        const hasConstraints = edges.some(edge =>
             edge.data?.constraintType || edge.data?.constraintParams
         );
-        
+
         // Check for complex structures (adaptive layout)
-        const isComplex = nodes.length > 50 || edges.length > 100 || 
-                         this._calculateGraphComplexity(nodes, edges) > 0.7;
+        const isComplex = nodes.length > 50 || edges.length > 100 ||
+            this._calculateGraphComplexity(nodes, edges) > 0.7;
 
         if (hasContainers && hasConstraints && isComplex) {
             return this.layoutModes.HYBRID;
@@ -129,17 +129,17 @@ export class AdvancedLayoutManager extends LayoutManager {
         if (isComplex) return this.layoutModes.ADAPTIVE;
         if (hasContainers) return this.layoutModes.NESTED;
         if (hasConstraints) return this.layoutModes.CONSTRAINT;
-        
+
         return this.layoutModes.STANDARD;
     }
 
     _calculateGraphComplexity(nodes, edges) {
         if (nodes.length === 0) return 0;
-        
+
         const density = edges.length / (nodes.length * (nodes.length - 1) / 2);
         const avgDegree = (2 * edges.length) / nodes.length;
         const sizeComplexity = Math.min(1, nodes.length / 100);
-        
+
         return (density + avgDegree / 10 + sizeComplexity) / 3;
     }
 
@@ -163,13 +163,13 @@ export class AdvancedLayoutManager extends LayoutManager {
 
         // Apply constraints
         await this.constraintSystem.init(nodes, edges, config);
-        
+
         this.activeLayout = this.constraintSystem;
         this.activeLayoutName = 'constraint';
         this.currentMode = this.layoutModes.CONSTRAINT;
 
-        this.space.emit('layout:started', { 
-            name: 'constraint', 
+        this.space.emit('layout:started', {
+            name: 'constraint',
             layout: this.constraintSystem,
             mode: this.currentMode
         });
@@ -187,13 +187,13 @@ export class AdvancedLayoutManager extends LayoutManager {
         const edges = Array.from(edgePlugin.getEdges().values());
 
         await this.nestedSystem.init(nodes, edges, config);
-        
+
         this.activeLayout = this.nestedSystem;
         this.activeLayoutName = 'nested';
         this.currentMode = this.layoutModes.NESTED;
 
-        this.space.emit('layout:started', { 
-            name: 'nested', 
+        this.space.emit('layout:started', {
+            name: 'nested',
             layout: this.nestedSystem,
             mode: this.currentMode
         });
@@ -211,13 +211,13 @@ export class AdvancedLayoutManager extends LayoutManager {
         const edges = Array.from(edgePlugin.getEdges().values());
 
         await this.adaptiveSystem.init(nodes, edges, config);
-        
+
         this.activeLayout = this.adaptiveSystem;
         this.activeLayoutName = 'adaptive';
         this.currentMode = this.layoutModes.ADAPTIVE;
 
-        this.space.emit('layout:started', { 
-            name: 'adaptive', 
+        this.space.emit('layout:started', {
+            name: 'adaptive',
             layout: this.adaptiveSystem,
             mode: this.currentMode
         });
@@ -264,8 +264,8 @@ export class AdvancedLayoutManager extends LayoutManager {
         this.activeLayoutName = 'hybrid';
         this.currentMode = this.layoutModes.HYBRID;
 
-        this.space.emit('layout:started', { 
-            name: 'hybrid', 
+        this.space.emit('layout:started', {
+            name: 'hybrid',
             layout: this.activeLayout,
             mode: this.currentMode
         });
@@ -415,7 +415,7 @@ export class AdvancedLayoutManager extends LayoutManager {
     // Advanced configuration
     setLayoutMode(mode) {
         this.currentMode = mode;
-        
+
         // Enable/disable systems based on mode
         this.settings.enableConstraints = mode === this.layoutModes.CONSTRAINT || mode === this.layoutModes.HYBRID;
         this.settings.enableNesting = mode === this.layoutModes.NESTED || mode === this.layoutModes.HYBRID;
@@ -464,7 +464,7 @@ export class AdvancedLayoutManager extends LayoutManager {
     // Override parent methods to integrate advanced systems
     addNodeToLayout(node) {
         super.addNodeToLayout(node);
-        
+
         if (this.settings.enableConstraints) {
             this.constraintSystem.addNode(node);
         }
@@ -478,7 +478,7 @@ export class AdvancedLayoutManager extends LayoutManager {
 
     removeNodeFromLayout(node) {
         super.removeNodeFromLayout(node);
-        
+
         if (this.settings.enableConstraints) {
             this.constraintSystem.removeNode(node);
         }
@@ -492,7 +492,7 @@ export class AdvancedLayoutManager extends LayoutManager {
 
     addEdgeToLayout(edge) {
         super.addEdgeToLayout(edge);
-        
+
         if (this.settings.enableConstraints) {
             this.constraintSystem.addEdge(edge);
         }
@@ -506,7 +506,7 @@ export class AdvancedLayoutManager extends LayoutManager {
 
     removeEdgeFromLayout(edge) {
         super.removeEdgeFromLayout(edge);
-        
+
         if (this.settings.enableConstraints) {
             this.constraintSystem.removeEdge(edge);
         }
@@ -520,7 +520,7 @@ export class AdvancedLayoutManager extends LayoutManager {
 
     dispose() {
         super.dispose();
-        
+
         this.constraintSystem.dispose();
         this.nestedSystem.dispose();
         this.connector.dispose();

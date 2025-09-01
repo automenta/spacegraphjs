@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { ControlPanelNode } from './ControlPanelNode.js';
+import {beforeEach, describe, expect, it, vi} from 'vitest';
+import {ControlPanelNode} from './ControlPanelNode.js';
 
 // Mock HTML and Three.js dependencies
 // Mock document and its methods used by HtmlNode and its subclasses
@@ -7,8 +7,8 @@ global.document = {
     createElement: vi.fn((tagName) => {
         const el = {
             tagName: tagName.toLowerCase(),
-            style: { setProperty: vi.fn() }, // Added setProperty
-            classList: { add: vi.fn(), toggle: vi.fn(), remove: vi.fn(), contains: vi.fn() }, // Added contains
+            style: {setProperty: vi.fn()}, // Added setProperty
+            classList: {add: vi.fn(), toggle: vi.fn(), remove: vi.fn(), contains: vi.fn()}, // Added contains
             dataset: {}, // Add dataset property
             addEventListener: vi.fn(),
             appendChild: vi.fn(),
@@ -18,21 +18,41 @@ global.document = {
             removeAttribute: vi.fn(),
             querySelector: vi.fn(selector => {
                 // Basic querySelector mock, can be expanded if needed
-                if (selector === '.node-content') return { contentEditable: '', style: {}, addEventListener: vi.fn(), querySelectorAll: vi.fn(() => []) };
-                if (selector === '.controls-container') return { appendChild: vi.fn(), querySelectorAll: vi.fn(() => []) };
-                if (selector === '.panel-minimize') return { addEventListener: vi.fn(), textContent: '' };
-                if (selector === '.panel-close') return { addEventListener: vi.fn() };
-                if (selector === '.control-panel-body') return { style: {} };
+                if (selector === '.node-content') return {
+                    contentEditable: '',
+                    style: {},
+                    addEventListener: vi.fn(),
+                    querySelectorAll: vi.fn(() => [])
+                };
+                if (selector === '.controls-container') return {
+                    appendChild: vi.fn(),
+                    querySelectorAll: vi.fn(() => [])
+                };
+                if (selector === '.panel-minimize') return {addEventListener: vi.fn(), textContent: ''};
+                if (selector === '.panel-close') return {addEventListener: vi.fn()};
+                if (selector === '.control-panel-body') return {style: {}};
                 return null;
             }),
             querySelectorAll: vi.fn(() => []),
             innerHTML: '',
-            get contentEditable() { return this._contentEditable; },
-            set contentEditable(val) { this._contentEditable = val; },
-            get scrollHeight() { return this._scrollHeight || 0; },
-            set scrollHeight(val) { this._scrollHeight = val; },
-            get clientHeight() { return this._clientHeight || 0; },
-            set clientHeight(val) { this._clientHeight = val; },
+            get contentEditable() {
+                return this._contentEditable;
+            },
+            set contentEditable(val) {
+                this._contentEditable = val;
+            },
+            get scrollHeight() {
+                return this._scrollHeight || 0;
+            },
+            set scrollHeight(val) {
+                this._scrollHeight = val;
+            },
+            get clientHeight() {
+                return this._clientHeight || 0;
+            },
+            set clientHeight(val) {
+                this._clientHeight = val;
+            },
             // Add other properties/methods as needed by the classes under test
         };
         return el;
@@ -43,8 +63,8 @@ global.document = {
 vi.mock('three/addons/renderers/CSS3DRenderer.js', () => ({
     CSS3DObject: vi.fn().mockImplementation(element => ({
         element: element,
-        position: { copy: vi.fn() },
-        quaternion: { copy: vi.fn() },
+        position: {copy: vi.fn()},
+        quaternion: {copy: vi.fn()},
         userData: {}
     }))
 }));
@@ -53,7 +73,7 @@ vi.mock('three/addons/renderers/CSS3DRenderer.js', () => ({
 describe('ControlPanelNode', () => {
     let node;
     let mockSpace; // Mock space for event emitting
-    
+
     beforeEach(() => {
         mockSpace = {
             emit: vi.fn(),
@@ -74,14 +94,14 @@ describe('ControlPanelNode', () => {
             width: 300,
             height: 200,
             controls: [
-                { type: 'slider', label: 'Volume', min: 0, max: 100, value: 50, id: 'volume' },
-                { type: 'button', label: 'Start', id: 'startBtn' }, // Buttons also need an ID for controls map
-                { type: 'switch', label: 'Auto Mode', id: 'autoMode', value: false } // toggle is likely switch
+                {type: 'slider', label: 'Volume', min: 0, max: 100, value: 50, id: 'volume'},
+                {type: 'button', label: 'Start', id: 'startBtn'}, // Buttons also need an ID for controls map
+                {type: 'switch', label: 'Auto Mode', id: 'autoMode', value: false} // toggle is likely switch
             ]
         };
         node = new ControlPanelNode(
             'control-panel-1',
-            { x: 0, y: 0, z: 0 }, // Position might need to be a Vector3 mock if methods are called on it
+            {x: 0, y: 0, z: 0}, // Position might need to be a Vector3 mock if methods are called on it
             initialData
         );
         node.space = mockSpace; // Inject mock space
@@ -91,7 +111,7 @@ describe('ControlPanelNode', () => {
         expect(node.id).toBe('control-panel-1');
         // position is directly stored if not a Vector3, or a Vector3 instance
         // For now, assuming it's an object as passed.
-        expect(node.position).toEqual({ x: 0, y: 0, z: 0 });
+        expect(node.position).toEqual({x: 0, y: 0, z: 0});
         expect(node.data.title).toBe('Test Control Panel');
         expect(node.data.width).toBe(300); // data.width is used for initial size
         expect(node.size.width).toBe(300); // size.width is the actual current size
@@ -116,7 +136,7 @@ describe('ControlPanelNode', () => {
     it('should set and get control values correctly', () => {
         node.setValue('volume', 75);
         expect(node.getValue('volume')).toBe(75);
-        
+
         node.setValue('autoMode', true);
         expect(node.getValue('autoMode')).toBe(true);
     });
@@ -133,7 +153,7 @@ describe('ControlPanelNode', () => {
         // or we can test the internal _emitControlChange by calling a control's event listener.
         // The current `setValue` in ControlPanelNode doesn't call _emitControlChange.
         // _emitControlChange is called by the event listeners of the actual input elements.
-        
+
         // We'll test if an event is emitted when a control's input event fires.
         // This requires a more detailed mock of the created control elements.
         // For simplicity, let's assume _emitControlChange is called correctly by internal handlers.

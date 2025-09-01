@@ -40,12 +40,12 @@ export class ChartNode extends HtmlNode {
             },
             scales: {
                 x: {
-                    ticks: { color: 'white' },
-                    grid: { color: 'rgba(255,255,255,0.1)' }
+                    ticks: {color: 'white'},
+                    grid: {color: 'rgba(255,255,255,0.1)'}
                 },
                 y: {
-                    ticks: { color: 'white' },
-                    grid: { color: 'rgba(255,255,255,0.1)' }
+                    ticks: {color: 'white'},
+                    grid: {color: 'rgba(255,255,255,0.1)'}
                 }
             }
         };
@@ -56,8 +56,8 @@ export class ChartNode extends HtmlNode {
             width: data.width ?? 300,
             height: data.height ?? 200,
             chartType: data.chartType ?? 'bar',
-            chartData: data.chartData ? { ...defaultChartData, ...data.chartData } : defaultChartData,
-            chartOptions: data.chartOptions ? { ...defaultChartOptions, ...data.chartOptions } : defaultChartOptions,
+            chartData: data.chartData ? {...defaultChartData, ...data.chartData} : defaultChartData,
+            chartOptions: data.chartOptions ? {...defaultChartOptions, ...data.chartOptions} : defaultChartOptions,
             editable: false, // Charts are not directly editable content
             backgroundColor: data.backgroundColor ?? '#2a2a2b',
             type: ChartNode.typeName,
@@ -140,14 +140,14 @@ export class ChartNode extends HtmlNode {
 
     // Method to update chart data dynamically
     updateChartData(newChartData) {
-        this.data.chartData = { ...this.data.chartData, ...newChartData };
+        this.data.chartData = {...this.data.chartData, ...newChartData};
         if (this.chartInstance) {
             this.chartInstance.data = this.data.chartData;
             this.chartInstance.update();
         } else {
             this._renderChart(); // Re-render if chart not initialized
         }
-        this.space?.emit('graph:node:dataChanged', { node: this, property: 'chartData', value: this.data.chartData });
+        this.space?.emit('graph:node:dataChanged', {node: this, property: 'chartData', value: this.data.chartData});
     }
 
     dispose() {

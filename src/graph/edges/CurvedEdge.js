@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {Edge} from './Edge.js';
-import {createCSS3DLabelObject, applyLabelLOD} from '../../utils/labelUtils.js';
+import {applyLabelLOD, createCSS3DLabelObject} from '../../utils/labelUtils.js';
 
 export class CurvedEdge extends Edge {
     static typeName = 'curved';

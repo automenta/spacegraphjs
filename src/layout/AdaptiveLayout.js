@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { gsap } from 'gsap';
+import {gsap} from 'gsap';
 
 export class AdaptiveLayout {
     space = null;
@@ -37,7 +37,7 @@ export class AdaptiveLayout {
     adaptationTimer = null;
 
     constructor(config = {}) {
-        this.settings = { ...this.settings, ...config };
+        this.settings = {...this.settings, ...config};
         this._initializeAdaptationRules();
     }
 
@@ -100,12 +100,12 @@ export class AdaptiveLayout {
 
     async init(nodes, edges, config = {}) {
         if (config) this.updateConfig(config);
-        
+
         const metrics = this._calculateGraphMetrics(nodes, edges);
         const bestLayout = this._selectBestLayout(metrics);
-        
+
         await this._applyLayout(bestLayout, nodes, edges, config);
-        
+
         if (this.settings.enableAutoAdaptation) {
             this._startAdaptationMonitoring();
         }
@@ -114,7 +114,7 @@ export class AdaptiveLayout {
     _calculateGraphMetrics(nodes, edges) {
         const nodeCount = nodes.length;
         const edgeCount = edges.length;
-        
+
         if (nodeCount === 0) {
             return {
                 nodeCount: 0,
@@ -162,7 +162,7 @@ export class AdaptiveLayout {
 
     _calculateBoundingBox(positions) {
         if (positions.length === 0) {
-            return { min: new THREE.Vector3(), max: new THREE.Vector3(), size: new THREE.Vector3() };
+            return {min: new THREE.Vector3(), max: new THREE.Vector3(), size: new THREE.Vector3()};
         }
 
         const min = positions[0].clone();
@@ -205,7 +205,7 @@ export class AdaptiveLayout {
         // Simple hierarchy score based on leaf ratio and structure
         const leafRatio = leaves / nodes.length;
         const connectivityScore = 1 - (edges.length / (nodes.length * nodes.length));
-        
+
         return Math.min(1, leafRatio + connectivityScore);
     }
 
@@ -235,7 +235,7 @@ export class AdaptiveLayout {
                     possibleTriangles++;
                     const neighbor1 = neighborsArray[i];
                     const neighbor2 = neighborsArray[j];
-                    
+
                     if (adjacencyList.get(neighbor1)?.has(neighbor2)) {
                         triangles++;
                     }
@@ -317,7 +317,7 @@ export class AdaptiveLayout {
             const morphPromises = nodes.map(node => {
                 const oldPos = oldPositions.get(node.id);
                 const newPos = node.position.clone();
-                
+
                 if (!oldPos) return Promise.resolve();
 
                 // Reset to old position
@@ -373,7 +373,7 @@ export class AdaptiveLayout {
 
         if (bestLayout !== this.currentLayoutName) {
             console.log(`AdaptiveLayout: Adapting from ${this.currentLayoutName} to ${bestLayout}`);
-            
+
             this.isAdapting = true;
             await this._applyLayout(bestLayout, nodes, edges);
             this.isAdapting = false;
@@ -451,7 +451,7 @@ export class AdaptiveLayout {
 
     setAdaptationEnabled(enabled) {
         this.settings.enableAutoAdaptation = enabled;
-        
+
         if (enabled) {
             this._startAdaptationMonitoring();
         } else if (this.adaptationTimer) {
@@ -478,7 +478,7 @@ export class AdaptiveLayout {
     // Layout interface methods
     addNode(node) {
         this.currentLayout?.addNode?.(node);
-        
+
         // Check if adaptation is needed due to new node
         if (this.settings.enableAutoAdaptation && !this.isAdapting) {
             setTimeout(() => this._checkForAdaptation(), 100);
@@ -487,7 +487,7 @@ export class AdaptiveLayout {
 
     removeNode(node) {
         this.currentLayout?.removeNode?.(node);
-        
+
         // Check if adaptation is needed due to removed node
         if (this.settings.enableAutoAdaptation && !this.isAdapting) {
             setTimeout(() => this._checkForAdaptation(), 100);
@@ -496,7 +496,7 @@ export class AdaptiveLayout {
 
     addEdge(edge) {
         this.currentLayout?.addEdge?.(edge);
-        
+
         // Check if adaptation is needed due to new edge
         if (this.settings.enableAutoAdaptation && !this.isAdapting) {
             setTimeout(() => this._checkForAdaptation(), 100);
@@ -505,7 +505,7 @@ export class AdaptiveLayout {
 
     removeEdge(edge) {
         this.currentLayout?.removeEdge?.(edge);
-        
+
         // Check if adaptation is needed due to removed edge
         if (this.settings.enableAutoAdaptation && !this.isAdapting) {
             setTimeout(() => this._checkForAdaptation(), 100);
@@ -525,8 +525,8 @@ export class AdaptiveLayout {
     }
 
     updateConfig(newConfig) {
-        this.settings = { ...this.settings, ...newConfig };
-        
+        this.settings = {...this.settings, ...newConfig};
+
         if (newConfig.adaptationRules) {
             this._initializeAdaptationRules();
         }
@@ -543,7 +543,7 @@ export class AdaptiveLayout {
         this.adaptationRules = [];
         this.layoutHistory = [];
         this.nodeMetrics.clear();
-        
+
         this.currentLayout = null;
         this.currentLayoutName = '';
         this.space = null;

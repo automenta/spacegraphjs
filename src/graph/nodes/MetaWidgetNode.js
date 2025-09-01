@@ -3,7 +3,7 @@ import {$} from '../../utils.js';
 
 export class MetaWidgetNode extends HtmlNode {
     static typeName = 'meta-widget';
-    
+
     childWidgets = new Map();
     layout = 'grid';
     columns = 2;
@@ -11,7 +11,7 @@ export class MetaWidgetNode extends HtmlNode {
     resizable = true;
     collapsible = true;
     isCollapsed = false;
-    
+
     constructor(id, position, data = {}, mass = 1.0) {
         const metaData = {
             width: data.width ?? 400,
@@ -35,7 +35,7 @@ export class MetaWidgetNode extends HtmlNode {
         this.gap = metaData.gap;
         this.resizable = metaData.resizable;
         this.collapsible = metaData.collapsible;
-        
+
         this._initializeWidgets();
         this._setupMetaWidgetEvents();
     }
@@ -324,7 +324,7 @@ export class MetaWidgetNode extends HtmlNode {
             e.preventDefault();
             const widgetId = e.dataTransfer.getData('text/widget-id');
             const targetSlot = e.target.closest('.widget-slot');
-            
+
             if (widgetId && targetSlot) {
                 this._handleWidgetDrop(widgetId, targetSlot);
             }
@@ -400,7 +400,7 @@ export class MetaWidgetNode extends HtmlNode {
 
         // Widget content based on type
         const content = this._createWidgetContent(widget);
-        
+
         wrapper.appendChild(content);
         wrapper.appendChild(controls);
         slot.appendChild(wrapper);
@@ -444,11 +444,11 @@ export class MetaWidgetNode extends HtmlNode {
     _createControlPanelContent(widget) {
         const controls = widget.data.controls || [];
         let html = `<div class="mini-control-panel">`;
-        
+
         controls.forEach(control => {
             html += `<div class="mini-control">`;
             html += `<label class="mini-control-label">${control.label}</label>`;
-            
+
             switch (control.type) {
                 case 'slider':
                     html += `<input type="range" class="mini-slider" 
@@ -472,7 +472,7 @@ export class MetaWidgetNode extends HtmlNode {
             }
             html += `</div>`;
         });
-        
+
         html += `</div>`;
         html += `<style>
             .mini-control-panel { padding: 8px; font-size: 11px; }
@@ -491,7 +491,7 @@ export class MetaWidgetNode extends HtmlNode {
             .mini-button { width: 100%; padding: 4px 8px; background: #4a9eff; border: none; border-radius: 3px; 
                           color: white; font-size: 10px; cursor: pointer; }
         </style>`;
-        
+
         return html;
     }
 
@@ -499,7 +499,7 @@ export class MetaWidgetNode extends HtmlNode {
         const value = widget.data.value || 0;
         const max = widget.data.max || 100;
         const percent = (value / max) * 100;
-        
+
         return `
             <div class="mini-progress">
                 <div class="mini-progress-label">${widget.data.label || 'Progress'}</div>
@@ -549,11 +549,11 @@ export class MetaWidgetNode extends HtmlNode {
     _setupControlPanelEvents(content, widget) {
         content.querySelectorAll('[data-control-id]').forEach(control => {
             const controlId = control.dataset.controlId;
-            
+
             control.addEventListener('input', (e) => {
                 e.stopPropagation();
                 let value = e.target.value;
-                
+
                 if (e.target.type === 'checkbox') {
                     value = e.target.checked;
                 } else if (e.target.type === 'range') {
@@ -561,7 +561,7 @@ export class MetaWidgetNode extends HtmlNode {
                     const valueSpan = e.target.parentNode.querySelector('.mini-value');
                     if (valueSpan) valueSpan.textContent = value;
                 }
-                
+
                 this.space?.emit('meta-widget:control-changed', {
                     metaWidget: this,
                     widget,
@@ -569,7 +569,7 @@ export class MetaWidgetNode extends HtmlNode {
                     value
                 });
             });
-            
+
             if (control.type === 'button' || control.tagName === 'BUTTON') {
                 control.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -614,7 +614,7 @@ export class MetaWidgetNode extends HtmlNode {
 
         // Clear existing layout classes
         grid.className = 'widget-grid';
-        
+
         // Add layout-specific class
         grid.classList.add(`layout-${this.layout}`);
 
@@ -718,20 +718,20 @@ export class MetaWidgetNode extends HtmlNode {
         };
 
         cancelBtn.addEventListener('click', closeDialog);
-        
+
         confirmBtn.addEventListener('click', () => {
             const type = typeSelect.value;
             const title = titleInput.value || `New ${type}`;
-            
+
             const widgetData = {
                 type,
-                data: { title, label: title }
+                data: {title, label: title}
             };
 
             // Add type-specific default data
             if (type === 'control-panel') {
                 widgetData.data.controls = [
-                    { id: 'sample', type: 'slider', label: 'Sample', value: 50, min: 0, max: 100 }
+                    {id: 'sample', type: 'slider', label: 'Sample', value: 50, min: 0, max: 100}
                 ];
             } else if (type === 'progress') {
                 widgetData.data.value = 25;
@@ -777,7 +777,7 @@ export class MetaWidgetNode extends HtmlNode {
             this.layout = layout;
             this.data.layout = layout;
             this._updateLayout();
-            
+
             this.space?.emit('meta-widget:layout-changed', {
                 metaWidget: this,
                 layout
@@ -801,19 +801,19 @@ export class MetaWidgetNode extends HtmlNode {
         this.isCollapsed = !this.isCollapsed;
         const content = $('.meta-widget-content', this.htmlElement);
         const collapseBtn = $('.collapse-btn', this.htmlElement);
-        
+
         if (content) {
             content.classList.toggle('collapsed', this.isCollapsed);
         }
-        
+
         if (collapseBtn) {
             collapseBtn.textContent = this.isCollapsed ? '+' : '−';
         }
-        
+
         // Adjust height
         const newHeight = this.isCollapsed ? 60 : this.data.height;
         this.setSize(this.size.width, newHeight);
-        
+
         this.space?.emit('meta-widget:collapsed-changed', {
             metaWidget: this,
             isCollapsed: this.isCollapsed
@@ -833,7 +833,7 @@ export class MetaWidgetNode extends HtmlNode {
         if (!widget) return false;
 
         Object.assign(widget.data, newData);
-        
+
         // Re-render the widget
         const widgetElement = $(`[data-widget-id="${widgetId}"]`, this.htmlElement);
         if (widgetElement) {

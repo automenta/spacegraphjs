@@ -1,4 +1,3 @@
-import * as S from '../../index.js';
 // import * as THREE from 'three'; // Available via S.THREE
 
 const demoMetadata = {
@@ -17,38 +16,53 @@ const demoMetadata = {
 };
 
 function createGraph(space) {
-    const commonProps = { mass: 1.0 };
+    const commonProps = {mass: 1.0};
     let yPos = -200;
     const yIncrement = 180;
 
     const shapeNodeBox = space.createNode({
-        id: 'shapeBox', type: 'shape', position: { x: -300, y: yPos, z: 0 },
-        data: { label: 'Box (ShapeNode)', shape: 'box', size: 80, color: 0xffaa00 }, ...commonProps
+        id: 'shapeBox', type: 'shape', position: {x: -300, y: yPos, z: 0},
+        data: {label: 'Box (ShapeNode)', shape: 'box', size: 80, color: 0xffaa00}, ...commonProps
     });
     const shapeNodeSphere = space.createNode({
-        id: 'shapeSphere', type: 'shape', position: { x: -100, y: yPos, z: 0 },
-        data: { label: 'Sphere (ShapeNode)', shape: 'sphere', size: 50, color: 0x00aaff }, ...commonProps
+        id: 'shapeSphere', type: 'shape', position: {x: -100, y: yPos, z: 0},
+        data: {label: 'Sphere (ShapeNode)', shape: 'sphere', size: 50, color: 0x00aaff}, ...commonProps
     });
     const shapeNodeCapsule = space.createNode({
-        id: 'shapeCapsule', type: 'shape', position: { x: 100, y: yPos, z: 0 },
-        data: { label: 'Capsule (ShapeNode)', shape: 'capsule', size: {radius:30, height:80}, color: 0x00ffaa }, ...commonProps
+        id: 'shapeCapsule', type: 'shape', position: {x: 100, y: yPos, z: 0},
+        data: {
+            label: 'Capsule (ShapeNode)',
+            shape: 'capsule',
+            size: {radius: 30, height: 80},
+            color: 0x00ffaa
+        }, ...commonProps
     });
 
     yPos += yIncrement;
     const noteNode = space.createNode({
-        id: 'noteNode', type: 'note', position: { x: -200, y: yPos, z: 0 },
-        data: { label: 'NoteNode (HTML)', content: '<h3>HTML Content</h3><p>This is a <code>NoteNode</code>. It can render <b>rich HTML</b>.</p>', width: 250, height: 120, backgroundColor: '#334455' }, ...commonProps
+        id: 'noteNode', type: 'note', position: {x: -200, y: yPos, z: 0},
+        data: {
+            label: 'NoteNode (HTML)',
+            content: '<h3>HTML Content</h3><p>This is a <code>NoteNode</code>. It can render <b>rich HTML</b>.</p>',
+            width: 250,
+            height: 120,
+            backgroundColor: '#334455'
+        }, ...commonProps
     });
 
     yPos += yIncrement;
     const imageNode = space.createNode({
-        id: 'imageNode', type: 'image', position: { x: -200, y: yPos, z: 0 },
-        data: { label: 'ImageNode', imageUrl: 'https://placehold.co/200x150/FFAA00/000000?text=Image+Node', size: 150 }, ...commonProps
+        id: 'imageNode', type: 'image', position: {x: -200, y: yPos, z: 0},
+        data: {
+            label: 'ImageNode',
+            imageUrl: 'https://placehold.co/200x150/FFAA00/000000?text=Image+Node',
+            size: 150
+        }, ...commonProps
     });
 
     yPos += yIncrement + 50; // More space for video
     const videoNode = space.createNode({
-        id: 'videoNode', type: 'video', position: { x: -200, y: yPos, z: 0 },
+        id: 'videoNode', type: 'video', position: {x: -200, y: yPos, z: 0},
         data: {
             label: 'VideoNode',
             videoUrl: 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4',
@@ -60,25 +74,25 @@ function createGraph(space) {
     const xPosCol2 = 300;
 
     const iframeNode = space.createNode({
-        id: 'iframeNode', type: 'iframe', position: { x: xPosCol2, y: yPos, z: 0 },
-        data: { label: 'IFrameNode', iframeUrl: 'https://example.com', width: 300, height: 200 }, ...commonProps
+        id: 'iframeNode', type: 'iframe', position: {x: xPosCol2, y: yPos, z: 0},
+        data: {label: 'IFrameNode', iframeUrl: 'https://example.com', width: 300, height: 200}, ...commonProps
     });
 
     yPos += yIncrement + 80;
 
     const groupChild1 = space.createNode({
-        id: 'gc1', type: 'html', position: { x: xPosCol2 -50 , y: yPos + 50, z: 0 },
-        data: { label: 'Child A', content: 'Child A', width:100, height:50, backgroundColor: '#556677'}, mass: 0.5
+        id: 'gc1', type: 'html', position: {x: xPosCol2 - 50, y: yPos + 50, z: 0},
+        data: {label: 'Child A', content: 'Child A', width: 100, height: 50, backgroundColor: '#556677'}, mass: 0.5
     });
     const groupChild2 = space.createNode({
-        id: 'gc2', type: 'shape', position: { x: xPosCol2 + 50, y: yPos - 20, z: 10 },
-        data: { label: 'Child B', shape:'sphere', size:30, color:0xcc66ff }, mass: 0.5
+        id: 'gc2', type: 'shape', position: {x: xPosCol2 + 50, y: yPos - 20, z: 10},
+        data: {label: 'Child B', shape: 'sphere', size: 30, color: 0xcc66ff}, mass: 0.5
     });
 
     let groupNode = null;
-    if(groupChild1 && groupChild2) {
+    if (groupChild1 && groupChild2) {
         groupNode = space.createNode({
-            id: 'groupNode', type: 'group', position: { x: xPosCol2, y: yPos, z: 0 },
+            id: 'groupNode', type: 'group', position: {x: xPosCol2, y: yPos, z: 0},
             data: {
                 label: 'GroupNode',
                 children: [groupChild1.id, groupChild2.id],
@@ -87,7 +101,7 @@ function createGraph(space) {
                 headerColor: 'rgba(40,60,80,0.5)',
             }, ...commonProps
         });
-        space.addEdge(groupChild1, groupChild2, {label: "Internal", color: 0xaaaaaa, thickness:1});
+        space.addEdge(groupChild1, groupChild2, {label: "Internal", color: 0xaaaaaa, thickness: 1});
     }
 
     if (noteNode && imageNode) space.addEdge(noteNode, imageNode, {label: 'related'});
@@ -95,8 +109,8 @@ function createGraph(space) {
     if (iframeNode && groupNode) space.addEdge(iframeNode, groupNode);
 
     const centralHub = space.createNode({
-        id: 'hubNodeTypes', type: 'shape', position: { x: 0, y: 200, z: -50 },
-        data: { label: 'Node Types Hub', shape: 'sphere', size: 20, color: 0xeeeeee, opacity: 0.5 }, mass: 0.1
+        id: 'hubNodeTypes', type: 'shape', position: {x: 0, y: 200, z: -50},
+        data: {label: 'Node Types Hub', shape: 'sphere', size: 20, color: 0xeeeeee, opacity: 0.5}, mass: 0.1
     });
 
     [shapeNodeBox, shapeNodeSphere, shapeNodeCapsule, noteNode, imageNode, videoNode, iframeNode, groupNode].forEach(n => {
@@ -104,4 +118,4 @@ function createGraph(space) {
     });
 }
 
-export { createGraph, demoMetadata };
+export {createGraph, demoMetadata};

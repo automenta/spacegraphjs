@@ -7,12 +7,12 @@ export class CircularLayout {
         plane: 'xy',
         startAngle: 0,
         angularSpacing: 0,
-        center: { x: 0, y: 0, z: 0 },
+        center: {x: 0, y: 0, z: 0},
         animate: true,
     };
 
     constructor(config = {}) {
-        this.settings = { ...this.settings, ...config };
+        this.settings = {...this.settings, ...config};
     }
 
     setContext(space, pluginManager) {
@@ -21,7 +21,7 @@ export class CircularLayout {
     }
 
     updateConfig(newConfig) {
-        this.settings = { ...this.settings, ...newConfig };
+        this.settings = {...this.settings, ...newConfig};
     }
 
     init(nodes, edges, config = {}) {
@@ -31,7 +31,7 @@ export class CircularLayout {
         if (this.nodes.length === 0) return;
 
         const numNodes = this.nodes.length;
-        const { radius, plane, startAngle, center } = this.settings;
+        const {radius, plane, startAngle, center} = this.settings;
         const angularSpacing = this.settings.angularSpacing <= 0 ? (2 * Math.PI) / numNodes : this.settings.angularSpacing;
 
         let dynamicRadius = radius;
@@ -55,12 +55,23 @@ export class CircularLayout {
         });
     }
 
-    run() {}
-    stop() {}
-    addNode(node) {}
-    removeNode(node) {}
-    addEdge(edge) {}
-    removeEdge(edge) {}
+    run() {
+    }
+
+    stop() {
+    }
+
+    addNode(node) {
+    }
+
+    removeNode(node) {
+    }
+
+    addEdge(edge) {
+    }
+
+    removeEdge(edge) {
+    }
 
     dispose() {
         this.nodes = [];

@@ -3,7 +3,7 @@ import {$} from '../../utils.js';
 
 export class ProgressNode extends HtmlNode {
     static typeName = 'progress';
-    
+
     constructor(id, position, data = {}, mass = 1.0) {
         const progressData = {
             width: data.width ?? 200,
@@ -235,7 +235,7 @@ export class ProgressNode extends HtmlNode {
 
     _generateProgressContent() {
         const percent = this._getPercent();
-        
+
         switch (this.data.progressType) {
             case 'circular':
                 return this._generateCircularProgress(percent);
@@ -283,16 +283,16 @@ export class ProgressNode extends HtmlNode {
         const endAngle = 135;
         const totalAngle = endAngle - startAngle;
         const currentAngle = startAngle + (percent / 100) * totalAngle;
-        
+
         const radius = 35;
         const centerX = 50;
         const centerY = 45;
-        
+
         const startX = centerX + radius * Math.cos((startAngle * Math.PI) / 180);
         const startY = centerY + radius * Math.sin((startAngle * Math.PI) / 180);
         const endX = centerX + radius * Math.cos((endAngle * Math.PI) / 180);
         const endY = centerY + radius * Math.sin((endAngle * Math.PI) / 180);
-        
+
         const needleX = centerX + 30 * Math.cos((currentAngle * Math.PI) / 180);
         const needleY = centerY + 30 * Math.sin((currentAngle * Math.PI) / 180);
 
@@ -316,7 +316,7 @@ export class ProgressNode extends HtmlNode {
     _generateStepsProgress() {
         const steps = this.data.steps ?? 5;
         const currentStep = Math.floor((this.data.value / this.data.max) * steps);
-        
+
         let stepsHtml = '';
         for (let i = 0; i < steps; i++) {
             const stepClass = i < currentStep ? 'completed' : (i === currentStep ? 'current' : '');
@@ -338,12 +338,12 @@ export class ProgressNode extends HtmlNode {
 
     _generateValueText() {
         if (!this.data.showValue && !this.data.showPercent) return '';
-        
+
         let text = '';
         if (this.data.showValue) text += `${this.data.value} / ${this.data.max}`;
         if (this.data.showValue && this.data.showPercent) text += ' • ';
         if (this.data.showPercent) text += `${Math.round(this._getPercent())}%`;
-        
+
         return `<div class="progress-value">${text}</div>`;
     }
 
@@ -377,10 +377,10 @@ export class ProgressNode extends HtmlNode {
     setValue(value) {
         this.data.value = Math.max(this.data.min, Math.min(this.data.max, value));
         this._updateProgress();
-        this.space?.emit('graph:node:dataChanged', { 
-            node: this, 
-            property: 'value', 
-            value: this.data.value 
+        this.space?.emit('graph:node:dataChanged', {
+            node: this,
+            property: 'value',
+            value: this.data.value
         });
     }
 
@@ -405,27 +405,27 @@ export class ProgressNode extends HtmlNode {
     animateToValue(targetValue, duration = 1000) {
         const startValue = this.data.value;
         const startTime = performance.now();
-        
+
         const animate = (currentTime) => {
             const elapsed = currentTime - startTime;
             const progress = Math.min(elapsed / duration, 1);
-            
+
             const easeOutCubic = 1 - Math.pow(1 - progress, 3);
             const currentValue = startValue + (targetValue - startValue) * easeOutCubic;
-            
+
             this.setValue(currentValue);
-            
+
             if (progress < 1) {
                 this._animationFrame = requestAnimationFrame(animate);
             } else {
                 this._animationFrame = null;
             }
         };
-        
+
         if (this._animationFrame) {
             cancelAnimationFrame(this._animationFrame);
         }
-        
+
         this._animationFrame = requestAnimationFrame(animate);
     }
 

@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { FlowEdge } from './FlowEdge.js';
+import {beforeEach, describe, expect, it, vi} from 'vitest';
+import {FlowEdge} from './FlowEdge.js';
 
 // Mock Three.js module
 vi.mock('three', async (importOriginal) => {
@@ -13,14 +13,20 @@ vi.mock('three', async (importOriginal) => {
         BufferAttribute: vi.fn(),
         ShaderMaterial: vi.fn(() => ({ // Changed from PointsMaterial to ShaderMaterial
             dispose: vi.fn(), // Added dispose
-            uniforms: { time: { value: 0 }, glowIntensity: { value: 0} }
+            uniforms: {time: {value: 0}, glowIntensity: {value: 0}}
         })),
         Points: vi.fn(() => ({
-            position: { copy: vi.fn() },
+            position: {copy: vi.fn()},
             lookAt: vi.fn(),
-            geometry: { attributes: { position: { array: [], needsUpdate: false }, size: { array: [], needsUpdate: false }, color: { array: [], needsUpdate: false } }, dispose: vi.fn() }, // Mock geometry with attributes
-            material: { uniforms: { time: { value: 0 }, glowIntensity: { value: 0} }, dispose: vi.fn() }, // Mock material
-            parent: { remove: vi.fn() }, // Mock parent for removal
+            geometry: {
+                attributes: {
+                    position: {array: [], needsUpdate: false},
+                    size: {array: [], needsUpdate: false},
+                    color: {array: [], needsUpdate: false}
+                }, dispose: vi.fn()
+            }, // Mock geometry with attributes
+            material: {uniforms: {time: {value: 0}, glowIntensity: {value: 0}}, dispose: vi.fn()}, // Mock material
+            parent: {remove: vi.fn()}, // Mock parent for removal
             userData: {}
         })),
         Vector3: vi.fn((x = 0, y = 0, z = 0) => ({
@@ -30,7 +36,7 @@ vi.mock('three', async (importOriginal) => {
             lerpVectors: vi.fn().mockReturnThis(), // Added for _getPositionOnCurve
             distanceTo: vi.fn(() => 5),
         })),
-        Color: vi.fn(() => ({ r: 0, g: 1, b: 0 })), // Example color
+        Color: vi.fn(() => ({r: 0, g: 1, b: 0})), // Example color
         AdditiveBlending: 'AdditiveBlendingConstant', // Mock constant
     };
 });
@@ -40,20 +46,20 @@ describe('FlowEdge', () => {
     let edge;
     let sourceNode;
     let targetNode;
-    
+
     beforeEach(() => {
         sourceNode = {
             id: 'source',
-            position: { x: 0, y: 0, z: 0 },
-            getWorldPosition: vi.fn(() => ({ x: 0, y: 0, z: 0 }))
+            position: {x: 0, y: 0, z: 0},
+            getWorldPosition: vi.fn(() => ({x: 0, y: 0, z: 0}))
         };
-        
+
         targetNode = {
             id: 'target',
-            position: { x: 10, y: 0, z: 0 },
-            getWorldPosition: vi.fn(() => ({ x: 10, y: 0, z: 0 }))
+            position: {x: 10, y: 0, z: 0},
+            getWorldPosition: vi.fn(() => ({x: 10, y: 0, z: 0}))
         };
-        
+
         edge = new FlowEdge(
             'flow-edge-1',
             sourceNode,
@@ -98,7 +104,7 @@ describe('FlowEdge', () => {
         edge.setAnimated(false);
         expect(edge.data.animated).toBe(false);
         expect(edge.animationFrame).toBeNull();
-        
+
         edge.setAnimated(true);
         expect(edge.data.animated).toBe(true);
         expect(edge.animationFrame).not.toBeNull();
@@ -114,14 +120,14 @@ describe('FlowEdge', () => {
         // Constructor sets this.flowDirection from data.flowDirection
         // Test if data.bidirectional (if it were a primary option) translates to flowDirection
         // The current code uses data.flowDirection (1, -1, or 0 for bidirectional)
-        const biFlowEdge = new FlowEdge('bi-flow', sourceNode, targetNode, { flowDirection: 0 }); // 0 for bidirectional
+        const biFlowEdge = new FlowEdge('bi-flow', sourceNode, targetNode, {flowDirection: 0}); // 0 for bidirectional
         expect(biFlowEdge.flowDirection).toBe(0);
         expect(biFlowEdge.data.flowDirection).toBe(0);
 
-        const forwardFlowEdge = new FlowEdge('forward-flow', sourceNode, targetNode, { flowDirection: 1 });
+        const forwardFlowEdge = new FlowEdge('forward-flow', sourceNode, targetNode, {flowDirection: 1});
         expect(forwardFlowEdge.flowDirection).toBe(1);
 
-        const backwardFlowEdge = new FlowEdge('backward-flow', sourceNode, targetNode, { flowDirection: -1 });
+        const backwardFlowEdge = new FlowEdge('backward-flow', sourceNode, targetNode, {flowDirection: -1});
         expect(backwardFlowEdge.flowDirection).toBe(-1);
     });
 
@@ -167,7 +173,7 @@ describe('FlowEdge', () => {
         // as requestAnimationFrame is mocked to run immediately.
 
         edge.setAnimated(true); // Ensure animation is "running"
-        
+
         // Call _updateParticles a few times which should be triggered by mocked requestAnimationFrame
         // However, since _startAnimation uses a closure for animate, spying or direct calls are easier.
         // Let's call _updateParticles directly for this test to check its effect.
@@ -192,7 +198,7 @@ beforeEach(() => {
         return Date.now(); // Return a mock ID
     });
     global.cancelAnimationFrame = vi.fn();
-    global.performance = { now: vi.fn(() => Date.now()) }; // Mock performance.now
+    global.performance = {now: vi.fn(() => Date.now())}; // Mock performance.now
 });
 
 afterEach(() => {

@@ -7,11 +7,11 @@ export class TextMeshNode extends ShapeNode {
     static typeName = 'text-mesh';
     static fontCache = new Map();
     static defaultFont = null;
-    
+
     textMesh = null;
     font = null;
     isLoadingFont = false;
-    
+
     constructor(id, position, data = {}, mass = 1.5) {
         const textData = {
             text: data.text ?? 'Text',
@@ -69,10 +69,10 @@ export class TextMeshNode extends ShapeNode {
     async _loadFont() {
         if (this.isLoadingFont) return;
         this.isLoadingFont = true;
-        
+
         try {
             let fontKey = this.data.fontPath || `${this.data.fontFamily}_${this.data.fontWeight}`;
-            
+
             // Check cache first
             if (TextMeshNode.fontCache.has(fontKey)) {
                 this.font = TextMeshNode.fontCache.get(fontKey);
@@ -80,9 +80,9 @@ export class TextMeshNode extends ShapeNode {
                 this.isLoadingFont = false;
                 return;
             }
-            
+
             const loader = new FontLoader();
-            
+
             // Determine font URL
             let fontUrl;
             if (this.data.fontPath) {
@@ -92,7 +92,7 @@ export class TextMeshNode extends ShapeNode {
                 const baseUrl = 'https://threejs.org/examples/fonts/';
                 fontUrl = `${baseUrl}${this.data.fontFamily}_${this.data.fontWeight}.typeface.json`;
             }
-            
+
             const font = await new Promise((resolve, reject) => {
                 loader.load(
                     fontUrl,
@@ -109,16 +109,16 @@ export class TextMeshNode extends ShapeNode {
                     }
                 );
             });
-            
+
             this.font = font;
             TextMeshNode.fontCache.set(fontKey, font);
-            
+
             if (!TextMeshNode.defaultFont) {
                 TextMeshNode.defaultFont = font;
             }
-            
+
             this._createTextMesh();
-            
+
         } catch (error) {
             console.error('Font loading failed:', error);
             this._createFallbackMesh();
@@ -129,9 +129,9 @@ export class TextMeshNode extends ShapeNode {
 
     _createTextMesh() {
         if (!this.font) return;
-        
+
         this._disposeTextMesh();
-        
+
         try {
             const textGeometry = new TextGeometry(this.data.text, {
                 font: this.font,
@@ -144,21 +144,21 @@ export class TextMeshNode extends ShapeNode {
                 bevelOffset: this.data.bevelOffset,
                 bevelSegments: this.data.bevelSegments,
             });
-            
+
             textGeometry.computeBoundingBox();
             this._alignText(textGeometry);
-            
+
             const materials = this._createTextMaterials();
             this.textMesh = new THREE.Mesh(textGeometry, materials);
             this.textMesh.castShadow = true;
             this.textMesh.receiveShadow = true;
-            this.textMesh.userData = { nodeId: this.id, type: 'text-mesh' };
-            
+            this.textMesh.userData = {nodeId: this.id, type: 'text-mesh'};
+
             // Add stroke if enabled
             if (this.data.strokeWidth > 0) {
                 this._addStroke();
             }
-            
+
             // Clear existing mesh children and add text mesh
             if (this.mesh?.children) {
                 this.mesh.children.forEach(child => {
@@ -167,16 +167,16 @@ export class TextMeshNode extends ShapeNode {
                     this.mesh.remove(child);
                 });
             }
-            
+
             if (this.mesh) {
                 this.mesh.add(this.textMesh);
             }
-            
+
             // Start animation if enabled
             if (this.data.animated) {
                 this._startTextAnimation();
             }
-            
+
         } catch (error) {
             console.error('Text geometry creation failed:', error);
             this._createFallbackMesh();
@@ -185,7 +185,7 @@ export class TextMeshNode extends ShapeNode {
 
     _alignText(geometry) {
         const boundingBox = geometry.boundingBox;
-        
+
         switch (this.data.align) {
             case 'center':
                 geometry.translate(
@@ -217,15 +217,15 @@ export class TextMeshNode extends ShapeNode {
             transparent: true,
             opacity: 1.0,
         };
-        
+
         // Handle gradient colors
         if (this.data.gradientColors && this.data.gradientColors.length >= 2) {
             // Create gradient shader material
             return new THREE.ShaderMaterial({
                 uniforms: {
-                    color1: { value: new THREE.Color(this.data.gradientColors[0]) },
-                    color2: { value: new THREE.Color(this.data.gradientColors[1]) },
-                    time: { value: 0 }
+                    color1: {value: new THREE.Color(this.data.gradientColors[0])},
+                    color2: {value: new THREE.Color(this.data.gradientColors[1])},
+                    time: {value: 0}
                 },
                 vertexShader: `
                     varying vec3 vPosition;
@@ -257,7 +257,7 @@ export class TextMeshNode extends ShapeNode {
                 transparent: materialProps.transparent,
             });
         }
-        
+
         // Standard material types
         switch (this.data.materialType) {
             case 'basic':
@@ -290,7 +290,7 @@ export class TextMeshNode extends ShapeNode {
 
     _addStroke() {
         if (!this.textMesh || this.data.strokeWidth <= 0) return;
-        
+
         // Create stroke geometry by scaling the original
         const strokeGeometry = this.textMesh.geometry.clone();
         const strokeMaterial = new THREE.MeshBasicMaterial({
@@ -298,13 +298,13 @@ export class TextMeshNode extends ShapeNode {
             transparent: true,
             opacity: 0.8,
         });
-        
+
         const strokeMesh = new THREE.Mesh(strokeGeometry, strokeMaterial);
         const scale = 1 + (this.data.strokeWidth / this.data.fontSize) * 2;
         strokeMesh.scale.setScalar(scale);
         strokeMesh.position.z = -this.data.strokeWidth / 2;
         strokeMesh.renderOrder = -1;
-        
+
         this.textMesh.add(strokeMesh);
     }
 
@@ -314,23 +314,23 @@ export class TextMeshNode extends ShapeNode {
         const ctx = canvas.getContext('2d');
         canvas.width = 256;
         canvas.height = 128;
-        
+
         ctx.fillStyle = '#' + this.color.toString(16).padStart(6, '0');
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
+
         ctx.fillStyle = 'white';
         ctx.font = `${Math.min(canvas.height * 0.6, 48)}px Arial`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(this.data.text, canvas.width / 2, canvas.height / 2);
-        
+
         const texture = new THREE.CanvasTexture(canvas);
         const geometry = new THREE.BoxGeometry(this.size, this.size * 0.5, this.size * 0.1);
-        const material = new THREE.MeshBasicMaterial({ map: texture });
-        
+        const material = new THREE.MeshBasicMaterial({map: texture});
+
         this.textMesh = new THREE.Mesh(geometry, material);
-        this.textMesh.userData = { nodeId: this.id, type: 'text-mesh-fallback' };
-        
+        this.textMesh.userData = {nodeId: this.id, type: 'text-mesh-fallback'};
+
         if (this.mesh) {
             this.mesh.add(this.textMesh);
         }
@@ -338,12 +338,12 @@ export class TextMeshNode extends ShapeNode {
 
     _startTextAnimation() {
         if (this.animationFrame) return;
-        
+
         const animate = () => {
             this._updateTextAnimation();
             this.animationFrame = requestAnimationFrame(animate);
         };
-        
+
         this.animationFrame = requestAnimationFrame(animate);
     }
 
@@ -356,9 +356,9 @@ export class TextMeshNode extends ShapeNode {
 
     _updateTextAnimation() {
         if (!this.textMesh) return;
-        
+
         const time = performance.now() * 0.001;
-        
+
         switch (this.data.animationType) {
             case 'rotate':
                 this.textMesh.rotation.y = time * 0.5;
@@ -401,10 +401,10 @@ export class TextMeshNode extends ShapeNode {
         if (this.font && !this.isLoadingFont) {
             this._createTextMesh();
         }
-        this.space?.emit('graph:node:dataChanged', { 
-            node: this, 
-            property: 'text', 
-            value: text 
+        this.space?.emit('graph:node:dataChanged', {
+            node: this,
+            property: 'text',
+            value: text
         });
     }
 
@@ -465,7 +465,7 @@ export class TextMeshNode extends ShapeNode {
     setAnimated(animated, type = 'rotate') {
         this.data.animated = animated;
         this.data.animationType = type;
-        
+
         if (animated) {
             this._startTextAnimation();
         } else {
@@ -501,7 +501,7 @@ export class TextMeshNode extends ShapeNode {
 
     update(space) {
         super.update(space);
-        
+
         // Update shader uniforms if using gradient material
         if (this.textMesh?.material?.uniforms?.time) {
             this.textMesh.material.uniforms.time.value = performance.now() * 0.001;

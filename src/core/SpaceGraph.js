@@ -37,7 +37,7 @@ export class SpaceGraph {
         this.plugins = new PluginManager(this);
 
         const uiOptions = options.ui || {};
-        const { contextMenuElement, confirmDialogElement } = uiOptions;
+        const {contextMenuElement, confirmDialogElement} = uiOptions;
 
         this.plugins.add(new CameraPlugin(this, this.plugins));
         this.plugins.add(new RenderingPlugin(this, this.plugins));
@@ -49,6 +49,10 @@ export class SpaceGraph {
         this.plugins.add(new DataPlugin(this, this.plugins));
         this.plugins.add(new FractalZoomPlugin(this, this.plugins));
         this.plugins.add(new PerformancePlugin(this, this.plugins));
+    }
+
+    get layoutManager() {
+        return this._layoutPlugin?.layoutManager;
     }
 
     async init() {
@@ -144,7 +148,8 @@ export class SpaceGraph {
     _setupEdgeEventListeners() {
         this.on('ui:request:addEdge', (sourceNode, targetNode, data) => this._edgePlugin?.addEdge(sourceNode, targetNode, data));
         // 'edge:added' listener can be used for logging or other side effects if needed.
-        this.on('edge:added', () => { /* console.log('Edge added event received'); */ });
+        this.on('edge:added', () => { /* console.log('Edge added event received'); */
+        });
         this.on('ui:request:removeEdge', (edgeId) => this._edgePlugin?.removeEdge(edgeId));
         this.on('ui:request:reverseEdge', this._handleReverseEdge.bind(this));
         this.on('ui:request:updateEdge', this._handleUpdateEdge.bind(this));
@@ -210,11 +215,14 @@ export class SpaceGraph {
         edge.data.constraintParams = params;
     }
 
-
     /** Sets up event listeners related to UI elements like background. */
     _setupUIEventListeners() {
         this.on('ui:request:toggleBackground', (color, alpha) => this._renderingPlugin?.setBackground(color, alpha));
     }
+
+    // _setupOtherEventListeners() {
+    //     // Placeholder for any other event listeners that don't fit specific categories
+    // }
 
     /** Sets up event listeners related to camera controls and view manipulation. */
     _setupCameraEventListeners() {
@@ -224,10 +232,6 @@ export class SpaceGraph {
         this.on('ui:request:zoomCamera', (deltaY) => this._cameraPlugin?.zoom(deltaY));
         this.on('ui:request:focusOnNode', (node, duration, pushHistory) => this.focusOnNode(node, duration, pushHistory));
     }
-
-    // _setupOtherEventListeners() {
-    //     // Placeholder for any other event listeners that don't fit specific categories
-    // }
 
     addNode(nodeInstance) {
         const addedNode = this._nodePlugin?.addNode(nodeInstance);
@@ -291,7 +295,7 @@ export class SpaceGraph {
         if (intersection) {
             const node = this._nodePlugin?.getNodeById(intersection.nodeId);
             if (node) {
-                return { node, distance: intersection.distance, type: 'node' };
+                return {node, distance: intersection.distance, type: 'node'};
             }
         }
         return null;
@@ -311,7 +315,7 @@ export class SpaceGraph {
                 const intersectedMesh = intersects[0].object;
                 const node = this._nodePlugin.getNodeById(intersectedMesh.userData?.nodeId);
                 if (node) {
-                    return { node, distance: intersects[0].distance, type: 'node' };
+                    return {node, distance: intersects[0].distance, type: 'node'};
                 }
             }
         }
@@ -326,7 +330,7 @@ export class SpaceGraph {
         if (intersection && (!currentClosest || intersection.distance < currentClosest.distance)) {
             const edge = this._edgePlugin?.getEdgeById(intersection.edgeId);
             if (edge) {
-                return { edge, distance: intersection.distance, type: 'edge' };
+                return {edge, distance: intersection.distance, type: 'edge'};
             }
         }
         return currentClosest;
@@ -346,7 +350,7 @@ export class SpaceGraph {
                 const intersectedLine = intersects[0].object;
                 const edge = this._edgePlugin.getEdgeById(intersectedLine.userData?.edgeId);
                 if (edge) {
-                    return { edge, distance: intersects[0].distance, type: 'edge' };
+                    return {edge, distance: intersects[0].distance, type: 'edge'};
                 }
             }
         }
@@ -380,8 +384,8 @@ export class SpaceGraph {
         if (!closestIntersect) return null;
 
         return closestIntersect.type === 'node'
-            ? { node: closestIntersect.node, distance: closestIntersect.distance }
-            : { edge: closestIntersect.edge, distance: closestIntersect.distance };
+            ? {node: closestIntersect.node, distance: closestIntersect.distance}
+            : {edge: closestIntersect.edge, distance: closestIntersect.distance};
     }
 
     animate() {
@@ -390,10 +394,6 @@ export class SpaceGraph {
             requestAnimationFrame(frame);
         };
         frame();
-    }
-
-    get layoutManager() {
-        return this._layoutPlugin?.layoutManager;
     }
 
     dispose() {
@@ -434,7 +434,7 @@ export class SpaceGraph {
         this.container.addEventListener('mousemove', this._boundHandleMouseMoveEvent);
         this.container.addEventListener('mouseup', this._boundHandleMouseUpOrLeaveEvent);
         this.container.addEventListener('mouseleave', this._boundHandleMouseUpOrLeaveEvent); // Correct: mouseup and mouseleave can share handler logic
-        this.container.addEventListener('wheel', this._boundHandleWheelEvent, { passive: false });
+        this.container.addEventListener('wheel', this._boundHandleWheelEvent, {passive: false});
     }
 
     /** Handles the contextmenu event on the container. */

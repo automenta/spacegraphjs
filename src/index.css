@@ -103,10 +103,9 @@ body {
     color: var(--sg-node-text);
     pointer-events: auto;
     cursor: grab;
-    transition:
-        transform var(--sg-transition-fast),
-        box-shadow var(--sg-transition-medium),
-        border-color var(--sg-transition-medium);
+    transition: transform var(--sg-transition-fast),
+    box-shadow var(--sg-transition-medium),
+    border-color var(--sg-transition-medium);
     box-shadow: 0 2px 8px 1px var(--sg-node-shadow);
     min-width: 80px;
     min-height: 40px;
@@ -303,9 +302,8 @@ body {
     border-radius: 4px;
     cursor: pointer;
     text-align: left;
-    transition:
-        background-color var(--sg-transition-fast),
-        border-color var(--sg-transition-fast);
+    transition: background-color var(--sg-transition-fast),
+    border-color var(--sg-transition-fast);
 }
 
 #page-selector button:hover {
@@ -331,7 +329,7 @@ body {
     border: 1px solid var(--sg-accent-secondary);
     max-width: 350px; /* Increased max-width */
     font-size: 0.9em;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(8px);
 }
 
@@ -341,14 +339,17 @@ body {
     color: var(--sg-accent-primary);
     font-size: 1.1em;
 }
+
 #hud p {
     margin-bottom: 8px;
     line-height: 1.4;
 }
+
 #hud ul {
     margin-bottom: 8px;
     padding-left: 1.2em;
 }
+
 #hud code {
     background-color: rgba(var(--sg-accent-primary-rgb), 0.1);
     color: var(--sg-accent-primary);
@@ -402,7 +403,7 @@ body {
     padding: 2px 5px;
     font-family: var(--sg-font-mono);
     font-size: 0.9em;
-    box-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+    box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
     margin: 0 2px;
     display: inline-block;
 }
@@ -437,6 +438,7 @@ body {
     color: var(--sg-text-primary);
     min-width: 150px;
 }
+
 #layout-settings-dialog select:focus {
     border-color: var(--sg-accent-primary);
     outline: none;
@@ -447,6 +449,7 @@ body {
     margin-top: 20px;
     padding-top: 15px;
 }
+
 #layout-settings-dialog .layout-options-container p {
     font-style: italic;
     color: var(--sg-text-secondary);
@@ -477,7 +480,7 @@ body {
     border-radius: 4px;
     border: 1px solid rgba(var(--sg-accent-secondary-rgb, 0, 142, 168), 0.5);
     opacity: 0.75;
-    box-shadow: 0 1px 5px rgba(0,0,0,0.2);
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
     pointer-events: auto;
     white-space: nowrap;
     transition: opacity var(--sg-transition-fast), background-color var(--sg-transition-fast), border-color var(--sg-transition-fast);
@@ -499,6 +502,7 @@ body {
     cursor: pointer;
     user-select: none;
 }
+
 #hud-main-menu-button.active {
     background-color: rgba(var(--sg-accent-primary-rgb, 0, 208, 255), 0.2);
     border-color: rgba(var(--sg-accent-primary-rgb, 0, 208, 255), 0.9);
@@ -515,7 +519,7 @@ body {
     border: 1px solid var(--sg-accent-primary);
     border-radius: 6px;
     padding: 10px;
-    box-shadow: 0 3px 15px rgba(0,0,0,0.3);
+    box-shadow: 0 3px 15px rgba(0, 0, 0, 0.3);
     pointer-events: auto;
     display: flex;
     flex-direction: column;
@@ -537,6 +541,7 @@ body {
     flex-direction: column; /* Stack label and control */
     gap: 4px;
 }
+
 .hud-menu-group label {
     font-size: 0.9em;
     color: var(--sg-text-secondary);
@@ -577,6 +582,7 @@ body {
     background-color: var(--sg-bg-ui-hover);
     border-color: var(--sg-accent-primary);
 }
+
 #hud-popup-menu select:focus,
 #hud-popup-menu button:focus {
     outline: none;
@@ -595,16 +601,18 @@ body {
 /* Theme light adjustments */
 .theme-light #hud-layer > div:not(#hud-popup-menu),
 .theme-light #hud-layer > select {
-     background-color: rgba(var(--sg-bg-ui-rgb, 255, 255, 255), 0.7);
-     border: 1px solid rgba(var(--sg-accent-secondary-rgb, 0, 86, 179), 0.5);
-     box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    background-color: rgba(var(--sg-bg-ui-rgb, 255, 255, 255), 0.7);
+    border: 1px solid rgba(var(--sg-accent-secondary-rgb, 0, 86, 179), 0.5);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }
+
 .theme-light #hud-layer > div:not(#hud-popup-menu):hover,
 .theme-light #hud-layer > select:hover {
     opacity: 1;
     background-color: rgba(var(--sg-bg-ui-rgb, 255, 255, 255), 0.85);
     border-color: rgba(var(--sg-accent-primary-rgb, 0, 123, 255), 0.7);
 }
+
 .theme-light #hud-main-menu-button.active {
     background-color: rgba(var(--sg-accent-primary-rgb, 0, 123, 255), 0.2);
     border-color: rgba(var(--sg-accent-primary-rgb, 0, 123, 255), 0.9);
@@ -614,12 +622,14 @@ body {
     background-color: rgba(var(--sg-bg-ui-rgb, 250, 250, 250), 0.95);
     border-color: var(--sg-accent-primary);
 }
+
 .theme-light #hud-popup-menu select,
 .theme-light #hud-popup-menu button {
     background-color: var(--sg-node-button-bg); /* Uses theme's node button bg */
     border-color: var(--sg-accent-secondary);
     color: var(--sg-text-primary);
 }
+
 .theme-light #hud-popup-menu select {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23555555' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
 }
@@ -733,9 +743,8 @@ body {
     line-height: 22px;
     text-align: center;
     cursor: pointer;
-    transition:
-        background-color var(--sg-transition-fast),
-        transform var(--sg-transition-fast);
+    transition: background-color var(--sg-transition-fast),
+    transform var(--sg-transition-fast);
 }
 
 .node-quick-button:hover {
@@ -770,9 +779,8 @@ body {
     border-bottom-right-radius: 7px;
     cursor: nwse-resize;
     opacity: 0;
-    transition:
-        opacity var(--sg-transition-fast),
-        transform var(--sg-transition-fast);
+    transition: opacity var(--sg-transition-fast),
+    transform var(--sg-transition-fast);
     pointer-events: auto;
     z-index: 10;
 }
@@ -825,9 +833,8 @@ body {
 .context-menu li {
     padding: 8px 18px;
     cursor: pointer;
-    transition:
-        background-color var(--sg-transition-fast),
-        color var(--sg-transition-fast);
+    transition: background-color var(--sg-transition-fast),
+    color var(--sg-transition-fast);
     color: var(--sg-text-primary);
     white-space: nowrap;
 }
@@ -842,6 +849,7 @@ body {
     cursor: not-allowed;
     background-color: transparent !important;
 }
+
 .context-menu li.disabled:hover {
     color: var(--sg-text-secondary);
 }
@@ -890,9 +898,8 @@ body {
     border-radius: 5px;
     cursor: pointer;
     font-weight: 600;
-    transition:
-        background-color var(--sg-transition-fast),
-        box-shadow var(--sg-transition-fast);
+    transition: background-color var(--sg-transition-fast),
+    box-shadow var(--sg-transition-fast);
     min-width: 80px;
 }
 
@@ -901,6 +908,7 @@ body {
     filter: brightness(1.2);
     box-shadow: 0 0 12px var(--sg-accent-primary);
 }
+
 .dialog button:active {
     transform: scale(0.98);
     filter: brightness(0.9);
@@ -948,7 +956,7 @@ body {
     z-index: 100;
     opacity: 0.95;
     transition: opacity var(--sg-transition-fast);
-    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
 .edge-menu-frame input[type="color"],
@@ -963,16 +971,19 @@ body {
     transition: border-color var(--sg-transition-fast);
     font-size: 12px;
 }
-.edge-menu-frame input[type="color"]{
+
+.edge-menu-frame input[type="color"] {
     min-width: 25px;
     height: 22px;
     padding: 1px 2px;
 }
-.edge-menu-frame input[type="range"]{
+
+.edge-menu-frame input[type="range"] {
     height: 22px;
     flex-grow: 1;
     min-width: 60px;
 }
+
 .edge-menu-frame select {
     height: 22px;
 }
@@ -1005,6 +1016,7 @@ body {
     background-color: #ff5555;
     transform: scale(1.1);
 }
+
 .edge-menu-frame button.delete-button:active {
     transform: scale(0.95);
 }
@@ -1034,9 +1046,8 @@ body {
     cursor: pointer;
     font-size: 13px;
     font-weight: 500;
-    transition:
-        background-color var(--sg-transition-fast),
-        border-color var(--sg-transition-fast);
+    transition: background-color var(--sg-transition-fast),
+    border-color var(--sg-transition-fast);
 }
 
 #toolbar button:hover {

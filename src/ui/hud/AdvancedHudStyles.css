@@ -50,8 +50,14 @@
     max-width: 320px; /* Max width for sidebars */
     pointer-events: auto; /* Sidebars can be interacted with */
 }
-.hud-region-left { align-items: flex-start; }
-.hud-region-right { align-items: flex-end; }
+
+.hud-region-left {
+    align-items: flex-start;
+}
+
+.hud-region-right {
+    align-items: flex-end;
+}
 
 
 .hud-region-bottom {
@@ -66,15 +72,18 @@
     gap: 10px; /* Spacing between items in a group */
     align-items: flex-start;
 }
+
 .hud-top-left-group {
     /* Takes space on the left */
     margin-right: auto; /* Pushes other groups away */
 }
+
 .hud-top-center-group {
     /* Centers itself if hud-region-top uses justify-content: space-between effectively */
     /* Or, if hud-region-top is just display:flex, this would need margin: 0 auto; */
     /* Given hud-region-top has space-between, this group will be in the middle slot */
 }
+
 .hud-top-right-group {
     /* Takes space on the right */
     margin-left: auto; /* Pushes other groups away */
@@ -93,10 +102,12 @@
     position: relative; /* No longer absolute */
     margin: 5px;
 }
+
 .hud-top-right { /* Example: for view controls */
     position: relative;
     margin: 5px;
 }
+
 .hud-top-center { /* Example: for notifications */
     position: relative;
     margin: 5px auto; /* Center horizontally */
@@ -105,16 +116,41 @@
     align-items: center;
 }
 
-.hud-bottom-left { position: relative; margin: 5px; }
-.hud-bottom-right { position: relative; margin: 5px; }
-.hud-bottom-center { position: relative; margin: 5px auto; display: flex; flex-direction: column; align-items: center; }
-.hud-bottom-full { position: relative; width: 100%; } /* For status bar */
+.hud-bottom-left {
+    position: relative;
+    margin: 5px;
+}
+
+.hud-bottom-right {
+    position: relative;
+    margin: 5px;
+}
+
+.hud-bottom-center {
+    position: relative;
+    margin: 5px auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.hud-bottom-full {
+    position: relative;
+    width: 100%;
+}
+
+/* For status bar */
 
 .hud-left-center { /* For panels in the left sidebar */
-    position: relative; margin: 5px; width: 100%;
+    position: relative;
+    margin: 5px;
+    width: 100%;
 }
+
 .hud-right-center { /* For panels in the right sidebar */
-    position: relative; margin: 5px; width: 100%;
+    position: relative;
+    margin: 5px;
+    width: 100%;
 }
 
 
@@ -282,10 +318,21 @@
     opacity: 1;
 }
 
-.hud-notification-info { border-left-color: #2196F3; }
-.hud-notification-success { border-left-color: #4CAF50; }
-.hud-notification-warning { border-left-color: #FF9800; }
-.hud-notification-error { border-left-color: #F44336; }
+.hud-notification-info {
+    border-left-color: #2196F3;
+}
+
+.hud-notification-success {
+    border-left-color: #4CAF50;
+}
+
+.hud-notification-warning {
+    border-left-color: #FF9800;
+}
+
+.hud-notification-error {
+    border-left-color: #F44336;
+}
 
 .notification-icon {
     margin-right: 12px;
@@ -354,7 +401,7 @@
     height: 100%;
     border-radius: 10px;
     transition: width 0.3s ease;
-    width: 0%;
+    width: 0;
 }
 
 .progress-percent {
@@ -535,24 +582,24 @@
         min-width: 150px;
         max-width: 200px;
     }
-    
+
     .hud-status-bar {
         font-size: 10px;
         padding: 6px 12px;
     }
-    
+
     .status-section {
         gap: 8px;
     }
-    
+
     .status-item {
         padding: 1px 6px;
     }
-    
+
     .hud-notifications {
         max-width: 250px;
     }
-    
+
     .nav-button, .action-button {
         padding: 6px 8px;
         font-size: 10px;
@@ -644,6 +691,7 @@
     width: 1.2em; /* Ensure space for icon */
     text-align: center;
 }
+
 .hud-menu-label {
     flex-grow: 1;
 }
@@ -652,7 +700,7 @@
     padding: 8px 12px;
     font-size: 11px;
     color: #a0a0a0; /* Dimmer color for static info */
-    border-bottom: 1px solid rgba(255,255,255,0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     margin-bottom: 4px;
 }
 
@@ -678,6 +726,7 @@
 .hud-submenu.hidden {
     display: none;
 }
+
 .hud-submenu.visible {
     display: block;
 }
@@ -696,16 +745,18 @@
 
 #hud-popup-menu {
     z-index: 1001; /* Ensure popup menu is above overlays but below button if overlapping */
-     min-width: 220px; /* Give main popup a bit more space */
+    min-width: 220px; /* Give main popup a bit more space */
 }
 
 /* Ensure original panel content looks good inside overlay panel */
 .hud-overlay-panel-content .performance-metric {
     font-size: 11px; /* Match panel font-size */
 }
+
 .hud-overlay-panel-content .action-group {
     margin-bottom: 6px;
 }
+
 .hud-overlay-panel-content .action-button {
     font-size: 11px;
     padding: 6px 10px;
@@ -713,28 +764,56 @@
 
 /* Animation keyframes */
 @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
 }
 
 @keyframes slideInRight {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
 }
 
 @keyframes slideInLeft {
-    from { transform: translateX(-100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
+    from {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
 }
 
 @keyframes slideInUp {
-    from { transform: translateY(100%); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
 }
 
 @keyframes slideInDown {
-    from { transform: translateY(-100%); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
 }
 
 /* Theme variations */
@@ -789,7 +868,7 @@
     .progress-fill {
         transition: none;
     }
-    
+
     .hud-notification {
         transform: none;
     }

@@ -94,13 +94,13 @@ export class Camera {
             this.isPointerLocked = true;
             Object.keys(this.moveState).forEach(key => this.moveState[key] = false);
             this.domElement.style.cursor = 'none';
-            this.space.emit('camera:pointerLockChanged', { locked: true });
+            this.space.emit('camera:pointerLockChanged', {locked: true});
         });
 
         this.pointerLockControls.addEventListener('unlock', () => {
             this.isPointerLocked = false;
             this.domElement.style.cursor = this.cameraMode === CAMERA_MODES.FREE ? 'crosshair' : 'grab';
-            this.space.emit('camera:pointerLockChanged', { locked: false });
+            this.space.emit('camera:pointerLockChanged', {locked: false});
         });
     }
 
@@ -178,7 +178,7 @@ export class Camera {
         this.currentTargetNodeId = null;
 
         const zoomFactor = Math.pow(0.95, deltaY * 0.025 * this.zoomSpeed);
-        
+
         if (this.cameraMode === CAMERA_MODES.TOP_DOWN) {
             const currentY = this.targetPosition.y;
             let newY = currentY * zoomFactor;
@@ -206,10 +206,27 @@ export class Camera {
         gsap.killTweensOf(this.targetPosition);
         gsap.killTweensOf(this.targetLookAt);
 
-        const onComplete = () => { this._isManuallyControlled = false; };
+        const onComplete = () => {
+            this._isManuallyControlled = false;
+        };
 
-        gsap.to(this.targetPosition, { x: targetPos.x, y: targetPos.y, z: targetPos.z, duration, ease: 'power3.out', overwrite: true });
-        gsap.to(this.targetLookAt, { x: targetLook.x, y: targetLook.y, z: targetLook.z, duration, ease: 'power3.out', overwrite: true, onComplete });
+        gsap.to(this.targetPosition, {
+            x: targetPos.x,
+            y: targetPos.y,
+            z: targetPos.z,
+            duration,
+            ease: 'power3.out',
+            overwrite: true
+        });
+        gsap.to(this.targetLookAt, {
+            x: targetLook.x,
+            y: targetLook.y,
+            z: targetLook.z,
+            duration,
+            ease: 'power3.out',
+            overwrite: true,
+            onComplete
+        });
 
         if (newCameraMode && newCameraMode !== this.cameraMode) this.setCameraMode(newCameraMode, true);
     }
@@ -241,7 +258,9 @@ export class Camera {
     }
 
     getCurrentTargetNodeId = () => this.currentTargetNodeId;
-    setCurrentTargetNodeId = (nodeId) => { this.currentTargetNodeId = nodeId; };
+    setCurrentTargetNodeId = (nodeId) => {
+        this.currentTargetNodeId = nodeId;
+    };
 
     _startUpdateLoop = () => {
         this.animationFrameId = requestAnimationFrame(this._updateCameraLogic);
@@ -259,14 +278,32 @@ export class Camera {
             const verticalMoveSpeed = this.freeCameraVerticalSpeed * delta;
             let moved = false;
 
-            if (this.moveState.forward) { this.pointerLockControls.moveForward(moveSpeed); moved = true; }
-            if (this.moveState.backward) { this.pointerLockControls.moveForward(-moveSpeed); moved = true; }
-            if (this.moveState.left) { this.pointerLockControls.moveRight(-moveSpeed); moved = true; }
-            if (this.moveState.right) { this.pointerLockControls.moveRight(moveSpeed); moved = true; }
+            if (this.moveState.forward) {
+                this.pointerLockControls.moveForward(moveSpeed);
+                moved = true;
+            }
+            if (this.moveState.backward) {
+                this.pointerLockControls.moveForward(-moveSpeed);
+                moved = true;
+            }
+            if (this.moveState.left) {
+                this.pointerLockControls.moveRight(-moveSpeed);
+                moved = true;
+            }
+            if (this.moveState.right) {
+                this.pointerLockControls.moveRight(moveSpeed);
+                moved = true;
+            }
 
             if (this.cameraMode === CAMERA_MODES.FREE) {
-                if (this.moveState.up) { this._cam.position.y += verticalMoveSpeed; moved = true; }
-                if (this.moveState.down) { this._cam.position.y -= verticalMoveSpeed; moved = true; }
+                if (this.moveState.up) {
+                    this._cam.position.y += verticalMoveSpeed;
+                    moved = true;
+                }
+                if (this.moveState.down) {
+                    this._cam.position.y -= verticalMoveSpeed;
+                    moved = true;
+                }
             }
 
             if (moved) {
@@ -328,13 +365,13 @@ export class Camera {
     startFollowing(target, options = {}) {
         if (!target) return;
         this.followTargetObject = target;
-        this.followOptions = { ...this.followOptions, ...options };
+        this.followOptions = {...this.followOptions, ...options};
         this.isFollowing = true;
         this._isManuallyControlled = false;
         this.currentTargetNodeId = target?.id || null;
         gsap.killTweensOf(this.targetPosition);
         gsap.killTweensOf(this.targetLookAt);
-        this.space.emit('camera:followStarted', { target: this.followTargetObject, options: this.followOptions });
+        this.space.emit('camera:followStarted', {target: this.followTargetObject, options: this.followOptions});
     }
 
     stopFollowing() {
@@ -342,7 +379,7 @@ export class Camera {
             const oldTarget = this.followTargetObject;
             this.isFollowing = false;
             this.followTargetObject = null;
-            this.space.emit('camera:followStopped', { oldTarget });
+            this.space.emit('camera:followStopped', {oldTarget});
         }
     }
 
@@ -374,7 +411,9 @@ export class Camera {
                     });
                 });
             }
-        } catch (e) { console.error('Camera: Error loading named views:', e); }
+        } catch (e) {
+            console.error('Camera: Error loading named views:', e);
+        }
     }
 
     _saveNamedViewsToStorage() {
@@ -382,14 +421,16 @@ export class Camera {
             const viewsToStore = {};
             this.namedViews.forEach((view, name) => {
                 viewsToStore[name] = {
-                    position: { x: view.position.x, y: view.position.y, z: view.position.z },
-                    lookAt: { x: view.lookAt.x, y: view.lookAt.y, z: view.lookAt.z },
+                    position: {x: view.position.x, y: view.position.y, z: view.position.z},
+                    lookAt: {x: view.lookAt.x, y: view.lookAt.y, z: view.lookAt.z},
                     mode: view.mode,
                     targetNodeId: view.targetNodeId,
                 };
             });
             localStorage.setItem('spacegraph_namedViews', JSON.stringify(viewsToStore));
-        } catch (e) { console.error('Camera: Error saving named views:', e); }
+        } catch (e) {
+            console.error('Camera: Error saving named views:', e);
+        }
     }
 
     saveNamedView(name) {
@@ -401,7 +442,7 @@ export class Camera {
             targetNodeId: this.currentTargetNodeId,
         });
         this._saveNamedViewsToStorage();
-        this.space.emit('camera:namedViewSaved', { name, view: this.namedViews.get(name) });
+        this.space.emit('camera:namedViewSaved', {name, view: this.namedViews.get(name)});
         return true;
     }
 
@@ -410,7 +451,7 @@ export class Camera {
         if (!view) return false;
         this.moveTo(view.position.x, view.position.y, view.position.z, duration, view.lookAt, view.mode);
         this.setCurrentTargetNodeId(view.targetNodeId);
-        this.space.emit('camera:namedViewRestored', { name, view });
+        this.space.emit('camera:namedViewRestored', {name, view});
         return true;
     }
 
@@ -418,7 +459,7 @@ export class Camera {
         if (!this.namedViews.has(name)) return false;
         this.namedViews.delete(name);
         this._saveNamedViewsToStorage();
-        this.space.emit('camera:namedViewDeleted', { name });
+        this.space.emit('camera:namedViewDeleted', {name});
         return true;
     }
 
@@ -472,7 +513,7 @@ export class Camera {
                 // For now, we'll assume it keeps its current orientation or is set by moveTo.
                 break;
         }
-        this.space.emit('camera:modeChanged', { newMode: this.cameraMode, oldMode });
+        this.space.emit('camera:modeChanged', {newMode: this.cameraMode, oldMode});
         setTimeout(() => this._isManuallyControlled = false, 50);
     }
 
@@ -524,7 +565,7 @@ export class Camera {
         const maxPolar = Math.PI - 0.01;
 
         if (angleToUp > minPolar && angleToUp < maxPolar) {
-             this.targetPosition.copy(this.currentLookAt).add(lookAtToCam.setLength(radius));
+            this.targetPosition.copy(this.currentLookAt).add(lookAtToCam.setLength(radius));
         } else {
             // If constraint is violated, revert the vertical rotation part
             lookAtToCam.applyAxisAngle(cameraX, -phiDelta); // Revert vertical

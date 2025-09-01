@@ -1,5 +1,5 @@
 // src/ui/hud/MenuSection.js
-import { MenuItem } from './MenuItem.js';
+import {MenuItem} from './MenuItem.js';
 
 export class MenuSection {
     constructor(menu, sectionId, title, isPinnable = true) {

@@ -12,7 +12,7 @@ export class AudioNode extends Node {
     constructor(id, position, data = {}, mass = 1.0) {
         super(id, position, data, mass);
         this.mesh = this.createMesh();
-        this.mesh.userData = { nodeId: this.id, type: AudioNode.typeName };
+        this.mesh.userData = {nodeId: this.id, type: AudioNode.typeName};
         this.update();
 
         if (this.data.audioUrl) {
@@ -36,9 +36,9 @@ export class AudioNode extends Node {
     createMesh() {
         if (this.mesh) return this.mesh;
         const geometry = new THREE.SphereGeometry(this.data.size * 0.5, 16, 12);
-        const material = new THREE.MeshBasicMaterial({ color: this.data.color, wireframe: true });
+        const material = new THREE.MeshBasicMaterial({color: this.data.color, wireframe: true});
         this.mesh = new THREE.Mesh(geometry, material);
-        this.mesh.userData = { nodeId: this.id, type: AudioNode.typeName };
+        this.mesh.userData = {nodeId: this.id, type: AudioNode.typeName};
         return this.mesh;
     }
 
@@ -76,16 +76,16 @@ export class AudioNode extends Node {
             this.isPlaying = false;
             this.sourceNode = null;
             this.gainNode = null;
-            if (!this.data.loop) this.space?.emit('node:audio:ended', { node: this });
+            if (!this.data.loop) this.space?.emit('node:audio:ended', {node: this});
         };
-        this.space?.emit('node:audio:played', { node: this });
+        this.space?.emit('node:audio:played', {node: this});
     }
 
     pause() {
         if (!this.isPlaying || !this.sourceNode) return;
         this.sourceNode.stop();
         this.isPlaying = false;
-        this.space?.emit('node:audio:paused', { node: this });
+        this.space?.emit('node:audio:paused', {node: this});
     }
 
     setVolume(volume) {

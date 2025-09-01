@@ -19,7 +19,7 @@ export class NestedLayout {
     isRunning = false;
 
     constructor(config = {}) {
-        this.settings = { ...this.settings, ...config };
+        this.settings = {...this.settings, ...config};
     }
 
     setContext(space, pluginManager) {
@@ -94,7 +94,7 @@ export class NestedLayout {
     _calculateContainerBounds(container) {
         const radius = container.getBoundingSphereRadius?.() || 100;
         const center = container.position.clone();
-        
+
         return {
             min: center.clone().sub(new THREE.Vector3(radius, radius, radius)),
             max: center.clone().add(new THREE.Vector3(radius, radius, radius)),
@@ -123,7 +123,7 @@ export class NestedLayout {
     }
 
     async _applyContainerLayout(containerData, depth) {
-        const { container, childNodes, layout, layoutConfig } = containerData;
+        const {container, childNodes, layout, layoutConfig} = containerData;
         const layoutKey = `${container.id}_${layout}`;
 
         let layoutInstance = this.layoutInstances.get(layoutKey);
@@ -207,7 +207,7 @@ export class NestedLayout {
     }
 
     _recalculateContainerBounds(containerData) {
-        const { childNodes } = containerData;
+        const {childNodes} = containerData;
         if (childNodes.length === 0) return containerData.bounds;
 
         const positions = childNodes.map(node => node.position);
@@ -236,8 +236,8 @@ export class NestedLayout {
 
     _resizeContainers() {
         this.containerHierarchy.forEach((containerData, containerId) => {
-            const { container, bounds } = containerData;
-            
+            const {container, bounds} = containerData;
+
             if (container.data?.autoResize !== false) {
                 const scale = bounds.size.clone().multiplyScalar(0.5);
                 if (container.scale) {
@@ -323,7 +323,7 @@ export class NestedLayout {
     }
 
     updateConfig(newConfig) {
-        this.settings = { ...this.settings, ...newConfig };
+        this.settings = {...this.settings, ...newConfig};
     }
 
     run() {
@@ -397,7 +397,7 @@ class GridLayoutNested {
     }
 
     async init(nodes, edges, config = {}) {
-        const settings = { ...this.settings, ...config };
+        const settings = {...this.settings, ...config};
         const nodeCount = nodes.length;
         if (nodeCount === 0) return;
 
@@ -413,7 +413,7 @@ class GridLayoutNested {
             rows = Math.ceil(nodeCount / columns);
         }
 
-        const bounds = config.bounds || { size: new THREE.Vector3(500, 500, 0) };
+        const bounds = config.bounds || {size: new THREE.Vector3(500, 500, 0)};
         const cellWidth = bounds.size.x / columns;
         const cellHeight = bounds.size.y / rows;
         const startX = -(bounds.size.x / 2) + (cellWidth / 2);
@@ -422,7 +422,7 @@ class GridLayoutNested {
         nodes.forEach((node, index) => {
             const col = index % columns;
             const row = Math.floor(index / columns);
-            
+
             const x = startX + col * cellWidth;
             const y = startY - row * cellHeight;
             const z = 0;
@@ -454,11 +454,11 @@ class CircularLayoutNested {
     }
 
     async init(nodes, edges, config = {}) {
-        const settings = { ...this.settings, ...config };
+        const settings = {...this.settings, ...config};
         const nodeCount = nodes.length;
         if (nodeCount === 0) return;
 
-        const bounds = config.bounds || { size: new THREE.Vector3(400, 400, 0) };
+        const bounds = config.bounds || {size: new THREE.Vector3(400, 400, 0)};
         const radius = Math.min(bounds.size.x, bounds.size.y) * 0.4;
         const angleStep = (2 * Math.PI) / nodeCount;
 
@@ -497,8 +497,8 @@ class ForceLayoutNested {
 
     async init(nodes, edges, config = {}) {
         // Simplified force layout for nested containers
-        const bounds = config.bounds || { size: new THREE.Vector3(400, 400, 0) };
-        
+        const bounds = config.bounds || {size: new THREE.Vector3(400, 400, 0)};
+
         for (let i = 0; i < this.settings.iterations; i++) {
             nodes.forEach((node, index) => {
                 if (node.isPinned) return;
@@ -508,10 +508,10 @@ class ForceLayoutNested {
                 // Repulsion from other nodes
                 nodes.forEach((otherNode, otherIndex) => {
                     if (index === otherIndex) return;
-                    
+
                     const diff = node.position.clone().sub(otherNode.position);
                     const distance = diff.length();
-                    
+
                     if (distance > 0) {
                         force.add(diff.normalize().multiplyScalar(this.settings.repulsion / (distance * distance)));
                     }
@@ -552,7 +552,7 @@ class HierarchicalLayoutNested {
 
     async init(nodes, edges, config = {}) {
         // Simplified hierarchical layout
-        const bounds = config.bounds || { size: new THREE.Vector3(400, 400, 0) };
+        const bounds = config.bounds || {size: new THREE.Vector3(400, 400, 0)};
         const levels = Math.ceil(Math.sqrt(nodes.length));
         const nodesPerLevel = Math.ceil(nodes.length / levels);
 
@@ -592,9 +592,9 @@ class FlowLayoutNested {
     }
 
     async init(nodes, edges, config = {}) {
-        const settings = { ...this.settings, ...config };
-        const bounds = config.bounds || { size: new THREE.Vector3(400, 400, 0) };
-        
+        const settings = {...this.settings, ...config};
+        const bounds = config.bounds || {size: new THREE.Vector3(400, 400, 0)};
+
         let currentX = -bounds.size.x / 2;
         let currentY = bounds.size.y / 2;
         let maxHeightInRow = 0;

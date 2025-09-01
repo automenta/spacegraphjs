@@ -54,7 +54,8 @@ describe('PluginManager', () => {
         const pm = new PluginManager(mockSpaceGraph);
         const plugin1 = new MockPlugin(mockSpaceGraph, pm, 'DuplicateNamePlugin');
         const plugin2 = new MockPlugin(mockSpaceGraph, pm, 'DuplicateNamePlugin');
-        const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {
+        });
 
         pm.add(plugin1);
         pm.add(plugin2); // This should overwrite plugin1
@@ -69,7 +70,7 @@ describe('PluginManager', () => {
 
     it('should throw an error when registering an invalid plugin object', () => {
         const pm = new PluginManager(mockSpaceGraph);
-        const invalidPlugin = { name: 'InvalidPlugin' };
+        const invalidPlugin = {name: 'InvalidPlugin'};
 
         // Expect the add method to throw an error
         expect(() => pm.add(invalidPlugin)).toThrow(

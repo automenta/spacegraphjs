@@ -1,4 +1,4 @@
-import { BaseFactory } from '../core/BaseFactory.js'; // Import BaseFactory
+import {BaseFactory} from '../core/BaseFactory.js'; // Import BaseFactory
 import {Edge} from './edges/Edge.js';
 import {CurvedEdge} from './edges/CurvedEdge.js';
 import {LabeledEdge} from './edges/LabeledEdge.js';
@@ -20,7 +20,7 @@ export class EdgeFactory extends BaseFactory { // Extend BaseFactory
         this.registerType(LabeledEdge.typeName, LabeledEdge);
         this.registerType(DottedEdge.typeName, DottedEdge);
         this.registerType(DynamicThicknessEdge.typeName, DynamicThicknessEdge);
-        
+
         // Advanced edge types
         this.registerType(FlowEdge.typeName, FlowEdge);
         this.registerType(SpringEdge.typeName, SpringEdge);

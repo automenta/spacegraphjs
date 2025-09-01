@@ -1,42 +1,46 @@
 {
-    "source": {
-        "include": ["src"],
-        "includePattern": ".+\\.js(doc|x)?$",
-        "exclude": [
-            "src/examples",
-            "src/core/PluginManager.test.js",
-            "src/rendering/InstancedEdgeManager.test.js",
-            "src/rendering/InstancedMeshManager.test.js"
-        ],
-        "excludePattern": "(^|[\\/\\\\])_"
+  "source": {
+    "include": [
+      "src"
+    ],
+    "includePattern": ".+\\.js(doc|x)?$",
+    "exclude": [
+      "src/examples",
+      "src/core/PluginManager.test.js",
+      "src/rendering/InstancedEdgeManager.test.js",
+      "src/rendering/InstancedMeshManager.test.js"
+    ],
+    "excludePattern": "(^|[\\/\\\\])_"
+  },
+  "opts": {
+    "destination": "./docs/api/",
+    "recurse": true,
+    "readme": "./README.md",
+    "template": "node_modules/docdash"
+  },
+  "plugins": [
+    "plugins/markdown"
+  ],
+  "templates": {
+    "cleverLinks": true,
+    "monospaceLinks": true,
+    "default": {
+      "outputSourceFiles": true
     },
-    "opts": {
-        "destination": "./docs/api/",
-        "recurse": true,
-        "readme": "./README.md",
-        "template": "node_modules/docdash"
-    },
-    "plugins": ["plugins/markdown"],
-    "templates": {
-        "cleverLinks": true,
-        "monospaceLinks": true,
-        "default": {
-            "outputSourceFiles": true
-        },
-        "docdash": {
-            "static": true,
-            "sort": true,
-            "sectionOrder": [
-                "Classes",
-                "Modules",
-                "Externals",
-                "Events",
-                "Namespaces",
-                "Mixins",
-                "Tutorials",
-                "Interfaces"
-            ],
-            "search": true
-        }
+    "docdash": {
+      "static": true,
+      "sort": true,
+      "sectionOrder": [
+        "Classes",
+        "Modules",
+        "Externals",
+        "Events",
+        "Namespaces",
+        "Mixins",
+        "Tutorials",
+        "Interfaces"
+      ],
+      "search": true
     }
+  }
 }

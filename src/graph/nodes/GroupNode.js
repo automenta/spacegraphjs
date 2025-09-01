@@ -111,7 +111,7 @@ export class GroupNode extends HtmlNode {
         this.updateGroupAppearance();
         this._updateChildNodeVisibility();
 
-        this.space?.emit('node:group:stateChanged', { groupNode: this, isCollapsed: this.isCollapsed });
+        this.space?.emit('node:group:stateChanged', {groupNode: this, isCollapsed: this.isCollapsed});
         this.space?.plugins.getPlugin('LayoutPlugin')?.kick();
     }
 

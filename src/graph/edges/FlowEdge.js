@@ -23,11 +23,11 @@ export class FlowEdge extends Edge {
         };
 
         super(id, sourceNode, targetNode, flowData);
-        
+
         this.particleCount = flowData.particleCount;
         this.particleSpeed = flowData.particleSpeed;
         this.flowDirection = flowData.flowDirection;
-        
+
         this._createParticleSystem();
         if (flowData.animated) {
             this._startAnimation();
@@ -44,7 +44,7 @@ export class FlowEdge extends Edge {
         for (let i = 0; i < this.particleCount; i++) {
             const t = i / this.particleCount;
             const position = this._getPositionOnCurve(t);
-            
+
             positions[i * 3] = position.x;
             positions[i * 3 + 1] = position.y;
             positions[i * 3 + 2] = position.z;
@@ -72,8 +72,8 @@ export class FlowEdge extends Edge {
 
         const material = new THREE.ShaderMaterial({
             uniforms: {
-                time: { value: 0 },
-                glowIntensity: { value: this.data.glowEffect ? 1.0 : 0.0 }
+                time: {value: 0},
+                glowIntensity: {value: this.data.glowEffect ? 1.0 : 0.0}
             },
             vertexShader: `
                 attribute float size;
@@ -124,7 +124,7 @@ export class FlowEdge extends Edge {
         });
 
         this.particleSystem = new THREE.Points(geometry, material);
-        this.particleSystem.userData = { edgeId: this.id, type: 'flow-particles' };
+        this.particleSystem.userData = {edgeId: this.id, type: 'flow-particles'};
         this.particleSystem.renderOrder = 1;
     }
 
@@ -136,7 +136,7 @@ export class FlowEdge extends Edge {
         // Simple linear interpolation for now, can be enhanced with curves
         const sourcePos = this.source.position;
         const targetPos = this.target.position;
-        
+
         return new THREE.Vector3().lerpVectors(sourcePos, targetPos, t);
     }
 
@@ -172,11 +172,11 @@ export class FlowEdge extends Edge {
 
         for (let i = 0; i < this.particles.length; i++) {
             const particle = this.particles[i];
-            
+
             // Update progress based on flow direction
             if (this.flowDirection !== 0) {
                 particle.progress += this.particleSpeed * particle.velocity * this.flowDirection * 0.01;
-                
+
                 // Wrap around
                 if (this.flowDirection > 0 && particle.progress > 1) {
                     particle.progress = 0;
@@ -211,7 +211,7 @@ export class FlowEdge extends Edge {
 
     update() {
         super.update();
-        
+
         if (this.particleSystem && this.source && this.target) {
             // Update particle positions based on new node positions
             this._updateParticles();
@@ -231,11 +231,11 @@ export class FlowEdge extends Edge {
     setParticleCount(count) {
         this.particleCount = count;
         this.data.particleCount = count;
-        
+
         // Recreate particle system with new count
         this.disposeParticleSystem();
         this._createParticleSystem();
-        
+
         if (this.data.animated) {
             this._startAnimation();
         }
@@ -243,24 +243,24 @@ export class FlowEdge extends Edge {
 
     setParticleColor(color) {
         this.data.particleColor = color;
-        
+
         if (this.particleSystem) {
             const colors = this.particleSystem.geometry.attributes.color.array;
             const colorObj = new THREE.Color(color);
-            
+
             for (let i = 0; i < this.particleCount; i++) {
                 colors[i * 3] = colorObj.r;
                 colors[i * 3 + 1] = colorObj.g;
                 colors[i * 3 + 2] = colorObj.b;
             }
-            
+
             this.particleSystem.geometry.attributes.color.needsUpdate = true;
         }
     }
 
     setAnimated(animated) {
         this.data.animated = animated;
-        
+
         if (animated) {
             this._startAnimation();
         } else {
@@ -270,7 +270,7 @@ export class FlowEdge extends Edge {
 
     setGlowEffect(enabled) {
         this.data.glowEffect = enabled;
-        
+
         if (this.particleSystem && this.particleSystem.material.uniforms) {
             this.particleSystem.material.uniforms.glowIntensity.value = enabled ? 1.0 : 0.0;
         }

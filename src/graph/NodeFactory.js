@@ -1,4 +1,4 @@
-import { BaseFactory } from '../core/BaseFactory.js'; // Import BaseFactory
+import {BaseFactory} from '../core/BaseFactory.js'; // Import BaseFactory
 import {HtmlNode} from './nodes/HtmlNode.js';
 import {ShapeNode} from './nodes/ShapeNode.js';
 import {ImageNode} from './nodes/ImageNode.js';
@@ -36,16 +36,16 @@ export class NodeFactory extends BaseFactory { // Extend BaseFactory
         this.registerType(AudioNode.typeName, AudioNode);
         this.registerType(DocumentNode.typeName, DocumentNode);
         this.registerType(ChartNode.typeName, ChartNode);
-        
+
         // Advanced widget nodes
         this.registerType(ControlPanelNode.typeName, ControlPanelNode);
         this.registerType(ProgressNode.typeName, ProgressNode);
         this.registerType(CanvasNode.typeName, CanvasNode);
-        
+
         // Advanced shape nodes
         this.registerType(ProceduralShapeNode.typeName, ProceduralShapeNode);
         this.registerType(TextMeshNode.typeName, TextMeshNode);
-        
+
         // MetaWidget system
         this.registerType(MetaWidgetNode.typeName, MetaWidgetNode);
 

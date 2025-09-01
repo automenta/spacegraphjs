@@ -18,13 +18,13 @@ export const demoMetadata = {
 
 export function createGraph(space) {
     // Clear any existing content
-    space.importGraphFromJSON({ nodes: [], edges: [] });
+    space.importGraphFromJSON({nodes: [], edges: []});
 
     // Central title
     const titleNode = space.addNode(
         new S.TextMeshNode(
             'title',
-            { x: 0, y: 350, z: 0 },
+            {x: 0, y: 350, z: 0},
             {
                 text: 'MetaWidget\nSystem',
                 fontSize: 28,
@@ -40,8 +40,8 @@ export function createGraph(space) {
     );
 
     // Control Center Dashboard
-    const controlCenter = WidgetComposer.createControlCenter(space, 
-        { x: -600, y: 150, z: 0 },
+    const controlCenter = WidgetComposer.createControlCenter(space,
+        {x: -600, y: 150, z: 0},
         [
             {
                 name: 'power',
@@ -49,9 +49,9 @@ export function createGraph(space) {
                 enabled: true,
                 level: 85,
                 controls: [
-                    { id: 'main-power', type: 'switch', label: 'Main Power', value: true },
-                    { id: 'backup-power', type: 'switch', label: 'Backup Power', value: false },
-                    { id: 'power-level', type: 'slider', label: 'Power Level', value: 85, min: 0, max: 100 }
+                    {id: 'main-power', type: 'switch', label: 'Main Power', value: true},
+                    {id: 'backup-power', type: 'switch', label: 'Backup Power', value: false},
+                    {id: 'power-level', type: 'slider', label: 'Power Level', value: 85, min: 0, max: 100}
                 ]
             },
             {
@@ -60,9 +60,9 @@ export function createGraph(space) {
                 enabled: true,
                 level: 62,
                 controls: [
-                    { id: 'cooling-enabled', type: 'switch', label: 'Cooling Enabled', value: true },
-                    { id: 'fan-speed', type: 'slider', label: 'Fan Speed', value: 62, min: 0, max: 100 },
-                    { id: 'temp-target', type: 'slider', label: 'Target Temp', value: 22, min: 15, max: 30 }
+                    {id: 'cooling-enabled', type: 'switch', label: 'Cooling Enabled', value: true},
+                    {id: 'fan-speed', type: 'slider', label: 'Fan Speed', value: 62, min: 0, max: 100},
+                    {id: 'temp-target', type: 'slider', label: 'Target Temp', value: 22, min: 15, max: 30}
                 ]
             },
             {
@@ -71,13 +71,14 @@ export function createGraph(space) {
                 enabled: false,
                 level: 100,
                 controls: [
-                    { id: 'security-armed', type: 'switch', label: 'Armed', value: false },
-                    { id: 'alert-level', type: 'select', label: 'Alert Level', value: 'low', 
-                      options: [
-                          { value: 'low', label: 'Low' },
-                          { value: 'medium', label: 'Medium' },
-                          { value: 'high', label: 'High' }
-                      ]
+                    {id: 'security-armed', type: 'switch', label: 'Armed', value: false},
+                    {
+                        id: 'alert-level', type: 'select', label: 'Alert Level', value: 'low',
+                        options: [
+                            {value: 'low', label: 'Low'},
+                            {value: 'medium', label: 'Medium'},
+                            {value: 'high', label: 'High'}
+                        ]
                     }
                 ]
             },
@@ -87,9 +88,9 @@ export function createGraph(space) {
                 enabled: true,
                 level: 78,
                 controls: [
-                    { id: 'wifi-enabled', type: 'switch', label: 'WiFi', value: true },
-                    { id: 'bandwidth', type: 'slider', label: 'Bandwidth Limit', value: 78, min: 0, max: 100 },
-                    { id: 'vpn-enabled', type: 'switch', label: 'VPN', value: true }
+                    {id: 'wifi-enabled', type: 'switch', label: 'WiFi', value: true},
+                    {id: 'bandwidth', type: 'slider', label: 'Bandwidth Limit', value: 78, min: 0, max: 100},
+                    {id: 'vpn-enabled', type: 'switch', label: 'VPN', value: true}
                 ]
             }
         ]
@@ -97,52 +98,52 @@ export function createGraph(space) {
 
     // Monitoring Dashboard
     const monitorDash = WidgetComposer.createMonitoringDashboard(space,
-        { x: 600, y: 150, z: 0 },
+        {x: 600, y: 150, z: 0},
         [
-            { name: 'cpu', title: 'CPU Usage', type: 'gauge', value: 45, max: 100, color: '#e74c3c' },
-            { name: 'memory', title: 'Memory Usage', type: 'gauge', value: 67, max: 100, color: '#f39c12' },
-            { name: 'disk', title: 'Disk Usage', type: 'progress', value: 23, max: 100, color: '#27ae60' },
-            { name: 'network-in', title: 'Network In', type: 'progress', value: 78, max: 100, color: '#3498db' },
-            { name: 'network-out', title: 'Network Out', type: 'progress', value: 34, max: 100, color: '#9b59b6' },
-            { name: 'temperature', title: 'Temperature', type: 'gauge', value: 62, max: 100, color: '#e67e22' },
-            { name: 'power-status', title: 'Power', type: 'status', status: 'ok' },
-            { name: 'backup-status', title: 'Backup', type: 'status', status: 'warning' },
-            { name: 'security-status', title: 'Security', type: 'status', status: 'warning' }
+            {name: 'cpu', title: 'CPU Usage', type: 'gauge', value: 45, max: 100, color: '#e74c3c'},
+            {name: 'memory', title: 'Memory Usage', type: 'gauge', value: 67, max: 100, color: '#f39c12'},
+            {name: 'disk', title: 'Disk Usage', type: 'progress', value: 23, max: 100, color: '#27ae60'},
+            {name: 'network-in', title: 'Network In', type: 'progress', value: 78, max: 100, color: '#3498db'},
+            {name: 'network-out', title: 'Network Out', type: 'progress', value: 34, max: 100, color: '#9b59b6'},
+            {name: 'temperature', title: 'Temperature', type: 'gauge', value: 62, max: 100, color: '#e67e22'},
+            {name: 'power-status', title: 'Power', type: 'status', status: 'ok'},
+            {name: 'backup-status', title: 'Backup', type: 'status', status: 'warning'},
+            {name: 'security-status', title: 'Security', type: 'status', status: 'warning'}
         ]
     );
 
     // Analytics Dashboard
     const analyticsDash = WidgetComposer.createAnalyticsDashboard(space,
-        { x: -300, y: -200, z: 0 },
+        {x: -300, y: -200, z: 0},
         {
             keyMetrics: [
-                { name: 'Conversion Rate', value: 3.2, max: 10, color: '#2ecc71' },
-                { name: 'User Engagement', value: 78, max: 100, color: '#3498db' },
-                { name: 'Performance Score', value: 92, max: 100, color: '#9b59b6' }
+                {name: 'Conversion Rate', value: 3.2, max: 10, color: '#2ecc71'},
+                {name: 'User Engagement', value: 78, max: 100, color: '#3498db'},
+                {name: 'Performance Score', value: 92, max: 100, color: '#9b59b6'}
             ],
             charts: [
-                { title: 'Traffic Over Time', type: 'line' },
-                { title: 'User Demographics', type: 'pie' },
-                { title: 'Page Performance', type: 'bar' }
+                {title: 'Traffic Over Time', type: 'line'},
+                {title: 'User Demographics', type: 'pie'},
+                {title: 'Page Performance', type: 'bar'}
             ]
         }
     );
 
     // Workflow Builder
     const workflowBuilder = WidgetComposer.createWorkflowBuilder(space,
-        { x: 300, y: -200, z: 0 },
+        {x: 300, y: -200, z: 0},
         [
-            { title: 'Data Collection', completed: true, active: false },
-            { title: 'Data Processing', completed: true, active: false },
-            { title: 'Analysis', completed: false, active: true },
-            { title: 'Report Generation', completed: false, active: false },
-            { title: 'Distribution', completed: false, active: false }
+            {title: 'Data Collection', completed: true, active: false},
+            {title: 'Data Processing', completed: true, active: false},
+            {title: 'Analysis', completed: false, active: true},
+            {title: 'Report Generation', completed: false, active: false},
+            {title: 'Distribution', completed: false, active: false}
         ]
     );
 
     // Game HUD example
     const gameHUD = WidgetComposer.createGameHUD(space,
-        { x: 0, y: -350, z: 0 },
+        {x: 0, y: -350, z: 0},
         {
             health: 87,
             energy: 45,
@@ -160,7 +161,7 @@ export function createGraph(space) {
     const customWidget = space.addNode(
         new S.MetaWidgetNode(
             'custom-meta',
-            { x: 0, y: 0, z: 0 },
+            {x: 0, y: 0, z: 0},
             {
                 title: 'Custom Mixed Dashboard',
                 width: 350,
@@ -183,8 +184,8 @@ export function createGraph(space) {
                         data: {
                             title: 'Quick Actions',
                             controls: [
-                                { id: 'restart', type: 'button', label: 'Restart System', text: 'Restart' },
-                                { id: 'maintenance', type: 'switch', label: 'Maintenance Mode', value: false }
+                                {id: 'restart', type: 'button', label: 'Restart System', text: 'Restart'},
+                                {id: 'maintenance', type: 'switch', label: 'Maintenance Mode', value: false}
                             ]
                         }
                     },
@@ -238,20 +239,20 @@ export function createGraph(space) {
 
     // Set up event listeners for inter-widget communication
     space.on('meta-widget:control-changed', (event) => {
-        const { metaWidget, widget, controlId, value } = event;
+        const {metaWidget, widget, controlId, value} = event;
         console.log(`MetaWidget "${metaWidget.data.title}" control "${controlId}" changed to:`, value);
-        
+
         // Example: Power system affects monitoring
         if (controlId === 'main-power') {
             // Update system status indicators
             updateSystemStatus(space, value);
         }
-        
+
         // Example: Cooling system affects temperature readings
         if (controlId === 'fan-speed') {
             updateTemperatureReadings(space, value);
         }
-        
+
         // Example: Analytics time range affects all charts
         if (controlId === 'timeRange') {
             updateAnalyticsTimeRange(space, value);
@@ -259,9 +260,9 @@ export function createGraph(space) {
     });
 
     space.on('meta-widget:control-clicked', (event) => {
-        const { metaWidget, widget, controlId } = event;
+        const {metaWidget, widget, controlId} = event;
         console.log(`MetaWidget "${metaWidget.data.title}" button "${controlId}" clicked`);
-        
+
         // Handle button clicks
         if (controlId === 'restart') {
             simulateSystemRestart(space);
@@ -274,13 +275,13 @@ export function createGraph(space) {
     let animationTime = 0;
     const animateDashboards = () => {
         animationTime += 0.016;
-        
+
         // Update monitoring values with realistic variations
         updateMonitoringValues(monitorDash, animationTime);
         updateAnalyticsValues(analyticsDash, animationTime);
         updateGameHUDValues(gameHUD, animationTime);
         updateCustomWidgetValues(customWidget, animationTime);
-        
+
         requestAnimationFrame(animateDashboards);
     };
     animateDashboards();
@@ -289,25 +290,25 @@ export function createGraph(space) {
     const infoNodes = [
         {
             id: 'control-info',
-            position: { x: -600, y: 300, z: 0 },
+            position: {x: -600, y: 300, z: 0},
             text: 'Control Center\nSystem controls\nand settings',
             color: 0x3498db
         },
         {
             id: 'monitor-info',
-            position: { x: 600, y: 300, z: 0 },
+            position: {x: 600, y: 300, z: 0},
             text: 'Monitoring\nReal-time system\nmetrics & status',
             color: 0xe74c3c
         },
         {
             id: 'analytics-info',
-            position: { x: -300, y: -350, z: 0 },
+            position: {x: -300, y: -350, z: 0},
             text: 'Analytics\nData insights\nand reporting',
             color: 0x27ae60
         },
         {
             id: 'workflow-info',
-            position: { x: 300, y: -350, z: 0 },
+            position: {x: 300, y: -350, z: 0},
             text: 'Workflow\nProcess automation\nand tracking',
             color: 0xf39c12
         }

@@ -7,12 +7,13 @@ export class HudOverlayPanel {
         this.titleText = title;
         this.options = {
             parentElement: document.body, // Default to body, can be hudLayer
-            initialPosition: { x: 100, y: 100 },
-            initialSize: { width: 'auto', height: 'auto' },
+            initialPosition: {x: 100, y: 100},
+            initialSize: {width: 'auto', height: 'auto'},
             className: '',
             canClose: true,
             canDrag: true,
-            onClose: () => {},
+            onClose: () => {
+            },
             ...options,
         };
 

@@ -7,7 +7,7 @@ export class VideoNode extends Node {
     static DEFAULT_HEIGHT = 240;
     htmlElement = null;
     videoElement = null;
-    size = { width: VideoNode.DEFAULT_WIDTH, height: VideoNode.DEFAULT_HEIGHT };
+    size = {width: VideoNode.DEFAULT_WIDTH, height: VideoNode.DEFAULT_HEIGHT};
 
     constructor(id, position, data = {}, mass = 1.2) {
         super(id, position, data, mass);
@@ -17,7 +17,7 @@ export class VideoNode extends Node {
         };
         this.htmlElement = this._createElement();
         this.cssObject = new CSS3DObject(this.htmlElement);
-        this.cssObject.userData = { nodeId: this.id, type: 'video-node' };
+        this.cssObject.userData = {nodeId: this.id, type: 'video-node'};
         this.update();
     }
 

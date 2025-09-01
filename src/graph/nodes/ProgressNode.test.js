@@ -1,13 +1,13 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { ProgressNode } from './ProgressNode.js';
+import {beforeEach, describe, expect, it, vi} from 'vitest';
+import {ProgressNode} from './ProgressNode.js';
 
 // Mock HTML and Three.js dependencies
 global.document = {
     createElement: vi.fn((tagName) => {
         const el = {
             tagName: tagName.toLowerCase(),
-            style: { setProperty: vi.fn() },
-            classList: { add: vi.fn(), toggle: vi.fn(), remove: vi.fn(), contains: vi.fn() },
+            style: {setProperty: vi.fn()},
+            classList: {add: vi.fn(), toggle: vi.fn(), remove: vi.fn(), contains: vi.fn()},
             dataset: {},
             addEventListener: vi.fn(),
             appendChild: vi.fn(),
@@ -16,8 +16,8 @@ global.document = {
             setAttribute: vi.fn(),
             removeAttribute: vi.fn(),
             // This querySelector on 'el' will be context.querySelector
-            querySelector: vi.fn(function(selector) { // Use function to access this.tagName if needed
-                if (selector === '.progress-container') return { innerHTML: '' };
+            querySelector: vi.fn(function (selector) { // Use function to access this.tagName if needed
+                if (selector === '.progress-container') return {innerHTML: ''};
                 // Add more specific mocks if other selectors are used on the element itself
                 return null;
             }),
@@ -31,8 +31,8 @@ global.document = {
 vi.mock('three/addons/renderers/CSS3DRenderer.js', () => ({
     CSS3DObject: vi.fn().mockImplementation(element => ({
         element: element,
-        position: { copy: vi.fn() },
-        quaternion: { copy: vi.fn() },
+        position: {copy: vi.fn()},
+        quaternion: {copy: vi.fn()},
         userData: {}
     }))
 }));
@@ -40,9 +40,9 @@ vi.mock('three/addons/renderers/CSS3DRenderer.js', () => ({
 describe('ProgressNode', () => {
     let node;
     let mockSpace;
-    
+
     beforeEach(() => {
-        mockSpace = { emit: vi.fn() };
+        mockSpace = {emit: vi.fn()};
         const initialData = {
             label: 'Test Progress', // Changed from title to label to match ProgressNode data
             progressType: 'bar',    // Changed from type to progressType
@@ -54,7 +54,7 @@ describe('ProgressNode', () => {
         };
         node = new ProgressNode(
             'progress-1',
-            { x: 0, y: 0, z: 0 },
+            {x: 0, y: 0, z: 0},
             initialData
         );
         node.space = mockSpace; // Inject mock space
@@ -62,7 +62,7 @@ describe('ProgressNode', () => {
 
     it('should create a ProgressNode with correct properties', () => {
         expect(node.id).toBe('progress-1');
-        expect(node.position).toEqual({ x: 0, y: 0, z: 0 });
+        expect(node.position).toEqual({x: 0, y: 0, z: 0});
         expect(node.data.label).toBe('Test Progress');
         expect(node.data.progressType).toBe('bar');
         expect(node.data.value).toBe(50);
@@ -96,16 +96,16 @@ describe('ProgressNode', () => {
     it('should clamp values to min/max range on setValue', () => {
         node.setValue(-10);
         expect(node.data.value).toBe(node.data.min); // Clamped to min (0 by default)
-        
+
         node.setValue(150);
         expect(node.data.value).toBe(node.data.max); // Clamped to max (100 by default)
     });
 
     it('should support different progress types via data.progressType', () => {
-        const circleNode = new ProgressNode('circle', { x: 0, y: 0, z: 0 }, { progressType: 'circular' });
+        const circleNode = new ProgressNode('circle', {x: 0, y: 0, z: 0}, {progressType: 'circular'});
         expect(circleNode.data.progressType).toBe('circular');
-        
-        const gaugeNode = new ProgressNode('gauge', { x: 0, y: 0, z: 0 }, { progressType: 'gauge' });
+
+        const gaugeNode = new ProgressNode('gauge', {x: 0, y: 0, z: 0}, {progressType: 'gauge'});
         expect(gaugeNode.data.progressType).toBe('gauge');
     });
 
@@ -129,7 +129,10 @@ describe('ProgressNode', () => {
 // Mock requestAnimationFrame and cancelAnimationFrame for animateToValue
 beforeEach(() => {
     vi.useFakeTimers();
-    global.requestAnimationFrame = vi.fn((cb) => { cb(performance.now()); return Date.now(); });
+    global.requestAnimationFrame = vi.fn((cb) => {
+        cb(performance.now());
+        return Date.now();
+    });
     global.cancelAnimationFrame = vi.fn();
     let currentTime = Date.now();
     global.performance = {

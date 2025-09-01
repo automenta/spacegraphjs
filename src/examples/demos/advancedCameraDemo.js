@@ -1,5 +1,3 @@
-import * as THREE from 'three';
-
 const demoMetadata = {
     id: 'advanced-camera',
     title: 'Advanced Camera Controls',
@@ -21,7 +19,7 @@ function createGraph(space) {
     const demo = {
         title: 'Advanced Camera Controls',
         description: 'Auto-zoom, rotation, peek mode, and cinematic camera movements',
-        
+
         init() {
             this.setupUI();
             this.createDemoGraph();
@@ -196,10 +194,10 @@ function createGraph(space) {
             this.layouts = ['force', 'circular', 'grid', 'hierarchical'];
 
             // Create initial graph with varying densities
-            this.createCluster('center', { x: 0, y: 0, z: 0 }, 8, 150);
-            this.createCluster('left', { x: -300, y: 100, z: 50 }, 6, 100);
-            this.createCluster('right', { x: 300, y: -100, z: -50 }, 7, 120);
-            this.createCluster('top', { x: 0, y: 300, z: 80 }, 5, 80);
+            this.createCluster('center', {x: 0, y: 0, z: 0}, 8, 150);
+            this.createCluster('left', {x: -300, y: 100, z: 50}, 6, 100);
+            this.createCluster('right', {x: 300, y: -100, z: -50}, 7, 120);
+            this.createCluster('top', {x: 0, y: 300, z: 80}, 5, 80);
 
             // Create some inter-cluster connections
             this.connectClusters();
@@ -209,7 +207,7 @@ function createGraph(space) {
 
         createCluster(name, center, count, radius) {
             const clusterNodes = [];
-            
+
             for (let i = 0; i < count; i++) {
                 const angle = (i / count) * Math.PI * 2;
                 const distance = radius * (0.3 + Math.random() * 0.7);
@@ -257,23 +255,23 @@ function createGraph(space) {
 
         connectClusters() {
             const clusters = ['center', 'left', 'right', 'top'];
-            
+
             clusters.forEach((cluster1, i) => {
                 clusters.forEach((cluster2, j) => {
                     if (i < j) {
                         const nodes1 = this.nodes.filter(n => n.data.cluster === cluster1);
                         const nodes2 = this.nodes.filter(n => n.data.cluster === cluster2);
-                        
+
                         if (nodes1.length > 0 && nodes2.length > 0) {
                             const source = nodes1[Math.floor(Math.random() * nodes1.length)];
                             const target = nodes2[Math.floor(Math.random() * nodes2.length)];
-                            
+
                             const edge = space.addEdge({
                                 id: `inter_${cluster1}_${cluster2}`,
                                 source,
                                 target,
                                 type: 'FlowEdge',
-                                data: { isInterCluster: true }
+                                data: {isInterCluster: true}
                             });
                             this.edges.push(edge);
                         }
@@ -283,7 +281,7 @@ function createGraph(space) {
         },
 
         hasEdge(source, target) {
-            return this.edges.some(edge => 
+            return this.edges.some(edge =>
                 (edge.source === source && edge.target === target) ||
                 (edge.source === target && edge.target === source)
             );
@@ -291,7 +289,7 @@ function createGraph(space) {
 
         setupCameraEnhancements() {
             const cameraPlugin = space.plugins.getPlugin('CameraPlugin');
-            
+
             // Configure advanced camera settings
             cameraPlugin.updateAdvancedSettings({
                 autoZoom: {
@@ -319,10 +317,10 @@ function createGraph(space) {
 
         performSmartFocus() {
             if (this.nodes.length === 0) return;
-            
+
             const randomNode = this.nodes[Math.floor(Math.random() * this.nodes.length)];
             const cameraPlugin = space.plugins.getPlugin('CameraPlugin');
-            
+
             cameraPlugin.smartFocusOnNode(randomNode, {
                 considerNeighbors: true,
                 includeEdges: true,
@@ -335,11 +333,11 @@ function createGraph(space) {
 
         async startViewSequence() {
             if (this.nodes.length < 4) return;
-            
+
             // Select interesting nodes from different clusters
             const clusters = ['center', 'left', 'right', 'top'];
             const tourNodes = [];
-            
+
             clusters.forEach(cluster => {
                 const clusterNodes = this.nodes.filter(n => n.data.cluster === cluster);
                 if (clusterNodes.length > 0) {
@@ -348,7 +346,7 @@ function createGraph(space) {
             });
 
             const cameraPlugin = space.plugins.getPlugin('CameraPlugin');
-            
+
             console.log('Starting view sequence tour...');
             await cameraPlugin.createViewSequence(tourNodes, {
                 duration: 1.5,
@@ -361,16 +359,16 @@ function createGraph(space) {
 
         addRandomNodes(count) {
             const clusters = ['center', 'left', 'right', 'top'];
-            
+
             for (let i = 0; i < count; i++) {
                 const cluster = clusters[Math.floor(Math.random() * clusters.length)];
                 const existingClusterNodes = this.nodes.filter(n => n.data.cluster === cluster);
-                
+
                 if (existingClusterNodes.length > 0) {
                     const centerNode = existingClusterNodes[0];
                     const angle = Math.random() * Math.PI * 2;
                     const distance = 80 + Math.random() * 120;
-                    
+
                     const position = {
                         x: centerNode.position.x + Math.cos(angle) * distance,
                         y: centerNode.position.y + Math.sin(angle) * distance,
@@ -414,7 +412,7 @@ function createGraph(space) {
 
             for (let i = 0; i < count && this.nodes.length > 10; i++) {
                 const nodeToRemove = this.nodes[Math.floor(Math.random() * this.nodes.length)];
-                
+
                 // Remove associated edges
                 this.edges = this.edges.filter(edge => {
                     if (edge.source === nodeToRemove || edge.target === nodeToRemove) {
@@ -459,7 +457,7 @@ function createGraph(space) {
             if (this.ui && this.ui.parentNode) {
                 this.ui.parentNode.removeChild(this.ui);
             }
-            
+
             // Clean up nodes and edges
             this.nodes.forEach(node => space.removeNode(node.id));
             this.edges.forEach(edge => space.removeEdge(edge.id));
@@ -470,4 +468,4 @@ function createGraph(space) {
     return demo;
 }
 
-export { demoMetadata, createGraph };
+export {demoMetadata, createGraph};

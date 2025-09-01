@@ -240,10 +240,10 @@ export class WidgetComposer {
                         label: 'Time Range',
                         value: '7d',
                         options: [
-                            { value: '1d', label: 'Last 24 Hours' },
-                            { value: '7d', label: 'Last 7 Days' },
-                            { value: '30d', label: 'Last 30 Days' },
-                            { value: '90d', label: 'Last 90 Days' }
+                            {value: '1d', label: 'Last 24 Hours'},
+                            {value: '7d', label: 'Last 7 Days'},
+                            {value: '30d', label: 'Last 30 Days'},
+                            {value: '90d', label: 'Last 90 Days'}
                         ]
                     },
                     {
@@ -375,10 +375,10 @@ export class WidgetComposer {
                         label: 'Chart Type',
                         value: 'line',
                         options: [
-                            { value: 'line', label: 'Line Chart' },
-                            { value: 'bar', label: 'Bar Chart' },
-                            { value: 'pie', label: 'Pie Chart' },
-                            { value: 'scatter', label: 'Scatter Plot' }
+                            {value: 'line', label: 'Line Chart'},
+                            {value: 'bar', label: 'Bar Chart'},
+                            {value: 'pie', label: 'Pie Chart'},
+                            {value: 'scatter', label: 'Scatter Plot'}
                         ]
                     },
                     {
@@ -520,8 +520,8 @@ export class WidgetComposer {
             type: 'flow',
             particleCount: 5,
             particleSpeed: 0.3,
-            particleColor: connectionType === 'data' ? 0x00ff88 : 
-                          connectionType === 'control' ? 0xff6b35 : 0x4a9eff,
+            particleColor: connectionType === 'data' ? 0x00ff88 :
+                connectionType === 'control' ? 0xff6b35 : 0x4a9eff,
             flowDirection: 1,
             thickness: 2,
             label: connectionType
@@ -538,8 +538,8 @@ export class WidgetComposer {
     }
 
     static propagateData(event, targetWidget, connectionType) {
-        const { controlId, value } = event;
-        
+        const {controlId, value} = event;
+
         // Find matching controls in target widget
         targetWidget.getAllWidgets().forEach(widget => {
             if (widget.data.controls) {

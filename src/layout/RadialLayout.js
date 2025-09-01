@@ -16,7 +16,7 @@ export class RadialLayout {
     };
 
     constructor(config = {}) {
-        this.settings = { ...this.settings, ...config };
+        this.settings = {...this.settings, ...config};
     }
 
     setContext(space, pluginManager) {
@@ -25,14 +25,14 @@ export class RadialLayout {
     }
 
     updateConfig(newConfig) {
-        this.settings = { ...this.settings, ...newConfig };
+        this.settings = {...this.settings, ...newConfig};
     }
 
     init(nodes, edges, config = {}) {
         if (config) this.updateConfig(config);
         if (!nodes || nodes.length === 0) return;
 
-        const { centerNodeId, radiusIncrement, plane, startRadius, levelSpacingFactor } = this.settings;
+        const {centerNodeId, radiusIncrement, plane, startRadius, levelSpacingFactor} = this.settings;
         const centerPos = new THREE.Vector3(0, 0, 0);
 
         let rootNode = null;
@@ -128,15 +128,29 @@ export class RadialLayout {
         });
     }
 
-    run() { /* Not typically a continuous layout */ }
-    stop() { /* Nothing to stop */ }
-    update() { /* No per-frame updates needed usually */ }
+    run() { /* Not typically a continuous layout */
+    }
 
-    addNode(node) { /* Could re-trigger init */ }
-    removeNode(node) { /* Could re-trigger init */ }
-    addEdge(edge) {}
-    removeEdge(edge) {}
-    kick() {}
+    stop() { /* Nothing to stop */
+    }
+
+    update() { /* No per-frame updates needed usually */
+    }
+
+    addNode(node) { /* Could re-trigger init */
+    }
+
+    removeNode(node) { /* Could re-trigger init */
+    }
+
+    addEdge(edge) {
+    }
+
+    removeEdge(edge) {
+    }
+
+    kick() {
+    }
 
     dispose() {
         this.space = null;

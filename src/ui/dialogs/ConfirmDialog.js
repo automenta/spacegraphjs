@@ -1,4 +1,4 @@
-import { $ } from '../../utils.js';
+import {$} from '../../utils.js';
 
 export class ConfirmDialog {
     constructor(space, confirmDialogElement) {
@@ -28,7 +28,7 @@ export class ConfirmDialog {
         messageEl && (messageEl.textContent = message);
         this.confirmCallback = onConfirm;
         this.confirmDialogElement.style.display = 'block';
-        this.space.emit('ui:confirmdialog:shown', { message });
+        this.space.emit('ui:confirmdialog:shown', {message});
     }
 
     hide = () => {

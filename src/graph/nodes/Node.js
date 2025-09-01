@@ -12,7 +12,7 @@ export class Node {
     labelObject = null;
     isPinned = false;
 
-    constructor(id, position = { x: 0, y: 0, z: 0 }, data = {}, mass = 1.0) {
+    constructor(id, position = {x: 0, y: 0, z: 0}, data = {}, mass = 1.0) {
         this.id = id ?? Utils.generateId('node');
         this.setPosition(position);
         this.data = Utils.mergeDeep({}, this.getDefaultData(), data);
@@ -21,10 +21,11 @@ export class Node {
     }
 
     getDefaultData() {
-        return { label: '' };
+        return {label: ''};
     }
 
-    update(_space) {}
+    update(_space) {
+    }
 
     dispose() {
         this.mesh?.geometry?.dispose();
@@ -44,22 +45,27 @@ export class Node {
         return 50;
     }
 
-    setSelectedStyle(_selected) {}
+    setSelectedStyle(_selected) {
+    }
 
     setPosition(pos, y, z) {
-        const { x, _y, _z } = typeof pos === 'object' && pos !== null ? pos : { x: pos, _y: y, _z: z };
+        const {x, _y, _z} = typeof pos === 'object' && pos !== null ? pos : {x: pos, _y: y, _z: z};
         const finalY = _y ?? 0;
         const finalZ = _z ?? 0;
 
         if (!isFinite(x) || !isFinite(finalY) || !isFinite(finalZ)) {
-            console.warn(`BaseNode.setPosition: Attempted to set invalid position for node ${this.id}:`, { x, y: finalY, z: finalZ });
+            console.warn(`BaseNode.setPosition: Attempted to set invalid position for node ${this.id}:`, {
+                x,
+                y: finalY,
+                z: finalZ
+            });
             return;
         }
         this.position.set(x, finalY, finalZ);
     }
 
     startDrag() {
-        this.space?.emit('graph:node:dragstart', { node: this });
+        this.space?.emit('graph:node:dragstart', {node: this});
     }
 
     drag(newPosition) {
@@ -67,6 +73,6 @@ export class Node {
     }
 
     endDrag() {
-        this.space?.emit('graph:node:dragend', { node: this });
+        this.space?.emit('graph:node:dragend', {node: this});
     }
 }

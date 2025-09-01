@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 const MAX_INSTANCES_PER_TYPE = 1000;
 
@@ -76,7 +76,7 @@ class InstancedMeshGroup {
 
         const instanceId = intersection[0].instanceId;
         const nodeId = this.instanceIdToNodeId.get(instanceId);
-        return nodeId ? { ...intersection[0], nodeId } : null;
+        return nodeId ? {...intersection[0], nodeId} : null;
     }
 
     dispose() {

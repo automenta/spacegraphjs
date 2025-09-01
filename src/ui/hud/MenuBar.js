@@ -1,5 +1,5 @@
 // src/ui/hud/MenuBar.js
-import { Menu } from './Menu.js';
+import {Menu} from './Menu.js';
 
 export class MenuBar {
     constructor(hudManager) {

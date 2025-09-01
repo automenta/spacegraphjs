@@ -1,7 +1,7 @@
 // src/examples/pages.js
 
 // Dynamically import all demo modules from the demos/ directory
-const demoModules = import.meta.glob('./demos/*.js', { eager: true });
+const demoModules = import.meta.glob('./demos/*.js', {eager: true});
 
 const loadedPages = [];
 for (const path in demoModules) {

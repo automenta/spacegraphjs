@@ -1,6 +1,6 @@
-import { $, $$ } from '../../utils.js';
-import { KeyboardShortcutsDialog } from '../dialogs/KeyboardShortcutsDialog.js';
-import { LayoutSettingsDialog } from '../dialogs/LayoutSettingsDialog.js';
+import {$} from '../../utils.js';
+import {KeyboardShortcutsDialog} from '../dialogs/KeyboardShortcutsDialog.js';
+import {LayoutSettingsDialog} from '../dialogs/LayoutSettingsDialog.js';
 
 /**
  * Manages Heads-Up Display (HUD) elements, including a main menu for settings and actions,
@@ -160,14 +160,14 @@ export class HudManager {
             this.hudPopupMenu.classList.remove('hidden');
             this.hudMainMenuButton.classList.add('active');
             // Add a one-time event listener to close the menu when clicking outside
-            document.addEventListener('click', this._handleClickOutsideMenu, { capture: true, once: true });
-            document.addEventListener('keydown', this._handleEscKey, { capture: true, once: true });
+            document.addEventListener('click', this._handleClickOutsideMenu, {capture: true, once: true});
+            document.addEventListener('keydown', this._handleEscKey, {capture: true, once: true});
         } else {
             this.hudPopupMenu.classList.add('hidden');
             this.hudMainMenuButton.classList.remove('active');
             // Clean up listeners if any were missed or if closed by other means
-            document.removeEventListener('click', this._handleClickOutsideMenu, { capture: true });
-            document.removeEventListener('keydown', this._handleEscKey, { capture: true });
+            document.removeEventListener('click', this._handleClickOutsideMenu, {capture: true});
+            document.removeEventListener('keydown', this._handleEscKey, {capture: true});
         }
     };
 
@@ -178,11 +178,11 @@ export class HudManager {
             }
         } else {
             // Click was inside or on the button, re-attach listener if menu still open
-            if(this.isPopupMenuVisible) {
-                 document.addEventListener('click', this._handleClickOutsideMenu, { capture: true, once: true });
+            if (this.isPopupMenuVisible) {
+                document.addEventListener('click', this._handleClickOutsideMenu, {capture: true, once: true});
             }
         }
-        document.removeEventListener('keydown', this._handleEscKey, { capture: true });
+        document.removeEventListener('keydown', this._handleEscKey, {capture: true});
     };
 
     /**
@@ -195,9 +195,9 @@ export class HudManager {
             this._togglePopupMenu(); // Close it
         } else if (this.isPopupMenuVisible) {
             // Re-attach listener if menu still open and another key was pressed
-            document.addEventListener('keydown', this._handleEscKey, { capture: true, once: true });
+            document.addEventListener('keydown', this._handleEscKey, {capture: true, once: true});
         }
-         document.removeEventListener('click', this._handleClickOutsideMenu, { capture: true });
+        document.removeEventListener('click', this._handleClickOutsideMenu, {capture: true});
     };
 
     /**
@@ -342,7 +342,13 @@ export class HudManager {
         } catch (error) {
             console.error("HudManager: Failed to start performance monitoring.", error);
             // Ensure performanceMetrics are reset to safe defaults if startup fails
-            this.performanceMetrics = { fps: 'N/A', frameTime: 'N/A', nodeCount: 'N/A', edgeCount: 'N/A', lastUpdateTime: 0 };
+            this.performanceMetrics = {
+                fps: 'N/A',
+                frameTime: 'N/A',
+                nodeCount: 'N/A',
+                edgeCount: 'N/A',
+                lastUpdateTime: 0
+            };
         }
     }
 
@@ -410,8 +416,8 @@ export class HudManager {
         this.hudKeyboardShortcutsButton?.removeEventListener('click', this._onKeyboardShortcutsButtonClick);
         this.hudLayoutSettingsButton?.removeEventListener('click', this._onLayoutSettingsButtonClick);
 
-        document.removeEventListener('click', this._handleClickOutsideMenu, { capture: true });
-        document.removeEventListener('keydown', this._handleEscKey, { capture: true });
+        document.removeEventListener('click', this._handleClickOutsideMenu, {capture: true});
+        document.removeEventListener('keydown', this._handleEscKey, {capture: true});
 
 
         this.hudLayer?.remove();

@@ -15,7 +15,7 @@
     padding: 0 10px;
     box-sizing: border-box;
     z-index: 1000; /* Ensure it's above other HUD elements but below modals */
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
 .menu-bar-left,
@@ -57,7 +57,7 @@
     border-top: none;
     min-width: 200px;
     z-index: 1001; /* Above menu bar */
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     padding: 5px 0;
 }
 
@@ -187,19 +187,19 @@
 }
 
 .pinned-window-close-button {
-   /* Example:
-    background: none;
-    border: none;
-    color: var(--graph-text-color-primary, #ffffff);
-    font-size: 16px;
-    cursor: pointer;
-   */
+    /* Example:
+     background: none;
+     border: none;
+     color: var(--graph-text-color-primary, #ffffff);
+     font-size: 16px;
+     cursor: pointer;
+    */
 }
 
 .pinned-window-content {
-   /* padding: 10px;
-    flex-grow: 1;
-   */
+    /* padding: 10px;
+     flex-grow: 1;
+    */
 }
 
 /* Text in a menu section that's not a clickable item */

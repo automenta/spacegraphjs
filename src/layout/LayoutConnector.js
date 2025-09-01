@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { gsap } from 'gsap';
+import {gsap} from 'gsap';
 
 export class LayoutConnector {
     space = null;
@@ -24,7 +24,7 @@ export class LayoutConnector {
     isActive = false;
 
     constructor(config = {}) {
-        this.settings = { ...this.settings, ...config };
+        this.settings = {...this.settings, ...config};
     }
 
     setContext(space, pluginManager) {
@@ -48,7 +48,7 @@ export class LayoutConnector {
     unregisterLayoutRegion(regionId) {
         this.layoutRegions.delete(regionId);
         this._updateRoutingGraph();
-        
+
         // Remove connections involving this region
         this.connections.forEach((connection, connectionId) => {
             if (connection.sourceRegion === regionId || connection.targetRegion === regionId) {
@@ -82,7 +82,7 @@ export class LayoutConnector {
 
         this.connections.set(connectionId, connection);
         this._routeConnection(connection);
-        
+
         return connectionId;
     }
 
@@ -108,7 +108,7 @@ export class LayoutConnector {
     }
 
     _calculateConnectionPoints(bounds) {
-        const { min, max, center } = bounds;
+        const {min, max, center} = bounds;
         const points = [];
 
         // Edge midpoints
@@ -165,17 +165,17 @@ export class LayoutConnector {
 
     _addIntermediateRoutingNodes() {
         const regions = Array.from(this.layoutRegions.values());
-        
+
         for (let i = 0; i < regions.length; i++) {
             for (let j = i + 1; j < regions.length; j++) {
                 const region1 = regions[i];
                 const region2 = regions[j];
-                
+
                 // Add intermediate nodes between regions
                 const midpoint = region1.bounds.center.clone()
                     .add(region2.bounds.center)
                     .multiplyScalar(0.5);
-                
+
                 const intermediateId = `intermediate_${region1.id}_${region2.id}`;
                 this.routingGraph.set(intermediateId, {
                     position: midpoint,
@@ -225,24 +225,24 @@ export class LayoutConnector {
     _lineIntersectsCircle(start, end, circleCenter, radius) {
         const lineVec = end.clone().sub(start);
         const circleVec = circleCenter.clone().sub(start);
-        
+
         const projection = circleVec.dot(lineVec) / lineVec.lengthSq();
         const clampedProjection = Math.max(0, Math.min(1, projection));
-        
+
         const closestPoint = start.clone().add(lineVec.multiplyScalar(clampedProjection));
         const distance = closestPoint.distanceTo(circleCenter);
-        
+
         return distance < radius;
     }
 
     _routeConnection(connection) {
         const sourceNode = this._getNodeById(connection.sourceNodeId);
         const targetNode = this._getNodeById(connection.targetNodeId);
-        
+
         if (!sourceNode || !targetNode) return;
 
         let path;
-        
+
         switch (connection.type) {
             case 'direct':
                 path = this._routeDirect(sourceNode.position, targetNode.position);
@@ -262,7 +262,7 @@ export class LayoutConnector {
 
         connection.path = path;
         this.connectionPaths.set(connection.id, path);
-        
+
         if (this.settings.animate) {
             this._animateConnection(connection);
         } else {
@@ -285,9 +285,9 @@ export class LayoutConnector {
         // Choose exit and entry points based on region positions
         const sourceBounds = sourceRegion.bounds;
         const targetBounds = targetRegion.bounds;
-        
+
         let exitPoint, entryPoint;
-        
+
         if (targetBounds.center.x > sourceBounds.center.x) {
             // Target is to the right
             exitPoint = new THREE.Vector3(sourceBounds.max.x, start.y, start.z);
@@ -328,11 +328,11 @@ export class LayoutConnector {
         // Simple curved path
         const controlPoint1 = start.clone().add(end.clone().sub(start).multiplyScalar(0.33));
         const controlPoint2 = start.clone().add(end.clone().sub(start).multiplyScalar(0.66));
-        
+
         // Add some curve offset
         const perpendicular = new THREE.Vector3(-(end.y - start.y), end.x - start.x, 0).normalize();
         const offset = Math.min(100, start.distanceTo(end) * 0.2);
-        
+
         controlPoint1.add(perpendicular.clone().multiplyScalar(offset));
         controlPoint2.add(perpendicular.clone().multiplyScalar(-offset));
 
@@ -342,15 +342,15 @@ export class LayoutConnector {
     _routeBundled(start, end, connection) {
         // Find other connections that could be bundled together
         const bundleCandidates = [];
-        
+
         this.connections.forEach((otherConnection, otherId) => {
             if (otherId === connection.id) return;
-            
+
             const sourceRegion1 = connection.sourceRegion;
             const targetRegion1 = connection.targetRegion;
             const sourceRegion2 = otherConnection.sourceRegion;
             const targetRegion2 = otherConnection.targetRegion;
-            
+
             // Same source and target regions
             if ((sourceRegion1 === sourceRegion2 && targetRegion1 === targetRegion2) ||
                 (sourceRegion1 === targetRegion2 && targetRegion1 === sourceRegion2)) {
@@ -370,7 +370,7 @@ export class LayoutConnector {
         // Calculate bundle center point
         const midpoint = start.clone().add(end).multiplyScalar(0.5);
         const bundleCenter = midpoint.clone();
-        
+
         // Offset bundle center slightly to create bundle effect
         const perpendicular = new THREE.Vector3(-(end.y - start.y), end.x - start.x, 0).normalize();
         bundleCenter.add(perpendicular.multiplyScalar(this.settings.bundlingRadius));
@@ -388,13 +388,13 @@ export class LayoutConnector {
         // Simplified A* pathfinding using routing graph
         const startNodeId = this._findClosestRoutingNode(start, connection.sourceRegion);
         const endNodeId = this._findClosestRoutingNode(end, connection.targetRegion);
-        
+
         if (!startNodeId || !endNodeId) {
             return this._routeDirect(start, end);
         }
 
         const path = this._aStar(startNodeId, endNodeId);
-        
+
         if (path.length === 0) {
             return this._routeDirect(start, end);
         }
@@ -449,7 +449,7 @@ export class LayoutConnector {
             // Find node with lowest fScore
             let current = null;
             let lowestFScore = Infinity;
-            
+
             openSet.forEach(nodeId => {
                 const score = fScore.get(nodeId);
                 if (score < lowestFScore) {
@@ -462,12 +462,12 @@ export class LayoutConnector {
                 // Reconstruct path
                 const path = [];
                 let currentNode = current;
-                
+
                 while (cameFrom.has(currentNode)) {
                     path.unshift(currentNode);
                     currentNode = cameFrom.get(currentNode);
                 }
-                
+
                 return path;
             }
 
@@ -476,15 +476,15 @@ export class LayoutConnector {
 
             currentNodeData.connections.forEach(neighbor => {
                 const neighborId = this._getRoutingNodeId(neighbor);
-                const tentativeGScore = gScore.get(current) + 
+                const tentativeGScore = gScore.get(current) +
                     currentNodeData.position.distanceTo(neighbor.position);
 
                 if (tentativeGScore < gScore.get(neighborId)) {
                     cameFrom.set(neighborId, current);
                     gScore.set(neighborId, tentativeGScore);
-                    fScore.set(neighborId, tentativeGScore + 
+                    fScore.set(neighborId, tentativeGScore +
                         neighbor.position.distanceTo(endNode.position));
-                    
+
                     openSet.add(neighborId);
                 }
             });
@@ -502,13 +502,13 @@ export class LayoutConnector {
 
     _generateBezierPath(p0, p1, p2, p3, segments) {
         const path = [];
-        
+
         for (let i = 0; i <= segments; i++) {
             const t = i / segments;
             const point = this._bezierPoint(p0, p1, p2, p3, t);
             path.push(point);
         }
-        
+
         return path;
     }
 
@@ -529,14 +529,14 @@ export class LayoutConnector {
     _animateConnection(connection) {
         // Create visual element first
         this._createVisualConnection(connection);
-        
+
         if (connection.visualElement && connection.path) {
             // Animate the path drawing
             const geometry = connection.visualElement.geometry;
             if (geometry && geometry.attributes.position) {
                 const positions = geometry.attributes.position.array;
                 const originalPositions = [...positions];
-                
+
                 // Start with all points at the source
                 const sourcePos = connection.path[0];
                 for (let i = 0; i < positions.length; i += 3) {
@@ -544,9 +544,9 @@ export class LayoutConnector {
                     positions[i + 1] = sourcePos.y;
                     positions[i + 2] = sourcePos.z;
                 }
-                
+
                 geometry.attributes.position.needsUpdate = true;
-                
+
                 // Animate to final positions
                 gsap.to(positions, {
                     duration: this.settings.animationDuration,
@@ -570,7 +570,7 @@ export class LayoutConnector {
         // Create line geometry from path
         const points = connection.path;
         const geometry = new THREE.BufferGeometry().setFromPoints(points);
-        
+
         const material = new THREE.LineBasicMaterial({
             color: connection.metadata.color || 0x00ff00,
             linewidth: connection.metadata.width || 2,
@@ -606,12 +606,12 @@ export class LayoutConnector {
 
         // Update connection properties
         Object.assign(connection, options);
-        
+
         // Re-route if type changed
         if (options.type && options.type !== connection.type) {
             this._routeConnection(connection);
         }
-        
+
         // Update visual element
         if (connection.visualElement && options.metadata) {
             const material = connection.visualElement.material;
@@ -651,7 +651,7 @@ export class LayoutConnector {
     }
 
     updateConfig(newConfig) {
-        this.settings = { ...this.settings, ...newConfig };
+        this.settings = {...this.settings, ...newConfig};
     }
 
     dispose() {
@@ -660,7 +660,7 @@ export class LayoutConnector {
                 this._removeVisualElement(connection.visualElement);
             }
         });
-        
+
         this.connections.clear();
         this.layoutRegions.clear();
         this.routingGraph.clear();

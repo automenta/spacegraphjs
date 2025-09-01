@@ -39,7 +39,11 @@ export class RenderingPlugin extends Plugin {
 
     effectsConfig = {
         bloom: {
-            enabled: true, intensity: 0.5, kernelSize: KernelSize.MEDIUM, luminanceThreshold: 0.85, luminanceSmoothing: 0.4,
+            enabled: true,
+            intensity: 0.5,
+            kernelSize: KernelSize.MEDIUM,
+            luminanceThreshold: 0.85,
+            luminanceSmoothing: 0.4,
         },
         ssao: {
             enabled: true, blendFunction: BlendFunction.MULTIPLY, samples: 16, rings: 4, distanceThreshold: 0.05,
@@ -55,7 +59,7 @@ export class RenderingPlugin extends Plugin {
 
     css3dContainer = null;
     webglCanvas = null;
-    background = { color: 0x1a1a1d, alpha: 1.0 };
+    background = {color: 0x1a1a1d, alpha: 1.0};
     managedLights = new Map();
     instancedMeshManager = null;
 
@@ -146,7 +150,12 @@ export class RenderingPlugin extends Plugin {
 
 
         this.renderGL = new THREE.WebGLRenderer({
-            canvas: this.webglCanvas, powerPreference: 'high-performance', antialias: false, stencil: true, depth: true, alpha: true,
+            canvas: this.webglCanvas,
+            powerPreference: 'high-performance',
+            antialias: false,
+            stencil: true,
+            depth: true,
+            alpha: true,
         });
         this.renderGL.setSize(window.innerWidth, window.innerHeight);
         this.renderGL.setPixelRatio(window.devicePixelRatio);
@@ -180,17 +189,34 @@ export class RenderingPlugin extends Plugin {
         const cam = this.pluginManager?.getPlugin('CameraPlugin')?.getCameraInstance();
         if (!cam) return;
 
-        this.normalPassInstance?.dispose(); this.composer.removePass(this.normalPassInstance); this.normalPassInstance = null;
-        this.effectPassSSAO?.dispose(); this.composer.removePass(this.effectPassSSAO); this.effectPassSSAO = null;
-        this.effectPassOutline?.dispose(); this.composer.removePass(this.effectPassOutline); this.effectPassOutline = null;
-        this.effectPassBloom?.dispose(); this.composer.removePass(this.effectPassBloom); this.effectPassBloom = null;
+        this.normalPassInstance?.dispose();
+        this.composer.removePass(this.normalPassInstance);
+        this.normalPassInstance = null;
+        this.effectPassSSAO?.dispose();
+        this.composer.removePass(this.effectPassSSAO);
+        this.effectPassSSAO = null;
+        this.effectPassOutline?.dispose();
+        this.composer.removePass(this.effectPassOutline);
+        this.effectPassOutline = null;
+        this.effectPassBloom?.dispose();
+        this.composer.removePass(this.effectPassBloom);
+        this.effectPassBloom = null;
 
-        this.ssaoEffect?.dispose(); this.ssaoEffect = null;
-        this.outlineEffect?.dispose(); this.outlineEffect = null;
-        this.bloomEffect?.dispose(); this.bloomEffect = null;
+        this.ssaoEffect?.dispose();
+        this.ssaoEffect = null;
+        this.outlineEffect?.dispose();
+        this.outlineEffect = null;
+        this.bloomEffect?.dispose();
+        this.bloomEffect = null;
 
         if (this.effectsConfig.ssao.enabled) {
-            this.normalPassInstance = new NormalPass(this.scene, cam, { renderTarget: new THREE.WebGLRenderTarget(1, 1, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat }) });
+            this.normalPassInstance = new NormalPass(this.scene, cam, {
+                renderTarget: new THREE.WebGLRenderTarget(1, 1, {
+                    minFilter: THREE.LinearFilter,
+                    magFilter: THREE.LinearFilter,
+                    format: THREE.RGBAFormat
+                })
+            });
             this.composer.addPass(this.normalPassInstance);
             this.ssaoEffect = new SSAOEffect(cam, this.normalPassInstance.texture, this.effectsConfig.ssao);
             this.effectPassSSAO = new EffectPass(cam, this.ssaoEffect);
@@ -216,18 +242,18 @@ export class RenderingPlugin extends Plugin {
         if (!this.effectsConfig[effectName]) return console.warn(`RenderingPlugin: Effect "${effectName}" not found.`);
         this.effectsConfig[effectName].enabled = enabled;
         this._rebuildEffectPasses();
-        this.space.emit('effect:enabled:changed', { effectName, enabled });
+        this.space.emit('effect:enabled:changed', {effectName, enabled});
     }
 
     configureEffect(effectName, settings) {
         if (!this.effectsConfig[effectName]) return console.warn(`RenderingPlugin: Effect "${effectName}" not found.`);
         Object.assign(this.effectsConfig[effectName], settings);
         this._rebuildEffectPasses();
-        this.space.emit('effect:settings:changed', { effectName, settings });
+        this.space.emit('effect:settings:changed', {effectName, settings});
     }
 
     getEffectConfiguration(effectName) {
-        return this.effectsConfig[effectName] ? { ...this.effectsConfig[effectName] } : null;
+        return this.effectsConfig[effectName] ? {...this.effectsConfig[effectName]} : null;
     }
 
     addLight(id, type, options = {}) {
@@ -237,7 +263,9 @@ export class RenderingPlugin extends Plugin {
         const intensity = options.intensity ?? 1.0;
 
         switch (type.toLowerCase()) {
-            case 'ambient': light = new THREE.AmbientLight(color, intensity); break;
+            case 'ambient':
+                light = new THREE.AmbientLight(color, intensity);
+                break;
             case 'directional':
                 light = new THREE.DirectionalLight(color, intensity);
                 light.position.set(options.position?.x ?? 50, options.position?.y ?? 100, options.position?.z ?? 75);
@@ -258,8 +286,10 @@ export class RenderingPlugin extends Plugin {
                     light.shadow.camera.near = options.shadowCameraNear ?? 0.5;
                     light.shadow.camera.far = options.shadowCameraFar ?? 500;
                     const d = options.shadowCameraSize ?? 100;
-                    light.shadow.camera.left = -d; light.shadow.camera.right = d;
-                    light.shadow.camera.top = d; light.shadow.camera.bottom = -d;
+                    light.shadow.camera.left = -d;
+                    light.shadow.camera.right = d;
+                    light.shadow.camera.top = d;
+                    light.shadow.camera.bottom = -d;
                 }
                 break;
             case 'point':
@@ -273,14 +303,16 @@ export class RenderingPlugin extends Plugin {
                     light.shadow.camera.far = options.shadowCameraFar ?? 500;
                 }
                 break;
-            default: console.error(`RenderingPlugin: Unknown light type '${type}'`); return null;
+            default:
+                console.error(`RenderingPlugin: Unknown light type '${type}'`);
+                return null;
         }
 
         if (!light) return null;
         light.userData.lightId = id;
         this.managedLights.set(id, light);
         this.scene.add(light);
-        this.space.emit('light:added', { id, type, light });
+        this.space.emit('light:added', {id, type, light});
         return light;
     }
 
@@ -291,7 +323,7 @@ export class RenderingPlugin extends Plugin {
         this.scene.remove(light);
         light.dispose?.();
         this.managedLights.delete(id);
-        this.space.emit('light:removed', { id });
+        this.space.emit('light:removed', {id});
         return true;
     }
 
@@ -314,25 +346,33 @@ export class RenderingPlugin extends Plugin {
             options.shadowCameraFar !== undefined && (light.shadow.camera.far = options.shadowCameraFar);
             if (light.shadow.camera instanceof THREE.OrthographicCamera && options.shadowCameraSize !== undefined) {
                 const d = options.shadowCameraSize;
-                light.shadow.camera.left = -d; light.shadow.camera.right = d;
-                light.shadow.camera.top = d; light.shadow.camera.bottom = -d;
+                light.shadow.camera.left = -d;
+                light.shadow.camera.right = d;
+                light.shadow.camera.top = d;
+                light.shadow.camera.bottom = -d;
             }
             light.shadow.camera.updateProjectionMatrix();
         }
-        this.space.emit('light:configured', { id, light, options });
+        this.space.emit('light:configured', {id, light, options});
         return true;
     }
 
     _setupLighting() {
-        this.addLight('defaultAmbient', 'ambient', { intensity: 0.8 });
+        this.addLight('defaultAmbient', 'ambient', {intensity: 0.8});
         this.addLight('defaultDirectional', 'directional', {
-            intensity: 1.2, position: { x: 150, y: 200, z: 100 }, castShadow: true,
-            shadowMapSizeWidth: 2048, shadowMapSizeHeight: 2048, shadowCameraNear: 10, shadowCameraFar: 600, shadowCameraSize: 150,
+            intensity: 1.2,
+            position: {x: 150, y: 200, z: 100},
+            castShadow: true,
+            shadowMapSizeWidth: 2048,
+            shadowMapSizeHeight: 2048,
+            shadowCameraNear: 10,
+            shadowCameraFar: 600,
+            shadowCameraSize: 150,
         });
     }
 
     setBackground(color = 0x000000, alpha = 0) {
-        this.background = { color, alpha };
+        this.background = {color, alpha};
         this.renderGL?.setClearColor(color, alpha);
         if (this.webglCanvas) this.webglCanvas.style.backgroundColor = alpha === 0 ? 'transparent' : `#${new THREE.Color(color).getHexString()}`;
     }
@@ -341,14 +381,14 @@ export class RenderingPlugin extends Plugin {
         const cam = this.pluginManager?.getPlugin('CameraPlugin')?.getCameraInstance();
         if (!cam || !this.renderGL || !this.renderCSS3D || !this.composer) return;
 
-        const { innerWidth: iw, innerHeight: ih } = window;
+        const {innerWidth: iw, innerHeight: ih} = window;
         cam.aspect = iw / ih;
         cam.updateProjectionMatrix();
 
         this.renderGL.setSize(iw, ih);
         this.composer.setSize(iw, ih);
         this.renderCSS3D.setSize(iw, ih);
-        this.space.emit('renderer:resize', { width: iw, height: ih });
+        this.space.emit('renderer:resize', {width: iw, height: ih});
     };
 
     _updateFrustumHelper() {
@@ -365,13 +405,13 @@ export class RenderingPlugin extends Plugin {
         // NDC coordinates for near and far planes
         const ndcCorners = [
             new THREE.Vector3(-1, -1, -1), // Near bottom left
-            new THREE.Vector3( 1, -1, -1), // Near bottom right
-            new THREE.Vector3( 1,  1, -1), // Near top right
-            new THREE.Vector3(-1,  1, -1), // Near top left
-            new THREE.Vector3(-1, -1,  1), // Far bottom left
-            new THREE.Vector3( 1, -1,  1), // Far bottom right
-            new THREE.Vector3( 1,  1,  1), // Far top right
-            new THREE.Vector3(-1,  1,  1)  // Far top left
+            new THREE.Vector3(1, -1, -1), // Near bottom right
+            new THREE.Vector3(1, 1, -1), // Near top right
+            new THREE.Vector3(-1, 1, -1), // Near top left
+            new THREE.Vector3(-1, -1, 1), // Far bottom left
+            new THREE.Vector3(1, -1, 1), // Far bottom right
+            new THREE.Vector3(1, 1, 1), // Far top right
+            new THREE.Vector3(-1, 1, 1)  // Far top left
         ];
 
         for (let i = 0; i < 8; i++) {
@@ -411,17 +451,29 @@ export class RenderingPlugin extends Plugin {
         this.frustumHelper.visible = true; // Ensure it's visible
     }
 
-    getWebGLScene() { return this.scene; }
-    getCSS3DScene() { return this.cssScene; }
-    getInstancedMeshManager() { return this.instancedMeshManager; }
-    getCSS3DRenderer() { return this.renderCSS3D; }
+    getWebGLScene() {
+        return this.scene;
+    }
+
+    getCSS3DScene() {
+        return this.cssScene;
+    }
+
+    getInstancedMeshManager() {
+        return this.instancedMeshManager;
+    }
+
+    getCSS3DRenderer() {
+        return this.renderCSS3D;
+    }
 
     dispose() {
         super.dispose();
         window.removeEventListener('resize', this._onWindowResize);
         this.space.off('selection:changed', this.handleSelectionChange);
 
-        this.instancedMeshManager?.dispose(); this.instancedMeshManager = null;
+        this.instancedMeshManager?.dispose();
+        this.instancedMeshManager = null;
 
         this.effectPassBloom?.dispose();
         this.effectPassSSAO?.dispose();
@@ -446,6 +498,8 @@ export class RenderingPlugin extends Plugin {
         this.scene?.clear();
         this.cssScene?.clear();
 
-        this.scene = null; this.cssScene = null; this.renderGL = null;
+        this.scene = null;
+        this.cssScene = null;
+        this.renderGL = null;
     }
 }

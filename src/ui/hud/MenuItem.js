@@ -61,9 +61,9 @@ export class MenuItem {
             }
             // For items that are not checkboxes or submenus, close the main menu
             if (this.parentMenuOrSection.close && !this.options.submenu && this.options.type !== 'checkbox') {
-                 // Close all levels of menus
+                // Close all levels of menus
                 let parent = this.parentMenuOrSection;
-                while(parent && parent.close) {
+                while (parent && parent.close) {
                     parent.close();
                     parent = parent.parentMenuOrSection || parent.menu; // Navigate up
                 }

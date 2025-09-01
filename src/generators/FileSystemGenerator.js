@@ -33,7 +33,7 @@ export class FileSystemGenerator {
         }
 
         const defaultOptions = {
-            rootPosition: { x: 0, y: 0, z: 0 },
+            rootPosition: {x: 0, y: 0, z: 0},
             nodeTypeMapping: {
                 directory: 'group', // Or 'html' with custom styling
                 file: 'document', // Or 'html'
@@ -59,7 +59,7 @@ export class FileSystemGenerator {
             }),
         };
 
-        const config = { ...defaultOptions, ...options };
+        const config = {...defaultOptions, ...options};
         this._traverseFsItem(fsData, space, config, config.rootPosition, null);
     }
 
@@ -80,20 +80,20 @@ export class FileSystemGenerator {
         currentNode = space.createNode({
             id: S.Utils.generateId(item.name), // Consider more robust ID generation if names clash
             type: createType,
-            position: { ...position }, // Copy position
+            position: {...position}, // Copy position
             data: nodeData,
             mass: item.type === 'directory' ? 1.5 : 0.8,
         });
 
         if (parentNode && currentNode) {
-            space.addEdge(parentNode, currentNode, { type: 'straight', color: 0xaaaaaa, thickness: 1.5 });
+            space.addEdge(parentNode, currentNode, {type: 'straight', color: 0xaaaaaa, thickness: 1.5});
         }
 
         if (item.type === 'directory' && item.children && item.children.length > 0) {
             // For GroupNode, add children to its data for potential sub-layout
             if (createType === 'group' && currentNode) {
                 const childIds = [];
-                 // Temporarily store children to get their IDs after creation
+                // Temporarily store children to get their IDs after creation
                 const tempChildren = [];
 
                 item.children.forEach((childItem, index) => {
@@ -102,21 +102,21 @@ export class FileSystemGenerator {
                     // This simple version just creates them somewhere near.
                     const childPosition = {
                         x: position.x + (index % 3 - 1) * 100, // Simple spread for demo
-                        y: position.y - 100 - Math.floor(index/3) * 80,
+                        y: position.y - 100 - Math.floor(index / 3) * 80,
                         z: position.z + (index % 2) * 20
                     };
                     const childNode = this._traverseFsItem(childItem, space, config, childPosition, currentNode);
                     if (childNode) {
-                       childIds.push(childNode.id);
+                        childIds.push(childNode.id);
                     }
                 });
                 // If GroupNode, update its children list
                 // currentNode.data.children = childIds; // This would be if GroupNode handles child IDs itself
             } else {
-                 item.children.forEach((childItem, index) => {
+                item.children.forEach((childItem, index) => {
                     const childPosition = {
                         x: position.x + (index % 3 - 1) * 150,
-                        y: position.y - 150 - Math.floor(index/3) * 120,
+                        y: position.y - 150 - Math.floor(index / 3) * 120,
                         z: position.z + (index % 2) * 30
                     };
                     this._traverseFsItem(childItem, space, config, childPosition, currentNode);
@@ -129,14 +129,24 @@ export class FileSystemGenerator {
     _getFileIcon(fileName) {
         const ext = fileName.slice(fileName.lastIndexOf('.') + 1).toLowerCase();
         switch (ext) {
-            case 'txt': return '📄';
-            case 'json': return '{ }';
-            case 'js': return '📜';
-            case 'html': return '🌐';
-            case 'css': return '🎨';
-            case 'md': return '📝';
-            case 'png': case 'jpg': case 'gif': return '🖼️';
-            default: return '❔';
+            case 'txt':
+                return '📄';
+            case 'json':
+                return '{ }';
+            case 'js':
+                return '📜';
+            case 'html':
+                return '🌐';
+            case 'css':
+                return '🎨';
+            case 'md':
+                return '📝';
+            case 'png':
+            case 'jpg':
+            case 'gif':
+                return '🖼️';
+            default:
+                return '❔';
         }
     }
 }

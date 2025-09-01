@@ -1,4 +1,4 @@
-import { createContentAdapter } from '../../zoom/ContentAdapter.js';
+import {createContentAdapter} from '../../zoom/ContentAdapter.js';
 
 // Demo metadata for automatic loading
 export const demoMetadata = {
@@ -31,7 +31,7 @@ function createFractalZoomDemo(space) {
     createDetailNodes(space);
     createDataNodes(space);
     createTextNodes(space);
-    
+
     // Setup custom LOD levels for this demo
     if (fractalZoomPlugin) {
         setupCustomLODLevels(space, fractalZoomPlugin);
@@ -44,7 +44,7 @@ function createFractalZoomDemo(space) {
     addZoomInstructions(space);
 
     console.log('Fractal Zoom Demo created successfully');
-    
+
     return {
         name: 'Fractal Zoom Demo',
         description: 'Infinite zoom with level-of-detail management and content adaptation',
@@ -62,9 +62,9 @@ function createFractalZoomDemo(space) {
  */
 function createOverviewNodes(space) {
     const overviewData = [
-        { 
-            id: 'overview-science', 
-            position: { x: 0, y: 200, z: 0 },
+        {
+            id: 'overview-science',
+            position: {x: 0, y: 200, z: 0},
             title: 'Science',
             summary: 'Scientific Domains',
             detail: 'Physics, Chemistry, Biology, Computer Science',
@@ -78,9 +78,9 @@ function createOverviewNodes(space) {
                 </ul>
             `
         },
-        { 
-            id: 'overview-arts', 
-            position: { x: 300, y: 200, z: 0 },
+        {
+            id: 'overview-arts',
+            position: {x: 300, y: 200, z: 0},
             title: 'Arts',
             summary: 'Creative Arts',
             detail: 'Visual Arts, Music, Literature, Theater',
@@ -94,9 +94,9 @@ function createOverviewNodes(space) {
                 </ul>
             `
         },
-        { 
-            id: 'overview-tech', 
-            position: { x: -300, y: 200, z: 0 },
+        {
+            id: 'overview-tech',
+            position: {x: -300, y: 200, z: 0},
             title: 'Technology',
             summary: 'Tech Fields',
             detail: 'AI, Robotics, Web Development, Mobile Apps',
@@ -116,9 +116,9 @@ function createOverviewNodes(space) {
         const node = space.addNode(data.id, 'html', {
             position: data.position,
             content: data.summary,
-            size: { width: 150, height: 100 }
+            size: {width: 150, height: 100}
         });
-        
+
         // Store full content data for later use
         node.fractalData = data;
     });
@@ -131,7 +131,7 @@ function createDetailNodes(space) {
     const detailData = [
         {
             id: 'detail-physics',
-            position: { x: -100, y: 50, z: 0 },
+            position: {x: -100, y: 50, z: 0},
             parent: 'overview-science',
             title: 'Physics',
             data: {
@@ -150,7 +150,7 @@ function createDetailNodes(space) {
         },
         {
             id: 'detail-cs',
-            position: { x: 100, y: 50, z: 0 },
+            position: {x: 100, y: 50, z: 0},
             parent: 'overview-science',
             title: 'Computer Science',
             data: {
@@ -173,11 +173,11 @@ function createDetailNodes(space) {
         const node = space.addNode(data.id, 'html', {
             position: data.position,
             content: data.data.summary,
-            size: { width: 120, height: 80 }
+            size: {width: 120, height: 80}
         });
-        
+
         node.fractalData = data.data;
-        
+
         // Connect to parent
         if (data.parent) {
             space.addEdge(`${data.parent}-${data.id}`, data.parent, data.id, 'curved');
@@ -192,18 +192,18 @@ function createDataNodes(space) {
     const datasets = [
         {
             id: 'data-performance',
-            position: { x: 200, y: -100, z: 0 },
+            position: {x: 200, y: -100, z: 0},
             title: 'Performance Data',
             data: [
-                { year: 2020, value: 85 },
-                { year: 2021, value: 92 },
-                { year: 2022, value: 88 },
-                { year: 2023, value: 95 }
+                {year: 2020, value: 85},
+                {year: 2021, value: 92},
+                {year: 2022, value: 88},
+                {year: 2023, value: 95}
             ]
         },
         {
             id: 'data-usage',
-            position: { x: -200, y: -100, z: 0 },
+            position: {x: -200, y: -100, z: 0},
             title: 'Usage Statistics',
             data: {
                 users: 1250000,
@@ -218,10 +218,10 @@ function createDataNodes(space) {
         const node = space.addNode(dataset.id, 'html', {
             position: dataset.position,
             content: `<div class="data-summary">${dataset.title}</div>`,
-            size: { width: 140, height: 90 }
+            size: {width: 140, height: 90}
         });
-        
-        node.fractalData = { type: 'data', ...dataset };
+
+        node.fractalData = {type: 'data', ...dataset};
     });
 }
 
@@ -232,7 +232,7 @@ function createTextNodes(space) {
     const textData = [
         {
             id: 'text-ai',
-            position: { x: 0, y: -250, z: 0 },
+            position: {x: 0, y: -250, z: 0},
             title: 'Artificial Intelligence',
             summary: 'AI Overview',
             detail: 'Machine learning, neural networks, and intelligent systems for automation and decision making.',
@@ -262,9 +262,9 @@ function createTextNodes(space) {
         const node = space.addNode(data.id, 'html', {
             position: data.position,
             content: data.summary,
-            size: { width: 160, height: 100 }
+            size: {width: 160, height: 100}
         });
-        
+
         node.fractalData = data;
     });
 }
@@ -318,8 +318,8 @@ function setupContentAdapters(space) {
 
         if (node.fractalData.type === 'data') {
             // Data visualization adapter
-            adapter = createContentAdapter(node.id, 'data', { data: node.fractalData.data });
-            
+            adapter = createContentAdapter(node.id, 'data', {data: node.fractalData.data});
+
             adapter.defineDataLevels({
                 summary: {
                     minZoom: -10,
@@ -379,7 +379,7 @@ function setupContentAdapters(space) {
  */
 function addZoomInstructions(space) {
     const instructionsNode = space.addNode('zoom-instructions', 'html', {
-        position: { x: 400, y: -200, z: 0 },
+        position: {x: 400, y: -200, z: 0},
         content: `
             <div class="zoom-instructions">
                 <h4>🌀 Fractal Zoom Controls</h4>
@@ -395,17 +395,17 @@ function addZoomInstructions(space) {
                 <p><em>Content adapts automatically!</em></p>
             </div>
         `,
-        size: { width: 200, height: 160 }
+        size: {width: 200, height: 160}
     });
 
     // Create a simple content adapter for instructions
     const fractalZoomPlugin = space.plugins.getPlugin('FractalZoomPlugin');
     if (fractalZoomPlugin) {
         const adapter = createContentAdapter('zoom-instructions', 'html');
-        
+
         adapter.defineHTMLLevel(-10, -2, '<div class="zoom-help">🌀 Zoom Controls</div>');
         adapter.defineHTMLLevel(-2, 10, instructionsNode.htmlElement.innerHTML);
-        
+
         fractalZoomPlugin.addContentAdapter('zoom-instructions', adapter);
     }
 }

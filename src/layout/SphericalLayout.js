@@ -8,7 +8,7 @@ export class SphericalLayout {
     };
 
     constructor(config = {}) {
-        this.settings = { ...this.settings, ...config };
+        this.settings = {...this.settings, ...config};
     }
 
     setContext(space, pluginManager) {
@@ -42,17 +42,29 @@ export class SphericalLayout {
     }
 
     updateConfig(config) {
-        this.settings = { ...this.settings, ...config };
+        this.settings = {...this.settings, ...config};
     }
 
-    run() {}
-    stop() {}
-    kick() {}
+    run() {
+    }
 
-    addNode(node) {}
-    removeNode(node) {}
-    addEdge(edge) {}
-    removeEdge(edge) {}
+    stop() {
+    }
+
+    kick() {
+    }
+
+    addNode(node) {
+    }
+
+    removeNode(node) {
+    }
+
+    addEdge(edge) {
+    }
+
+    removeEdge(edge) {
+    }
 
     dispose() {
         this.space = null;

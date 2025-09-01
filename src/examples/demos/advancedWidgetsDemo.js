@@ -20,13 +20,13 @@ export const demoMetadata = {
 
 export function createGraph(space) {
     // Clear any existing content
-    space.importGraphFromJSON({ nodes: [], edges: [] });
+    space.importGraphFromJSON({nodes: [], edges: []});
 
     // Central hub node
     const hubNode = space.addNode(
         new S.TextMeshNode(
             'hub',
-            { x: 0, y: 0, z: 0 },
+            {x: 0, y: 0, z: 0},
             {
                 text: 'Advanced\nWidgets',
                 fontSize: 24,
@@ -45,7 +45,7 @@ export function createGraph(space) {
     const controlPanel = space.addNode(
         new S.ControlPanelNode(
             'control-panel',
-            { x: -300, y: 150, z: 0 },
+            {x: -300, y: 150, z: 0},
             {
                 title: 'System Controls',
                 width: 280,
@@ -66,10 +66,10 @@ export function createGraph(space) {
                         label: 'Quality',
                         value: 'high',
                         options: [
-                            { value: 'low', label: 'Low' },
-                            { value: 'medium', label: 'Medium' },
-                            { value: 'high', label: 'High' },
-                            { value: 'ultra', label: 'Ultra' }
+                            {value: 'low', label: 'Low'},
+                            {value: 'medium', label: 'Medium'},
+                            {value: 'high', label: 'High'},
+                            {value: 'ultra', label: 'Ultra'}
                         ]
                     },
                     {
@@ -94,7 +94,7 @@ export function createGraph(space) {
     const progressBar = space.addNode(
         new S.ProgressNode(
             'progress-bar',
-            { x: 300, y: 150, z: 0 },
+            {x: 300, y: 150, z: 0},
             {
                 progressType: 'bar',
                 label: 'Loading Progress',
@@ -109,7 +109,7 @@ export function createGraph(space) {
     const progressCircle = space.addNode(
         new S.ProgressNode(
             'progress-circle',
-            { x: 450, y: 150, z: 0 },
+            {x: 450, y: 150, z: 0},
             {
                 progressType: 'circular',
                 label: 'CPU Usage',
@@ -125,7 +125,7 @@ export function createGraph(space) {
     const progressGauge = space.addNode(
         new S.ProgressNode(
             'progress-gauge',
-            { x: 600, y: 150, z: 0 },
+            {x: 600, y: 150, z: 0},
             {
                 progressType: 'gauge',
                 label: 'Temperature',
@@ -142,7 +142,7 @@ export function createGraph(space) {
     const canvas = space.addNode(
         new S.CanvasNode(
             'canvas',
-            { x: -400, y: -150, z: 0 },
+            {x: -400, y: -150, z: 0},
             {
                 title: 'Drawing Canvas',
                 width: 350,
@@ -158,13 +158,13 @@ export function createGraph(space) {
     const fractalShape = space.addNode(
         new S.ProceduralShapeNode(
             'fractal',
-            { x: 200, y: -150, z: 0 },
+            {x: 200, y: -150, z: 0},
             {
                 shapeType: 'fractal',
                 complexity: 3,
                 size: 60,
                 color: 0x8e44ad,
-                parameters: { iterations: 3, scale: 0.6, offset: 1.2 },
+                parameters: {iterations: 3, scale: 0.6, offset: 1.2},
                 animated: true,
                 wireframe: false
             },
@@ -175,12 +175,12 @@ export function createGraph(space) {
     const organicShape = space.addNode(
         new S.ProceduralShapeNode(
             'organic',
-            { x: 350, y: -150, z: 0 },
+            {x: 350, y: -150, z: 0},
             {
                 shapeType: 'organic',
                 size: 80,
                 color: 0x27ae60,
-                parameters: { segments: 32, rings: 16, noise: 0.4, bulges: 2 },
+                parameters: {segments: 32, rings: 16, noise: 0.4, bulges: 2},
                 animated: true,
                 materialType: 'phong'
             },
@@ -191,12 +191,12 @@ export function createGraph(space) {
     const crystalShape = space.addNode(
         new S.ProceduralShapeNode(
             'crystal',
-            { x: 500, y: -150, z: 0 },
+            {x: 500, y: -150, z: 0},
             {
                 shapeType: 'crystal',
                 size: 70,
                 color: 0x3498db,
-                parameters: { faces: 8, height: 80, irregularity: 0.15 },
+                parameters: {faces: 8, height: 80, irregularity: 0.15},
                 animated: false,
                 materialType: 'physical'
             },
@@ -208,7 +208,7 @@ export function createGraph(space) {
     const titleText = space.addNode(
         new S.TextMeshNode(
             'title',
-            { x: -150, y: 280, z: 0 },
+            {x: -150, y: 280, z: 0},
             {
                 text: 'Interactive\nWidgets',
                 fontSize: 18,
@@ -226,7 +226,7 @@ export function createGraph(space) {
     const subtitleText = space.addNode(
         new S.TextMeshNode(
             'subtitle',
-            { x: 150, y: 280, z: 0 },
+            {x: 150, y: 280, z: 0},
             {
                 text: 'Procedural\nShapes',
                 fontSize: 18,
@@ -242,7 +242,7 @@ export function createGraph(space) {
     );
 
     // Create advanced edge connections
-    
+
     // Flow edge from hub to control panel
     const flowEdge1 = space.addEdge(hubNode, controlPanel, {
         type: 'flow',
@@ -329,17 +329,17 @@ export function createGraph(space) {
 
     // Set up event listeners for interactive features
     space.on('graph:node:controlChanged', (event) => {
-        const { node, controlId, value } = event;
+        const {node, controlId, value} = event;
         console.log(`Control "${controlId}" changed to:`, value);
-        
+
         // Example: Update progress based on volume control
         if (controlId === 'volume') {
             progressBar.setValue(value);
         }
-        
+
         // Example: Change shape complexity based on quality setting
         if (controlId === 'quality') {
-            const complexityMap = { low: 2, medium: 3, high: 4, ultra: 5 };
+            const complexityMap = {low: 2, medium: 3, high: 4, ultra: 5};
             fractalShape.setComplexity(complexityMap[value] || 3);
         }
     });
@@ -348,15 +348,15 @@ export function createGraph(space) {
     let animationTime = 0;
     const animateProgress = () => {
         animationTime += 0.016; // ~60fps
-        
+
         // Animate different progress indicators
         const waveValue = 50 + Math.sin(animationTime * 0.5) * 30;
         const pulseValue = 50 + Math.sin(animationTime * 0.8) * 40;
         const sawtoothValue = (animationTime * 10) % 100;
-        
+
         progressCircle.setValue(Math.max(0, Math.min(100, waveValue)));
         progressGauge.setValue(Math.max(0, Math.min(100, pulseValue)));
-        
+
         requestAnimationFrame(animateProgress);
     };
     animateProgress();

@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { FractalZoomManager } from './FractalZoomManager.js';
+import {beforeEach, describe, expect, it, vi} from 'vitest';
+import {FractalZoomManager} from './FractalZoomManager.js';
 import * as THREE_MOCKED from 'three'; // Import the mocked THREE
 
 describe('FractalZoomManager', () => {
@@ -10,7 +10,7 @@ describe('FractalZoomManager', () => {
     let mockCameraInstance;
     let mockPluginManager;
     let mockNodePlugin;
-    
+
     beforeEach(() => {
         mockCameraInstance = {
             position: new THREE_MOCKED.Vector3(0, 0, 1000), // Default distance for zoom level 0
@@ -47,30 +47,30 @@ describe('FractalZoomManager', () => {
             emit: vi.fn(),
             on: vi.fn()
         };
-        
+
         mockNodes = [
-            { 
-                id: 'node1', 
-                position: { x: 0, y: 0, z: 0 },
+            {
+                id: 'node1',
+                position: {x: 0, y: 0, z: 0},
                 visible: true,
                 isDetailNode: false,
                 parentId: null,
                 getLevelOfDetail: vi.fn(() => 'high'),
                 setLevelOfDetail: vi.fn(),
-                getContentAdapter: vi.fn(() => ({ adapt: vi.fn() }))
+                getContentAdapter: vi.fn(() => ({adapt: vi.fn()}))
             },
-            { 
-                id: 'node2', 
-                position: { x: 5, y: 0, z: 0 },
+            {
+                id: 'node2',
+                position: {x: 5, y: 0, z: 0},
                 visible: true,
                 isDetailNode: false,
                 parentId: null,
                 getLevelOfDetail: vi.fn(() => 'medium'),
                 setLevelOfDetail: vi.fn(),
-                getContentAdapter: vi.fn(() => ({ adapt: vi.fn() }))
+                getContentAdapter: vi.fn(() => ({adapt: vi.fn()}))
             }
         ];
-        
+
         // The constructor for FractalZoomManager only takes spaceGraph
         zoomManager = new FractalZoomManager(mockSpace);
         zoomManager.init(mockCameraPlugin); // Initialize with camera plugin
@@ -110,7 +110,7 @@ describe('FractalZoomManager', () => {
     it('should clamp zoom level to valid range', () => {
         zoomManager.zoomToLevel(30, 0); // Above maxZoomIn (20)
         expect(zoomManager.getZoomLevel()).toBe(zoomManager.maxZoomIn); // Should be clamped to maxZoomIn
-        
+
         zoomManager.zoomToLevel(-20, 0); // Below maxZoomOut (-10)
         expect(zoomManager.getZoomLevel()).toBe(zoomManager.maxZoomOut); // Should be clamped to maxZoomOut
     });
@@ -118,14 +118,14 @@ describe('FractalZoomManager', () => {
     it('should handle zoom in/out operations', () => {
         zoomManager.zoomToLevel(1.0, 0);
         expect(zoomManager.getZoomLevel()).toBe(1.0);
-        
+
         // zoomIn uses this.zoomStep which is 0.5
         // 1.0 + 0.5 = 1.5
         zoomManager.zoomIn();
         // GSAP updates currentZoomLevel asynchronously. targetZoomLevel is synchronous.
         expect(zoomManager.targetZoomLevel).toBe(1.5);
         zoomManager.currentZoomLevel = zoomManager.targetZoomLevel; // Manually sync for next step in test
-        
+
         // 1.5 - 0.5 = 1.0
         zoomManager.zoomOut();
         expect(zoomManager.targetZoomLevel).toBe(1.0);
@@ -148,7 +148,7 @@ describe('FractalZoomManager', () => {
     it('should get correct LOD config based on zoom level', () => {
         // Based on _initializeLODLevels:
         // -5: overview, -2: distant, 0: normal, 3: detailed, 6: micro
-        
+
         zoomManager.zoomToLevel(-6, 0); // Below -5
         let lodConfig = zoomManager.getCurrentLODConfig();
         // The loop in getCurrentLODConfig will result in the lowest config if zoom < lowest threshold.
@@ -160,7 +160,7 @@ describe('FractalZoomManager', () => {
         // For now, let's test based on current implementation.
         // If zoomLevel is -6, it defaults to 'normal' (level 0 config)
         // expect(lodConfig.name).toBe('overview'); // This would be the expectation if it picked the lowest for < -5
-        
+
         // Let's test within defined thresholds for now
         zoomManager.zoomToLevel(-5, 0);
         lodConfig = zoomManager.getCurrentLODConfig();
@@ -169,7 +169,7 @@ describe('FractalZoomManager', () => {
         zoomManager.zoomToLevel(-2, 0);
         lodConfig = zoomManager.getCurrentLODConfig();
         expect(lodConfig.name).toBe('distant');
-        
+
         zoomManager.zoomToLevel(0, 0);
         lodConfig = zoomManager.getCurrentLODConfig();
         expect(lodConfig.name).toBe('normal');
@@ -192,7 +192,7 @@ describe('FractalZoomManager', () => {
         let lodConfig = zoomManager.getCurrentLODConfig();
         expect(lodConfig.labelsVisible).toBe(false);
         expect(lodConfig.nodeDetailLevel).toBe('minimal');
-        
+
         zoomManager.zoomToLevel(3, 0); // detailed level
         lodConfig = zoomManager.getCurrentLODConfig();
         expect(lodConfig.labelsVisible).toBe(true);

@@ -1,5 +1,3 @@
-import * as THREE from 'three';
-
 export class TreeMapLayout {
     static layoutName = 'treemap';
     space = null;
@@ -15,7 +13,7 @@ export class TreeMapLayout {
     };
 
     constructor(config = {}) {
-        this.settings = { ...this.settings, ...config };
+        this.settings = {...this.settings, ...config};
     }
 
     setContext(space, pluginManager) {
@@ -24,7 +22,7 @@ export class TreeMapLayout {
     }
 
     updateConfig(newConfig) {
-        this.settings = { ...this.settings, ...newConfig };
+        this.settings = {...this.settings, ...newConfig};
     }
 
     init(nodes, edges, config = {}) {
@@ -34,7 +32,7 @@ export class TreeMapLayout {
         const nodesToArrange = nodes.filter(n => !n.isPinned);
         if (nodesToArrange.length === 0) return;
 
-        const { padding, plane, depth, centerOrigin, width, height } = this.settings;
+        const {padding, plane, depth, centerOrigin, width, height} = this.settings;
 
         // Calculate total area and assign areas to nodes
         let totalArea = 0;
@@ -48,7 +46,7 @@ export class TreeMapLayout {
         nodesToArrange.sort((a, b) => b._treemapArea - a._treemapArea);
 
         // Perform the squarified treemap layout
-        const rect = { x: 0, y: 0, width, height };
+        const rect = {x: 0, y: 0, width, height};
         this._squarify(nodesToArrange, rect, totalArea, padding);
 
         // Apply positions and potentially resize nodes
@@ -56,7 +54,7 @@ export class TreeMapLayout {
         let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
 
         nodesToArrange.forEach(node => {
-            const { x, y, width: nodeW, height: nodeH } = node._treemapRect;
+            const {x, y, width: nodeW, height: nodeH} = node._treemapRect;
             let finalX, finalY, finalZ;
 
             if (plane === 'xy') {
@@ -144,7 +142,7 @@ export class TreeMapLayout {
 
         this._layoutRow(currentRow, rect, rowArea, totalArea, padding);
 
-        const newRect = { ...rect };
+        const newRect = {...rect};
         if (rect.width > rect.height) { // Layouted horizontally
             newRect.x += currentRow[0]._treemapRect.width + padding;
             newRect.width -= (currentRow[0]._treemapRect.width + padding);
@@ -198,15 +196,29 @@ export class TreeMapLayout {
         });
     }
 
-    run() { /* Not typically a continuous layout */ }
-    stop() { /* Nothing to stop */ }
-    update() { /* No per-frame updates needed usually */ }
+    run() { /* Not typically a continuous layout */
+    }
 
-    addNode(node) { /* Could re-trigger init or add incrementally (complex) */ }
-    removeNode(node) { /* Could re-trigger init or remove incrementally (complex) */ }
-    addEdge(edge) {}
-    removeEdge(edge) {}
-    kick() {}
+    stop() { /* Nothing to stop */
+    }
+
+    update() { /* No per-frame updates needed usually */
+    }
+
+    addNode(node) { /* Could re-trigger init or add incrementally (complex) */
+    }
+
+    removeNode(node) { /* Could re-trigger init or remove incrementally (complex) */
+    }
+
+    addEdge(edge) {
+    }
+
+    removeEdge(edge) {
+    }
+
+    kick() {
+    }
 
     dispose() {
         this.space = null;

@@ -14,9 +14,12 @@ export class DynamicThicknessEdge extends Edge {
             // Property in 'data' that drives thickness, e.g., data: { value: 5 }
             thicknessDataKey: data.thicknessDataKey ?? 'value',
             // Range for mapping the data value to thickness
-            thicknessRange: data.thicknessRange ?? { min: 0, max: 100 }, // Expected input data range
+            thicknessRange: data.thicknessRange ?? {min: 0, max: 100}, // Expected input data range
             // Actual visual thickness range
-            visualThicknessRange: data.visualThicknessRange ?? { min: DynamicThicknessEdge.MIN_THICKNESS, max: DynamicThicknessEdge.MAX_THICKNESS },
+            visualThicknessRange: data.visualThicknessRange ?? {
+                min: DynamicThicknessEdge.MIN_THICKNESS,
+                max: DynamicThicknessEdge.MAX_THICKNESS
+            },
         }, data);
 
         super(id, sourceNode, targetNode, dynamicData);
@@ -34,12 +37,12 @@ export class DynamicThicknessEdge extends Edge {
         const value = this.data[this.data.thicknessDataKey] ?? null;
 
         if (typeof value === 'number' && isFinite(value)) {
-            const { thicknessRange, visualThicknessRange } = this.data;
+            const {thicknessRange, visualThicknessRange} = this.data;
 
             // Normalize value from data range to 0-1
             let normalizedValue = 0;
             if (thicknessRange.max > thicknessRange.min) {
-                 normalizedValue = (value - thicknessRange.min) / (thicknessRange.max - thicknessRange.min);
+                normalizedValue = (value - thicknessRange.min) / (thicknessRange.max - thicknessRange.min);
             } else if (thicknessRange.max === thicknessRange.min && value >= thicknessRange.min) {
                 normalizedValue = 1; // if data value matches the single point in range
             }
@@ -65,6 +68,6 @@ export class DynamicThicknessEdge extends Edge {
         this.data[this.data.thicknessDataKey] = newValue;
         this.updateThicknessFromData();
         // Could also trigger a general update if needed, e.g., for instanced rendering manager
-        this.space?.emit('edge:updated', { edge: this, property: 'data', value: this.data });
+        this.space?.emit('edge:updated', {edge: this, property: 'data', value: this.data});
     }
 }

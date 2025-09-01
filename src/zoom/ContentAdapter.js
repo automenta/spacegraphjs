@@ -16,7 +16,7 @@ export class ContentAdapter {
             maxCachedLevels: 5,
             ...config
         };
-        
+
         this.contentCache = new Map();
         this.currentContent = null;
         this.lastZoomLevel = 0;
@@ -40,12 +40,12 @@ export class ContentAdapter {
     adapt(node, lodConfig, zoomLevel) {
         // Check if zoom level change is significant enough to warrant content change
         if (Math.abs(zoomLevel - this.lastZoomLevel) < 0.5) return;
-        
+
         this.lastZoomLevel = zoomLevel;
-        
+
         // Find appropriate content for current zoom level
         const contentConfig = this._findContentForZoomLevel(zoomLevel);
-        
+
         if (contentConfig) {
             this._applyContent(node, contentConfig, lodConfig, zoomLevel);
         }
@@ -68,10 +68,10 @@ export class ContentAdapter {
      */
     _applyContent(node, contentConfig, lodConfig, zoomLevel) {
         if (!contentConfig.generator) return;
-        
+
         // Generate or retrieve cached content
         const content = this._getOrGenerateContent(contentConfig, lodConfig, zoomLevel);
-        
+
         if (content && content !== this.currentContent) {
             this._transitionToContent(node, content);
             this.currentContent = content;
@@ -83,22 +83,22 @@ export class ContentAdapter {
      */
     _getOrGenerateContent(contentConfig, lodConfig, zoomLevel) {
         const cacheKey = `${contentConfig.minZoom}-${contentConfig.maxZoom}-${zoomLevel.toFixed(1)}`;
-        
+
         if (this.contentCache.has(cacheKey)) {
             return this.contentCache.get(cacheKey);
         }
-        
+
         // Generate new content
         const content = contentConfig.generator(lodConfig, zoomLevel);
-        
+
         // Cache the content
         this.contentCache.set(cacheKey, content);
-        
+
         // Clean up cache if it gets too large
         if (this.contentCache.size > this.config.maxCachedLevels) {
             this._cleanupCache();
         }
-        
+
         return content;
     }
 
@@ -107,15 +107,15 @@ export class ContentAdapter {
      */
     _transitionToContent(node, content) {
         if (!node.htmlElement) return;
-        
+
         const contentElement = node.htmlElement.querySelector('.node-content');
         if (!contentElement) return;
-        
+
         if (this.config.fadeTransition) {
             // Fade out current content
             contentElement.style.transition = `opacity ${this.config.transitionDuration}s`;
             contentElement.style.opacity = '0';
-            
+
             setTimeout(() => {
                 // Update content
                 if (typeof content === 'string') {
@@ -125,7 +125,7 @@ export class ContentAdapter {
                 } else if (content.textContent) {
                     contentElement.textContent = content.textContent;
                 }
-                
+
                 // Fade in new content
                 contentElement.style.opacity = '1';
             }, this.config.transitionDuration * 1000);
@@ -248,7 +248,7 @@ export class DataContentAdapter extends ContentAdapter {
      */
     _generateDataVisualization(config, lodConfig, zoomLevel) {
         if (!this.data) return '<div>No data available</div>';
-        
+
         switch (config.type) {
             case 'summary':
                 return this._generateSummary(config);
@@ -278,7 +278,7 @@ export class DataContentAdapter extends ContentAdapter {
         // Simplified chart generation - in real implementation, this would use a charting library
         const chartType = config.chartType || 'bar';
         const dataPoints = Array.isArray(this.data) ? this.data.length : Object.keys(this.data).length;
-        
+
         return `
             <div class="data-chart">
                 <h4>${config.title || 'Chart'}</h4>
@@ -295,12 +295,12 @@ export class DataContentAdapter extends ContentAdapter {
      */
     _generateTable(config, zoomLevel) {
         if (!Array.isArray(this.data)) return '<div>Data not suitable for table</div>';
-        
+
         const maxRows = Math.min(config.maxRows || 10, this.data.length);
         const rows = this.data.slice(0, maxRows);
-        
+
         let html = '<table class="data-table"><thead><tr>';
-        
+
         // Generate headers
         if (rows.length > 0) {
             const headers = Object.keys(rows[0]);
@@ -308,7 +308,7 @@ export class DataContentAdapter extends ContentAdapter {
                 html += `<th>${header}</th>`;
             });
             html += '</tr></thead><tbody>';
-            
+
             // Generate rows
             rows.forEach(row => {
                 html += '<tr>';
@@ -318,7 +318,7 @@ export class DataContentAdapter extends ContentAdapter {
                 html += '</tr>';
             });
         }
-        
+
         html += '</tbody></table>';
         return html;
     }

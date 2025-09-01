@@ -1,6 +1,4 @@
-import { $ } from '../../utils.js';
-import * as THREE from 'three';
-import { HtmlNode } from '../../graph/nodes/HtmlNode.js';
+import {HtmlNode} from '../../graph/nodes/HtmlNode.js';
 
 export class ContextMenu {
     constructor(space, contextMenuElement, uiPluginCallbacks) {
@@ -19,8 +17,12 @@ export class ContextMenu {
         const li = e.target.closest('li[data-action]');
         if (!li || li.classList.contains('disabled')) return;
 
-        const { action, nodeId, edgeId, positionX, positionY, positionZ } = li.dataset;
-        const worldPos = positionX ? { x: parseFloat(positionX), y: parseFloat(positionY), z: parseFloat(positionZ) } : null;
+        const {action, nodeId, edgeId, positionX, positionY, positionZ} = li.dataset;
+        const worldPos = positionX ? {
+            x: parseFloat(positionX),
+            y: parseFloat(positionY),
+            z: parseFloat(positionZ)
+        } : null;
 
         this.hide();
 
@@ -81,16 +83,32 @@ export class ContextMenu {
                 break;
 
             case 'create-html-node':
-                worldPos && this.space.emit('ui:request:createNode', { type: 'html', position: worldPos, data: { label: 'New Node', content: 'Edit me!' } });
+                worldPos && this.space.emit('ui:request:createNode', {
+                    type: 'html',
+                    position: worldPos,
+                    data: {label: 'New Node', content: 'Edit me!'}
+                });
                 break;
             case 'create-note-node':
-                 worldPos && this.space.emit('ui:request:createNode', { type: 'note', position: worldPos, data: { content: 'New Note ✨' } });
+                worldPos && this.space.emit('ui:request:createNode', {
+                    type: 'note',
+                    position: worldPos,
+                    data: {content: 'New Note ✨'}
+                });
                 break;
             case 'create-shape-node-box':
-                 worldPos && this.space.emit('ui:request:createNode', { type: 'shape', position: worldPos, data: { label: 'Box Node 📦', shape: 'box', size: 60, color: Math.random() * 0xffffff } });
+                worldPos && this.space.emit('ui:request:createNode', {
+                    type: 'shape',
+                    position: worldPos,
+                    data: {label: 'Box Node 📦', shape: 'box', size: 60, color: Math.random() * 0xffffff}
+                });
                 break;
-           case 'create-shape-node-sphere':
-                 worldPos && this.space.emit('ui:request:createNode', { type: 'shape', position: worldPos, data: { label: 'Sphere Node 🌐', shape: 'sphere', size: 60, color: Math.random() * 0xffffff } });
+            case 'create-shape-node-sphere':
+                worldPos && this.space.emit('ui:request:createNode', {
+                    type: 'shape',
+                    position: worldPos,
+                    data: {label: 'Sphere Node 🌐', shape: 'sphere', size: 60, color: Math.random() * 0xffffff}
+                });
                 break;
 
             case 'center-camera-view':
@@ -102,7 +120,7 @@ export class ContextMenu {
             case 'toggle-background-visibility': {
                 if (renderingPlugin) {
                     const newAlpha = renderingPlugin.background.alpha === 0 ? 1.0 : 0;
-                    const newColor = newAlpha === 0 ? 0x000000 : (document.body.classList.contains('theme-light') ? 0xf4f4f4 : 0x1a1a1d) ;
+                    const newColor = newAlpha === 0 ? 0x000000 : (document.body.classList.contains('theme-light') ? 0xf4f4f4 : 0x1a1a1d);
                     this.space.emit('ui:request:toggleBackground', newColor, newAlpha);
                 }
                 break;
@@ -115,40 +133,40 @@ export class ContextMenu {
     _getContextMenuItemsForNode(node) {
         const items = [];
         if (node instanceof HtmlNode && node.data.editable) {
-            items.push({ label: '📝 Edit Content', action: 'edit-node-content', nodeId: node.id });
+            items.push({label: '📝 Edit Content', action: 'edit-node-content', nodeId: node.id});
         }
-        items.push({ label: '🔗 Start Link', action: 'start-linking-node', nodeId: node.id });
-        items.push({ label: '🔎 Auto Zoom', action: 'autozoom-node', nodeId: node.id });
+        items.push({label: '🔗 Start Link', action: 'start-linking-node', nodeId: node.id});
+        items.push({label: '🔎 Auto Zoom', action: 'autozoom-node', nodeId: node.id});
 
         const isPinned = node.isPinned || false;
-        items.push({ label: isPinned ? '📌 Unpin' : '📌 Pin', action: 'toggle-pin-node', nodeId: node.id });
+        items.push({label: isPinned ? '📌 Unpin' : '📌 Pin', action: 'toggle-pin-node', nodeId: node.id});
 
-        items.push({ type: 'separator' });
-        items.push({ label: '🗑️ Delete Node', action: 'delete-node', nodeId: node.id, isDestructive: true });
+        items.push({type: 'separator'});
+        items.push({label: '🗑️ Delete Node', action: 'delete-node', nodeId: node.id, isDestructive: true});
         return items;
     }
 
     _getContextMenuItemsForEdge(edge) {
         return [
-            { label: '🎨 Edit Style', action: 'edit-edge-style', edgeId: edge.id },
-            { label: '↔️ Reverse Direction', action: 'reverse-edge-direction', edgeId: edge.id },
-            { type: 'separator' },
-            { label: '🗑️ Delete Edge', action: 'delete-edge', edgeId: edge.id, isDestructive: true },
+            {label: '🎨 Edit Style', action: 'edit-edge-style', edgeId: edge.id},
+            {label: '↔️ Reverse Direction', action: 'reverse-edge-direction', edgeId: edge.id},
+            {type: 'separator'},
+            {label: '🗑️ Delete Edge', action: 'delete-edge', edgeId: edge.id, isDestructive: true},
         ];
     }
 
     _getContextMenuItemsForBackground(worldPos) {
         const items = [];
         if (worldPos) {
-            const posData = { positionX: worldPos.x, positionY: worldPos.y, positionZ: worldPos.z };
-            items.push({ label: '📄 Add HTML Node', action: 'create-html-node', ...posData });
-            items.push({ label: '📝 Add Note', action: 'create-note-node', ...posData });
-            items.push({ label: '📦 Add Box', action: 'create-shape-node-box', ...posData });
-            items.push({ label: '🌐 Add Sphere', action: 'create-shape-node-sphere', ...posData });
+            const posData = {positionX: worldPos.x, positionY: worldPos.y, positionZ: worldPos.z};
+            items.push({label: '📄 Add HTML Node', action: 'create-html-node', ...posData});
+            items.push({label: '📝 Add Note', action: 'create-note-node', ...posData});
+            items.push({label: '📦 Add Box', action: 'create-shape-node-box', ...posData});
+            items.push({label: '🌐 Add Sphere', action: 'create-shape-node-sphere', ...posData});
         }
-        items.push({ type: 'separator' });
-        items.push({ label: '🎯 Center View', action: 'center-camera-view' });
-        items.push({ label: '🔄 Reset View', action: 'reset-camera-view' });
+        items.push({type: 'separator'});
+        items.push({label: '🎯 Center View', action: 'center-camera-view'});
+        items.push({label: '🔄 Reset View', action: 'reset-camera-view'});
 
         const renderingPlugin = this.space.plugins.getPlugin('RenderingPlugin');
         if (renderingPlugin) {
@@ -175,7 +193,7 @@ export class ContextMenu {
             menuItems = this._getContextMenuItemsForEdge(targetInfo.intersectedEdge);
         } else {
             if (!targetInfo.shiftKey) {
-                 this._uiPluginCallbacks.setSelectedNode(null, false);
+                this._uiPluginCallbacks.setSelectedNode(null, false);
             }
             const worldPos = this.space.screenToWorld(x, y, 0);
             menuItems = this._getContextMenuItemsForBackground(worldPos);
@@ -205,7 +223,7 @@ export class ContextMenu {
         });
         cm.appendChild(ul);
 
-        const { offsetWidth: menuWidth, offsetHeight: menuHeight } = cm;
+        const {offsetWidth: menuWidth, offsetHeight: menuHeight} = cm;
         const margin = 5;
         let finalX = x + margin;
         if (finalX + menuWidth > window.innerWidth - margin) {
@@ -219,7 +237,7 @@ export class ContextMenu {
         cm.style.top = `${Math.max(margin, finalY)}px`;
         cm.style.display = 'block';
 
-        this.space.emit('ui:contextmenu:shown', { x, y, items: menuItems });
+        this.space.emit('ui:contextmenu:shown', {x, y, items: menuItems});
     }
 
     hide = () => {

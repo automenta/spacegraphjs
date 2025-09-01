@@ -1,12 +1,12 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { ConstraintLayout } from './ConstraintLayout.js';
+import {beforeEach, describe, expect, it, vi} from 'vitest';
+import {ConstraintLayout} from './ConstraintLayout.js';
 
 describe('ConstraintLayout', () => {
     let layout;
     let nodes;
     let edges;
     let THREE_module; // To store imported THREE mock
-    
+
     beforeEach(async () => { // Make beforeEach async
         THREE_module = await import('three'); // Import the mocked THREE
 
@@ -17,28 +17,28 @@ describe('ConstraintLayout', () => {
             dampingFactor: 0.9,   // maps to settings.dampingFactor
             // convergenceThreshold, maxForce, etc., will use defaults
         });
-        
+
         nodes = [
-            { 
-                id: 'node1', 
+            {
+                id: 'node1',
                 position: new THREE_module.Vector3(0, 0, 0),
                 constraints: []
             },
-            { 
-                id: 'node2', 
+            {
+                id: 'node2',
                 position: new THREE_module.Vector3(5, 0, 0),
                 constraints: []
             },
-            { 
-                id: 'node3', 
+            {
+                id: 'node3',
                 position: new THREE_module.Vector3(0, 5, 0),
                 constraints: []
             }
         ];
-        
+
         edges = [
-            { source: nodes[0], target: nodes[1] },
-            { source: nodes[1], target: nodes[2] }
+            {source: nodes[0], target: nodes[1]},
+            {source: nodes[1], target: nodes[2]}
         ];
     });
 
@@ -61,7 +61,7 @@ describe('ConstraintLayout', () => {
             distance: 10,
             strength: 1.0
         });
-        
+
         expect(layout.constraints).toHaveLength(1);
         const constraint = layout.constraints[0];
         expect(constraint.type).toBe('distance');
@@ -76,7 +76,7 @@ describe('ConstraintLayout', () => {
         layout.addPositionConstraint(nodes[0].id, targetPosInstance, {
             strength: 0.8
         });
-        
+
         expect(layout.constraints).toHaveLength(1);
         const constraint = layout.constraints[0];
         expect(constraint.type).toBe('position');
@@ -103,9 +103,9 @@ describe('ConstraintLayout', () => {
         const localLayout = new ConstraintLayout({});
         expect(localLayout.constraints).toHaveLength(0); // Initial state
 
-        localLayout.addDistanceConstraint('testnode1', 'testnode2', { distance: 5 });
+        localLayout.addDistanceConstraint('testnode1', 'testnode2', {distance: 5});
         expect(localLayout.constraints).toHaveLength(1);
-        
+
         await localLayout.init([], []);
         expect(localLayout.constraints).toHaveLength(0);
     });
@@ -118,9 +118,9 @@ describe('ConstraintLayout', () => {
         // Pass only nodes relevant to the constraint to simplify
         const relevantNodes = [nodes[0], nodes[1]];
         await layout.init(relevantNodes, []);
-        
+
         // Add a constraint after init, as init clears existing constraints
-        layout.addDistanceConstraint(nodes[0].id, nodes[1].id, { distance: 10 });
+        layout.addDistanceConstraint(nodes[0].id, nodes[1].id, {distance: 10});
 
         const solveSpy = vi.spyOn(layout, '_solveConstraints');
         await layout.kick(); // kick calls _solveConstraints which is async
@@ -146,18 +146,58 @@ describe('ConstraintLayout', () => {
 // Define a more complete mock for Vector3 instances
 const mockVector3Instance = {
     x: 0, y: 0, z: 0,
-    clone: vi.fn(function() { return { ...this, clone: mockVector3Instance.clone, sub: mockVector3Instance.sub, length: mockVector3Instance.length, multiplyScalar: mockVector3Instance.multiplyScalar, divideScalar: mockVector3Instance.divideScalar, add: mockVector3Instance.add, set: mockVector3Instance.set, normalize: mockVector3Instance.normalize, copy: mockVector3Instance.copy, angleTo: mockVector3Instance.angleTo, cross: mockVector3Instance.cross, applyAxisAngle: mockVector3Instance.applyAxisAngle }; }),
-    sub: vi.fn(function() { return this; }), // Simplified: returns self, real Vector3 returns new
+    clone: vi.fn(function () {
+        return {
+            ...this,
+            clone: mockVector3Instance.clone,
+            sub: mockVector3Instance.sub,
+            length: mockVector3Instance.length,
+            multiplyScalar: mockVector3Instance.multiplyScalar,
+            divideScalar: mockVector3Instance.divideScalar,
+            add: mockVector3Instance.add,
+            set: mockVector3Instance.set,
+            normalize: mockVector3Instance.normalize,
+            copy: mockVector3Instance.copy,
+            angleTo: mockVector3Instance.angleTo,
+            cross: mockVector3Instance.cross,
+            applyAxisAngle: mockVector3Instance.applyAxisAngle
+        };
+    }),
+    sub: vi.fn(function () {
+        return this;
+    }), // Simplified: returns self, real Vector3 returns new
     length: vi.fn(() => 1.0), // Default length
-    multiplyScalar: vi.fn(function() { return this; }), // Simplified
-    divideScalar: vi.fn(function() { return this; }), // Added missing method
-    add: vi.fn(function() { return this; }), // Simplified
-    set: vi.fn(function(x,y,z) { this.x=x; this.y=y; this.z=z; return this; }),
-    normalize: vi.fn(function() { return this; }),
-    copy: vi.fn(function(v) { this.x = v.x; this.y = v.y; this.z = v.z; return this; }),
+    multiplyScalar: vi.fn(function () {
+        return this;
+    }), // Simplified
+    divideScalar: vi.fn(function () {
+        return this;
+    }), // Added missing method
+    add: vi.fn(function () {
+        return this;
+    }), // Simplified
+    set: vi.fn(function (x, y, z) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        return this;
+    }),
+    normalize: vi.fn(function () {
+        return this;
+    }),
+    copy: vi.fn(function (v) {
+        this.x = v.x;
+        this.y = v.y;
+        this.z = v.z;
+        return this;
+    }),
     angleTo: vi.fn(() => Math.PI / 2), // Example angle
-    cross: vi.fn(function() { return this;}), // Simplified
-    applyAxisAngle: vi.fn(function() { return this;}) // Simplified
+    cross: vi.fn(function () {
+        return this;
+    }), // Simplified
+    applyAxisAngle: vi.fn(function () {
+        return this;
+    }) // Simplified
 };
 
 vi.mock('three', async (importOriginal) => {
@@ -166,7 +206,7 @@ vi.mock('three', async (importOriginal) => {
         ...actualThree,
         Vector3: vi.fn((x, y, z) => {
             // Create a new object for each instance to avoid shared state issues from the simple mock
-            const newInstance = { ...mockVector3Instance };
+            const newInstance = {...mockVector3Instance};
             newInstance.x = x || 0;
             newInstance.y = y || 0;
             newInstance.z = z || 0;

@@ -1,12 +1,10 @@
 // src/ui/hud/AdvancedHudManager.js
-import { $ } from '../../utils.js';
-import * as THREE from 'three';
-import { HudManager } from './HudManager.js';
-import { HudOverlayPanel } from './HudOverlayPanel.js';
-import { KeyboardShortcutsDialog } from '../dialogs/KeyboardShortcutsDialog.js'; // Keep for now
-import { LayoutSettingsDialog } from '../dialogs/LayoutSettingsDialog.js';   // Keep for now
-import { MenuBar } from './MenuBar.js';
-import { PinnedWindow } from './PinnedWindow.js';
+import {HudManager} from './HudManager.js';
+import {HudOverlayPanel} from './HudOverlayPanel.js';
+import {KeyboardShortcutsDialog} from '../dialogs/KeyboardShortcutsDialog.js'; // Keep for now
+import {LayoutSettingsDialog} from '../dialogs/LayoutSettingsDialog.js'; // Keep for now
+import {MenuBar} from './MenuBar.js';
+import {PinnedWindow} from './PinnedWindow.js';
 
 // Default settings for the Advanced HUD
 const DEFAULT_ADVANCED_HUD_SETTINGS = {
@@ -23,8 +21,8 @@ const DEFAULT_ADVANCED_HUD_SETTINGS = {
 export class AdvancedHudManager extends HudManager {
     constructor(space, container, uiPluginCallbacks) {
         super(space, container, uiPluginCallbacks); // Base HudManager constructor
-        
-        this.settings = { ...DEFAULT_ADVANCED_HUD_SETTINGS, ...this.settings }; // Merge with base settings
+
+        this.settings = {...DEFAULT_ADVANCED_HUD_SETTINGS, ...this.settings}; // Merge with base settings
 
         // this.performanceMetrics is now inherited from HudManager
         this.notifications = this.notifications || []; // Ensure array exists from base or init
@@ -40,13 +38,13 @@ export class AdvancedHudManager extends HudManager {
         // New Menu Bar System
         this.menuBar = null;
         this.pinnedWindows = new Map();
-        
+
         this._setupMenuBar(); // Setup MenuBar first, it will occupy the top region
 
         // Re-setup or adapt other HUD elements if they are still needed
         // and not part of the new MenuBar/PinnedWindow system.
         this._createAdvancedHudElements(); // This will adapt existing elements or create new ones
-        
+
         this._startPerformanceMonitoring(); // Already in parent, ensure it's called appropriately
         this._subscribeToAdvancedEvents();
 
@@ -63,8 +61,8 @@ export class AdvancedHudManager extends HudManager {
         this.menuBar = new MenuBar(this); // Pass `this` (AdvancedHudManager instance)
         // The MenuBar constructor should append its container to this.hudLayer or a specific region
         // If MenuBar doesn't auto-append, append it here:
-        if(this.hudRegionTop) { // Assuming hudRegionTop is created by base or here
-             this.hudRegionTop.appendChild(this.menuBar.container);
+        if (this.hudRegionTop) { // Assuming hudRegionTop is created by base or here
+            this.hudRegionTop.appendChild(this.menuBar.container);
         } else {
             this.hudLayer.insertBefore(this.menuBar.container, this.hudLayer.firstChild); // Prepend if no top region
         }
@@ -106,14 +104,14 @@ export class AdvancedHudManager extends HudManager {
 
         // Notification Container (usually top-center or bottom)
         this.notificationContainer = this.notificationContainer || this._createNotificationContainer();
-         if (!this.notificationContainer.parentNode) { // If base didn't add it or we want to move it
+        if (!this.notificationContainer.parentNode) { // If base didn't add it or we want to move it
             (this.hudTopCenterGroup || this.hudRegionTop || this.hudLayer).appendChild(this.notificationContainer);
         }
 
 
         // Progress Container
         this.progressContainer = this.progressContainer || this._createProgressContainer();
-         if (!this.progressContainer.parentNode) {
+        if (!this.progressContainer.parentNode) {
             (this.hudRegionBottom || this.hudLayer).appendChild(this.progressContainer);
         }
 
@@ -124,11 +122,15 @@ export class AdvancedHudManager extends HudManager {
         this.statusBar.className = 'status-bar'; // CSS will style this
         this.hudLayer.appendChild(this.statusBar);
         // Populate status bar sections
-        this.statusSelection = document.createElement('span'); this.statusBar.appendChild(this.statusSelection);
-        this.statusCamera = document.createElement('span');    this.statusBar.appendChild(this.statusCamera);
-        this.statusNodeCount = document.createElement('span'); this.statusBar.appendChild(this.statusNodeCount);
-        this.statusLayout = document.createElement('span');    this.statusBar.appendChild(this.statusLayout); // Added for layout status
-        
+        this.statusSelection = document.createElement('span');
+        this.statusBar.appendChild(this.statusSelection);
+        this.statusCamera = document.createElement('span');
+        this.statusBar.appendChild(this.statusCamera);
+        this.statusNodeCount = document.createElement('span');
+        this.statusBar.appendChild(this.statusNodeCount);
+        this.statusLayout = document.createElement('span');
+        this.statusBar.appendChild(this.statusLayout); // Added for layout status
+
         this._updateAllStatusDisplays();
     }
 
@@ -144,9 +146,9 @@ export class AdvancedHudManager extends HudManager {
         const selectedNodes = this._uiPluginCallbacks.getSelectedNodes ? this._uiPluginCallbacks.getSelectedNodes() : new Set();
         const selectedEdges = this._uiPluginCallbacks.getSelectedEdges ? this._uiPluginCallbacks.getSelectedEdges() : new Set();
         let text = 'Selection: None';
-        if (selectedNodes.size === 1) text = `Node: ${selectedNodes.values().next().value.id.substring(0,8)}`;
+        if (selectedNodes.size === 1) text = `Node: ${selectedNodes.values().next().value.id.substring(0, 8)}`;
         else if (selectedNodes.size > 1) text = `${selectedNodes.size} Nodes`;
-        else if (selectedEdges.size === 1) text = `Edge: ${selectedEdges.values().next().value.id.substring(0,8)}`;
+        else if (selectedEdges.size === 1) text = `Edge: ${selectedEdges.values().next().value.id.substring(0, 8)}`;
         else if (selectedEdges.size > 1) text = `${selectedEdges.size} Edges`;
         this.statusSelection.textContent = text;
     }
@@ -186,8 +188,7 @@ export class AdvancedHudManager extends HudManager {
                 this.statusLayout.textContent = `Layout: ${currentLayout.name || 'Active'} (Running)`;
             } else if (currentLayout) {
                 this.statusLayout.textContent = `Layout: ${currentLayout.name || 'Active'} (Stopped)`;
-            }
-            else {
+            } else {
                 this.statusLayout.textContent = "Layout: Idle";
             }
         }
@@ -238,35 +239,41 @@ export class AdvancedHudManager extends HudManager {
         if (!this.menuBar) return;
 
         const fileMenu = this.menuBar.addMenu('file', 'File');
-        fileMenu.addMenuItem('exportGraph', 'Export Graph...', () => this._exportGraph(), { hotkey: 'Ctrl+E' });
-        fileMenu.addMenuItem('importGraph', 'Import Graph...', () => { this.showNotification('Import not implemented yet.'); });
+        fileMenu.addMenuItem('exportGraph', 'Export Graph...', () => this._exportGraph(), {hotkey: 'Ctrl+E'});
+        fileMenu.addMenuItem('importGraph', 'Import Graph...', () => {
+            this.showNotification('Import not implemented yet.');
+        });
         fileMenu.addSeparator();
         fileMenu.addMenuItem('takeScreenshot', 'Take Screenshot', () => this._takeScreenshot());
         fileMenu.addSeparator();
-        fileMenu.addMenuItem('toggleFullscreen', 'Toggle Fullscreen', () => this._toggleFullscreen(), { hotkey: 'F11' });
+        fileMenu.addMenuItem('toggleFullscreen', 'Toggle Fullscreen', () => this._toggleFullscreen(), {hotkey: 'F11'});
 
         const viewMenu = this.menuBar.addMenu('view', 'View');
         const appearanceSection = viewMenu.addSection('appearance', 'Appearance Options', true);
-        appearanceSection.addMenuItem('toggleGrid', 'Grid', (checked) => this._toggleGrid(), { type: 'checkbox', checked: false, updateHandler: (item) => {
-            const RPlugin = this.space.plugins.getPlugin('RenderingPlugin');
-            if (RPlugin) item.setChecked(RPlugin.isGridVisible()); // Sync with actual state
-        }});
-        appearanceSection.addMenuItem('toggleAxes', 'Axes', (checked) => this._toggleAxes(), { type: 'checkbox', checked: false, updateHandler: (item) => {
-            const RPlugin = this.space.plugins.getPlugin('RenderingPlugin');
-            if (RPlugin) item.setChecked(RPlugin.areAxesVisible());
-        } });
+        appearanceSection.addMenuItem('toggleGrid', 'Grid', (checked) => this._toggleGrid(), {
+            type: 'checkbox', checked: false, updateHandler: (item) => {
+                const RPlugin = this.space.plugins.getPlugin('RenderingPlugin');
+                if (RPlugin) item.setChecked(RPlugin.isGridVisible()); // Sync with actual state
+            }
+        });
+        appearanceSection.addMenuItem('toggleAxes', 'Axes', (checked) => this._toggleAxes(), {
+            type: 'checkbox', checked: false, updateHandler: (item) => {
+                const RPlugin = this.space.plugins.getPlugin('RenderingPlugin');
+                if (RPlugin) item.setChecked(RPlugin.areAxesVisible());
+            }
+        });
         // ... other view items like labels, shadows
 
         const hudSection = viewMenu.addSection('hudElements', 'HUD Elements', true);
         hudSection.addMenuItem('togglePerformance', 'Performance Metrics', (checked) => {
-            this.applyHudSettings({ showPerformanceMetrics: checked });
-        }, { type: 'checkbox', checked: this.settings.showPerformanceMetrics });
+            this.applyHudSettings({showPerformanceMetrics: checked});
+        }, {type: 'checkbox', checked: this.settings.showPerformanceMetrics});
         hudSection.addMenuItem('toggleMinimap', 'Minimap', (checked) => {
-            this.applyHudSettings({ showMinimap: checked });
-        }, { type: 'checkbox', checked: this.settings.showMinimap });
-         hudSection.addMenuItem('toggleStatusBar', 'Status Bar', (checked) => {
-            this.applyHudSettings({ showStatusBar: checked });
-        }, { type: 'checkbox', checked: this.settings.showStatusBar });
+            this.applyHudSettings({showMinimap: checked});
+        }, {type: 'checkbox', checked: this.settings.showMinimap});
+        hudSection.addMenuItem('toggleStatusBar', 'Status Bar', (checked) => {
+            this.applyHudSettings({showStatusBar: checked});
+        }, {type: 'checkbox', checked: this.settings.showStatusBar});
 
         // Example: Add performance metrics to menu bar status area
         this.fpsStatusElement = document.createElement('div');
@@ -295,9 +302,15 @@ export class AdvancedHudManager extends HudManager {
     }
 
     // Override or adapt methods related to old HUD components
-    _setupPerformancePanel() { /* Now managed by _createAdvancedHudElements or as a pinned window */ }
-    _setupMinimap() { /* Now managed by _createAdvancedHudElements or as a pinned window */ }
-    _setupToolbar() { /* Replaced by MenuBar */ }
+    _setupPerformancePanel() { /* Now managed by _createAdvancedHudElements or as a pinned window */
+    }
+
+    _setupMinimap() { /* Now managed by _createAdvancedHudElements or as a pinned window */
+    }
+
+    _setupToolbar() { /* Replaced by MenuBar */
+    }
+
     // _setupStatusBar() { /* Replaced by new status bar logic in _createAdvancedHudElements */ }
 
     // Keep notification and progress logic, but ensure containers are correctly parented
@@ -307,12 +320,14 @@ export class AdvancedHudManager extends HudManager {
         container.className = 'hud-notifications';
         return container;
     }
+
     _createProgressContainer() {
         const container = document.createElement('div');
         container.id = 'hud-progress-indicators';
         container.className = 'hud-progress-container';
         return container;
     }
+
     showNotification(message, type = 'info', duration = 3000) {
         if (!this.settings.showNotifications || !this.notificationContainer) return;
         const toast = HudOverlayPanel.createToast(message, type); // Use static method from HudOverlayPanel
@@ -320,12 +335,14 @@ export class AdvancedHudManager extends HudManager {
         this.notifications.push(toast);
         setTimeout(() => this._removeNotification(toast), duration);
     }
+
     _removeNotification(toastElement) {
         if (toastElement.parentNode === this.notificationContainer) {
             this.notificationContainer.removeChild(toastElement);
         }
         this.notifications = this.notifications.filter(n => n !== toastElement);
     }
+
     showProgress(id, message, percentage) { /* Similar adaptation for progress */
         if (!this.settings.showProgressIndicators || !this.progressContainer) return;
         let progressToast = this.progressIndicators.get(id);
@@ -338,11 +355,12 @@ export class AdvancedHudManager extends HudManager {
         // ... update logic for progress bar ...
         const fill = progressToast.querySelector('.progress-fill');
         const percentText = progressToast.querySelector('.progress-percent');
-        if(fill) fill.style.width = `${Math.max(0, Math.min(100, percentage))}%`;
-        if(percentText) percentText.textContent = `${Math.round(percentage)}%`;
+        if (fill) fill.style.width = `${Math.max(0, Math.min(100, percentage))}%`;
+        if (percentText) percentText.textContent = `${Math.round(percentage)}%`;
 
         if (percentage >= 100) setTimeout(() => this.hideProgress(id), 1000);
     }
+
     hideProgress(id) { /* ... */
         const indicator = this.progressIndicators.get(id);
         if (indicator && indicator.parentNode) {
@@ -355,22 +373,25 @@ export class AdvancedHudManager extends HudManager {
     _exportGraph() { /* ... */
         const graphData = this.space.exportGraphToJSON();
         if (graphData) {
-            const blob = new Blob([JSON.stringify(graphData, null, 2)], { type: 'application/json' });
+            const blob = new Blob([JSON.stringify(graphData, null, 2)], {type: 'application/json'});
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `spacegraph_${new Date().toISOString().slice(0,10)}.json`;
+            a.download = `spacegraph_${new Date().toISOString().slice(0, 10)}.json`;
             a.click();
             URL.revokeObjectURL(url);
             this.showNotification('Graph exported successfully', 'success', 2000);
-        }}
+        }
+    }
+
     _toggleFullscreen() { /* ... */
-         if (!document.fullscreenElement) {
+        if (!document.fullscreenElement) {
             this.hudLayer.requestFullscreen?.() || this.container.requestFullscreen?.();
         } else {
             document.exitFullscreen?.();
         }
     }
+
     _takeScreenshot() { /* ... */
         const rendererPlugin = this.space.plugins.getPlugin('RenderingPlugin');
         if (rendererPlugin && rendererPlugin.takeScreenshot) {
@@ -379,11 +400,26 @@ export class AdvancedHudManager extends HudManager {
             this.showNotification('Screenshot feature not available.', 'warning', 2000);
         }
     }
-    _setViewMode(mode) { this.space.emit('ui:request:setViewMode', mode); }
-    _toggleGrid() { this.space.emit('ui:request:toggleGrid'); }
-    _toggleAxes() { this.space.emit('ui:request:toggleAxes'); }
-    _toggleLabels() { this.space.emit('ui:request:toggleLabels'); }
-    _toggleShadows() { this.space.emit('ui:request:toggleShadows'); }
+
+    _setViewMode(mode) {
+        this.space.emit('ui:request:setViewMode', mode);
+    }
+
+    _toggleGrid() {
+        this.space.emit('ui:request:toggleGrid');
+    }
+
+    _toggleAxes() {
+        this.space.emit('ui:request:toggleAxes');
+    }
+
+    _toggleLabels() {
+        this.space.emit('ui:request:toggleLabels');
+    }
+
+    _toggleShadows() {
+        this.space.emit('ui:request:toggleShadows');
+    }
 
     // Pinning logic
     pinSection(section) {
@@ -409,12 +445,12 @@ export class AdvancedHudManager extends HudManager {
     }
 
     applyHudSettings(settings) {
-        const oldSettings = { ...this.settings };
+        const oldSettings = {...this.settings};
         // super.applyHudSettings(settings); // Apply base settings and then specific ones - THIS LINE IS REMOVED
 
         // Merge incoming settings with current settings
         const oldShowMenuBar = this.settings.showMenuBar;
-        this.settings = { ...this.settings, ...settings };
+        this.settings = {...this.settings, ...settings};
 
         // If menuBar visibility changed from false to true, ensure it's initialized
         if (!oldShowMenuBar && this.settings.showMenuBar && !this.menuBar) {
@@ -423,7 +459,7 @@ export class AdvancedHudManager extends HudManager {
         }
 
         if (this.menuBar) {
-             this.menuBar.container.style.display = this.settings.showMenuBar ? 'flex' : 'none';
+            this.menuBar.container.style.display = this.settings.showMenuBar ? 'flex' : 'none';
         } else if (this.settings.showMenuBar && !this.menuBar) {
             // This should ideally be caught by the block above, but as a fallback:
             console.warn("AdvancedHudManager: settings.showMenuBar is true, but this.menuBar is still not initialized after attempting setup.");
@@ -469,7 +505,7 @@ export class AdvancedHudManager extends HudManager {
         if (this.menuBar) this.menuBar.dispose();
         this.pinnedWindows.forEach(pw => pw.dispose());
         this.pinnedWindows.clear();
-        
+
         // Remove elements created by this class if not handled by super.dispose()
         if (this.performancePanel?.parentNode) this.performancePanel.parentNode.removeChild(this.performancePanel);
         if (this.minimapPanel?.parentNode) this.minimapPanel.parentNode.removeChild(this.minimapPanel);

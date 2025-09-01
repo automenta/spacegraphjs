@@ -7,7 +7,7 @@ export class IFrameNode extends Node {
     static DEFAULT_HEIGHT = 360;
     htmlElement = null;
     iframeElement = null;
-    size = { width: IFrameNode.DEFAULT_WIDTH, height: IFrameNode.DEFAULT_HEIGHT };
+    size = {width: IFrameNode.DEFAULT_WIDTH, height: IFrameNode.DEFAULT_HEIGHT};
 
     constructor(id, position, data = {}, mass = 1.3) {
         super(id, position, data, mass);
@@ -17,7 +17,7 @@ export class IFrameNode extends Node {
         };
         this.htmlElement = this._createElement();
         this.cssObject = new CSS3DObject(this.htmlElement);
-        this.cssObject.userData = { nodeId: this.id, type: 'iframe-node' };
+        this.cssObject.userData = {nodeId: this.id, type: 'iframe-node'};
         this.update();
     }
 
@@ -76,7 +76,7 @@ export class IFrameNode extends Node {
         this.iframeElement.src = this.data.iframeUrl;
 
         this.iframeElement.addEventListener('pointerdown', (e) => e.stopPropagation());
-        this.iframeElement.addEventListener('wheel', (e) => e.stopPropagation(), { passive: false });
+        this.iframeElement.addEventListener('wheel', (e) => e.stopPropagation(), {passive: false});
 
         el.appendChild(titleDiv);
         el.appendChild(this.iframeElement);

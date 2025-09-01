@@ -105,7 +105,7 @@ export class UIPlugin extends Plugin {
     _emitSelectionChange() {
         const selectedItems = new Set([...this.selectedNodes, ...this.selectedEdges]);
         const type = this.selectedNodes.size > 0 ? 'node' : (this.selectedEdges.size > 0 ? 'edge' : 'none');
-        this.space.emit('selection:changed', { selected: selectedItems, type });
+        this.space.emit('selection:changed', {selected: selectedItems, type});
     }
 
     getSelectedNode() {
@@ -128,7 +128,7 @@ export class UIPlugin extends Plugin {
         if (!sourceNode) return;
         this.linkSourceNode = sourceNode;
         this.isLinking = true;
-        this.space.emit('linking:started', { sourceNode });
+        this.space.emit('linking:started', {sourceNode});
     };
 
     cancelLinking = () => {
@@ -145,7 +145,7 @@ export class UIPlugin extends Plugin {
 
         if (targetNode && targetNode !== this.linkSourceNode) {
             this.space.emit('ui:request:addEdge', this.linkSourceNode, targetNode);
-            this.space.emit('linking:succeeded', { source: this.linkSourceNode, target: targetNode });
+            this.space.emit('linking:succeeded', {source: this.linkSourceNode, target: targetNode});
         } else {
             this.space.emit('linking:failed');
         }

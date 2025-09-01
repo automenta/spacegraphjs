@@ -59,7 +59,7 @@ export class EdgePlugin extends Plugin {
         this.instancedEdgeManager = new InstancedEdgeManager(renderingPlugin.getWebGLScene());
     }
 
-    handleRendererResize({ width, height }) {
+    handleRendererResize({width, height}) {
         this.edges.forEach((edge) => {
             if (!edge.isInstanced && edge.updateResolution) edge.updateResolution(width, height);
         });
@@ -146,7 +146,7 @@ export class EdgePlugin extends Plugin {
         if (!edge) return console.warn(`EdgePlugin: Edge ${edgeId} not found.`);
 
         this.pluginManager.getPlugin('UIPlugin')?.getSelectedEdge() === edge &&
-            this.pluginManager.getPlugin('UIPlugin').setSelectedEdge(null);
+        this.pluginManager.getPlugin('UIPlugin').setSelectedEdge(null);
 
         this.pluginManager.getPlugin('LayoutPlugin')?.removeEdgeFromLayout(edge);
 
@@ -168,6 +168,7 @@ export class EdgePlugin extends Plugin {
     getEdgeById(id) {
         return this.edges.get(id);
     }
+
     getEdges() {
         return this.edges;
     }

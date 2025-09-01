@@ -123,30 +123,39 @@ export class CameraPlugin extends Plugin {
     pan(deltaX, deltaY) {
         this.cameraControls?.pan(deltaX, deltaY);
     }
+
     startPan(startX, startY) {
         this.cameraControls?.startPan(startX, startY);
     }
+
     endPan() {
         this.cameraControls?.endPan();
     }
+
     zoom(deltaY) {
         this.cameraControls?.zoom(deltaY);
     }
+
     resetView(duration = 0.7) {
         this.cameraControls?.resetView(duration);
     }
+
     pushState() {
         this.cameraControls?.pushState();
     }
+
     popState(duration = 0.6) {
         this.cameraControls?.popState(duration);
     }
+
     getCurrentTargetNodeId() {
         return this.cameraControls?.getCurrentTargetNodeId();
     }
+
     setCurrentTargetNodeId(nodeId) {
         this.cameraControls?.setCurrentTargetNodeId(nodeId);
     }
+
     setInitialState() {
         this.cameraControls?.setInitialState();
     }

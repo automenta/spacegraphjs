@@ -28,13 +28,13 @@ export class ForceLayout {
     };
 
     constructor(config = {}) {
-        this.settings = { ...this.settings, ...config };
-        this.worker = new Worker(new URL('./forceLayout.worker.js', import.meta.url), { type: 'module' });
+        this.settings = {...this.settings, ...config};
+        this.worker = new Worker(new URL('./forceLayout.worker.js', import.meta.url), {type: 'module'});
         this.worker.onmessage = this._handleWorkerMessage.bind(this);
         this.worker.onerror = (error) => {
             console.error('ForceLayout Worker Error:', error);
             this.isRunning = false;
-            this.space.emit('layout:error', { error });
+            this.space.emit('layout:error', {error});
         };
     }
 
@@ -44,7 +44,7 @@ export class ForceLayout {
     }
 
     _handleWorkerMessage(event) {
-        const { type, positions, energy, error } = event.data;
+        const {type, positions, energy, error} = event.data;
         switch (type) {
             case 'positionsUpdate':
                 this.totalEnergy = energy;
@@ -56,11 +56,11 @@ export class ForceLayout {
             case 'stopped':
                 this.isRunning = false;
                 this.totalEnergy = energy;
-                this.space.emit('layout:stopped', { name: 'force (worker)' });
+                this.space.emit('layout:stopped', {name: 'force (worker)'});
                 break;
             case 'error':
                 console.error('ForceLayout Worker error:', error);
-                this.space.emit('layout:error', { error });
+                this.space.emit('layout:error', {error});
                 break;
         }
     }
@@ -72,7 +72,7 @@ export class ForceLayout {
         this.edgesMap.clear();
         initialEdges.forEach((e) => this.edgesMap.set(e.id, e));
 
-        this.settings = { ...this.settings, ...config };
+        this.settings = {...this.settings, ...config};
 
         const workerNodes = initialNodes.map((n) => ({
             id: n.id,
@@ -95,15 +95,15 @@ export class ForceLayout {
         }));
 
         const plainGravityCenter = this.settings.gravityCenter && typeof this.settings.gravityCenter.x === 'number'
-            ? { x: this.settings.gravityCenter.x, y: this.settings.gravityCenter.y, z: this.settings.gravityCenter.z }
-            : { x: 0, y: 0, z: 0 };
+            ? {x: this.settings.gravityCenter.x, y: this.settings.gravityCenter.y, z: this.settings.gravityCenter.z}
+            : {x: 0, y: 0, z: 0};
 
         this.worker.postMessage({
             type: 'init',
             payload: {
                 nodes: workerNodes,
                 edges: workerEdges,
-                settings: { ...this.settings, gravityCenter: plainGravityCenter },
+                settings: {...this.settings, gravityCenter: plainGravityCenter},
             },
         });
     }
@@ -113,7 +113,7 @@ export class ForceLayout {
     }
 
     getConfig() {
-        return { ...this.settings };
+        return {...this.settings};
     }
 
     setPinState(node, isPinned) {
@@ -121,7 +121,7 @@ export class ForceLayout {
         node.isPinned = isPinned;
         this.worker.postMessage({
             type: 'updateNodeState',
-            payload: { nodeId: node.id, isFixed: node.isPinned, isPinned: node.isPinned },
+            payload: {nodeId: node.id, isFixed: node.isPinned, isPinned: node.isPinned},
         });
         if (this.isRunning) this.kick();
     }
@@ -134,7 +134,7 @@ export class ForceLayout {
                 nodeId: node.id,
                 isFixed: true,
                 isPinned: node.isPinned,
-                position: { x: node.position.x, y: node.position.y, z: node.position.z },
+                position: {x: node.position.x, y: node.position.y, z: node.position.z},
             },
         });
     }
@@ -144,7 +144,7 @@ export class ForceLayout {
         if (!node.isPinned) {
             this.worker.postMessage({
                 type: 'updateNodeState',
-                payload: { nodeId: node.id, isFixed: false, isPinned: node.isPinned },
+                payload: {nodeId: node.id, isFixed: false, isPinned: node.isPinned},
             });
         }
         this.kick();
@@ -165,7 +165,7 @@ export class ForceLayout {
         if (this.nodesMap.has(node.id)) return;
 
         // Ensure position is valid or provide a default
-        let { x = 0, y = 0, z = 0 } = node.position || {};
+        let {x = 0, y = 0, z = 0} = node.position || {};
         if (typeof node.position !== 'object' || node.position === null) {
             console.warn(`ForceLayout.addNode: Node ${node.id} is missing a valid position object. Defaulting to {x:0, y:0, z:0}. Node:`, node);
             // node.position will be used below, so ensure it's an object if we didn't default x,y,z from it
@@ -203,7 +203,7 @@ export class ForceLayout {
     removeNode(node) {
         if (!this.nodesMap.has(node.id)) return;
         this.nodesMap.delete(node.id);
-        this.worker.postMessage({ type: 'removeNode', payload: { nodeId: node.id } });
+        this.worker.postMessage({type: 'removeNode', payload: {nodeId: node.id}});
         if (this.isRunning && this.nodesMap.size < 2) this.stop();
         else if (this.isRunning) this.kick();
     }
@@ -231,7 +231,7 @@ export class ForceLayout {
         this.edgesMap.delete(edge.id);
         this.worker.postMessage({
             type: 'removeEdge',
-            payload: { sourceId: edge.source.id, targetId: edge.target.id },
+            payload: {sourceId: edge.source.id, targetId: edge.target.id},
         });
         if (this.isRunning) this.kick();
     }
@@ -246,30 +246,30 @@ export class ForceLayout {
             return;
         }
         this.isRunning = true;
-        this.worker.postMessage({ type: 'start' });
-        this.space.emit('layout:started', { name: 'force (worker)' });
+        this.worker.postMessage({type: 'start'});
+        this.space.emit('layout:started', {name: 'force (worker)'});
     }
 
     stop() {
         if (!this.worker) return;
-        this.worker.postMessage({ type: 'stop' });
+        this.worker.postMessage({type: 'stop'});
     }
 
     kick(intensity = 1) {
         if (this.nodesMap.size < 1 || !this.worker) return;
-        this.worker.postMessage({ type: 'kick', payload: { intensity } });
+        this.worker.postMessage({type: 'kick', payload: {intensity}});
         if (!this.isRunning) this.run();
     }
 
     setSettings(newSettings) {
-        this.settings = { ...this.settings, ...newSettings };
+        this.settings = {...this.settings, ...newSettings};
         const plainGravityCenter = this.settings.gravityCenter && typeof this.settings.gravityCenter.x === 'number'
-            ? { x: this.settings.gravityCenter.x, y: this.settings.gravityCenter.y, z: this.settings.gravityCenter.z }
-            : { x: 0, y: 0, z: 0 };
+            ? {x: this.settings.gravityCenter.x, y: this.settings.gravityCenter.y, z: this.settings.gravityCenter.z}
+            : {x: 0, y: 0, z: 0};
 
         this.worker.postMessage({
             type: 'updateSettings',
-            payload: { settings: { ...this.settings, gravityCenter: plainGravityCenter } },
+            payload: {settings: {...this.settings, gravityCenter: plainGravityCenter}},
         });
     }
 

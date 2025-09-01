@@ -1,6 +1,6 @@
 import {Node} from './Node.js';
 import * as THREE from 'three';
-import {createCSS3DLabelObject, applyLabelLOD} from '../../utils/labelUtils.js';
+import {applyLabelLOD, createCSS3DLabelObject} from '../../utils/labelUtils.js';
 
 export class DocumentNode extends Node {
     static typeName = 'document';
@@ -9,7 +9,7 @@ export class DocumentNode extends Node {
     constructor(id, position, data = {}, mass = 1.0) {
         super(id, position, data, mass);
         this.mesh = this.createMesh();
-        this.mesh.userData = { nodeId: this.id, type: DocumentNode.typeName };
+        this.mesh.userData = {nodeId: this.id, type: DocumentNode.typeName};
 
         if (this.data.label || this.data.icon) {
             this.labelObject = this._createLabel();
@@ -33,7 +33,7 @@ export class DocumentNode extends Node {
         if (this.mesh) return this.mesh;
         // A simple 3D "sheet" representation
         const geometry = new THREE.BoxGeometry(this.data.size, this.data.size * 1.2, 5);
-        const material = new THREE.MeshStandardMaterial({ color: this.data.color, roughness: 0.7, metalness: 0.1 });
+        const material = new THREE.MeshStandardMaterial({color: this.data.color, roughness: 0.7, metalness: 0.1});
         this.mesh = new THREE.Mesh(geometry, material);
         this.mesh.castShadow = true;
         this.mesh.receiveShadow = true;
@@ -68,7 +68,7 @@ export class DocumentNode extends Node {
 
     viewDocument() {
         if (this.data.documentUrl) {
-            this.space?.emit('node:document:view', { node: this, url: this.data.documentUrl });
+            this.space?.emit('node:document:view', {node: this, url: this.data.documentUrl});
             console.log(`DocumentNode: Request to view document at ${this.data.documentUrl}`);
         } else {
             console.warn(`DocumentNode: No documentUrl specified for node ${this.id}`);

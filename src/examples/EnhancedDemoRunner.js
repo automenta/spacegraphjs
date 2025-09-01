@@ -1,4 +1,4 @@
-import { pages } from './pages.js';
+import {pages} from './pages.js';
 
 /**
  * EnhancedDemoRunner provides an interactive demo system with documentation,
@@ -12,20 +12,20 @@ export class EnhancedDemoRunner {
         this.performanceMonitor = null;
         this.codeViewer = null;
         this.demoHistory = [];
-        
+
         // UI Elements
         this.mainContainer = null;
         this.sidebar = null;
         this.contentArea = null;
         this.toolbar = null;
-        
+
         // Demo metadata
         this.enhancedPages = this._enhancePageMetadata(pages);
         this._categorizePages();
-        
+
         this._initializeUI();
         this._bindEvents();
-        
+
         console.log('EnhancedDemoRunner initialized');
     }
 
@@ -50,7 +50,7 @@ export class EnhancedDemoRunner {
     _determineCategory(page) {
         const id = page.id.toLowerCase();
         const title = page.title.toLowerCase();
-        
+
         if (id.includes('performance') || title.includes('performance')) return 'Performance';
         if (id.includes('fractal') || id.includes('zoom')) return 'Zooming';
         if (id.includes('layout') || title.includes('layout')) return 'Layouts';
@@ -58,7 +58,7 @@ export class EnhancedDemoRunner {
         if (id.includes('camera') || title.includes('camera')) return 'Camera';
         if (id.includes('hud') || title.includes('hud')) return 'Interface';
         if (id.includes('all-features') || title.includes('comprehensive')) return 'Showcase';
-        
+
         return 'General';
     }
 
@@ -68,10 +68,10 @@ export class EnhancedDemoRunner {
     _determineComplexity(page) {
         const id = page.id.toLowerCase();
         const title = page.title.toLowerCase();
-        
+
         if (id.includes('performance') || id.includes('fractal') || id.includes('advanced')) return 'Advanced';
         if (id.includes('meta') || id.includes('layout') || id.includes('camera')) return 'Intermediate';
-        
+
         return 'Basic';
     }
 
@@ -81,7 +81,7 @@ export class EnhancedDemoRunner {
     _extractFeatures(page) {
         const features = [];
         const searchText = (page.id + ' ' + page.title + ' ' + page.description).toLowerCase();
-        
+
         const featureMap = {
             'Widgets': ['widget', 'node', 'control', 'progress', 'canvas'],
             'Layouts': ['layout', 'force', 'hierarchical', 'grid', 'circular'],
@@ -94,13 +94,13 @@ export class EnhancedDemoRunner {
             'Animation': ['animation', 'transition', 'tween', 'gsap'],
             'Interaction': ['interaction', 'click', 'drag', 'hover', 'select']
         };
-        
+
         Object.entries(featureMap).forEach(([feature, keywords]) => {
             if (keywords.some(keyword => searchText.includes(keyword))) {
                 features.push(feature);
             }
         });
-        
+
         return features;
     }
 
@@ -110,9 +110,12 @@ export class EnhancedDemoRunner {
     _estimateLoadTime(page) {
         const complexity = this._determineComplexity(page);
         switch (complexity) {
-            case 'Advanced': return '3-5 seconds';
-            case 'Intermediate': return '1-3 seconds';
-            default: return '< 1 second';
+            case 'Advanced':
+                return '3-5 seconds';
+            case 'Intermediate':
+                return '1-3 seconds';
+            default:
+                return '< 1 second';
         }
     }
 
@@ -121,7 +124,7 @@ export class EnhancedDemoRunner {
      */
     _determinePrerequisites(page) {
         const prereqs = [];
-        
+
         if (page.features?.includes('Performance')) {
             prereqs.push('Modern browser with WebGL support');
         }
@@ -131,7 +134,7 @@ export class EnhancedDemoRunner {
         if (page.id.includes('performance')) {
             prereqs.push('4GB+ RAM recommended');
         }
-        
+
         return prereqs;
     }
 
@@ -141,12 +144,12 @@ export class EnhancedDemoRunner {
     _generateTags(page) {
         const tags = [...page.features];
         tags.push(page.category, page.complexity);
-        
+
         // Add specific tags based on content
         if (page.id.includes('3d')) tags.push('Three.js', 'WebGL');
         if (page.id.includes('worker')) tags.push('Web Workers', 'Multithreading');
         if (page.id.includes('graph')) tags.push('Graph Theory', 'Network');
-        
+
         return [...new Set(tags)]; // Remove duplicates
     }
 
@@ -161,18 +164,18 @@ export class EnhancedDemoRunner {
             }
             this.demoCategories.get(category).push(page);
         });
-        
+
         // Sort categories and pages within categories
         this.demoCategories.forEach(pages => {
             pages.sort((a, b) => {
                 // Showcase category first, then by complexity, then alphabetically
                 if (a.category === 'Showcase') return -1;
                 if (b.category === 'Showcase') return 1;
-                
-                const complexityOrder = { 'Basic': 0, 'Intermediate': 1, 'Advanced': 2 };
+
+                const complexityOrder = {'Basic': 0, 'Intermediate': 1, 'Advanced': 2};
                 const complexityDiff = complexityOrder[a.complexity] - complexityOrder[b.complexity];
                 if (complexityDiff !== 0) return complexityDiff;
-                
+
                 return a.title.localeCompare(b.title);
             });
         });
@@ -198,31 +201,31 @@ export class EnhancedDemoRunner {
         // Find existing containers
         const pageSelectorEl = document.getElementById('page-selector');
         const hudEl = document.getElementById('hud');
-        
+
         // Hide original elements
         if (pageSelectorEl) pageSelectorEl.style.display = 'none';
         if (hudEl) hudEl.style.display = 'none';
-        
+
         // Create main container
         this.mainContainer = document.createElement('div');
         this.mainContainer.id = 'enhanced-demo-runner';
         this.mainContainer.className = 'enhanced-demo-runner';
-        
+
         // Create layout sections
         this.toolbar = document.createElement('div');
         this.toolbar.className = 'demo-toolbar';
-        
+
         this.sidebar = document.createElement('div');
         this.sidebar.className = 'demo-sidebar';
-        
+
         this.contentArea = document.createElement('div');
         this.contentArea.className = 'demo-content';
-        
+
         // Assemble layout
         this.mainContainer.appendChild(this.toolbar);
         this.mainContainer.appendChild(this.sidebar);
         this.mainContainer.appendChild(this.contentArea);
-        
+
         // Add to page
         document.body.appendChild(this.mainContainer);
     }
@@ -241,9 +244,9 @@ export class EnhancedDemoRunner {
                 <div class="filter-container">
                     <select id="category-filter">
                         <option value="">All Categories</option>
-                        ${Array.from(this.demoCategories.keys()).map(cat => 
-                            `<option value="${cat}">${cat}</option>`
-                        ).join('')}
+                        ${Array.from(this.demoCategories.keys()).map(cat =>
+            `<option value="${cat}">${cat}</option>`
+        ).join('')}
                     </select>
                     <select id="complexity-filter">
                         <option value="">All Levels</option>
@@ -264,7 +267,7 @@ export class EnhancedDemoRunner {
      */
     _generateCategoryHTML() {
         let html = '';
-        
+
         this.demoCategories.forEach((pages, category) => {
             html += `
                 <div class="category-section" data-category="${category}">
@@ -278,7 +281,7 @@ export class EnhancedDemoRunner {
                 </div>
             `;
         });
-        
+
         return html;
     }
 
@@ -288,10 +291,10 @@ export class EnhancedDemoRunner {
     _generateDemoItemHTML(page) {
         const complexityIcon = {
             'Basic': '🟢',
-            'Intermediate': '🟡', 
+            'Intermediate': '🟡',
             'Advanced': '🔴'
         }[page.complexity] || '⚪';
-        
+
         return `
             <div class="demo-item" data-demo-id="${page.id}" data-category="${page.category}" data-complexity="${page.complexity}">
                 <div class="demo-header">
@@ -300,9 +303,9 @@ export class EnhancedDemoRunner {
                 </div>
                 <div class="demo-description">${page.description}</div>
                 <div class="demo-features">
-                    ${page.features.slice(0, 3).map(feature => 
-                        `<span class="feature-tag">${feature}</span>`
-                    ).join('')}
+                    ${page.features.slice(0, 3).map(feature =>
+            `<span class="feature-tag">${feature}</span>`
+        ).join('')}
                     ${page.features.length > 3 ? `<span class="more-features">+${page.features.length - 3}</span>` : ''}
                 </div>
                 <div class="demo-metadata">
@@ -396,7 +399,7 @@ export class EnhancedDemoRunner {
         this.performanceMonitor.id = 'performance-monitor-overlay';
         this.performanceMonitor.className = 'overlay-panel performance-monitor';
         this.performanceMonitor.style.display = 'none';
-        
+
         this.performanceMonitor.innerHTML = `
             <div class="overlay-header">
                 <h3>📊 Performance Monitor</h3>
@@ -424,7 +427,7 @@ export class EnhancedDemoRunner {
                 <canvas id="performance-chart" width="300" height="150"></canvas>
             </div>
         `;
-        
+
         this.mainContainer.appendChild(this.performanceMonitor);
     }
 
@@ -436,7 +439,7 @@ export class EnhancedDemoRunner {
         this.codeViewer.id = 'code-viewer-overlay';
         this.codeViewer.className = 'overlay-panel code-viewer';
         this.codeViewer.style.display = 'none';
-        
+
         this.codeViewer.innerHTML = `
             <div class="overlay-header">
                 <h3>💻 Source Code</h3>
@@ -450,7 +453,7 @@ export class EnhancedDemoRunner {
                 <pre><code id="demo-source-code">// Select a demo to view its source code</code></pre>
             </div>
         `;
-        
+
         this.mainContainer.appendChild(this.codeViewer);
     }
 
@@ -883,7 +886,7 @@ export class EnhancedDemoRunner {
                 }
             }
         `;
-        
+
         const styleSheet = document.createElement('style');
         styleSheet.textContent = styles;
         document.head.appendChild(styleSheet);
@@ -900,28 +903,28 @@ export class EnhancedDemoRunner {
                 const demoId = demoItem.dataset.demoId;
                 this.loadDemo(demoId);
             }
-            
+
             const categoryHeader = e.target.closest('.category-header');
             if (categoryHeader) {
                 this._toggleCategory(categoryHeader);
             }
         });
-        
+
         // Search functionality
         const searchInput = document.getElementById('demo-search');
         const searchClear = document.getElementById('search-clear');
         const categoryFilter = document.getElementById('category-filter');
         const complexityFilter = document.getElementById('complexity-filter');
-        
+
         searchInput?.addEventListener('input', (e) => this._filterDemos(e.target.value));
         searchClear?.addEventListener('click', () => {
             searchInput.value = '';
             this._filterDemos('');
         });
-        
+
         categoryFilter?.addEventListener('change', (e) => this._filterByCategory(e.target.value));
         complexityFilter?.addEventListener('change', (e) => this._filterByComplexity(e.target.value));
-        
+
         // Toolbar controls
         document.getElementById('demo-home')?.addEventListener('click', () => this._showHome());
         document.getElementById('demo-back')?.addEventListener('click', () => this._navigateDemo(-1));
@@ -931,14 +934,14 @@ export class EnhancedDemoRunner {
         document.getElementById('show-code')?.addEventListener('click', () => this._toggleCodeViewer());
         document.getElementById('show-performance')?.addEventListener('click', () => this._togglePerformanceMonitor());
         document.getElementById('toggle-sidebar')?.addEventListener('click', () => this._toggleSidebar());
-        
+
         // Overlay controls
         this.mainContainer.addEventListener('click', (e) => {
             if (e.target.classList.contains('close-overlay')) {
                 e.target.closest('.overlay-panel').style.display = 'none';
             }
         });
-        
+
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => this._handleKeyboardShortcuts(e));
     }
@@ -952,34 +955,34 @@ export class EnhancedDemoRunner {
             console.error(`Demo ${demoId} not found`);
             return;
         }
-        
+
         try {
             // Update UI
             this._updateActiveDemoItem(demoId);
             this._updateToolbarTitle(page.title);
             this._showDemoDetails(page);
-            
+
             // Add to history
             this.demoHistory.push(demoId);
             if (this.demoHistory.length > 10) {
                 this.demoHistory.shift();
             }
-            
+
             // Load the demo
-            await this.space.importGraphFromJSON({ nodes: [], edges: [] });
-            
+            await this.space.importGraphFromJSON({nodes: [], edges: []});
+
             if (typeof page.createGraph === 'function') {
                 const result = page.createGraph(this.space);
                 console.log(`Loaded demo: ${page.title}`, result);
             }
-            
+
             // Re-initialize layout
             const layoutPlugin = this.space.plugins.getPlugin('LayoutPlugin');
             layoutPlugin?.layoutManager?.kick?.();
-            
+
             this.space.centerView(null, 0.8);
             this.currentDemo = page;
-            
+
         } catch (error) {
             console.error(`Failed to load demo ${demoId}:`, error);
         }
@@ -1010,7 +1013,7 @@ export class EnhancedDemoRunner {
     _showDemoDetails(page) {
         const infoPanel = document.getElementById('demo-info-panel');
         const detailsPanel = document.getElementById('demo-details-panel');
-        
+
         if (infoPanel) infoPanel.style.display = 'none';
         if (detailsPanel) {
             detailsPanel.style.display = 'block';
@@ -1040,9 +1043,9 @@ export class EnhancedDemoRunner {
                 <div class="demo-features-detailed">
                     <h3>Features Demonstrated</h3>
                     <div class="features-grid">
-                        ${page.features.map(feature => 
-                            `<span class="feature-badge">${feature}</span>`
-                        ).join('')}
+                        ${page.features.map(feature =>
+            `<span class="feature-badge">${feature}</span>`
+        ).join('')}
                     </div>
                 </div>
                 
@@ -1084,7 +1087,7 @@ export class EnhancedDemoRunner {
         const categorySection = categoryHeader.closest('.category-section');
         const toggle = categoryHeader.querySelector('.category-toggle');
         const demos = categorySection.querySelector('.category-demos');
-        
+
         const isCollapsed = demos.style.display === 'none';
         demos.style.display = isCollapsed ? 'block' : 'none';
         toggle.textContent = isCollapsed ? '−' : '+';
@@ -1096,17 +1099,17 @@ export class EnhancedDemoRunner {
     _filterDemos(searchTerm) {
         const term = searchTerm.toLowerCase();
         const demoItems = this.sidebar.querySelectorAll('.demo-item');
-        
+
         demoItems.forEach(item => {
             const title = item.querySelector('.demo-title').textContent.toLowerCase();
             const description = item.querySelector('.demo-description').textContent.toLowerCase();
             const features = Array.from(item.querySelectorAll('.feature-tag'))
                 .map(tag => tag.textContent.toLowerCase()).join(' ');
-            
+
             const matches = title.includes(term) || description.includes(term) || features.includes(term);
             item.style.display = matches ? 'block' : 'none';
         });
-        
+
         // Show/hide category sections based on visible demos
         this._updateCategoryVisibility();
     }
@@ -1116,13 +1119,13 @@ export class EnhancedDemoRunner {
      */
     _filterByCategory(category) {
         const demoItems = this.sidebar.querySelectorAll('.demo-item');
-        
+
         demoItems.forEach(item => {
             const itemCategory = item.dataset.category;
             const matches = !category || itemCategory === category;
             item.style.display = matches ? 'block' : 'none';
         });
-        
+
         this._updateCategoryVisibility();
     }
 
@@ -1131,13 +1134,13 @@ export class EnhancedDemoRunner {
      */
     _filterByComplexity(complexity) {
         const demoItems = this.sidebar.querySelectorAll('.demo-item');
-        
+
         demoItems.forEach(item => {
             const itemComplexity = item.dataset.complexity;
             const matches = !complexity || itemComplexity === complexity;
             item.style.display = matches ? 'block' : 'none';
         });
-        
+
         this._updateCategoryVisibility();
     }
 
@@ -1146,7 +1149,7 @@ export class EnhancedDemoRunner {
      */
     _updateCategoryVisibility() {
         const categorySections = this.sidebar.querySelectorAll('.category-section');
-        
+
         categorySections.forEach(section => {
             const visibleDemos = section.querySelectorAll('.demo-item[style*="block"], .demo-item:not([style])');
             section.style.display = visibleDemos.length > 0 ? 'block' : 'none';
@@ -1159,10 +1162,10 @@ export class EnhancedDemoRunner {
     _showHome() {
         const infoPanel = document.getElementById('demo-info-panel');
         const detailsPanel = document.getElementById('demo-details-panel');
-        
+
         if (infoPanel) infoPanel.style.display = 'block';
         if (detailsPanel) detailsPanel.style.display = 'none';
-        
+
         this._updateToolbarTitle('Select a demo to begin');
         this._updateActiveDemoItem(null);
         this.currentDemo = null;
@@ -1173,10 +1176,10 @@ export class EnhancedDemoRunner {
      */
     _navigateDemo(direction) {
         if (!this.currentDemo) return;
-        
+
         const currentIndex = this.enhancedPages.findIndex(p => p.id === this.currentDemo.id);
         const newIndex = currentIndex + direction;
-        
+
         if (newIndex >= 0 && newIndex < this.enhancedPages.length) {
             this.loadDemo(this.enhancedPages[newIndex].id);
         }
@@ -1208,7 +1211,7 @@ export class EnhancedDemoRunner {
     _toggleCodeViewer() {
         const isVisible = this.codeViewer.style.display !== 'none';
         this.codeViewer.style.display = isVisible ? 'none' : 'block';
-        
+
         if (!isVisible && this.currentDemo) {
             this._loadDemoSourceCode(this.currentDemo);
         }
@@ -1221,7 +1224,7 @@ export class EnhancedDemoRunner {
         try {
             // In a real implementation, this would fetch the actual source file
             const sourceCode = `// Source code for ${demo.title}\n// This would be loaded from the actual demo file\n\n// Demo metadata:\nexport const demoMetadata = ${JSON.stringify(demo, null, 2)};\n\n// Demo implementation would be here...`;
-            
+
             const codeElement = document.getElementById('demo-source-code');
             if (codeElement) {
                 codeElement.textContent = sourceCode;
@@ -1237,7 +1240,7 @@ export class EnhancedDemoRunner {
     _togglePerformanceMonitor() {
         const isVisible = this.performanceMonitor.style.display !== 'none';
         this.performanceMonitor.style.display = isVisible ? 'none' : 'block';
-        
+
         if (!isVisible) {
             this._startPerformanceMonitoring();
         } else {
@@ -1273,7 +1276,7 @@ export class EnhancedDemoRunner {
             'perf-objects': metrics.objectCount || 0,
             'perf-memory': `${((metrics.memoryUsage || 0) / (1024 * 1024)).toFixed(1)}MB`
         };
-        
+
         Object.entries(updates).forEach(([id, value]) => {
             const element = document.getElementById(id);
             if (element) {
@@ -1294,7 +1297,7 @@ export class EnhancedDemoRunner {
      */
     _handleKeyboardShortcuts(e) {
         if (e.target.tagName === 'INPUT') return; // Don't handle shortcuts in input fields
-        
+
         switch (e.key) {
             case 'h':
                 e.preventDefault();
@@ -1338,7 +1341,7 @@ export class EnhancedDemoRunner {
         if (this.mainContainer && this.mainContainer.parentNode) {
             this.mainContainer.parentNode.removeChild(this.mainContainer);
         }
-        
+
         this._stopPerformanceMonitoring();
         console.log('EnhancedDemoRunner disposed');
     }

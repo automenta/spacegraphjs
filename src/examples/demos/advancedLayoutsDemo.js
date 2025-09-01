@@ -21,7 +21,7 @@ function createGraph(space) {
     const demo = {
         title: 'Advanced Layout Systems',
         description: 'Constraint-based, nested, adaptive, and connected layouts with morphing transitions',
-        
+
         init() {
             this.setupUI();
             this.createDemoGraph();
@@ -139,19 +139,19 @@ function createGraph(space) {
             });
 
             constraintsCheck.addEventListener('change', (e) => {
-                this.layoutManager.enableAdvancedFeatures({ constraints: e.target.checked });
+                this.layoutManager.enableAdvancedFeatures({constraints: e.target.checked});
             });
 
             nestingCheck.addEventListener('change', (e) => {
-                this.layoutManager.enableAdvancedFeatures({ nesting: e.target.checked });
+                this.layoutManager.enableAdvancedFeatures({nesting: e.target.checked});
             });
 
             adaptiveCheck.addEventListener('change', (e) => {
-                this.layoutManager.enableAdvancedFeatures({ adaptive: e.target.checked });
+                this.layoutManager.enableAdvancedFeatures({adaptive: e.target.checked});
             });
 
             connectionsCheck.addEventListener('change', (e) => {
-                this.layoutManager.enableAdvancedFeatures({ connections: e.target.checked });
+                this.layoutManager.enableAdvancedFeatures({connections: e.target.checked});
                 if (e.target.checked) {
                     this.layoutManager.activateConnections();
                 } else {
@@ -183,7 +183,7 @@ function createGraph(space) {
 
         updateLayoutMode(layoutType) {
             const modeSelect = document.getElementById('layoutMode');
-            
+
             // Auto-select appropriate mode based on layout type
             switch (layoutType) {
                 case 'constraint':
@@ -231,7 +231,7 @@ function createGraph(space) {
             for (let i = 20; i < 30; i++) {
                 const parentIndex = Math.floor((i - 20) / 3);
                 const parent = this.nodes[parentIndex];
-                
+
                 const node = space.addNode({
                     id: `hierarchy_${i}`,
                     type: 'TextMeshNode',
@@ -268,7 +268,7 @@ function createGraph(space) {
             for (let i = 0; i < 25; i++) {
                 const source = this.nodes[Math.floor(Math.random() * this.nodes.length)];
                 const target = this.nodes[Math.floor(Math.random() * this.nodes.length)];
-                
+
                 if (source !== target && !this.hasEdge(source, target)) {
                     const edge = space.addEdge({
                         id: `edge_${i}`,
@@ -291,7 +291,7 @@ function createGraph(space) {
         },
 
         hasEdge(source, target) {
-            return this.edges.some(edge => 
+            return this.edges.some(edge =>
                 (edge.source === source && edge.target === target) ||
                 (edge.source === target && edge.target === source)
             );
@@ -300,7 +300,7 @@ function createGraph(space) {
         setupAdvancedLayoutManager() {
             // Get the layout manager from space and enhance it
             this.layoutManager = space.layoutManager;
-            
+
             // Enable advanced features
             this.layoutManager.enableAdvancedFeatures({
                 constraints: false,
@@ -350,7 +350,7 @@ function createGraph(space) {
         },
 
         calculateNodeGroupBounds(nodes) {
-            if (nodes.length === 0) return { min: { x: 0, y: 0, z: 0 }, max: { x: 0, y: 0, z: 0 } };
+            if (nodes.length === 0) return {min: {x: 0, y: 0, z: 0}, max: {x: 0, y: 0, z: 0}};
 
             const positions = nodes.map(n => n.position);
             const min = {
@@ -380,7 +380,7 @@ function createGraph(space) {
                 for (let i = 0; i < 3; i++) {
                     const sourceNode = groupANodes[Math.floor(Math.random() * groupANodes.length)];
                     const targetNode = groupBNodes[Math.floor(Math.random() * groupBNodes.length)];
-                    
+
                     this.layoutManager.addLayoutConnection(sourceNode.id, targetNode.id, {
                         type: 'curved',
                         metadata: {
@@ -426,7 +426,7 @@ function createGraph(space) {
 
         async demonstrateMorphing() {
             const layouts = ['circular', 'grid', 'force', 'hierarchical', 'spherical', 'radial', 'treemap'];
-            
+
             for (const layout of layouts) {
                 // Add a check for experimental layouts if they might not be fully functional for morphing
                 // For now, assume they can be called.
@@ -502,7 +502,7 @@ function createGraph(space) {
             // Add some existing nodes to the container
             const availableNodes = this.nodes.filter(n => !n.data.parentContainer);
             const nodesToAdd = availableNodes.slice(0, Math.min(6, availableNodes.length));
-            
+
             nodesToAdd.forEach(node => {
                 this.layoutManager.addNodeToContainer(node, containerNode.id);
             });
@@ -518,7 +518,7 @@ function createGraph(space) {
             const currentLayout = this.layoutManager.getCurrentLayout();
             const availableLayouts = layouts.filter(l => l !== currentLayout.name);
             const targetLayout = availableLayouts[Math.floor(Math.random() * availableLayouts.length)];
-            
+
             this.layoutManager.forceAdaptation(targetLayout, 'manual_demo');
             console.log(`Forced adaptation to ${targetLayout}`);
         },
@@ -526,13 +526,13 @@ function createGraph(space) {
         showLayoutConnections() {
             const connections = this.layoutManager.connector.getAllConnections();
             console.log('Current layout connections:', connections);
-            
+
             // Temporarily highlight connections
             connections.forEach(conn => {
                 if (conn.visualElement && conn.visualElement.material) {
                     const material = conn.visualElement.material;
                     const originalOpacity = material.opacity;
-                    
+
                     material.opacity = 1.0;
                     setTimeout(() => {
                         material.opacity = originalOpacity;
@@ -545,7 +545,7 @@ function createGraph(space) {
             const nodeCount = this.nodes.length;
             const edgeCount = this.edges.length;
             const density = nodeCount > 1 ? edgeCount / (nodeCount * (nodeCount - 1) / 2) : 0;
-            
+
             const capabilities = this.layoutManager?.getLayoutCapabilities();
             const currentLayout = capabilities?.currentMode || 'Unknown';
 
@@ -559,7 +559,7 @@ function createGraph(space) {
             if (this.ui && this.ui.parentNode) {
                 this.ui.parentNode.removeChild(this.ui);
             }
-            
+
             // Clean up nodes and edges
             this.nodes.forEach(node => space.removeNode(node.id));
             this.edges.forEach(edge => space.removeEdge(edge.id));
@@ -570,4 +570,4 @@ function createGraph(space) {
     return demo;
 }
 
-export { demoMetadata, createGraph };
+export {demoMetadata, createGraph};

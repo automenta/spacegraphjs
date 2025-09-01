@@ -1,14 +1,14 @@
 import * as THREE from 'three';
-import {CSS3DObject} from 'three/addons/renderers/CSS3DRenderer.js';
-import {$, $$} from '../utils.js';
+import {$$} from '../utils.js';
 import {HtmlNode} from '../graph/nodes/HtmlNode.js';
 
 // Import decomposed modules
-import { InteractionState } from './InteractionState.js';
-import { ConfirmDialog } from './dialogs/ConfirmDialog.js';
-import { ContextMenu } from './menus/ContextMenu.js';
-import { EdgeMenu } from './menus/EdgeMenu.js';
-import { AdvancedHudManager } from './hud/AdvancedHudManager.js';
+import {InteractionState} from './InteractionState.js';
+import {ConfirmDialog} from './dialogs/ConfirmDialog.js';
+import {ContextMenu} from './menus/ContextMenu.js';
+import {EdgeMenu} from './menus/EdgeMenu.js';
+import {AdvancedHudManager} from './hud/AdvancedHudManager.js';
+
 // import { Toolbar } from './Toolbar.js'; // Toolbar will be removed
 
 export class UIManager {
@@ -30,8 +30,8 @@ export class UIManager {
     dragOffset = new THREE.Vector3();
 
     resizedNode = null;
-    resizeStartPointerPos = { x: 0, y: 0 };
-    resizeStartNodeSize = { width: 0, height: 0 };
+    resizeStartPointerPos = {x: 0, y: 0};
+    resizeStartNodeSize = {width: 0, height: 0};
     resizeNodeScreenScaleX = 1;
     resizeNodeScreenScaleY = 1;
 
@@ -52,14 +52,18 @@ export class UIManager {
 
     // Callbacks provided by the UIPlugin
     _uiPluginCallbacks = {
-        setSelectedNode: () => {},
-        setSelectedEdge: () => {},
-        cancelLinking: () => {},
+        setSelectedNode: () => {
+        },
+        setSelectedEdge: () => {
+        },
+        cancelLinking: () => {
+        },
         getIsLinking: () => false,
         getLinkSourceNode: () => null,
         getSelectedNodes: () => new Set(),
         getSelectedEdges: () => new Set(),
-        completeLinking: () => {},
+        completeLinking: () => {
+        },
     };
 
     constructor(space, contextMenuEl, confirmDialogEl, uiPluginCallbacks) {
@@ -68,7 +72,7 @@ export class UIManager {
         this.space = space;
         this.container = space.container;
 
-        this._uiPluginCallbacks = { ...this._uiPluginCallbacks, ...uiPluginCallbacks };
+        this._uiPluginCallbacks = {...this._uiPluginCallbacks, ...uiPluginCallbacks};
 
         // Initialize decomposed components
         this.confirmDialog = new ConfirmDialog(this.space, confirmDialogEl);
@@ -89,7 +93,7 @@ export class UIManager {
     }
 
     _bindEvents() {
-        const passiveFalse = { passive: false };
+        const passiveFalse = {passive: false};
         this.container.addEventListener('pointerdown', this._onPointerDown, passiveFalse);
         window.addEventListener('pointermove', this._onPointerMove, passiveFalse);
         window.addEventListener('pointerup', this._onPointerUp, passiveFalse);
@@ -125,7 +129,7 @@ export class UIManager {
             if (!this.edgeMenu.edgeMenuObject || this.edgeMenu.edgeMenuObject.element.dataset.edgeId !== edge.id) {
                 this.edgeMenu.show(edge);
             } else {
-                 this.edgeMenu.updatePosition(edge);
+                this.edgeMenu.updatePosition(edge);
             }
         } else {
             this.edgeMenu.hide();
@@ -203,8 +207,8 @@ export class UIManager {
             case InteractionState.RESIZING_NODE:
                 this.resizedNode = data.node;
                 this.resizedNode.startResize();
-                this.resizeStartNodeSize = { ...this.resizedNode.size };
-                this.resizeStartPointerPos = { x: this.pointerState.clientX, y: this.pointerState.clientY };
+                this.resizeStartNodeSize = {...this.resizedNode.size};
+                this.resizeStartPointerPos = {x: this.pointerState.clientX, y: this.pointerState.clientY};
                 this.container.style.cursor = 'nwse-resize';
 
                 const node = this.resizedNode;
@@ -265,7 +269,7 @@ export class UIManager {
                 this.container.style.cursor = 'grab';
                 break;
         }
-        this.space.emit('interaction:stateChanged', { newState, oldState: this.currentState, data });
+        this.space.emit('interaction:stateChanged', {newState, oldState: this.currentState, data});
     }
 
     _onPointerDown = (e) => {
@@ -299,7 +303,7 @@ export class UIManager {
             if (targetInfo.resizeHandle && targetInfo.node instanceof HtmlNode) {
                 e.preventDefault();
                 e.stopPropagation();
-                this._transitionToState(InteractionState.RESIZING_NODE, { node: targetInfo.node });
+                this._transitionToState(InteractionState.RESIZING_NODE, {node: targetInfo.node});
                 this._uiPluginCallbacks.setSelectedNode(targetInfo.node, false);
                 this.contextMenu.hide();
                 return;
@@ -313,7 +317,7 @@ export class UIManager {
                     this.contextMenu.hide();
                     return;
                 }
-                this._transitionToState(InteractionState.DRAGGING_NODE, { node: targetInfo.node });
+                this._transitionToState(InteractionState.DRAGGING_NODE, {node: targetInfo.node});
                 this._uiPluginCallbacks.setSelectedNode(targetInfo.node, e.shiftKey);
                 this.contextMenu.hide();
                 return;
@@ -329,7 +333,7 @@ export class UIManager {
             this._transitionToState(InteractionState.PANNING);
             this.contextMenu.hide();
             if (!e.shiftKey) {
-                 this._uiPluginCallbacks.setSelectedNode(null, false);
+                this._uiPluginCallbacks.setSelectedNode(null, false);
             }
         }
     };
@@ -379,7 +383,10 @@ export class UIManager {
                         } else {
                             this.draggedNode.drag(primaryNodeNewCalculatedPos);
                         }
-                        this.space.emit('graph:node:dragged', {node: this.draggedNode, position: primaryNodeNewCalculatedPos});
+                        this.space.emit('graph:node:dragged', {
+                            node: this.draggedNode,
+                            position: primaryNodeNewCalculatedPos
+                        });
                     }
                 }
                 break;
@@ -400,7 +407,7 @@ export class UIManager {
                         Math.max(HtmlNode.MIN_SIZE.width, newWidth),
                         Math.max(HtmlNode.MIN_SIZE.height, newHeight)
                     );
-                    this.space.emit('graph:node:resized', {node: this.resizedNode, size: { ...this.resizedNode.size }});
+                    this.space.emit('graph:node:resized', {node: this.resizedNode, size: {...this.resizedNode.size}});
                 }
                 break;
 
@@ -499,7 +506,7 @@ export class UIManager {
             const clickedSelectedEdge = targetInfo.intersectedEdge && selectedEdges?.has(targetInfo.intersectedEdge);
 
             if (!clickedSelectedEdge) {
-                 this._uiPluginCallbacks.setSelectedEdge(null, false);
+                this._uiPluginCallbacks.setSelectedEdge(null, false);
             }
         }
     };
@@ -589,7 +596,7 @@ export class UIManager {
                 break;
             case '-':
             case '_':
-                 if (primarySelectedNode instanceof HtmlNode) {
+                if (primarySelectedNode instanceof HtmlNode) {
                     const factor = e.key === '-' || e.key === '_' ? 1 / 1.15 : 1 / 1.2;
                     (e.ctrlKey || e.metaKey)
                         ? this.space.emit('ui:request:adjustNodeSize', primarySelectedNode, factor)
@@ -751,7 +758,7 @@ export class UIManager {
     }
 
     _onLinkingStarted = (data) => {
-        this._transitionToState(InteractionState.LINKING_NODE, { sourceNode: data.sourceNode });
+        this._transitionToState(InteractionState.LINKING_NODE, {sourceNode: data.sourceNode});
     };
 
     _onLinkingCancelled = (_data) => {
@@ -769,7 +776,7 @@ export class UIManager {
     };
 
     dispose() {
-        const passiveFalse = { passive: false };
+        const passiveFalse = {passive: false};
         this.container.removeEventListener('pointerdown', this._onPointerDown, passiveFalse);
         window.removeEventListener('pointermove', this._onPointerMove, passiveFalse);
         window.removeEventListener('pointerup', this._onPointerUp, passiveFalse);
