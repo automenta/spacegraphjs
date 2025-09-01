@@ -96,11 +96,6 @@ body {
 }
 
 
-
-
-
-
-
 /* Styles for page selector and HUD */
 #page-selector {
     position: absolute;
@@ -534,7 +529,6 @@ body {
 }
 
 
-
 .context-menu,
 .dialog {
     position: fixed;
@@ -803,34 +797,38 @@ body {
 /* CSS from ControlPanelNode.js */
 .node-control-panel {
     background: var(--node-bg, rgba(20, 25, 40, 0.95));
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 8px;
     backdrop-filter: blur(10px);
     font-family: 'Segoe UI', sans-serif;
     color: white;
     overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
+
 .control-panel-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 8px 12px;
-    background: rgba(0,0,0,0.2);
-    border-bottom: 1px solid rgba(255,255,255,0.1);
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
+
 .panel-title {
     margin: 0;
     font-size: 14px;
     font-weight: 600;
     color: #fff;
 }
+
 .panel-actions {
     display: flex;
     gap: 4px;
 }
+
 .panel-actions button {
-    background: rgba(255,255,255,0.1);
+    background: rgba(255, 255, 255, 0.1);
     border: none;
     color: white;
     width: 24px;
@@ -843,47 +841,55 @@ body {
     font-size: 16px;
     transition: background 0.2s;
 }
+
 .panel-actions button:hover {
-    background: rgba(255,255,255,0.2);
+    background: rgba(255, 255, 255, 0.2);
 }
+
 .control-panel-body {
     padding: 12px;
     height: calc(100% - 50px);
     overflow-y: auto;
 }
+
 .control-group {
     margin-bottom: 16px;
 }
+
 .control-label {
     display: block;
     font-size: 12px;
     margin-bottom: 6px;
-    color: rgba(255,255,255,0.8);
+    color: rgba(255, 255, 255, 0.8);
     font-weight: 500;
 }
+
 .control-input {
     width: 100%;
     padding: 6px 8px;
-    background: rgba(255,255,255,0.1);
-    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 4px;
     color: white;
     font-size: 13px;
 }
+
 .control-input:focus {
     outline: none;
     border-color: #4a9eff;
-    box-shadow: 0 0 0 2px rgba(74,158,255,0.2);
+    box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.2);
 }
+
 .control-slider {
     width: 100%;
     height: 6px;
-    background: rgba(255,255,255,0.2);
+    background: rgba(255, 255, 255, 0.2);
     border-radius: 3px;
     outline: none;
     appearance: none;
     cursor: pointer;
 }
+
 .control-slider::-webkit-slider-thumb {
     appearance: none;
     width: 18px;
@@ -891,8 +897,9 @@ body {
     background: #4a9eff;
     border-radius: 50%;
     cursor: pointer;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
+
 .control-button {
     width: 100%;
     padding: 8px 12px;
@@ -905,30 +912,36 @@ body {
     cursor: pointer;
     transition: all 0.2s;
 }
+
 .control-button:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(74,158,255,0.3);
+    box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);
 }
+
 .control-button:active {
     transform: translateY(0);
 }
+
 .control-value {
     float: right;
     font-size: 11px;
     color: #4a9eff;
     font-weight: 600;
 }
+
 .control-switch {
     position: relative;
     width: 44px;
     height: 24px;
     margin: 0;
 }
+
 .control-switch input {
     opacity: 0;
     width: 0;
     height: 0;
 }
+
 .control-switch .slider {
     position: absolute;
     cursor: pointer;
@@ -936,10 +949,11 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(255,255,255,0.2);
+    background-color: rgba(255, 255, 255, 0.2);
     transition: 0.3s;
     border-radius: 24px;
 }
+
 .control-switch .slider:before {
     position: absolute;
     content: "";
@@ -951,9 +965,11 @@ body {
     transition: 0.3s;
     border-radius: 50%;
 }
+
 .control-switch input:checked + .slider {
     background-color: #4a9eff;
 }
+
 .control-switch input:checked + .slider:before {
     transform: translateX(20px);
 }

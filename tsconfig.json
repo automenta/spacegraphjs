@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES2024",
+    "target": "ES2020",
     // Or a version that matches your supported environments
     "module": "ESNext",
     // Using ESNext for modern module features

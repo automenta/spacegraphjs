@@ -19,10 +19,10 @@ const DEFAULT_ADVANCED_HUD_SETTINGS = {
 };
 
 export class AdvancedHudManager {
+    static _nextZIndex = 1000;
     space = null;
     container = null;
     _uiPluginCallbacks = null;
-
     hudLayer = null;
     hudMainMenuButton = null;
     hudPopupMenu = null;
@@ -31,12 +31,9 @@ export class AdvancedHudManager {
     hudSelectionInfo = null;
     hudKeyboardShortcutsButton = null;
     hudLayoutSettingsButton = null;
-
     isPopupMenuVisible = false;
-
     keyboardShortcutsDialog = null;
     layoutSettingsDialog = null;
-
     performanceMetrics = {
         fps: 0,
         frameTime: 0,
@@ -74,6 +71,10 @@ export class AdvancedHudManager {
 
         this.applyHudSettings(this.settings);
         this._populateDefaultMenus();
+    }
+
+    static getNextZIndex() {
+        return AdvancedHudManager._nextZIndex++;
     }
 
     /**
@@ -410,7 +411,7 @@ export class AdvancedHudManager {
     }
 
     // Override or adapt _createAdvancedHudElements from parent
-        _createAdvancedHudElements() {
+    _createAdvancedHudElements() {
         // If base class creates regions, we might not need to recreate them
         // super._createAdvancedHudElements(); // Call if base class sets up common regions
 
@@ -673,13 +674,13 @@ export class AdvancedHudManager {
     _setupPerformancePanel() { /* Now managed by _createAdvancedHudElements or as a pinned window */
     }
 
+    // _setupStatusBar() { /* Replaced by new status bar logic in _createAdvancedHudElements */ }
+
     _setupMinimap() { /* Now managed by _createAdvancedHudElements or as a pinned window */
     }
 
     _setupToolbar() { /* Replaced by MenuBar */
     }
-
-    // _setupStatusBar() { /* Replaced by new status bar logic in _createAdvancedHudElements */ }
 
     // Keep notification and progress logic, but ensure containers are correctly parented
     _createNotificationContainer() {
@@ -787,12 +788,6 @@ export class AdvancedHudManager {
 
     _toggleShadows() {
         this.space.emit('ui:request:toggleShadows');
-    }
-
-    static _nextZIndex = 1000;
-
-    static getNextZIndex() {
-        return AdvancedHudManager._nextZIndex++;
     }
 
     // Pinning logic

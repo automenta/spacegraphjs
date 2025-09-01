@@ -1,34 +1,38 @@
 /* CSS from ControlPanelNode.js */
 .node-control-panel {
     background: var(--node-bg, rgba(20, 25, 40, 0.95));
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 8px;
     backdrop-filter: blur(10px);
     font-family: 'Segoe UI', sans-serif;
     color: white;
     overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
+
 .control-panel-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 8px 12px;
-    background: rgba(0,0,0,0.2);
-    border-bottom: 1px solid rgba(255,255,255,0.1);
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
+
 .panel-title {
     margin: 0;
     font-size: 14px;
     font-weight: 600;
     color: #fff;
 }
+
 .panel-actions {
     display: flex;
     gap: 4px;
 }
+
 .panel-actions button {
-    background: rgba(255,255,255,0.1);
+    background: rgba(255, 255, 255, 0.1);
     border: none;
     color: white;
     width: 24px;
@@ -41,47 +45,55 @@
     font-size: 16px;
     transition: background 0.2s;
 }
+
 .panel-actions button:hover {
-    background: rgba(255,255,255,0.2);
+    background: rgba(255, 255, 255, 0.2);
 }
+
 .control-panel-body {
     padding: 12px;
     height: calc(100% - 50px);
     overflow-y: auto;
 }
+
 .control-group {
     margin-bottom: 16px;
 }
+
 .control-label {
     display: block;
     font-size: 12px;
     margin-bottom: 6px;
-    color: rgba(255,255,255,0.8);
+    color: rgba(255, 255, 255, 0.8);
     font-weight: 500;
 }
+
 .control-input {
     width: 100%;
     padding: 6px 8px;
-    background: rgba(255,255,255,0.1);
-    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 4px;
     color: white;
     font-size: 13px;
 }
+
 .control-input:focus {
     outline: none;
     border-color: #4a9eff;
-    box-shadow: 0 0 0 2px rgba(74,158,255,0.2);
+    box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.2);
 }
+
 .control-slider {
     width: 100%;
     height: 6px;
-    background: rgba(255,255,255,0.2);
+    background: rgba(255, 255, 255, 0.2);
     border-radius: 3px;
     outline: none;
     appearance: none;
     cursor: pointer;
 }
+
 .control-slider::-webkit-slider-thumb {
     appearance: none;
     width: 18px;
@@ -89,8 +101,9 @@
     background: #4a9eff;
     border-radius: 50%;
     cursor: pointer;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
+
 .control-button {
     width: 100%;
     padding: 8px 12px;
@@ -103,30 +116,36 @@
     cursor: pointer;
     transition: all 0.2s;
 }
+
 .control-button:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(74,158,255,0.3);
+    box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);
 }
+
 .control-button:active {
     transform: translateY(0);
 }
+
 .control-value {
     float: right;
     font-size: 11px;
     color: #4a9eff;
     font-weight: 600;
 }
+
 .control-switch {
     position: relative;
     width: 44px;
     height: 24px;
     margin: 0;
 }
+
 .control-switch input {
     opacity: 0;
     width: 0;
     height: 0;
 }
+
 .control-switch .slider {
     position: absolute;
     cursor: pointer;
@@ -134,10 +153,11 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(255,255,255,0.2);
+    background-color: rgba(255, 255, 255, 0.2);
     transition: 0.3s;
     border-radius: 24px;
 }
+
 .control-switch .slider:before {
     position: absolute;
     content: "";
@@ -149,9 +169,11 @@
     transition: 0.3s;
     border-radius: 50%;
 }
+
 .control-switch input:checked + .slider {
     background-color: #4a9eff;
 }
+
 .control-switch input:checked + .slider:before {
     transform: translateX(20px);
 }
@@ -159,7 +181,7 @@
 /* CSS from ProgressNode.js */
 .node-progress {
     background: var(--node-bg, rgba(30, 35, 50, 0.95));
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 8px;
     padding: 12px;
     font-family: 'Segoe UI', sans-serif;
@@ -168,8 +190,9 @@
     align-items: center;
     justify-content: center;
     backdrop-filter: blur(10px);
-    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
+
 .progress-container {
     width: 100%;
     height: 100%;
@@ -179,20 +202,23 @@
     justify-content: center;
     gap: 8px;
 }
+
 .progress-label {
     font-size: 14px;
     font-weight: 600;
-    color: rgba(255,255,255,0.9);
+    color: rgba(255, 255, 255, 0.9);
     margin-bottom: 4px;
 }
+
 .progress-bar-wrapper {
     width: 100%;
     height: 20px;
-    background: rgba(255,255,255,0.1);
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 10px;
     overflow: hidden;
     position: relative;
 }
+
 .progress-bar-fill {
     height: 100%;
     background: linear-gradient(90deg, var(--progress-color), var(--progress-color-lighten));
@@ -201,6 +227,7 @@
     position: relative;
     overflow: hidden;
 }
+
 .progress-bar-fill.animated::before {
     content: '';
     position: absolute;
@@ -208,33 +235,43 @@
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
     animation: shimmer 1.5s infinite;
 }
+
 @keyframes shimmer {
-    0% { left: -100%; }
-    100% { left: 100%; }
+    0% {
+        left: -100%;
+    }
+    100% {
+        left: 100%;
+    }
 }
+
 .progress-value {
     font-size: 12px;
-    color: rgba(255,255,255,0.8);
+    color: rgba(255, 255, 255, 0.8);
     margin-top: 4px;
 }
+
 .progress-circular {
     position: relative;
     width: 80px;
     height: 80px;
 }
+
 .progress-circular svg {
     width: 100%;
     height: 100%;
     transform: rotate(-90deg);
 }
+
 .progress-circular-bg {
     fill: none;
-    stroke: rgba(255,255,255,0.1);
+    stroke: rgba(255, 255, 255, 0.1);
     stroke-width: 6;
 }
+
 .progress-circular-fill {
     fill: none;
     stroke: var(--progress-color);
@@ -242,6 +279,7 @@
     stroke-linecap: round;
     transition: stroke-dashoffset 0.3s ease;
 }
+
 .progress-circular-text {
     position: absolute;
     top: 50%;
@@ -251,20 +289,24 @@
     font-weight: 600;
     color: white;
 }
+
 .progress-gauge {
     position: relative;
     width: 100px;
     height: 60px;
 }
+
 .progress-gauge svg {
     width: 100%;
     height: 100%;
 }
+
 .progress-gauge-bg {
     fill: none;
-    stroke: rgba(255,255,255,0.1);
+    stroke: rgba(255, 255, 255, 0.1);
     stroke-width: 8;
 }
+
 .progress-gauge-fill {
     fill: none;
     stroke: var(--progress-color);
@@ -272,12 +314,14 @@
     stroke-linecap: round;
     transition: stroke-dashoffset 0.3s ease;
 }
+
 .progress-gauge-needle {
     stroke: white;
     stroke-width: 2;
     transition: transform 0.3s ease;
     transform-origin: 50px 50px;
 }
+
 .progress-gauge-text {
     position: absolute;
     bottom: 5px;
@@ -286,17 +330,19 @@
     font-size: 12px;
     color: white;
 }
+
 .progress-steps {
     display: flex;
     align-items: center;
     gap: 8px;
     width: 100%;
 }
+
 .progress-step {
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: rgba(255,255,255,0.1);
+    background: rgba(255, 255, 255, 0.1);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -304,23 +350,27 @@
     font-weight: 600;
     transition: all 0.3s ease;
 }
+
 .progress-step.completed {
     background: var(--progress-color);
     color: white;
 }
+
 .progress-step.current {
     background: var(--progress-color);
     color: white;
     transform: scale(1.2);
-    box-shadow: 0 0 10px var(--progress-color)50;
+    box-shadow: 0 0 10px var(--progress-color) 50;
 }
+
 .progress-step-line {
     height: 2px;
-    background: rgba(255,255,255,0.1);
+    background: rgba(255, 255, 255, 0.1);
     flex: 1;
     position: relative;
     overflow: hidden;
 }
+
 .progress-step-line.completed {
     background: var(--progress-color);
 }

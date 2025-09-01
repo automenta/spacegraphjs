@@ -99,7 +99,7 @@ export class WidgetComposer {
                 library.button('start', 'Start Workflow', 'Start').data.controls[0],
                 library.button('pause', 'Pause', 'Pause').data.controls[0],
                 library.button('reset', 'Reset', 'Reset').data.controls[0],
-                { id: 'auto', type: 'switch', label: 'Auto Mode', value: false }
+                {id: 'auto', type: 'switch', label: 'Auto Mode', value: false}
             ]
         }));
 
@@ -137,14 +137,16 @@ export class WidgetComposer {
         widgets.push(this._createWidget('control-panel', 'analytics-controls', {
             title: 'Analytics Controls',
             controls: [
-                { id: 'timeRange', type: 'select', label: 'Time Range', value: '7d', options: [
-                    {value: '1d', label: 'Last 24 Hours'},
-                    {value: '7d', label: 'Last 7 Days'},
-                    {value: '30d', label: 'Last 30 Days'},
-                    {value: '90d', label: 'Last 90 Days'}
-                ]},
+                {
+                    id: 'timeRange', type: 'select', label: 'Time Range', value: '7d', options: [
+                        {value: '1d', label: 'Last 24 Hours'},
+                        {value: '7d', label: 'Last 7 Days'},
+                        {value: '30d', label: 'Last 30 Days'},
+                        {value: '90d', label: 'Last 90 Days'}
+                    ]
+                },
                 library.button('refresh', 'Refresh Data', 'Refresh').data.controls[0],
-                { id: 'autoRefresh', type: 'switch', label: 'Auto Refresh', value: true }
+                {id: 'autoRefresh', type: 'switch', label: 'Auto Refresh', value: true}
             ]
         }));
 
@@ -212,14 +214,16 @@ export class WidgetComposer {
         widgets.push(this._createWidget('control-panel', 'viz-controls', {
             title: 'Visualization Controls',
             controls: [
-                { id: 'chartType', type: 'select', label: 'Chart Type', value: 'line', options: [
-                    {value: 'line', label: 'Line Chart'},
-                    {value: 'bar', label: 'Bar Chart'},
-                    {value: 'pie', label: 'Pie Chart'},
-                    {value: 'scatter', label: 'Scatter Plot'}
-                ]},
-                { id: 'showGrid', type: 'switch', label: 'Show Grid', value: true },
-                { id: 'animate', type: 'switch', label: 'Animate', value: true }
+                {
+                    id: 'chartType', type: 'select', label: 'Chart Type', value: 'line', options: [
+                        {value: 'line', label: 'Line Chart'},
+                        {value: 'bar', label: 'Bar Chart'},
+                        {value: 'pie', label: 'Pie Chart'},
+                        {value: 'scatter', label: 'Scatter Plot'}
+                    ]
+                },
+                {id: 'showGrid', type: 'switch', label: 'Show Grid', value: true},
+                {id: 'animate', type: 'switch', label: 'Animate', value: true}
             ]
         }));
 
@@ -334,22 +338,22 @@ export class WidgetComposer {
     }
 
     static _createWidget(type, id, data = {}) {
-        const widgetConfig = { id: id || `${type}-${Date.now()}`, type, data };
+        const widgetConfig = {id: id || `${type}-${Date.now()}`, type, data};
         switch (type) {
             case 'control-panel':
-                widgetConfig.data = { title: 'Control Panel', controls: [], ...data };
+                widgetConfig.data = {title: 'Control Panel', controls: [], ...data};
                 break;
             case 'progress':
-                widgetConfig.data = { label: 'Progress', progressType: 'bar', value: 0, max: 100, ...data };
+                widgetConfig.data = {label: 'Progress', progressType: 'bar', value: 0, max: 100, ...data};
                 break;
             case 'info':
-                widgetConfig.data = { text: 'Information', icon: 'ℹ', ...data };
+                widgetConfig.data = {text: 'Information', icon: 'ℹ', ...data};
                 break;
             case 'chart':
-                widgetConfig.data = { title: 'Chart', chartType: 'line', ...data };
+                widgetConfig.data = {title: 'Chart', chartType: 'line', ...data};
                 break;
             case 'meta-widget':
-                widgetConfig.data = { title: 'Dashboard', ...data };
+                widgetConfig.data = {title: 'Dashboard', ...data};
                 break;
         }
         return widgetConfig;
@@ -360,26 +364,26 @@ export class WidgetComposer {
             slider: (id, label, value = 50, min = 0, max = 100) =>
                 this._createWidget('control-panel', id, {
                     title: 'Slider Control',
-                    controls: [{ id, type: 'slider', label, value, min, max }]
+                    controls: [{id, type: 'slider', label, value, min, max}]
                 }),
 
             button: (id, label, text) =>
                 this._createWidget('control-panel', id, {
                     title: 'Button Control',
-                    controls: [{ id, type: 'button', label: label || text, text: text || label }]
+                    controls: [{id, type: 'button', label: label || text, text: text || label}]
                 }),
 
             progressBar: (id, label, value = 0, max = 100) =>
-                this._createWidget('progress', id, { label, progressType: 'bar', value, max }),
+                this._createWidget('progress', id, {label, progressType: 'bar', value, max}),
 
             gauge: (id, label, value = 0, max = 100) =>
-                this._createWidget('progress', id, { label, progressType: 'gauge', value, max }),
+                this._createWidget('progress', id, {label, progressType: 'gauge', value, max}),
 
             infoPanel: (id, text, icon = 'ℹ') =>
-                this._createWidget('info', id, { text, icon }),
+                this._createWidget('info', id, {text, icon}),
 
             chart: (id, title, chartType = 'line') =>
-                this._createWidget('chart', id, { title, chartType })
+                this._createWidget('chart', id, {title, chartType})
         };
     }
 }

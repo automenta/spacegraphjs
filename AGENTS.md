@@ -1,4 +1,5 @@
 # Code Guidelines
+
 - Elegance
     - abstract, modularize
     - syntax: ternary, switch, etc
