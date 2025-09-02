@@ -4,18 +4,95 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SpaceGraphJS - Mini</title>
-    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="graph-container"></div>
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    <script type="module">
+        import { SpaceGraph } from './src/SpaceGraph.js';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const container = document.getElementById('graph-container');
+            if (!container) {
+                console.error('Container element #graph-container not found.');
+                return;
             }
-        }
+
+            const space = new SpaceGraph(container);
+
+            const node1 = space.createNode({
+                id: 'n1',
+                type: 'shape',
+                data: { label: 'Hello', color: 0xff0000, size: 20 },
+                position: { x: 0, y: 0, z: 0 }
+            });
+
+            const node2Content = `
+                <div style="background-color: rgba(0,128,255,0.5); padding: 10px; border-radius: 5px; width: 280px; height: 160px;">
+                    <h4>HTML Node Demo</h4>
+                    <img src="https://via.placeholder.com/150x50" alt="placeholder">
+                    <p>Interact with these elements:</p>
+                    <input type="text" placeholder="Type here..." />
+                    <button id="create-node-button">Add a new node</button>
+                    <input type="range" min="1" max="100" value="50">
+                </div>
+            `;
+
+            const node2 = space.createNode({
+                id: 'n2',
+                type: 'html',
+                data: {
+                    width: 300,
+                    height: 180,
+                    content: node2Content,
+                },
+                position: { x: 100, y: 50, z: 0 }
+            });
+
+            const node3 = space.createNode({
+                id: 'n3',
+                type: 'shape',
+                data: { label: 'World', color: 0x00ff00, size: 20 },
+                position: { x: -100, y: -50, z: 0 }
+            });
+
+            space.addEdge(node1, node2);
+            space.addEdge(node1, node3);
+
+            space.applyLayout();
+
+            space.animate();
+
+            space.on('node:click', (node) => {
+                console.log('Node clicked:', node);
+            });
+
+            space.on('background:click', () => {
+                console.log('Background clicked.');
+            });
+
+            // Make the button in the HTML node interactive
+            // We need to wait a tick for the CSS3DObject to be created and added to the DOM
+            setTimeout(() => {
+                const button = document.getElementById('create-node-button');
+                if (button) {
+                    button.addEventListener('click', () => {
+                        const newNodeId = `n${space.nodes.length + 1}`;
+                        const newNode = space.createNode({
+                            id: newNodeId,
+                            type: 'shape',
+                            data: { label: `Node ${newNodeId}`, color: Math.random() * 0xffffff, size: 15 },
+                            position: {
+                                x: node2.object.position.x + (Math.random() - 0.5) * 200,
+                                y: node2.object.position.y + (Math.random() - 0.5) * 200,
+                                z: node2.object.position.z + (Math.random() - 0.5) * 200
+                            }
+                        });
+                        space.addEdge(node2, newNode);
+                        console.log(`Created new node ${newNodeId}`);
+                    });
+                }
+            }, 0);
+        });
     </script>
-    <script type="module" src="main.js"></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
-import * as THREE from 'three';
-import { CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import { CSS3DObject } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/renderers/CSS3DRenderer.js';
 
 export class Node {
     constructor(config, space) {
@@ -31,9 +31,42 @@ export class Node {
         const material = new THREE.MeshBasicMaterial({ color });
         const mesh = new THREE.Mesh(geometry, material);
         this.object.add(mesh);
+        this.shapeMesh = mesh; // Keep a reference for scaling
 
         if (this.data.label) {
             this.createLabel(this.data.label);
+        }
+        this.createResizeHandle();
+    }
+
+    createResizeHandle() {
+        const handleSize = 4;
+        const handleGeometry = new THREE.BoxGeometry(handleSize, handleSize, handleSize);
+        const handleMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff, transparent: true, opacity: 0.5 });
+        const handle = new THREE.Mesh(handleGeometry, handleMaterial);
+        handle.name = 'resizeHandle';
+
+        const size = this.data.size || 10;
+        const scale = this.data.scale || 1;
+        handle.position.set(size * scale, -size * scale, 0);
+
+        this.object.add(handle);
+        this.resizeHandle = handle;
+    }
+
+    setScale(scale) {
+        if (this.type === 'shape' && this.shapeMesh) {
+            this.shapeMesh.scale.set(scale, scale, scale);
+            this.data.scale = scale;
+
+            const size = this.data.size || 10;
+            this.resizeHandle.position.set(size * scale, -size * scale, 0);
+
+            // Also scale the label
+            const label = this.object.children.find(c => c.type === 'Sprite');
+            if (label) {
+                label.position.y = (size * scale) + 20;
+            }
         }
     }
 
@@ -64,10 +97,18 @@ export class Node {
         const element = document.createElement('div');
         element.innerHTML = this.data.content;
         element.className = 'node-html-content';
-        // Allow interactions with this specific HTML element
+        // This is important to allow interaction with the content of the node
         element.style.pointerEvents = 'auto';
 
         const cssObject = new CSS3DObject(element);
         this.object.add(cssObject);
+
+        // Add an invisible plane for raycasting, sized to the HTML content
+        const width = this.data.width || 200; // default width
+        const height = this.data.height || 100; // default height
+        const geometry = new THREE.PlaneGeometry(width, height);
+        const material = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, side: THREE.DoubleSide });
+        const mesh = new THREE.Mesh(geometry, material);
+        this.object.add(mesh);
     }
 }
