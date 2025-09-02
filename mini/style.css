@@ -1,0 +1,32 @@
+body {
+    margin: 0;
+    overflow: hidden;
+    font-family: sans-serif;
+    background-color: #111;
+}
+
+#graph-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+canvas {
+    display: block;
+}
+
+.css3d-object {
+    pointer-events: auto; /* Allow interaction with HTML elements */
+}
+
+.node-html-content {
+    background-color: rgba(0, 0, 0, 0.7);
+    border: 1px solid #999;
+    color: #eee;
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 14px;
+    text-align: center;
+}
