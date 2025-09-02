@@ -1,8 +1,199 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 import { CSS3DRenderer, CSS3DObject } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/renderers/CSS3DRenderer.js';
-import { Node } from './Node.js';
-import { Edge } from './Edge.js';
-import { ForceLayout } from './ForceLayout.js';
+
+class Node {
+    constructor(config, space) {
+        this.id = config.id;
+        this.type = config.type || 'shape';
+        this.data = config.data || {};
+        this.space = space;
+        this.object = new THREE.Object3D();
+
+        this.createVisuals();
+
+        if (config.position) {
+            this.object.position.set(config.position.x, config.position.y, config.position.z);
+        }
+    }
+
+    createVisuals() {
+        if (this.type === 'shape') {
+            this.createShape();
+        } else if (this.type === 'html') {
+            this.createHtml();
+        }
+    }
+
+    createShape() {
+        const size = this.data.size || 10;
+        const color = this.data.color || 0xffffff;
+        const geometry = new THREE.SphereGeometry(size, 32, 32);
+        const material = new THREE.MeshBasicMaterial({ color });
+        const mesh = new THREE.Mesh(geometry, material);
+        this.object.add(mesh);
+        this.shapeMesh = mesh; // Keep a reference for scaling
+
+        if (this.data.label) {
+            this.createLabel(this.data.label);
+        }
+        this.createResizeHandle();
+    }
+
+    createResizeHandle() {
+        const handleSize = 4;
+        const handleGeometry = new THREE.BoxGeometry(handleSize, handleSize, handleSize);
+        const handleMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff, transparent: true, opacity: 0.5 });
+        const handle = new THREE.Mesh(handleGeometry, handleMaterial);
+        handle.name = 'resizeHandle';
+
+        const size = this.data.size || 10;
+        const scale = this.data.scale || 1;
+        handle.position.set(size * scale, -size * scale, 0);
+
+        this.object.add(handle);
+        this.resizeHandle = handle;
+    }
+
+    setScale(scale) {
+        if (this.type === 'shape' && this.shapeMesh) {
+            this.shapeMesh.scale.set(scale, scale, scale);
+            this.data.scale = scale;
+
+            const size = this.data.size || 10;
+            this.resizeHandle.position.set(size * scale, -size * scale, 0);
+
+            // Also scale the label
+            const label = this.object.children.find(c => c.type === 'Sprite');
+            if (label) {
+                label.position.y = (size * scale) + 20;
+            }
+        }
+    }
+
+    createLabel(text) {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        context.font = '24px Arial';
+        const textWidth = context.measureText(text).width;
+
+        canvas.width = textWidth;
+        canvas.height = 28;
+
+        context.font = '24px Arial';
+        context.fillStyle = 'rgba(255, 255, 255, 1.0)';
+        context.fillText(text, 0, 22);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        const material = new THREE.SpriteMaterial({ map: texture });
+        const sprite = new THREE.Sprite(material);
+
+        sprite.scale.set(textWidth, 28, 1.0);
+        sprite.position.y = (this.data.size || 10) + 20;
+
+        this.object.add(sprite);
+    }
+
+    createHtml() {
+        const element = document.createElement('div');
+        element.innerHTML = this.data.content;
+        element.className = 'node-html-content';
+        // This is important to allow interaction with the content of the node
+        element.style.pointerEvents = 'auto';
+
+        const cssObject = new CSS3DObject(element);
+        this.object.add(cssObject);
+
+        // Add an invisible plane for raycasting, sized to the HTML content
+        const width = this.data.width || 200; // default width
+        const height = this.data.height || 100; // default height
+        const geometry = new THREE.PlaneGeometry(width, height);
+        const material = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, side: THREE.DoubleSide });
+        const mesh = new THREE.Mesh(geometry, material);
+        this.object.add(mesh);
+    }
+}
+
+class Edge {
+    constructor(source, target, config = {}) {
+        this.source = source;
+        this.target = target;
+        this.config = config;
+
+        const material = new THREE.LineBasicMaterial({
+            color: this.config.color || 0xffffff,
+            linewidth: this.config.linewidth || 1,
+        });
+
+        const geometry = new THREE.BufferGeometry().setFromPoints([
+            this.source.object.position,
+            this.target.object.position,
+        ]);
+
+        this.object = new THREE.Line(geometry, material);
+    }
+
+    update() {
+        const positions = this.object.geometry.attributes.position.array;
+        positions[0] = this.source.object.position.x;
+        positions[1] = this.source.object.position.y;
+        positions[2] = this.source.object.position.z;
+        positions[3] = this.target.object.position.x;
+        positions[4] = this.target.object.position.y;
+        positions[5] = this.target.object.position.z;
+        this.object.geometry.attributes.position.needsUpdate = true;
+    }
+}
+
+class ForceLayout {
+    constructor(nodes, edges) {
+        this.nodes = nodes;
+        this.edges = edges;
+        this.repulsion = 10000;
+        this.stiffness = 0.05;
+        this.damping = 0.85;
+        this.idealLength = 150;
+
+        // Initialize velocities
+        this.nodes.forEach(node => {
+            node.velocity = new THREE.Vector3();
+        });
+    }
+
+    update() {
+        // Calculate repulsive forces
+        for (let i = 0; i < this.nodes.length; i++) {
+            const nodeA = this.nodes[i];
+            for (let j = i + 1; j < this.nodes.length; j++) {
+                const nodeB = this.nodes[j];
+                const delta = new THREE.Vector3().subVectors(nodeA.object.position, nodeB.object.position);
+                const distance = delta.length() + 0.1; // avoid division by zero
+                const force = this.repulsion / (distance * distance);
+
+                const direction = delta.normalize();
+                nodeA.velocity.add(direction.clone().multiplyScalar(force));
+                nodeB.velocity.sub(direction.clone().multiplyScalar(force));
+            }
+        }
+
+        // Calculate attractive forces (springs)
+        for (const edge of this.edges) {
+            const delta = new THREE.Vector3().subVectors(edge.target.object.position, edge.source.object.position);
+            const distance = delta.length() + 0.1;
+            const displacement = distance - this.idealLength;
+            const force = this.stiffness * displacement;
+
+            const direction = delta.normalize();
+            edge.source.velocity.add(direction.clone().multiplyScalar(force));
+            edge.target.velocity.sub(direction.clone().multiplyScalar(force));
+        }
+
+        // Apply velocities and damping
+        for (const node of this.nodes) {
+            node.velocity.multiplyScalar(this.damping);
+            node.object.position.add(node.velocity);
+        }
+    }
+}
 
 export class SpaceGraph {
     constructor(container) {
@@ -11,13 +202,7 @@ export class SpaceGraph {
         this.edges = [];
         this._events = {};
 
-        // Auto-import the default stylesheet if not already present
-        if (!document.querySelector('link[href="style.css"]')) {
-            const cssLink = document.createElement('link');
-            cssLink.rel = 'stylesheet';
-            cssLink.href = 'style.css';
-            document.head.appendChild(cssLink);
-        }
+        this.injectStyles();
 
         this.initThree();
         this.initControls();
@@ -279,5 +464,50 @@ export class SpaceGraph {
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
         this.cssRenderer.setSize(this.container.clientWidth, this.container.clientHeight);
+    }
+
+    injectStyles() {
+        const styleId = 'spacegraph-mini-styles';
+        if (document.getElementById(styleId)) {
+            return;
+        }
+
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.innerHTML = `
+            body {
+                margin: 0;
+                overflow: hidden;
+                font-family: sans-serif;
+                background-color: #111;
+            }
+
+            #graph-container {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+            }
+
+            canvas {
+                display: block;
+            }
+
+            .css3d-object {
+                pointer-events: auto;
+            }
+
+            .node-html-content {
+                background-color: rgba(0, 0, 0, 0.7);
+                border: 1px solid #999;
+                color: #eee;
+                padding: 10px;
+                border-radius: 5px;
+                font-size: 14px;
+                text-align: center;
+            }
+        `;
+        document.head.appendChild(style);
     }
 }
